@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-10 (Session 82 — public date-based changelog page on `afnan-jr`)  
+> **Last Updated:** 2026-10-11 (Session 83 — banner navigation update to Back to Challenges)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -320,4 +320,24 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` ✅ (0 errors)
    - `npm run test` ✅ (80 test files, 858/858 tests green)
    - `npm run build` ✅ (12 routes compiled cleanly)
+- **NEXT STEP:** Restore deleted P0 UIs (host pardon modal, 1-click Discord summary copy, Punishment Wall).
+
+### Session 83 — 2026-10-11 (krish — Challenge Hero Banner "Back to challenges" Navigation & Obsidian Pill Enhancement)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & User Intent:**
+   - Change the banner navigation arrow on `/challenge/[id]` from "Back to home" to "Back to challenges" pointing to `/challenges` (since home is directly accessible via the top-bar HoldMeToIt logo).
+   - Enhance the link's visual prominence so it is noticeably clearer and does not get visually lost against dark or intricate hero artwork.
+- **Implementation:**
+   - **`features/challenges/presentation/challenge-hero-banner.tsx`:**
+      - Updated route destination from `/` to `/challenges`.
+      - Updated label from "Back to home" to "Back to challenges".
+      - Transformed raw underlined text into an elevated Obsidian frosted glass pill (`rounded-full`, `bg-black/50 hover:bg-black/75`, `border border-white/15 hover:border-white/30`, `backdrop-blur-md`, `text-[#f4f3f6] hover:text-white`).
+      - Added responsive padding (`px-3 py-1.5 sm:px-3.5 sm:py-1.5`) and interactive hover nudge micro-interaction on the arrow icon (`group-hover:-translate-x-0.5`).
+      - Preserved mobile responsiveness guardrail (360px+).
+   - **`features/challenges/presentation/challenge-hero-banner.test.tsx`:**
+      - Added unit test asserting the link points to `/challenges` with text "Back to challenges".
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors via `npx tsc --noEmit`)
+   - `npm run test` ✅ (81 test files, 873/873 tests green)
 - **NEXT STEP:** Restore deleted P0 UIs (host pardon modal, 1-click Discord summary copy, Punishment Wall).
