@@ -45,6 +45,11 @@ const nextConfig = {
          // 3 MB punishment image + multipart overhead (Vercel caps requests at 4.5 MB).
          bodySizeLimit: "4mb",
       },
+      // Ship the changelog source with the serverless function so the dynamic
+      // /changelog route can read it at runtime.
+      outputFileTracingIncludes: {
+         "/changelog": ["./CHANGELOG.md"],
+      },
    },
    async redirects() {
       return [

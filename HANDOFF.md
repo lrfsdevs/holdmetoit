@@ -4,18 +4,18 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-10 (Session 81 — consolidated dependabot migration: Vitest 5 + Tailwind CSS 4 on `afnan-jr`)  
+> **Last Updated:** 2026-10-10 (Session 82 — public date-based changelog page on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-10, Session 81 — dependency consolidation on `afnan-jr`)                                                                                                                                                   |
+| Gate                                         | Result (2026-10-10, Session 82 — date-based changelog page on `afnan-jr`)                                                                                                                                                  |
 | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                           |
-| `npm run test`                               | ✅ 79 files green (844/844 tests passing)                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                             |
+| `npm run test`                               | ✅ 80 files green (864/864 tests passing)                                                                                                                                                                                  |
+| `npm run build`                              | ✅ 12 routes compiled (production build clean)                                                                                                                                                                             |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~93%** — Dedicated public /challenges catalog, participant statistics cockpit, multi-view search & team filtering, mod audit log, daily hours overrides, weekly target hours override & admin roster removal complete |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                 |
 | Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                             |
@@ -26,6 +26,7 @@
 | :-------------------------------------------- | :----------------------------------------------------------------------------------------------------- | :------------------------------------- |
 | `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board         | Guest (local tasks only) / Participant |
 | `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)           | Public spectator / Participant / Admin |
+| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                  | Public spectator / Participant / Admin |
 | `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                    | Public view, admin entry               |
@@ -87,6 +88,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`             | Matches the Figma                                                                                                                                                                                  |
 | `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                  | Grants full admin plus developer access                                                                                                                                                            |
 | Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`  | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                              |
+| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`      | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                        |
 
 ---
 
@@ -147,30 +149,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
-### Sessions 1–75 (Summarized)
+### Sessions 1–77 (Summarized)
 
-- Core domain math, Prisma models, Discord OAuth, participant cockpit, mobile pass, drag & drop across Daily/Weekly boards, offline-first IndexedDB task sync (`holdmetoit_db`), 2-card participant logging, admin 7-day hours overrides, law labels UI cleanup, moderator future hours prevention, cross-day task moving/rescheduling with validation, participant study log audit trail integration (`STUDY_LOG_ADDED`), dedicated public challenges catalog (`/challenges`) with role-gated admin controls, multi-view pagination guards (`DataPagination`), challenge-specific participant statistics profiles (`/challenge/[id]/participant/[participantId]`), multi-view search & team filtering with "View by Team" mode, dynamic team color palettes with WCAG AA contrast calculation (`team-colors.ts`), overall time reset to 0 (`executeAdminResetOverallHours`), and challenge tab reload URL sync (`challenge-tabs.ts`). Also: full migration of daily study logs from legacy V1 to `DailyStudyLogV2` (cockpit/participant-stats log resolution simplified). Also (Session 76, afnan): leaderboard view-mode URL sync (`?view=individual|today|team`) with `popstate` restoration and participant-profile breadcrumb/empty-state context preservation.
-
-### Session 77 — 2026-10-10 (afnan-jr)
-
-- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Data & Identity Agent.
-- **Punishment Picture Disclosure in Overview & About Tab Merge:**
-   - **Domain Layer (`features/challenges/domain/challenge-tabs.ts`):**
-      - Merged `"about"` into `"overview"`. Updated `CHALLENGE_TABS = ["overview", "leaderboard", "manage", "audit"]` and `PUBLIC_CHALLENGE_TABS = ["overview", "leaderboard"]`.
-      - Added automatic fallback in `resolveAllowedChallengeTab` where `requestedTab === "about"` redirects safely to `"overview"`, preserving backwards compatibility with legacy bookmarks and external links without 404s.
-      - Updated `challenge-tabs.test.ts` (10/10 tests green).
-   - **Presentation Layer (`features/challenges/presentation/`):**
-      - **Navigation Bar (`challenge-view.tsx`):** Removed the standalone "About" tab button and its rendering branch; tabs now cleanly present Overview, Leaderboard, and role-gated admin tabs.
-      - **Timetable (UTC) Merge (`challenge-overview-tab.tsx`):** Integrated the challenge timetable (Kickoff and Conclusion timestamps formatted in UTC) and challenge description into the Welcome card on the Overview tab.
-      - **Forfeit Avatar & Accountability Disclosure Card (`challenge-overview-tab.tsx`):** Added dedicated card for challenge forfeit preview with image preview and direct "Download Forfeit PFP" button.
-   - **Server Page (`app/challenge/[id]/page.test.tsx`):**
-      - Updated page server tests to assert that `searchParams.tab = "about"` resolves cleanly to `data-initial-tab="overview"`.
-   - **Unit Tests:**
-      - Added unit tests in `challenge-overview-tab.test.tsx` covering Timetable rendering, Punishment PFP preview + download button, null fallback state (8/8 tests green).
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (75/75 test files passing, 788/788 tests green)
-   - `npm run build` ✅ (10 routes compiled successfully)
+- Core domain math, Prisma models, Discord OAuth, participant cockpit, mobile pass, drag & drop across Daily/Weekly boards, offline-first IndexedDB task sync (`holdmetoit_db`), 2-card participant logging, admin 7-day hours overrides, law labels UI cleanup, moderator future hours prevention, cross-day task moving/rescheduling with validation, participant study log audit trail integration (`STUDY_LOG_ADDED`), dedicated public challenges catalog (`/challenges`) with role-gated admin controls, multi-view pagination guards (`DataPagination`), challenge-specific participant statistics profiles (`/challenge/[id]/participant/[participantId]`), multi-view search & team filtering with "View by Team" mode, dynamic team color palettes with WCAG AA contrast calculation (`team-colors.ts`), overall time reset to 0 (`executeAdminResetOverallHours`), and challenge tab reload URL sync (`challenge-tabs.ts`). Also: full migration of daily study logs from legacy V1 to `DailyStudyLogV2` (cockpit/participant-stats log resolution simplified). Also (Session 76, afnan): leaderboard view-mode URL sync (`?view=individual|today|team`) with `popstate` restoration and participant-profile breadcrumb/empty-state context preservation. Session 77 (afnan-jr): merged the "About" tab into Overview — `CHALLENGE_TABS` is now overview/leaderboard/manage/audit with a legacy `about`→`overview` redirect; the UTC timetable + description were folded into the Overview Welcome card, and a Forfeit Avatar download card was added.
 
 ### Session 78 — 2026-10-10 (afnan-jr + krish — merged `dev` into `main`)
 
@@ -262,6 +243,24 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Built + dev CSS bundles inspected: `animate-in` / `--tw-enter-opacity` / `zoom-in-95` (tailwindcss-animate), `rounded-3xl`, `hsl(var(--border))`, and font vars all emitted; `/challenges` dev render returns HTTP 200.
    - `npm audit`: 20 → 8 advisories (ISSUES #5 resolved; remaining are Next 14 / `eslint-config-next` majors, out of scope).
 - **Known warning (non-blocking):** Vite warns that `vitest.config.ts` uses ESM syntax while loaded as CommonJS — future Vite majors default to the native config loader, so rename to `vitest.config.mts` (or add `"type": "module"`) when that lands.
+- **NEXT STEP:** Unchanged — Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); then D5 catch-up migrations (`feedbacks`, `sort_order`).
+
+### Session 82 — 2026-10-10 (afnan-jr — public date-based changelog page)
+
+- **Agent Role:** Participant UI Agent (new public informational surface).
+- **Feature — date-grouped changelog (`/changelog`) rendered from the root `CHANGELOG.md`:**
+   - **Source of truth (`CHANGELOG.md`):** single date-wise file at the repo root, populated from this HANDOFF log + `git log`. `## YYYY-MM-DD` groups entries; `### Title [user]` is user-facing (visible to everyone) and an untagged `### Title` is internal (admins only).
+   - **Domain (`features/changelog/domain/changelog.ts`):** pure, framework-free `parseChangelogMarkdown` (dependency-free — no MDX/`gray-matter`), plus `sortGroupsByDate` (newest first, stable), `selectVisibleGroups(groups, isAdmin)`, and `formatEntryDate` (native `Intl`, UTC-pinned). Law L7; 15 Vitest cases in `changelog.test.ts`.
+   - **Data (`features/changelog/data/changelog.repository.ts`):** reads + parses the root `CHANGELOG.md`, returning `[]` on failure to drive the empty state.
+   - **Presentation (`features/changelog/presentation/changelog-view.tsx`):** server component filtering by effective admin (participant-preview respected); internal entries carry an "Internal" pill; rendered with the existing Obsidian system + `EmptyState` fallback.
+   - **Route (`app/changelog/`):** `layout.tsx` (AppHeader shell mirroring `/challenges`), `page.tsx` (resolves effective admin state + reads the file), `loading.tsx` (skeleton), `error.tsx` (LogRocket-instrumented `ErrorState` + retry) — Law L9 loading/empty/error states covered.
+   - **Access:** public route deliberately **unlinked** from `AppHeader` (URL-only) — a future nav link can be added beside "Challenges".
+   - **Deploy (`next.config.mjs`):** `experimental.outputFileTracingIncludes["/changelog"] = ["./CHANGELOG.md"]` so the dynamic route ships the file on Vercel (verified present in `page.js.nft.json`).
+   - **Removed:** the earlier `features/changelog/data/changelog-entries.ts` TS constant, superseded by `CHANGELOG.md` as the single source.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors)
+   - `npm run test` ✅ (80 files, 858/858 tests green)
+   - `npm run build` ✅ (12 routes compiled; `/changelog` trace includes `CHANGELOG.md`)
 - **NEXT STEP:** Unchanged — Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); then D5 catch-up migrations (`feedbacks`, `sort_order`).
 
 ### Session 81 — 2026-10-11 (krish — Fix D1: Challenge Lock Results After Natural Expiry)
