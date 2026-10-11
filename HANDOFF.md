@@ -32,6 +32,7 @@
 | `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                    | Public view, admin entry               |
 | `/admin`                                      | Server redirect to `/challenges`                                                                       | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                    | `ADMIN` / `DEV`                        |
+| `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                | Authenticated                          |
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                             | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                          | Authenticated                          |
 
@@ -291,4 +292,32 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` ✅ (0 errors)
    - `npm run test` ✅ (78 files, 847/847 tests green)
    - `npm run build` ✅ (11 routes compiled, 0 errors)
+
+### Session 82 — 2026-10-11 (krish — User Profile Navigation Links & Route Resolution)
+
+- **Agent Role:** Participant UI Agent, Data & Identity Agent.
+- **Scope & User Intent:**
+   - Make the username displayed next to "Welcome" on the home cockpit dashboard and the user's name capsule in the top navigation header clickable.
+   - Both links open the user's challenge participant statistics profile (`/challenge/[id]/participant/[participantId]`).
+- **Implementation:**
+   - **`/profile` Dynamic Resolution Route (`app/profile/page.tsx` & `page.test.tsx`):**
+      - Created a dedicated `/profile` server component route.
+      - Checks session; redirects unauthenticated visitors to `/`.
+      - Inspects optional `?challengeId=` query param to prioritize participant profile lookup for that specific challenge.
+      - Falls back to `findParticipantForUser(session.user.id)` to resolve the user's active, upcoming, or most recent challenge participant record.
+      - Redirects to `/challenge/${participant.challengeId}/participant/${participant.id}`, or `/challenges` if the user has no enrollments.
+   - **Top Navigation Bar Capsule (`features/auth/presentation/auth-nav.tsx` & `auth-nav.test.tsx`):**
+      - Updated `UserNav` and `AppHeader` to support an optional `profileUrl` prop, defaulting to `/profile`.
+      - Converted the user identity pill capsule into an accessible, interactive `<Link>` pointing to `profileUrl` with subtle Obsidian hover styling (`hover:bg-[#252525] hover:border-[#666666] group cursor-pointer`).
+      - Updated `app/challenge/[id]/layout.tsx` to pass `/profile?challengeId=${params.id}` for contextual challenge navigation.
+   - **Home Cockpit View (`features/study-logs/presentation/home-cockpit-view.tsx` & `home-cockpit-view.test.tsx`):**
+      - Added optional `profileUrl` prop to `HomeCockpitViewProps`.
+      - Computed `activeProfileUrl`: resolves directly to `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}` when enrolled, or `/profile`.
+      - Rendered the username next to "Welcome" as a clickable `<Link>` with hover underline and emerald green tint (`hover:underline hover:text-[#22c55e] transition-colors`) when authenticated.
+   - **Home Page (`app/page.tsx`):**
+      - Computes `profileUrl` from `cockpit` and passes it to both `<AppHeader>` and `<HomeCockpitView>`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors)
+   - `npm run test` ✅ (80 test files, 858/858 tests green)
+   - `npm run build` ✅ (12 routes compiled cleanly)
 - **NEXT STEP:** Restore deleted P0 UIs (host pardon modal, 1-click Discord summary copy, Punishment Wall).

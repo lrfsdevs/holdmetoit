@@ -105,6 +105,7 @@ export interface UserNavProps {
    redirectTo?: string;
    isActualAdmin?: boolean;
    isPreviewActive?: boolean;
+   profileUrl?: string;
 }
 
 export function ParticipantPreviewButton({
@@ -187,6 +188,7 @@ export function UserNav({
    redirectTo,
    isActualAdmin,
    isPreviewActive,
+   profileUrl,
 }: UserNavProps) {
    if (!user) {
       return (
@@ -208,6 +210,7 @@ export function UserNav({
       user.displayName || user.name || user.username || "Companion";
    const initial = displayName.charAt(0).toUpperCase();
    const isDev = isDevRole(user.role) && !effectiveIsPreviewActive;
+   const activeProfileUrl = profileUrl ?? "/profile";
 
    return (
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -219,8 +222,13 @@ export function UserNav({
          )}
 
          {/* User Capsule */}
-         <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#434343] bg-[#1c1c1c] px-2 sm:px-2.5 py-1 text-xs shrink-0 max-w-[130px] sm:max-w-none">
-            <div className="relative h-5 w-5 overflow-hidden rounded-full border border-[#545454] bg-[#292929] shrink-0">
+         <Link
+            href={activeProfileUrl}
+            title={`View profile for ${displayName}`}
+            data-testid="user-profile-link"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#434343] bg-[#1c1c1c] hover:bg-[#252525] hover:border-[#666666] px-2 sm:px-2.5 py-1 text-xs shrink-0 max-w-[130px] sm:max-w-none transition-colors group cursor-pointer"
+         >
+            <div className="relative h-5 w-5 overflow-hidden rounded-full border border-[#545454] bg-[#292929] shrink-0 group-hover:border-[#777777] transition-colors">
                {user.image ? (
                   <Image
                      src={user.image}
@@ -236,7 +244,7 @@ export function UserNav({
                )}
             </div>
 
-            <span className="max-w-[45px] xs:max-w-[75px] sm:max-w-[130px] truncate font-medium text-[#f4f3f6]">
+            <span className="max-w-[45px] xs:max-w-[75px] sm:max-w-[130px] truncate font-medium text-[#f4f3f6] group-hover:text-white transition-colors">
                {displayName}
             </span>
 
@@ -249,7 +257,7 @@ export function UserNav({
                   DEV
                </span>
             )}
-         </div>
+         </Link>
 
          <SignOutButton />
       </div>
@@ -262,12 +270,14 @@ export function AppHeader({
    subtitle,
    isActualAdmin,
    isPreviewActive,
+   profileUrl,
 }: {
    user?: UserNavProps["user"];
    redirectTo?: string;
    subtitle?: string;
    isActualAdmin?: boolean;
    isPreviewActive?: boolean;
+   profileUrl?: string;
 }) {
    return (
       <header className="sticky top-0 z-40 h-16 border-b border-[#1f1f1f] bg-[#0d0d0d]/95 backdrop-blur-md">
@@ -304,6 +314,7 @@ export function AppHeader({
                redirectTo={redirectTo}
                isActualAdmin={isActualAdmin}
                isPreviewActive={isPreviewActive}
+               profileUrl={profileUrl}
             />
          </div>
       </header>
