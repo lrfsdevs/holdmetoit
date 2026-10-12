@@ -60,7 +60,8 @@ export function SignInWithDiscordButton({
             className={className}
          >
             <DiscordIcon className="h-4 w-4 mr-2 shrink-0" />
-            <span>Sign In with Discord</span>
+            <span className="sm:hidden">Sign In</span>
+            <span className="hidden sm:inline">Sign In with Discord</span>
          </Button>
       </form>
    );
@@ -251,7 +252,7 @@ export function UserNav({
             {isDev && (
                <span
                   data-testid="dev-role-badge"
-                  className="rounded-full bg-[#e08a32]/20 border border-[#e08a32]/50 text-[#e08a32] px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider select-none shrink-0"
+                  className="hidden sm:inline rounded-full bg-[#e08a32]/20 border border-[#e08a32]/50 text-[#e08a32] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider select-none shrink-0"
                   title="Developer Role"
                >
                   DEV
@@ -281,8 +282,8 @@ export function AppHeader({
 }) {
    return (
       <header className="sticky top-0 z-40 h-16 border-b border-[#1f1f1f] bg-[#0d0d0d]/95 backdrop-blur-md">
-         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-3 sm:px-6">
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+         <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-2 min-w-0 px-3 sm:px-6">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                <Link
                   href="/"
                   className="flex items-center gap-2 sm:gap-2.5 group"
@@ -290,7 +291,7 @@ export function AppHeader({
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#ffffff] text-[#0a080e] shadow-sm shrink-0">
                      <Shield className="h-3.5 w-3.5 fill-current" />
                   </div>
-                  <span className="font-semibold text-sm sm:text-base tracking-tight text-[#f4f3f6] group-hover:text-white transition-colors">
+                  <span className="hidden sm:inline font-semibold text-sm sm:text-base tracking-tight text-[#f4f3f6] group-hover:text-white transition-colors">
                      HoldMeToIt
                   </span>
                </Link>

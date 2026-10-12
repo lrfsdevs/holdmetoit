@@ -12,6 +12,8 @@ import {
 import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
 import {
    buildChallengeWrappedViewModel,
+   getChallengeCompletionDate,
+   isChallengeCompleted,
    isWrappedPopupDue,
    isWrappedWindowExpired,
 } from "@/features/wrapped/domain/wrapped";
@@ -90,6 +92,8 @@ function ArrowLeftIcon({
 
 interface ChallengeWrappedModalProps {
    challenge: ChallengeScoreboardViewModel;
+   isOpen?: boolean;
+   onClose?: () => void;
 }
 
 /**
@@ -100,8 +104,10 @@ interface ChallengeWrappedModalProps {
  */
 export function ChallengeWrappedModal({
    challenge,
+   isOpen: controlledIsOpen,
+   onClose,
 }: ChallengeWrappedModalProps) {
-   const [isOpen, setIsOpen] = useState(false);
+   const [isOpen, setIsOpen] = useState(controlledIsOpen ?? false);
    const [slideIndex, setSlideIndex] = useState(0);
    const [dismissedThisVisit, setDismissedThisVisit] = useState(false);
    const [revealed, setRevealed] = useState(false);
@@ -126,7 +132,8 @@ export function ChallengeWrappedModal({
    const toastTimerRef = useRef<number | null>(null);
 
    const wrapped = useMemo(() => {
-      if (!challenge.resultsLockedAt || !challenge.currentUser.isEnrolled) {
+      const isCompleted = isChallengeCompleted(challenge);
+      if (!isCompleted || !challenge.currentUser.isEnrolled) {
          return null;
       }
 
@@ -156,10 +163,29 @@ export function ChallengeWrappedModal({
       }, 2600);
    }, []);
 
+   useEffect(() => {
+      if (controlledIsOpen !== undefined) {
+         if (controlledIsOpen) {
+            setDismissedThisVisit(false);
+            setSlideIndex(0);
+            revealedRef.current = false;
+            setRevealed(false);
+            setIsOpen(true);
+         } else {
+            setIsOpen(false);
+         }
+      }
+   }, [controlledIsOpen]);
+
    // Page load: seed localStorage from the server, run the 3-day auto-seen
    // check, and auto-open the story while it is still due.
    useEffect(() => {
-      if (!resultsLockedAt || !isEnrolled || dismissedThisVisit || isOpen) {
+      if (controlledIsOpen !== undefined) {
+         return;
+      }
+
+      const completionDate = getChallengeCompletionDate(challenge);
+      if (!completionDate || !isEnrolled || dismissedThisVisit || isOpen) {
          return;
       }
 
@@ -184,7 +210,7 @@ export function ChallengeWrappedModal({
       const effectiveSeen = activeLocal?.seen ?? isWrappedSeen;
       const effectiveFeedback = activeLocal?.feedback ?? isFeedbackFilled;
 
-      if (!effectiveSeen && isWrappedWindowExpired(resultsLockedAt)) {
+      if (!effectiveSeen && isWrappedWindowExpired(completionDate)) {
          writeWrappedLocalState(id, { seen: true });
          void markWrappedSeenIfExpiredAction(id);
          return;
@@ -192,6 +218,7 @@ export function ChallengeWrappedModal({
 
       const due = isWrappedPopupDue({
          resultsLockedAt,
+         endAt: challenge.endAt,
          isWrappedSeen,
          isFeedbackFilled,
          localSeen: effectiveSeen,
@@ -210,6 +237,8 @@ export function ChallengeWrappedModal({
    }, [
       id,
       resultsLockedAt,
+      challenge,
+      controlledIsOpen,
       isEnrolled,
       isWrappedSeen,
       isFeedbackFilled,
@@ -235,12 +264,13 @@ export function ChallengeWrappedModal({
    const close = useCallback(() => {
       setIsOpen(false);
       setDismissedThisVisit(true);
+      onClose?.();
 
       const previous = lastFocusRef.current;
       if (previous?.focus) {
          window.requestAnimationFrame(() => previous.focus());
       }
-   }, []);
+   }, [onClose]);
 
    const paintHold = useCallback(() => {
       const progress = holdProgressRef.current;
