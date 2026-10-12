@@ -22,6 +22,9 @@ interface ChallengeViewProps {
    initialTab?: ChallengeTab | string;
    isAdmin?: boolean;
    initialLeaderboardViewMode?: LeaderboardViewMode;
+   initialRosterSearch?: string;
+   initialRosterTeamFilter?: string;
+   initialRosterPage?: number;
 }
 
 export function ChallengeView({
@@ -29,6 +32,9 @@ export function ChallengeView({
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
    initialLeaderboardViewMode = "individual",
+   initialRosterSearch = "",
+   initialRosterTeamFilter = "ALL",
+   initialRosterPage = 1,
 }: ChallengeViewProps) {
    const [activeTab, setActiveTab] = useState<ChallengeTab>(() =>
       resolveAllowedChallengeTab(initialTab, isAdmin)
@@ -55,6 +61,11 @@ export function ChallengeView({
          }
          if (allowedTab !== "leaderboard") {
             url.searchParams.delete("view");
+         }
+         if (allowedTab !== "manage") {
+            url.searchParams.delete("search");
+            url.searchParams.delete("team");
+            url.searchParams.delete("page");
          }
          window.history.replaceState(
             null,
@@ -153,7 +164,12 @@ export function ChallengeView({
          )}
 
          {activeTab === "manage" && isAdmin && (
-            <ChallengeManageTab challenge={challenge} />
+            <ChallengeManageTab
+               challenge={challenge}
+               initialRosterSearch={initialRosterSearch}
+               initialRosterTeamFilter={initialRosterTeamFilter}
+               initialRosterPage={initialRosterPage}
+            />
          )}
 
          {activeTab === "audit" && isAdmin && (

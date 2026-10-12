@@ -11,11 +11,11 @@
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-12, Session 96 — Day 7 Grace Period Day Resolution on `afnan-jr`)                                                                                                                                                                                                                          |
+| Gate                                         | Result (2026-10-13, Session 98 — Admin Roster Search State Persistence Across Log Updates, Issue #92 on `krish`)                                                                                                                                                                                           |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                           |
-| `npm run test`                               | ✅ 90 files green (991/991 tests passing)                                                                                                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
+| `npm run test`                               | ✅ 92 files green (1,011/1,011 tests passing)                                                                                                                                                                                                                                                              |
+| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`challenge_feedbacks`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal, Discord summary copy) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                 |
 | Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                             |
@@ -392,4 +392,18 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates Verified:**
    - `npm run typecheck` ✅ (0 errors).
    - `npm run test` ✅ (90 test files, 992/992 tests green).
+
+### Session 98 — 2026-10-13 (krish — Admin Roster Search State Persistence Across Log Updates, Issue #92)
+
+- **Agent Role:** Admin Operations & Broadcaster Agent, Participant UI Agent.
+- **Issue Addressed:** GitHub Issue #92 (`lrfsdevs/holdmetoit#92`, Jira `GH-92`): "search state in admin page resets when updating logs".
+   - In the challenge Manage tab (`/challenge/[id]?tab=manage`), updating a participant's hours or targets via `AdminHoursOverrideModal` or `AdminTargetOverrideModal` caused Next.js App Router Suspense (`app/challenge/[id]/loading.tsx`) to trigger, unmounting and remounting the page tree and resetting the admin's roster search query (`rosterSearch`), team filter (`rosterTeamFilter`), and pagination page (`rosterPage`) back to default blank states.
+- **Technical Resolutions:**
+   1. **Transitioned Router Refreshes:** Wrapped `router.refresh()` inside `startTransition(() => { router.refresh(); })` across `AdminHoursOverrideModal` (single-day override & overall reset) and `AdminTargetOverrideModal` (weekly target override) callbacks. In React 18, untransitioned `router.refresh()` calls in async event handlers trigger route Suspense boundaries (`loading.tsx`), whereas `startTransition` preserves client component state during server revalidation.
+   2. **URL Search Parameter Synchronization:** In `ChallengeManageTab`, bound `rosterSearch`, `rosterTeamFilter`, and `rosterPage` to URL query parameters (`search`, `team`, `page`) using `window.history.replaceState`, initialized from `window.location.search` with prop fallback, added a `popstate` listener for browser back/forward navigation, and synchronized `participantTeamMap` from updated `challenge.standings`.
+   3. **Tab Navigation Cleanup & Prop Plumbing:** In `ChallengeView`, forwarded `initialRosterSearch`, `initialRosterTeamFilter`, and `initialRosterPage` to `ChallengeManageTab`, and stripped `search`, `team`, and `page` parameters upon navigating away from the Manage tab to maintain canonical URLs. In `app/challenge/[id]/page.tsx`, extracted `search`, `team`, and `page` from `searchParams` and forwarded them to `ChallengeView`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors).
+   - `npm run test` ✅ (92 test files, 1,011/1,011 tests green).
+   - `npm run build` ✅ (11 routes compiled cleanly in production).
 - **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).

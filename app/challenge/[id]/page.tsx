@@ -26,6 +26,9 @@ interface ChallengePageProps {
       tab?: string;
       as?: string;
       view?: string;
+      search?: string;
+      team?: string;
+      page?: string;
    };
 }
 
@@ -72,12 +75,21 @@ export default async function ChallengePage({
          searchParams?.view
       );
 
+      const initialRosterSearch = searchParams?.search ?? "";
+      const initialRosterTeamFilter = searchParams?.team ?? "ALL";
+      const initialRosterPage = searchParams?.page
+         ? Math.max(1, parseInt(searchParams.page, 10) || 1)
+         : 1;
+
       return (
          <ChallengeView
             challenge={challenge}
             initialTab={initialTab}
             isAdmin={isAdmin}
             initialLeaderboardViewMode={initialLeaderboardViewMode}
+            initialRosterSearch={initialRosterSearch}
+            initialRosterTeamFilter={initialRosterTeamFilter}
+            initialRosterPage={initialRosterPage}
          />
       );
    } catch (error) {
