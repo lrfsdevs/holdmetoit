@@ -17,6 +17,7 @@ export const logEvents = {
    challengeDeleted: "challenge.deleted",
    challengeKickoff: "challenge.kickoff",
    challengeLocked: "challenge.locked",
+   challengeUnlocked: "challenge.unlocked",
    challengeEnrolled: "challenge.enrolled",
    challengeParticipantRemoved: "challenge.participant_removed",
    challengeParticipantReassigned: "challenge.participant_reassigned",
@@ -32,6 +33,9 @@ export const logEvents = {
    leaderboardManualBatchLogged: "leaderboard.manual_batch_logged",
 
    accountabilityPardoned: "accountability.pardoned",
+
+   wrappedSeen: "wrapped.seen",
+   wrappedAutoSeen: "wrapped.auto_seen",
 
    taskCreated: "task.created",
    taskUpdated: "task.updated",

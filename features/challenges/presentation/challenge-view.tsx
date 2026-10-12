@@ -12,6 +12,8 @@ import { ChallengeOverviewTab } from "./challenge-overview-tab";
 import { ChallengeLeaderboardTab } from "@/features/leaderboard/presentation/challenge-leaderboard-tab";
 import { ChallengeManageTab } from "./challenge-manage-tab";
 import { EventAuditTab } from "@/features/audit/presentation/event-audit-tab";
+import { ChallengeSummaryTab } from "@/features/wrapped/presentation/challenge-summary-tab";
+import { ChallengeWrappedModal } from "@/features/wrapped/presentation/challenge-wrapped-modal";
 
 import type { LeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
 
@@ -32,12 +34,16 @@ export function ChallengeView({
       resolveAllowedChallengeTab(initialTab, isAdmin)
    );
 
+   const isSummaryVisible = Boolean(challenge.resultsLockedAt);
+
    useEffect(() => {
       setActiveTab(resolveAllowedChallengeTab(initialTab, isAdmin));
    }, [initialTab, isAdmin]);
 
    const handleTabChange = (tab: ChallengeTab) => {
-      const allowedTab = resolveAllowedChallengeTab(tab, isAdmin);
+      const allowedTab = resolveAllowedChallengeTab(tab, isAdmin, {
+         isSummaryVisible,
+      });
       setActiveTab(allowedTab);
 
       if (typeof window !== "undefined") {
@@ -86,6 +92,19 @@ export function ChallengeView({
                >
                   Leaderboard
                </button>
+               {isSummaryVisible && (
+                  <button
+                     type="button"
+                     onClick={() => handleTabChange("summary")}
+                     className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                        activeTab === "summary"
+                           ? "bg-[#4a4a4a] text-[#ffffff] shadow"
+                           : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                     }`}
+                  >
+                     Summary
+                  </button>
+               )}
                {isAdmin && (
                   <>
                      <button
@@ -129,6 +148,10 @@ export function ChallengeView({
             </div>
          )}
 
+         {activeTab === "summary" && isSummaryVisible && (
+            <ChallengeSummaryTab challenge={challenge} />
+         )}
+
          {activeTab === "manage" && isAdmin && (
             <ChallengeManageTab challenge={challenge} />
          )}
@@ -138,6 +161,10 @@ export function ChallengeView({
                challengeId={challenge.id}
                challengeTitle={challenge.title}
             />
+         )}
+
+         {isSummaryVisible && challenge.currentUser.isEnrolled && (
+            <ChallengeWrappedModal challenge={challenge} />
          )}
       </div>
    );
