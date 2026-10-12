@@ -29,66 +29,19 @@ function toValidDate(value: string | Date | null | undefined): Date | null {
    return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function getChallengeCompletionDate(
-   challenge:
-      | {
-           resultsLockedAt?: string | Date | null;
-           endAt?: string | Date | null;
-        }
-      | string
-      | Date
-      | null
-      | undefined
-): Date | null {
-   if (challenge == null) {
-      return null;
-   }
-   if (typeof challenge === "string" || challenge instanceof Date) {
-      return toValidDate(challenge);
-   }
-   return (
-      toValidDate(challenge.resultsLockedAt) ?? toValidDate(challenge.endAt)
-   );
-}
-
-export function isChallengeCompleted(
-   challenge: {
-      resultsLockedAt?: string | Date | null;
-      endAt?: string | Date | null;
-   },
-   now: Date = new Date()
-): boolean {
-   if (challenge.resultsLockedAt != null) {
-      return true;
-   }
-   const end = toValidDate(challenge.endAt);
-   return end !== null && now.getTime() >= end.getTime();
-}
-
 /**
  * The wrapped is "available" while the popup window is open: 3 days after
- * the host locked the results or the challenge completed.
+ * the host locked the results.
  */
 export function isWrappedWindowOpen(
-   resultsLockedAtOrChallenge:
-      | {
-           resultsLockedAt?: string | Date | null;
-           endAt?: string | Date | null;
-        }
-      | string
-      | Date
-      | null
-      | undefined,
+   resultsLockedAt: string | Date | null | undefined,
    now: Date = new Date()
 ): boolean {
-   const completionDate = getChallengeCompletionDate(
-      resultsLockedAtOrChallenge
-   );
-   if (!completionDate) {
+   const lockedAt = toValidDate(resultsLockedAt);
+   if (!lockedAt) {
       return false;
    }
-   const deadline =
-      completionDate.getTime() + WRAPPED_POPUP_WINDOW_DAYS * DAY_MS;
+   const deadline = lockedAt.getTime() + WRAPPED_POPUP_WINDOW_DAYS * DAY_MS;
    return now.getTime() < deadline;
 }
 
@@ -97,25 +50,14 @@ export function isWrappedWindowOpen(
  * check that flips `isWrappedSeen` to true).
  */
 export function isWrappedWindowExpired(
-   resultsLockedAtOrChallenge:
-      | {
-           resultsLockedAt?: string | Date | null;
-           endAt?: string | Date | null;
-        }
-      | string
-      | Date
-      | null
-      | undefined,
+   resultsLockedAt: string | Date | null | undefined,
    now: Date = new Date()
 ): boolean {
-   const completionDate = getChallengeCompletionDate(
-      resultsLockedAtOrChallenge
-   );
-   if (!completionDate) {
+   const lockedAt = toValidDate(resultsLockedAt);
+   if (!lockedAt) {
       return false;
    }
-   const deadline =
-      completionDate.getTime() + WRAPPED_POPUP_WINDOW_DAYS * DAY_MS;
+   const deadline = lockedAt.getTime() + WRAPPED_POPUP_WINDOW_DAYS * DAY_MS;
    return now.getTime() >= deadline;
 }
 
@@ -126,16 +68,13 @@ export function isWrappedWindowExpired(
  */
 export function isWrappedPopupDue(input: {
    resultsLockedAt?: string | Date | null;
-   endAt?: string | Date | null;
    isWrappedSeen?: boolean;
    isFeedbackFilled?: boolean;
    localSeen?: boolean | null;
    localFeedback?: boolean | null;
    now?: Date;
 }): boolean {
-   const completionDate =
-      toValidDate(input.resultsLockedAt) ?? toValidDate(input.endAt);
-   if (!isWrappedWindowOpen(completionDate, input.now ?? new Date())) {
+   if (!isWrappedWindowOpen(input.resultsLockedAt, input.now ?? new Date())) {
       return false;
    }
 

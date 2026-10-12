@@ -12,9 +12,6 @@ const config: Config = {
    ],
    theme: {
       extend: {
-         screens: {
-            xs: "400px",
-         },
          colors: {
             obsidian: {
                bg: "#0d0d0d",
