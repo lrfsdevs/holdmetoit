@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Calendar } from "lucide-react";
 import { hasAdminPrivileges } from "@/features/auth/domain/auth-roles";
 import { DailyHoursModal } from "./daily-hours-modal";
@@ -40,6 +41,7 @@ export interface HomeCockpitViewProps {
    } | null;
    userTasks?: UserCategorizedTasks | null;
    isAdmin?: boolean;
+   profileUrl?: string;
 }
 
 export function HomeCockpitView({
@@ -52,6 +54,7 @@ export function HomeCockpitView({
    upcomingChallenge,
    userTasks,
    isAdmin,
+   profileUrl,
 }: HomeCockpitViewProps) {
    const effectiveIsAdmin = isAdmin ?? hasAdminPrivileges(user?.role);
    const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
@@ -75,6 +78,12 @@ export function HomeCockpitView({
       (user && (user.id || user.name || user.username)) ||
       cockpit?.participant.userId
    );
+
+   const activeProfileUrl =
+      profileUrl ??
+      (cockpit?.challengeId && cockpit?.participant?.id
+         ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
+         : "/profile");
 
    const effectiveTodaySeconds = cockpit
       ? cockpit.todayLoggedSeconds
@@ -109,7 +118,18 @@ export function HomeCockpitView({
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                <h1 className="text-3xl sm:text-4xl font-extrabold text-[#ffffff] tracking-tight">
-                  Welcome {effectiveDisplayName}
+                  Welcome{" "}
+                  {isLoggedIn ? (
+                     <Link
+                        href={activeProfileUrl}
+                        className="hover:underline hover:text-[#22c55e] transition-colors"
+                        title={`View profile for ${effectiveDisplayName}`}
+                     >
+                        {effectiveDisplayName}
+                     </Link>
+                  ) : (
+                     effectiveDisplayName
+                  )}
                </h1>
                <p className="text-sm font-medium text-[#868686] mt-1 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />

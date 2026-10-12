@@ -70,12 +70,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ? { ...session.user, role: effectiveRole ?? session.user.role }
       : session?.user;
 
+   const profileUrl =
+      cockpit?.challengeId && cockpit?.participant?.id
+         ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
+         : "/profile";
+
    return (
       <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6]">
          <AppHeader
             user={session?.user}
             isActualAdmin={isActualAdmin}
             isPreviewActive={isPreviewActive}
+            profileUrl={profileUrl}
          />
          <main className="w-full">
             <HomeCockpitView
@@ -92,6 +98,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                upcomingChallenge={upcomingChallenge}
                userTasks={userTasks}
                isAdmin={isAdmin}
+               profileUrl={profileUrl}
             />
          </main>
       </div>

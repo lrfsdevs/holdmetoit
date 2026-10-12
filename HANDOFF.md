@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-12 (Session 96 — Day 7 Grace Period Day Resolution on `afnan-jr`)  
+> **Last Updated:** 2026-10-12 (Session 97 — dev integration merge: profile routes + wrapped + grace period resolution)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -32,6 +32,7 @@
 | `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                                          | Public view, admin entry               |
 | `/admin`                                      | Server redirect to `/challenges`                                                                                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                          | `ADMIN` / `DEV`                        |
+| `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                      | Authenticated                          |
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                   | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                | Authenticated                          |
 
@@ -280,6 +281,53 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP (completed in Session 95):** Cockpit Banner Post-Expiry State & Lock-Gated Outcome.
 
+### Session 82 — 2026-10-11 (krish — User Profile Navigation Links & Route Resolution)
+
+- **Agent Role:** Participant UI Agent, Data & Identity Agent.
+- **Scope & User Intent:**
+   - Make the username displayed next to "Welcome" on the home cockpit dashboard and the user's name capsule in the top navigation header clickable.
+   - Both links open the user's challenge participant statistics profile (`/challenge/[id]/participant/[participantId]`).
+- **Implementation:**
+   - **`/profile` Dynamic Resolution Route (`app/profile/page.tsx` & `page.test.tsx`):**
+      - Created a dedicated `/profile` server component route.
+      - Checks session; redirects unauthenticated visitors to `/`.
+      - Inspects optional `?challengeId=` query param to prioritize participant profile lookup for that specific challenge.
+      - Falls back to `findParticipantForUser(session.user.id)` to resolve the user's active, upcoming, or most recent challenge participant record.
+      - Redirects to `/challenge/${participant.challengeId}/participant/${participant.id}`, or `/challenges` if the user has no enrollments.
+   - **Top Navigation Bar Capsule (`features/auth/presentation/auth-nav.tsx` & `auth-nav.test.tsx`):**
+      - Updated `UserNav` and `AppHeader` to support an optional `profileUrl` prop, defaulting to `/profile`.
+      - Converted the user identity pill capsule into an accessible, interactive `<Link>` pointing to `profileUrl` with subtle Obsidian hover styling (`hover:bg-[#252525] hover:border-[#666666] group cursor-pointer`).
+      - Updated `app/challenge/[id]/layout.tsx` to pass `/profile?challengeId=${params.id}` for contextual challenge navigation.
+   - **Home Cockpit View (`features/study-logs/presentation/home-cockpit-view.tsx` & `home-cockpit-view.test.tsx`):**
+      - Added optional `profileUrl` prop to `HomeCockpitViewProps`.
+      - Computed `activeProfileUrl`: resolves directly to `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}` when enrolled, or `/profile`.
+      - Rendered the username next to "Welcome" as a clickable `<Link>` with hover underline and emerald green tint (`hover:underline hover:text-[#22c55e] transition-colors`) when authenticated.
+   - **Home Page (`app/page.tsx`):**
+      - Computes `profileUrl` from `cockpit` and passes it to both `<AppHeader>` and `<HomeCockpitView>`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors)
+   - `npm run test` ✅ (80 test files, 858/858 tests green)
+   - `npm run build` ✅ (12 routes compiled cleanly)
+
+### Session 83 — 2026-10-11 (krish — Challenge Hero Banner "Back to challenges" Navigation & Obsidian Pill Enhancement)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & User Intent:**
+   - Change the banner navigation arrow on `/challenge/[id]` from "Back to home" to "Back to challenges" pointing to `/challenges` (since home is directly accessible via the top-bar HoldMeToIt logo).
+   - Enhance the link's visual prominence so it is noticeably clearer and does not get visually lost against dark or intricate hero artwork.
+- **Implementation:**
+   - **`features/challenges/presentation/challenge-hero-banner.tsx`:**
+      - Updated route destination from `/` to `/challenges`.
+      - Updated label from "Back to home" to "Back to challenges".
+      - Transformed raw underlined text into an elevated Obsidian frosted glass pill (`rounded-full`, `bg-black/50 hover:bg-black/75`, `border border-white/15 hover:border-white/30`, `backdrop-blur-md`, `text-[#f4f3f6] hover:text-white`).
+      - Added responsive padding (`px-3 py-1.5 sm:px-3.5 sm:py-1.5`) and interactive hover nudge micro-interaction on the arrow icon (`group-hover:-translate-x-0.5`).
+      - Preserved mobile responsiveness guardrail (360px+).
+   - **`features/challenges/presentation/challenge-hero-banner.test.tsx`:**
+      - Added unit test asserting the link points to `/challenges` with text "Back to challenges".
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors via `npx tsc --noEmit`)
+   - `npm run test` ✅ (81 test files, 873/873 tests green)
+
 ### Session 95 — 2026-10-12 (afnan-jr — Lock-Gated Cockpit Banner & Unlocked Post-Expiry Logging State)
 
 - **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
@@ -311,23 +359,37 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Added 5 new unit tests to `challenge-lifecycle.test.ts` asserting lock-aware logging eligibility.
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (90 test files, 984/984 tests green).
-- **Session 96 (2026-10-12) — Day 7 Grace Period Day Resolution (Post-Day 7 Unlocked Capping at Day 7):**
-   - **Issue Reported:** During the post-Day 7 grace period (when a 7-day challenge has ended naturally but host has not yet locked results), the system calculated calendar days as Day 8. Consequently, the cockpit banner treated Day 8 as "today", found 0 seconds logged, and rendered `"You haven't logged today's hours"` even when participants had already logged Day 7, while opening modal options for an invalid Day 8.
-   - **Pure Domain Days Math (`features/study-logs/domain/challenge-day.ts`):**
-      - Added `calculateChallengeTotalDays(startAt, endAt?, fallbackDays = 7)` to compute exact duration in integer days.
-      - Updated `getChallengeDayBuckets(startAt, now, totalDays?)` to optionally cap `currentDayNumber` to `totalDays`. When capped, `current.dayNumber` is `totalDays` (Day 7) and `previous.dayNumber` is `totalDays - 1` (Day 6).
-      - Updated `getChallengeDayOptions(startAt, now, totalDays = 7)` to always generate exactly `totalDays` options, preventing any 8th day option from appearing.
-      - Updated `validateStudyLogChallengeDay` to accept `options.totalDays` and cap `currentDayNumber` during grace periods so that Day 7 logs validate as "today" and Day 6 logs as "yesterday".
-   - **Cockpit Data Grace Period Resolution (`features/study-logs/data/cockpit-data.ts`):**
-      - Computed `isGracePeriod = !isResultsLocked && challengeStatus === "COMPLETED" && rawBuckets.current.dayNumber > totalDays`.
-      - When `isGracePeriod` is true, hydrates `challengeDayBuckets` capped to `totalDays` (Day 7), mapping `todayDate` and `todayDayNumber` to Day 7 and `yesterdayDate` / `yesterdayDayNumber` to Day 6.
-      - `todayLog` therefore resolves the user's Day 7 study log. If already logged, `determineBannerVariant` correctly renders `STUDIED_TODAY` (`"Wow, you studied [hours] today"`) instead of falsely claiming they haven't logged.
-      - Added `totalChallengeDays: totalDays` to `CockpitViewModel` and piped it into `CockpitTasksSection` and `DailyHoursModal` in `home-cockpit-view.tsx`.
-   - **Leaderboard Standings Grace Period (`features/leaderboard/data/leaderboard-data.ts`):**
-      - Synced `todayDateKey` in `buildScoreboardViewModel` to resolve Day 7's date key during `isGracePeriod`, ensuring the standings table's "Today" column shows Day 7 study time instead of blank Day 8.
-   - **Verification:**
-      - Added unit tests in `challenge-day.test.ts` verifying `calculateChallengeTotalDays`, `getChallengeDayBuckets`, `getChallengeDayOptions`, and `validateStudyLogChallengeDay` during Day 7 grace periods.
-      - `npm run typecheck` passed (0 errors).
-      - `npm run test` passed (90 test files, 991/991 tests green).
-      - `npm run build` passed (12 routes compiled cleanly).
+
+### Session 96 — 2026-10-12 (afnan-jr — Day 7 Grace Period Day Resolution / Capping at Day 7)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Issue Reported:** During the post-Day 7 grace period (when a 7-day challenge has ended naturally but host has not yet locked results), the system calculated calendar days as Day 8. Consequently, the cockpit banner treated Day 8 as "today", found 0 seconds logged, and rendered `"You haven't logged today's hours"` even when participants had already logged Day 7, while opening modal options for an invalid Day 8.
+- **Pure Domain Days Math (`features/study-logs/domain/challenge-day.ts`):**
+   - Added `calculateChallengeTotalDays(startAt, endAt?, fallbackDays = 7)` to compute exact duration in integer days.
+   - Updated `getChallengeDayBuckets(startAt, now, totalDays?)` to optionally cap `currentDayNumber` to `totalDays`. When capped, `current.dayNumber` is `totalDays` (Day 7) and `previous.dayNumber` is `totalDays - 1` (Day 6).
+   - Updated `getChallengeDayOptions(startAt, now, totalDays = 7)` to always generate exactly `totalDays` options, preventing any 8th day option from appearing.
+   - Updated `validateStudyLogChallengeDay` to accept `options.totalDays` and cap `currentDayNumber` during grace periods so that Day 7 logs validate as "today" and Day 6 logs as "yesterday".
+- **Cockpit Data Grace Period Resolution (`features/study-logs/data/cockpit-data.ts`):**
+   - Computed `isGracePeriod = !isResultsLocked && challengeStatus === "COMPLETED" && rawBuckets.current.dayNumber > totalDays`.
+   - When `isGracePeriod` is true, hydrates `challengeDayBuckets` capped to `totalDays` (Day 7), mapping `todayDate` and `todayDayNumber` to Day 7 and `yesterdayDate` / `yesterdayDayNumber` to Day 6.
+   - `todayLog` therefore resolves the user's Day 7 study log. If already logged, `determineBannerVariant` correctly renders `STUDIED_TODAY` (`"Wow, you studied [hours] today"`) instead of falsely claiming they haven't logged.
+   - Added `totalChallengeDays: totalDays` to `CockpitViewModel` and piped it into `CockpitTasksSection` and `DailyHoursModal` in `home-cockpit-view.tsx`.
+- **Leaderboard Standings Grace Period (`features/leaderboard/data/leaderboard-data.ts`):**
+   - Synced `todayDateKey` in `buildScoreboardViewModel` to resolve Day 7's date key during `isGracePeriod`, ensuring the standings table's "Today" column shows Day 7 study time instead of blank Day 8.
+- **Verification:**
+   - Added unit tests in `challenge-day.test.ts` verifying `calculateChallengeTotalDays`, `getChallengeDayBuckets`, `getChallengeDayOptions`, and `validateStudyLogChallengeDay` during Day 7 grace periods.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (90 test files, 991/991 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+
+### Session 97 — 2026-10-12 (Integration Merge: dev branch into afnan-jr)
+
+- **Agent Role:** All Agents.
+- **Merge Scope:** Integrated `origin/dev` into `afnan-jr` (PR resolution).
+   - Merged user profile navigation links (`/profile` resolver, header capsule `<Link>`, cockpit Welcome name link).
+   - Merged challenge hero banner frosted glass pill navigation ("Back to challenges" → `/challenges`).
+   - Reconciled Wrapped modal mock types with new hero banner unit tests.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors).
+   - `npm run test` ✅ (90 test files, 992/992 tests green).
 - **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).

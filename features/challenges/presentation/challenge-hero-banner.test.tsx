@@ -308,4 +308,11 @@ describe("ChallengeHeroBanner", () => {
       });
       expect(html).toContain("6 Days Left");
    });
+
+   it("renders 'Back to challenges' link pointing to /challenges", () => {
+      const html = render();
+      expect(html).toContain('href="/challenges"');
+      expect(html).toContain("Back to challenges");
+      expect(html).not.toContain("Back to home");
+   });
 });
