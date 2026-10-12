@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
    buildChallengeWrappedViewModel,
+   getChallengeCompletionDate,
+   isChallengeCompleted,
    isWrappedPopupDue,
    isWrappedWindowExpired,
    isWrappedWindowOpen,
@@ -137,6 +139,59 @@ describe("wrapped window helpers", () => {
       expect(isWrappedWindowOpen(undefined)).toBe(false);
       expect(isWrappedWindowOpen("not-a-date")).toBe(false);
       expect(isWrappedWindowExpired(null)).toBe(false);
+   });
+
+   it("supports checking window with challenge object or endAt", () => {
+      const endAt = "2026-10-10T00:00:00.000Z";
+      const openNow = new Date(new Date(endAt).getTime() + 2 * DAY_MS);
+      const expiredNow = new Date(new Date(endAt).getTime() + 4 * DAY_MS);
+
+      expect(isWrappedWindowOpen({ endAt }, openNow)).toBe(true);
+      expect(isWrappedWindowExpired({ endAt }, openNow)).toBe(false);
+
+      expect(isWrappedWindowOpen({ endAt }, expiredNow)).toBe(false);
+      expect(isWrappedWindowExpired({ endAt }, expiredNow)).toBe(true);
+   });
+
+   it("resolves completion date prioritizing resultsLockedAt over endAt", () => {
+      expect(
+         getChallengeCompletionDate({
+            resultsLockedAt: LOCKED_AT,
+            endAt: "2026-10-10T00:00:00.000Z",
+         })
+      ).toEqual(new Date(LOCKED_AT));
+
+      expect(
+         getChallengeCompletionDate({
+            resultsLockedAt: null,
+            endAt: "2026-10-10T00:00:00.000Z",
+         })
+      ).toEqual(new Date("2026-10-10T00:00:00.000Z"));
+   });
+
+   it("identifies if a challenge is completed via lock or past endAt", () => {
+      const now = new Date("2026-10-11T00:00:00.000Z");
+      expect(
+         isChallengeCompleted({ resultsLockedAt: LOCKED_AT, endAt: null }, now)
+      ).toBe(true);
+      expect(
+         isChallengeCompleted(
+            {
+               resultsLockedAt: null,
+               endAt: "2026-10-10T00:00:00.000Z",
+            },
+            now
+         )
+      ).toBe(true);
+      expect(
+         isChallengeCompleted(
+            {
+               resultsLockedAt: null,
+               endAt: "2026-10-15T00:00:00.000Z",
+            },
+            now
+         )
+      ).toBe(false);
    });
 });
 
