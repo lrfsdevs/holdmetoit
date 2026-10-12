@@ -36,14 +36,60 @@ describe("determineBannerVariant", () => {
       expect(result).toBe("ENROLL_GROUP");
    });
 
-   it("returns CHALLENGE_COMPLETED when enrolled and challenge status is COMPLETED", () => {
+   it("returns CHALLENGE_COMPLETED when enrolled and isResultsLocked is true", () => {
       const result = determineBannerVariant({
          isEnrolled: true,
          challengeStatus: "COMPLETED",
+         isResultsLocked: true,
          todayLoggedSeconds: 3600,
          isYesterdayMissed: false,
       });
       expect(result).toBe("CHALLENGE_COMPLETED");
+   });
+
+   it("returns STUDIED_TODAY on post-expiry (COMPLETED) challenge when results are not locked and user studied today", () => {
+      const result = determineBannerVariant({
+         isEnrolled: true,
+         challengeStatus: "COMPLETED",
+         isResultsLocked: false,
+         todayLoggedSeconds: 3600,
+         isYesterdayMissed: false,
+      });
+      expect(result).toBe("STUDIED_TODAY");
+   });
+
+   it("returns NOT_LOGGED_TODAY on post-expiry (COMPLETED) challenge when results are not locked and user has not logged today", () => {
+      const result = determineBannerVariant({
+         isEnrolled: true,
+         challengeStatus: "COMPLETED",
+         isResultsLocked: false,
+         todayLoggedSeconds: 0,
+         isYesterdayMissed: false,
+      });
+      expect(result).toBe("NOT_LOGGED_TODAY");
+   });
+
+   it("returns FORGOT_YESTERDAY on post-expiry (COMPLETED) challenge when results are not locked and yesterday was missed", () => {
+      const result = determineBannerVariant({
+         isEnrolled: true,
+         challengeStatus: "COMPLETED",
+         isResultsLocked: false,
+         todayLoggedSeconds: 0,
+         isYesterdayMissed: true,
+      });
+      expect(result).toBe("FORGOT_YESTERDAY");
+   });
+
+   it("returns ON_LEAVE_TODAY on post-expiry (COMPLETED) challenge when results are not locked and user is on leave", () => {
+      const result = determineBannerVariant({
+         isEnrolled: true,
+         challengeStatus: "COMPLETED",
+         isResultsLocked: false,
+         todayLoggedSeconds: 0,
+         todayIsLeave: true,
+         isYesterdayMissed: false,
+      });
+      expect(result).toBe("ON_LEAVE_TODAY");
    });
 
    it("returns ENROLLED_UPCOMING when enrolled and challenge status is UPCOMING", () => {

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/core/db";
-import { evaluateParticipantPunishment } from "@/features/accountability/domain/punishment";
+import {
+   evaluateLockOutcome,
+   resolveWinningTeamIds,
+} from "@/features/accountability/domain/punishment";
 import {
    getAuditTrail,
    _clearAuditTrailForTests,
@@ -51,19 +54,18 @@ vi.mock("@/core/db", () => ({
       challengeParticipant: {
          findUnique: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn(),
       },
       dailyStudyLogV2: {
          findUnique: vi.fn(),
          upsert: vi.fn(),
       },
-      weeklyGoal: {
+      task: {
          findMany: vi.fn(),
-         deleteMany: vi.fn(),
-         createMany: vi.fn(),
-         update: vi.fn(),
       },
       punishmentRecord: {
-         upsert: vi.fn(),
+         deleteMany: vi.fn(),
+         createMany: vi.fn(),
       },
       user: {
          count: vi.fn(),
@@ -361,51 +363,76 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
    // =========================================================================
    // J6: Event Lock, Dual-Failure Auto-Punishment & Broadcaster
    // =========================================================================
-   describe("Journey J6: Event Lock, Dual-Failure Punishment & Discord Summary", () => {
-      it("locks results, flags dual-failure punishments, and generates Discord summary", async () => {
-         // 1. Dual-failure accountability evaluation (Law L6 / FEAT-PUN-01)
-         // Case A: Passed hours, passed goals -> NORMAL
-         const evalPassed = evaluateParticipantPunishment(
-            30 * 3600,
-            32 * 3600,
-            [{ completed: true }, { completed: true }]
-         );
-         expect(evalPassed.isPunished).toBe(false);
+   describe("Journey J6: Event Lock, Three-Condition Punishment & Discord Summary", () => {
+      it("locks results, evaluates the three-condition rule, and generates the Discord summary", async () => {
+         // 1. Three-condition lock evaluation (FEAT-PUN-01): saved only when hours
+         //    are met AND all challenge-linked weekly tasks are complete AND the
+         //    participant is in a winning team. Equal hours never punish.
+         const saved = evaluateLockOutcome({
+            targetSeconds: 30 * 3600,
+            loggedSeconds: 32 * 3600,
+            weeklyTasks: [{ status: "COMPLETED" }, { status: "COMPLETED" }],
+            isInWinningTeam: true,
+         });
+         expect(saved.isPunished).toBe(false);
 
-         // Case B: Passed hours, but 1 goal incomplete -> PUNISHED
-         const evalIncompleteGoals = evaluateParticipantPunishment(
-            30 * 3600,
-            32 * 3600,
-            [{ completed: true }, { completed: false }]
-         );
-         expect(evalIncompleteGoals.isPunished).toBe(true);
-         expect(evalIncompleteGoals.reasons).toContain("incomplete_goals");
+         const taskFailure = evaluateLockOutcome({
+            targetSeconds: 30 * 3600,
+            loggedSeconds: 32 * 3600,
+            weeklyTasks: [{ status: "COMPLETED" }, { status: "IN_PROGRESS" }],
+            isInWinningTeam: true,
+         });
+         expect(taskFailure.isPunished).toBe(true);
+         expect(taskFailure.reasons).toContain("incomplete_weekly_tasks");
 
-         // Case C: Failed hours, completed goals -> PUNISHED
-         const evalHoursDeficit = evaluateParticipantPunishment(
-            30 * 3600,
-            25 * 3600,
-            [{ completed: true }]
-         );
-         expect(evalHoursDeficit.isPunished).toBe(true);
-         expect(evalHoursDeficit.reasons).toContain("hours_deficit");
+         const hoursFailure = evaluateLockOutcome({
+            targetSeconds: 30 * 3600,
+            loggedSeconds: 25 * 3600,
+            weeklyTasks: [{ status: "COMPLETED" }],
+            isInWinningTeam: true,
+         });
+         expect(hoursFailure.isPunished).toBe(true);
+         expect(hoursFailure.reasons).toContain("hours_deficit");
+
+         const teamFailure = evaluateLockOutcome({
+            targetSeconds: 30 * 3600,
+            loggedSeconds: 32 * 3600,
+            weeklyTasks: [{ status: "COMPLETED" }],
+            isInWinningTeam: false,
+         });
+         expect(teamFailure.isPunished).toBe(true);
+         expect(teamFailure.reasons).toContain("losing_team");
+
+         expect(
+            resolveWinningTeamIds([
+               { teamId: "t_a", totalSeconds: 10 },
+               { teamId: "t_b", totalSeconds: 10 },
+            ])
+         ).toEqual(["t_a", "t_b"]);
 
          // 2. Host locks results
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
             id: "chal_complete",
+            title: "Reading Week Sprint",
             startAt: new Date(Date.now() - 7 * 86400000),
             endAt: new Date(Date.now() + 86400000),
+            resultsLockedAt: null,
+            teams: [{ id: "team_bees" }, { id: "team_butterflies" }],
             participants: [
                {
                   id: "part_1",
+                  userId: "user_1",
+                  teamId: "team_bees",
                   targetSeconds: 30 * 3600,
                   status: "NORMAL",
                   dailyStudyLogsV2: [{ durationSeconds: 25 * 3600 }], // 5h deficit
-                  weeklyGoals: [{ id: "g1", completed: true }],
-                  punishmentRecord: null,
+                  punishmentRecords: [],
                },
             ],
          } as never);
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "user_1", status: "IN_PROGRESS" },
+         ] as never);
 
          vi.mocked(prisma.challenge.update).mockResolvedValue({
             id: "chal_complete",
@@ -418,6 +445,9 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
             username: "HostAdmin",
          });
          expect(completed.status).toBe("COMPLETED");
+         expect(prisma.punishmentRecord.createMany).toHaveBeenCalledWith({
+            data: [{ challengeId: "chal_complete", participantId: "part_1" }],
+         });
 
          // 3. 1-Click Discord summary generation (FEAT-DISC-01)
          const discordSummary = generateDiscordSummary({
@@ -466,8 +496,6 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
                {
                   displayName: "Dave",
                   username: "dave",
-                  hoursDeficitSeconds: 5 * 3600,
-                  incompleteGoalsCount: 0,
                   isPardoned: false,
                   pardonReason: null,
                },
@@ -487,7 +515,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
          expect(discordSummary).toContain(
             "💀 **PUNISHMENT WALL (Change Avatar to Event Forfeit PFP)**"
          );
-         expect(discordSummary).toContain("**@dave** — Deficit: `-05:00:00`");
+         expect(discordSummary).toContain("**@dave** — Event forfeit");
       });
    });
 });

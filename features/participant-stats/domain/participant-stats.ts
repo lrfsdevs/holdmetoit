@@ -247,10 +247,8 @@ export function calculateParticipantAccountability(params: {
    isCompleted: boolean;
    status: "NORMAL" | "DEFICIT" | "EXCUSED" | "PUNISHED";
    punishmentRecord?: {
-      isPunished: boolean;
       isPardoned: boolean;
       pardonReason: string | null;
-      hoursDeficitSeconds: number;
    } | null;
 }): ParticipantAccountabilityStats {
    const {
@@ -274,8 +272,7 @@ export function calculateParticipantAccountability(params: {
       );
    }
 
-   const isPunished =
-      status === "PUNISHED" || Boolean(punishmentRecord?.isPunished);
+   const isPunished = status === "PUNISHED" || Boolean(punishmentRecord);
    const isPardoned =
       status === "EXCUSED" || Boolean(punishmentRecord?.isPardoned);
    const pardonReason = punishmentRecord?.pardonReason ?? null;

@@ -350,6 +350,7 @@ export async function migrateGuestDataToUser(
          payload: {
             id: task.id,
             categoryId: task.categoryId,
+            challengeId: task.challengeId ?? null,
             title: task.title,
             taskType: task.taskType,
             sortOrder: task.sortOrder ?? 0,

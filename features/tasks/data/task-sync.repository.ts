@@ -4,9 +4,12 @@ import type {
    BatchSyncResponse,
    QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
+import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
 import {
    DEFAULT_CATEGORY_NAME,
    getUserCategorizedTasks,
+   resolveTaskChallengeId,
+   validateTaskChallengeId,
 } from "@/features/tasks/data/task.repository";
 import type { TaskStatus, TaskType } from "@prisma/client";
 import { createLogger, logEvents } from "@/core/observability/logger";
@@ -38,8 +41,13 @@ export async function processBatchSync(
                      const existing = await tx.category.findFirst({
                         where: {
                            OR: [
-                              { id: catId },
-                              { userId, name: explicitName, taskType },
+                              { id: catId, deletedAt: null },
+                              {
+                                 userId,
+                                 name: explicitName,
+                                 taskType,
+                                 deletedAt: null,
+                              },
                            ],
                         },
                      });
@@ -88,6 +96,7 @@ export async function processBatchSync(
                                        taskType,
                                        name: targetName,
                                        id: { not: catId },
+                                       deletedAt: null,
                                     },
                                  }
                               );
@@ -104,7 +113,7 @@ export async function processBatchSync(
 
                      if (Object.keys(dataToUpdate).length > 0) {
                         await tx.category.updateMany({
-                           where: { id: catId, userId },
+                           where: { id: catId, userId, deletedAt: null },
                            data: dataToUpdate,
                         });
 
@@ -127,8 +136,29 @@ export async function processBatchSync(
                   }
                } else if (m.action === "DELETE") {
                   if (catId) {
-                     await tx.category.deleteMany({
+                     const now = new Date();
+                     const currentCategory = await tx.category.findFirst({
                         where: { id: catId, userId },
+                     });
+
+                     await tx.task.updateMany({
+                        where: { categoryId: catId, userId, deletedAt: null },
+                        data: { deletedAt: now },
+                     });
+
+                     await tx.category.updateMany({
+                        where: { id: catId, userId },
+                        data: {
+                           deletedAt: now,
+                           ...(currentCategory
+                              ? {
+                                   name: buildCategoryTombstoneName(
+                                      currentCategory.name,
+                                      currentCategory.id
+                                   ),
+                                }
+                              : {}),
+                        },
                      });
                   }
                }
@@ -177,6 +207,25 @@ export async function processBatchSync(
                         ? new Date(String(payload.dueDate))
                         : null;
 
+                     // Challenge linkage: honour a client-sent value (validated),
+                     // treat explicit null as standalone, otherwise resolve the
+                     // user's current challenge at sync time.
+                     const rawChallengeId = payload.challengeId;
+                     let challengeId: string | null;
+                     if (
+                        typeof rawChallengeId === "string" &&
+                        rawChallengeId.length > 0
+                     ) {
+                        challengeId = await validateTaskChallengeId(
+                           userId,
+                           rawChallengeId
+                        );
+                     } else if (rawChallengeId === null) {
+                        challengeId = null;
+                     } else {
+                        challengeId = await resolveTaskChallengeId(userId);
+                     }
+
                      await tx.task.upsert({
                         where: { id: taskId },
                         update: {
@@ -192,6 +241,7 @@ export async function processBatchSync(
                            id: taskId,
                            userId,
                            categoryId,
+                           challengeId,
                            title,
                            taskType,
                            sortOrder,
@@ -232,7 +282,7 @@ export async function processBatchSync(
                      }
 
                      await tx.task.updateMany({
-                        where: { id: taskId, userId },
+                        where: { id: taskId, userId, deletedAt: null },
                         data: dataToUpdate,
                      });
                   }
@@ -240,7 +290,7 @@ export async function processBatchSync(
                   const taskIds = (payload.taskIds as string[]) || [];
                   for (let i = 0; i < taskIds.length; i++) {
                      await tx.task.updateMany({
-                        where: { id: taskIds[i], userId },
+                        where: { id: taskIds[i], userId, deletedAt: null },
                         data: { sortOrder: i },
                      });
                   }
@@ -252,7 +302,7 @@ export async function processBatchSync(
                      const finalIsComplete = status === "COMPLETED";
 
                      await tx.task.updateMany({
-                        where: { id: taskId, userId },
+                        where: { id: taskId, userId, deletedAt: null },
                         data: {
                            isComplete: finalIsComplete,
                            status,
@@ -262,8 +312,9 @@ export async function processBatchSync(
                   }
                } else if (m.action === "DELETE") {
                   if (taskId) {
-                     await tx.task.deleteMany({
-                        where: { id: taskId, userId },
+                     await tx.task.updateMany({
+                        where: { id: taskId, userId, deletedAt: null },
+                        data: { deletedAt: new Date() },
                      });
                   }
                }

@@ -166,8 +166,11 @@ export function HomeCockpitView({
             userId={user?.id || cockpit?.participant.userId || null}
             userTasks={effectiveUserTasks}
             challengeStartDate={cockpit?.challengeStartDate}
+            challengeId={cockpit?.challengeId}
+            challengeStatus={cockpit?.challengeStatus}
             todayDate={cockpit?.todayDate}
             todayDayNumber={cockpit?.todayDayNumber}
+            totalChallengeDays={cockpit?.totalChallengeDays}
             onOpenHoursModal={openHoursModal}
             isAdmin={effectiveIsAdmin}
          />
@@ -192,6 +195,7 @@ export function HomeCockpitView({
             existingLeaves={existingLeavesMap}
             initialDayNumber={hoursModalDayNumber}
             challengeStartDate={cockpit?.challengeStartDate}
+            totalChallengeDays={cockpit?.totalChallengeDays}
             isAdmin={effectiveIsAdmin}
          />
 

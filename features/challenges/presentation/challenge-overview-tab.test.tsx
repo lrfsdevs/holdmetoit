@@ -87,8 +87,8 @@ describe("ChallengeOverviewTab", () => {
             targetSeconds: 72000,
             targetClock: "20:00:00",
             completionPercentage: 20,
-            goalsCompletedCount: 1,
-            goalsTotalCount: 3,
+            weeklyTasksCompletedCount: 1,
+            weeklyTasksTotalCount: 3,
             paceStatus: "on-track",
             paceLabel: "On Track",
             deficitSeconds: 0,
@@ -103,6 +103,8 @@ describe("ChallengeOverviewTab", () => {
          isLoggedIn: true,
          isEnrolled: true,
          participantId: "part-1",
+         isWrappedSeen: false,
+         isFeedbackFilled: false,
       },
    };
 

@@ -65,7 +65,8 @@ export default async function ChallengePage({
 
       const initialTab: ChallengeTab = resolveAllowedChallengeTab(
          searchParams?.tab,
-         isAdmin
+         isAdmin,
+         { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
       );
       const initialLeaderboardViewMode = resolveLeaderboardViewMode(
          searchParams?.view

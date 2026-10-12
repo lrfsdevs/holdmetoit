@@ -137,7 +137,13 @@ const challenge: ChallengeScoreboardViewModel = {
       flaggedMembers: [],
       isEventCompleted: false,
    },
-   currentUser: { isLoggedIn: false, isEnrolled: false, participantId: null },
+   currentUser: {
+      isLoggedIn: false,
+      isEnrolled: false,
+      participantId: null,
+      isWrappedSeen: false,
+      isFeedbackFilled: false,
+   },
 };
 
 function render(model = challenge) {
@@ -211,6 +217,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: false,
             isEnrolled: false,
             participantId: null,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).toContain(
@@ -227,6 +235,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: true,
             isEnrolled: false,
             participantId: null,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).toContain("Enroll Now");
@@ -241,6 +251,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: true,
             isEnrolled: true,
             participantId: "part-1",
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).not.toContain("Quick Log");
@@ -257,6 +269,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: false,
             isEnrolled: false,
             participantId: null,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).toContain("1 Day Left");
@@ -272,6 +286,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: false,
             isEnrolled: false,
             participantId: null,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).toContain("Starts Today");
@@ -286,6 +302,8 @@ describe("ChallengeHeroBanner", () => {
             isLoggedIn: false,
             isEnrolled: false,
             participantId: null,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
          },
       });
       expect(html).toContain("6 Days Left");

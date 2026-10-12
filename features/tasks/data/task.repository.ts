@@ -2,6 +2,8 @@ import { prisma } from "@/core/db";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
 import type { TaskType } from "@prisma/client";
+import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
 import type {
    CategoryGroup,
    CategoryItem,
@@ -16,6 +18,70 @@ function formatUtcDateKey(date: Date | string): string {
 }
 
 export const DEFAULT_CATEGORY_NAME = "General";
+
+/**
+ * Resolves the challenge a newly created task should be linked to (FEAT-TASK-01).
+ * Linked while the user is enrolled in a challenge that is not locked/ended
+ * (prefer the currently ACTIVE one, else the soonest UPCOMING); otherwise
+ * returns null for a standalone task.
+ */
+export async function resolveTaskChallengeId(
+   userId: string
+): Promise<string | null> {
+   const now = new Date();
+   const participations = await prisma.challengeParticipant.findMany({
+      where: {
+         userId,
+         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+      },
+      select: {
+         challenge: { select: { id: true, startAt: true, endAt: true } },
+      },
+   });
+
+   const ranked = participations.map((entry) => ({
+      id: entry.challenge.id,
+      status: calculateChallengeStatus(entry.challenge, now),
+      startAt: entry.challenge.startAt,
+   }));
+
+   const active = ranked.find((entry) => entry.status === "ACTIVE");
+   if (active) {
+      return active.id;
+   }
+
+   const upcoming = ranked
+      .filter((entry) => entry.status === "UPCOMING")
+      .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+
+   return upcoming[0]?.id ?? null;
+}
+
+/**
+ * Validates a client-sent challenge linkage: the user must be enrolled in that
+ * challenge and it must not be locked/ended. Falls back to the current
+ * challenge resolution when the requested id is invalid.
+ */
+export async function validateTaskChallengeId(
+   userId: string,
+   requestedChallengeId: string
+): Promise<string | null> {
+   const now = new Date();
+   const participation = await prisma.challengeParticipant.findFirst({
+      where: {
+         userId,
+         challengeId: requestedChallengeId,
+         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+      },
+      select: { challengeId: true },
+   });
+
+   if (participation) {
+      return participation.challengeId;
+   }
+
+   return resolveTaskChallengeId(userId);
+}
 
 export async function getUserCategorizedTasks(
    userId: string
@@ -36,9 +102,10 @@ async function getUserCategorizedTasksFromDatabase(
    userId: string
 ): Promise<UserCategorizedTasks> {
    const categories = await prisma.category.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       include: {
          tasks: {
+            where: { deletedAt: null },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
          },
       },
@@ -68,6 +135,7 @@ async function getUserCategorizedTasksFromDatabase(
                id: t.id,
                userId: t.userId,
                categoryId: t.categoryId,
+               challengeId: t.challengeId,
                title: t.title,
                taskType: "DAILY" as const,
                sortOrder: t.sortOrder,
@@ -102,6 +170,7 @@ async function getUserCategorizedTasksFromDatabase(
                id: t.id,
                userId: t.userId,
                categoryId: t.categoryId,
+               challengeId: t.challengeId,
                title: t.title,
                taskType: "WEEKLY" as const,
                sortOrder: t.sortOrder,
@@ -149,6 +218,7 @@ export async function createTask(params: {
    isComplete?: boolean;
    status?: TaskStatus;
    dueDate?: string | Date | null;
+   challengeId?: string | null;
 }) {
    let resolvedCategoryId = params.categoryId;
 
@@ -223,11 +293,16 @@ export async function createTask(params: {
       params.status ?? (params.isComplete ? "COMPLETED" : "TODO");
    const isComplete = status === "COMPLETED";
    const dueDate = params.dueDate ? new Date(params.dueDate) : null;
+   const challengeId =
+      params.challengeId !== undefined
+         ? params.challengeId
+         : await resolveTaskChallengeId(params.userId);
 
    return prisma.task.create({
       data: {
          userId: params.userId,
          categoryId: resolvedCategoryId,
+         challengeId,
          title: params.title.trim(),
          taskType: params.taskType,
          isComplete,
@@ -251,6 +326,7 @@ export async function toggleTask(params: {
       where: {
          id: params.taskId,
          userId: params.userId,
+         deletedAt: null,
       },
    });
 
@@ -287,6 +363,7 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       where: {
          id: params.taskId,
          userId: params.userId,
+         deletedAt: null,
       },
    });
 
@@ -294,8 +371,9 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       return null;
    }
 
-   return prisma.task.delete({
+   return prisma.task.update({
       where: { id: params.taskId },
+      data: { deletedAt: new Date() },
    });
 }
 
@@ -311,6 +389,7 @@ export async function createCategory(params: {
          userId: params.userId,
          taskType,
          name: { equals: trimmedName, mode: "insensitive" },
+         deletedAt: null,
       },
    });
 
@@ -339,6 +418,7 @@ export async function updateTask(params: {
       where: {
          id: params.taskId,
          userId: params.userId,
+         deletedAt: null,
       },
    });
 
@@ -389,6 +469,7 @@ export async function updateCategory(params: {
       where: {
          id: params.categoryId,
          userId: params.userId,
+         deletedAt: null,
       },
    });
 
@@ -416,6 +497,7 @@ export async function updateCategory(params: {
          taskType: existing.taskType,
          name: { equals: trimmedName, mode: "insensitive" },
          id: { not: params.categoryId },
+         deletedAt: null,
       },
    });
 
@@ -439,6 +521,7 @@ export async function deleteCategory(params: {
       where: {
          id: params.categoryId,
          userId: params.userId,
+         deletedAt: null,
       },
    });
 
@@ -446,7 +529,24 @@ export async function deleteCategory(params: {
       return null;
    }
 
-   return prisma.category.delete({
-      where: { id: params.categoryId },
+   const now = new Date();
+
+   return prisma.$transaction(async (tx) => {
+      await tx.task.updateMany({
+         where: {
+            categoryId: params.categoryId,
+            userId: params.userId,
+            deletedAt: null,
+         },
+         data: { deletedAt: now },
+      });
+
+      return tx.category.update({
+         where: { id: params.categoryId },
+         data: {
+            deletedAt: now,
+            name: buildCategoryTombstoneName(existing.name, existing.id),
+         },
+      });
    });
 }

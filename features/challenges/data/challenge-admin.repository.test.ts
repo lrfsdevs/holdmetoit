@@ -12,6 +12,7 @@ import {
    lockChallengeResults,
    reassignParticipantTeam,
    removeChallengeParticipant,
+   unlockChallengeResults,
    updateAdminChallenge,
 } from "./challenge-admin.repository";
 
@@ -34,11 +35,15 @@ vi.mock("@/core/db", () => {
          findUnique: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn(),
          delete: vi.fn(),
          deleteMany: vi.fn(),
       },
       dailyStudyLogV2: {
          deleteMany: vi.fn(),
+      },
+      task: {
+         findMany: vi.fn(),
       },
       leaderboardEntry: {
          deleteMany: vi.fn(),
@@ -49,6 +54,7 @@ vi.mock("@/core/db", () => {
       punishmentRecord: {
          upsert: vi.fn(),
          deleteMany: vi.fn(),
+         createMany: vi.fn(),
       },
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
@@ -57,6 +63,7 @@ vi.mock("@/core/db", () => {
 
 vi.mock("@/features/audit/data/audit-log.repository", () => ({
    recordAuditEvent: vi.fn().mockResolvedValue({ id: "audit_1" }),
+   getAuditTrail: vi.fn().mockResolvedValue([]),
 }));
 
 describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)", () => {
@@ -197,30 +204,58 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
    });
 
    describe("lockChallengeResults", () => {
-      it("evaluates dual-failure accountability and locks challenge", async () => {
-         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+      function mockLockChallenge(
+         participants: Array<Record<string, unknown>>,
+         teams: Array<{ id: string }> = [{ id: "t_1" }, { id: "t_2" }]
+      ) {
+         return {
             id: "c_act",
+            title: "October Team Battle",
             startAt: new Date(Date.now() - 7 * 86400000),
             endAt: new Date(Date.now() + 86400000),
             resultsLockedAt: null,
-            participants: [
-               {
-                  id: "p_1",
-                  targetSeconds: 36000,
-                  status: "NORMAL",
-                  dailyStudyLogsV2: [{ durationSeconds: 30000 }], // 6000s deficit
-                  weeklyGoals: [{ id: "g_1", completed: true }],
-                  punishmentRecord: null,
-               },
-            ],
-         } as never);
+            teams,
+            participants,
+         };
+      }
 
-         vi.mocked(prisma.challenge.update).mockResolvedValue({
+      function mockParticipant(overrides: Record<string, unknown> = {}) {
+         return {
+            id: "p_1",
+            userId: "u_1",
+            teamId: "t_1",
+            targetSeconds: 36000,
+            status: "NORMAL",
+            dailyStudyLogsV2: [{ durationSeconds: 36000 }],
+            punishmentRecords: [],
+            ...overrides,
+         };
+      }
+
+      function mockCompletedChallenge() {
+         return {
             id: "c_act",
+            title: "October Team Battle",
             startAt: new Date(Date.now() - 7 * 86400000),
             endAt: new Date(Date.now() - 3600000),
             resultsLockedAt: new Date(),
-         } as never);
+         };
+      }
+
+      it("saves a winning-team participant with all weekly tasks complete and hours met", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+               }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
 
          const result = await lockChallengeResults("c_act", {
             id: "admin_1",
@@ -228,27 +263,152 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
 
          expect(result.status).toBe("COMPLETED");
-         expect(prisma.challenge.update).toHaveBeenCalledWith(
+         expect(prisma.task.findMany).toHaveBeenCalledWith({
+            where: {
+               challengeId: "c_act",
+               taskType: "WEEKLY",
+               userId: { in: ["u_1"] },
+            },
+            select: { userId: true, status: true },
+         });
+         expect(auditRepo.recordAuditEvent).toHaveBeenCalledWith(
             expect.objectContaining({
-               where: { id: "c_act" },
-               data: expect.objectContaining({
-                  resultsLockedAt: expect.any(Date),
+               actionType: "CHALLENGE_LOCKED",
+               previousValue: expect.objectContaining({
+                  endAt: expect.any(String),
                }),
             })
          );
-         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
-            where: { id: "p_1" },
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+         expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_act", isPardoned: false },
+         });
+      });
+
+      it("punishes a winning-team participant when a weekly task is incomplete", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+               }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "IN_PROGRESS" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
             data: { status: "PUNISHED" },
          });
-         expect(prisma.punishmentRecord.upsert).toHaveBeenCalledWith(
-            expect.objectContaining({
-               where: { participantId: "p_1" },
-               create: expect.objectContaining({
-                  isPunished: true,
-                  hoursDeficitSeconds: 6000,
+         expect(prisma.punishmentRecord.createMany).toHaveBeenCalledWith({
+            data: [{ challengeId: "c_act", participantId: "p_1" }],
+         });
+      });
+
+      it("punishes a losing-team participant even with tasks complete and hours met", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  dailyStudyLogsV2: [{ durationSeconds: 36000 }],
                }),
-            })
+               mockParticipant({
+                  id: "p_2",
+                  userId: "u_2",
+                  teamId: "t_2",
+                  dailyStudyLogsV2: [{ durationSeconds: 72000 }],
+               }),
+            ]) as never
          );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+            { userId: "u_2", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
+            data: { status: "PUNISHED" },
+         });
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_2"] } },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.createMany).toHaveBeenCalledWith({
+            data: [{ challengeId: "c_act", participantId: "p_1" }],
+         });
+      });
+
+      it("never punishes via the team condition when combined hours are tied", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({}),
+               mockParticipant({ id: "p_2", userId: "u_2", teamId: "t_2" }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+            { userId: "u_2", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1", "p_2"] } },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+      });
+
+      it("keeps pardoned participants excused and preserves their records", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  status: "EXCUSED",
+                  punishmentRecords: [{ isPardoned: true }],
+               }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+         expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_act", isPardoned: false },
+         });
       });
 
       it("successfully locks an expired challenge (COMPLETED status) when results are not yet locked (Fix D1)", async () => {
@@ -259,16 +419,20 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             startAt: new Date(Date.now() - 7 * 86400000),
             endAt: pastEnd,
             resultsLockedAt: null,
+            teams: [{ id: "t_1" }],
             participants: [
                {
                   id: "p_expired_1",
+                  userId: "u_expired_1",
+                  teamId: "t_1",
                   targetSeconds: 20000,
                   status: "NORMAL",
                   dailyStudyLogsV2: [{ durationSeconds: 25000 }], // Exceeded target
-                  punishmentRecord: null,
+                  punishmentRecords: [],
                },
             ],
          } as never);
+         vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
 
          vi.mocked(prisma.challenge.update).mockResolvedValue({
             id: "c_expired",
@@ -291,8 +455,8 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                resultsLockedAt: expect.any(Date),
             },
          });
-         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
-            where: { id: "p_expired_1" },
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_expired_1"] } },
             data: { status: "NORMAL" },
          });
       });
@@ -333,6 +497,166 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          ).rejects.toThrow(
             "Cannot lock final results on an event that has not started yet."
          );
+      });
+   });
+
+   describe("unlockChallengeResults", () => {
+      function mockLockedChallenge(overrides: Record<string, unknown> = {}) {
+         return {
+            id: "c_act",
+            title: "October Team Battle",
+            startAt: new Date(Date.now() - 7 * 86400000),
+            endAt: new Date(Date.now() - 3600000),
+            resultsLockedAt: new Date(),
+            ...overrides,
+         };
+      }
+
+      it("reverts everything the lock produced and restores the original endAt", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge() as never
+         );
+         vi.mocked(auditRepo.getAuditTrail).mockResolvedValue([
+            {
+               actionType: "CHALLENGE_LOCKED",
+               previousValue: { endAt: "2026-10-12T00:00:00.000Z" },
+            },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockLockedChallenge({
+               resultsLockedAt: null,
+               endAt: new Date("2026-10-12T00:00:00.000Z"),
+            }) as never
+         );
+         vi.mocked(prisma.challengeParticipant.updateMany)
+            .mockResolvedValueOnce({ count: 3 } as never)
+            .mockResolvedValueOnce({ count: 3 } as never);
+         vi.mocked(prisma.punishmentRecord.deleteMany).mockResolvedValue({
+            count: 2,
+         } as never);
+
+         const result = await unlockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.challenge.update).toHaveBeenCalledWith({
+            where: { id: "c_act" },
+            data: {
+               resultsLockedAt: null,
+               endAt: new Date("2026-10-12T00:00:00.000Z"),
+            },
+         });
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_act" },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_act" },
+         });
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_act" },
+            data: { isWrappedSeen: false, isFeedbackFilled: false },
+         });
+         expect(result.participantsReset).toBe(3);
+         expect(result.recordsDeleted).toBe(2);
+         expect(result.wrappedFlagsReset).toBe(true);
+         expect(result.restoredEndAt?.toISOString()).toBe(
+            "2026-10-12T00:00:00.000Z"
+         );
+         expect(auditRepo.recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "CHALLENGE_UNLOCKED",
+               previousValue: expect.objectContaining({
+                  resultsLockedAt: expect.any(String),
+                  endAt: expect.any(String),
+               }),
+               newValue: expect.objectContaining({
+                  resultsLockedAt: null,
+                  participantsReset: 3,
+                  recordsDeleted: 2,
+                  wrappedFlagsReset: true,
+               }),
+            })
+         );
+      });
+
+      it("prefers an explicit endAt over the audit history", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge() as never
+         );
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockLockedChallenge({ resultsLockedAt: null }) as never
+         );
+         vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
+            count: 0,
+         } as never);
+         vi.mocked(prisma.punishmentRecord.deleteMany).mockResolvedValue({
+            count: 0,
+         } as never);
+
+         const explicitEndAt = new Date("2026-10-20T00:00:00.000Z");
+         await unlockChallengeResults(
+            "c_act",
+            { id: "admin_1", username: "HostAdmin" },
+            { endAt: explicitEndAt }
+         );
+
+         expect(auditRepo.getAuditTrail).not.toHaveBeenCalled();
+         expect(prisma.challenge.update).toHaveBeenCalledWith({
+            where: { id: "c_act" },
+            data: { resultsLockedAt: null, endAt: explicitEndAt },
+         });
+      });
+
+      it("keeps wrapped flags when requested", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge() as never
+         );
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockLockedChallenge({ resultsLockedAt: null }) as never
+         );
+         vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
+            count: 1,
+         } as never);
+         vi.mocked(prisma.punishmentRecord.deleteMany).mockResolvedValue({
+            count: 0,
+         } as never);
+
+         const result = await unlockChallengeResults(
+            "c_act",
+            { id: "admin_1", username: "HostAdmin" },
+            { keepWrappedFlags: true }
+         );
+
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledTimes(
+            1
+         );
+         expect(result.wrappedFlagsReset).toBe(false);
+      });
+
+      it("rejects when the results are not locked", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge({ resultsLockedAt: null }) as never
+         );
+
+         await expect(
+            unlockChallengeResults("c_act", {
+               id: "admin_1",
+               username: "HostAdmin",
+            })
+         ).rejects.toThrow("Challenge results are not locked.");
+      });
+
+      it("rejects when the challenge does not exist", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(null);
+
+         await expect(
+            unlockChallengeResults("missing", {
+               id: "admin_1",
+               username: "HostAdmin",
+            })
+         ).rejects.toThrow("Challenge not found.");
       });
    });
 

@@ -16,6 +16,7 @@ import {
    lockChallengeResults,
    reassignParticipantTeam,
    removeChallengeParticipant,
+   unlockChallengeResults,
    updateAdminChallenge,
 } from "@/features/challenges/data/challenge-admin.repository";
 import { getStorageUrlConfig } from "@/core/storage/supabase-storage";
@@ -236,6 +237,49 @@ export async function lockChallengeResultsAction(
             error instanceof Error
                ? error.message
                : "Failed to finalize and lock results.",
+      };
+   }
+}
+
+export async function unlockChallengeResultsAction(
+   challengeId: string
+): Promise<AdminActionResult> {
+   try {
+      const admin = await requireAdminUser();
+      await unlockChallengeResults(challengeId, {
+         id: admin.id,
+         username: admin.username,
+      });
+
+      invalidateTags([
+         cacheTags.challengeScoreboard(challengeId),
+         cacheTags.challengeMetadata(challengeId),
+      ]);
+
+      revalidatePath(`/challenge/${challengeId}`);
+      revalidatePath(`/admin/challenges/${challengeId}`);
+      revalidatePath("/challenges");
+      revalidatePath("/admin");
+      revalidatePath("/dashboard");
+      revalidatePath("/");
+
+      logger.info(logEvents.challengeUnlocked, {
+         context: { challengeId, adminId: admin.id },
+      });
+
+      return { ok: true };
+   } catch (error) {
+      logger.error(logEvents.challengeUnlocked, {
+         context: { challengeId },
+         error,
+      });
+      return {
+         ok: false,
+         code: "UNLOCK_FAILED",
+         message:
+            error instanceof Error
+               ? error.message
+               : "Failed to unlock the final results.",
       };
    }
 }

@@ -11,6 +11,7 @@ import {
    lockChallengeResultsAction,
    reassignParticipantTeamAction,
    removeChallengeParticipantAction,
+   unlockChallengeResultsAction,
    updateChallengeAction,
 } from "@/features/challenges/api/challenge-admin.actions";
 import * as requireAdminModule from "@/features/auth/api/require-admin";
@@ -62,6 +63,7 @@ vi.mock("@/features/challenges/data/challenge-admin.repository", () => ({
    createAdminChallenge: vi.fn(),
    kickoffChallenge: vi.fn(),
    lockChallengeResults: vi.fn(),
+   unlockChallengeResults: vi.fn(),
    adminEnrollParticipant: vi.fn(),
    updateAdminChallenge: vi.fn(),
    reassignParticipantTeam: vi.fn(),
@@ -295,6 +297,43 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
                username: "HostAdmin",
             }
          );
+      });
+   });
+
+   describe("unlockChallengeResultsAction", () => {
+      it("unlocks and reverts the final results", async () => {
+         vi.mocked(challengeAdminRepo.unlockChallengeResults).mockResolvedValue(
+            {
+               id: "c_1",
+               status: "ACTIVE",
+            } as never
+         );
+
+         const result = await unlockChallengeResultsAction("c_1");
+
+         expect(result).toEqual({ ok: true });
+         expect(challengeAdminRepo.unlockChallengeResults).toHaveBeenCalledWith(
+            "c_1",
+            {
+               id: "admin_1",
+               username: "HostAdmin",
+            }
+         );
+         expect(revalidatePath).toHaveBeenCalledWith("/challenge/c_1");
+      });
+
+      it("maps repository failures to UNLOCK_FAILED", async () => {
+         vi.mocked(challengeAdminRepo.unlockChallengeResults).mockRejectedValue(
+            new Error("Challenge results are not locked.")
+         );
+
+         const result = await unlockChallengeResultsAction("c_1");
+
+         expect(result.ok).toBe(false);
+         if (!result.ok) {
+            expect(result.code).toBe("UNLOCK_FAILED");
+            expect(result.message).toBe("Challenge results are not locked.");
+         }
       });
    });
 

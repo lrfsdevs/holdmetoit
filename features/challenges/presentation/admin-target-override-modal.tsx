@@ -445,7 +445,7 @@ export function AdminTargetOverrideModal({
                   <p className="text-[11px] leading-relaxed">
                      Updating weekly target hours dynamically recalculates the
                      scholar&apos;s catch-up deficit pace, goal completion
-                     percentage, and dual-failure punishment conditions.
+                     percentage, and three-condition punishment outcomes.
                   </p>
                </div>
 

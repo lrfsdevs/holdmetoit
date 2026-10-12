@@ -20,7 +20,10 @@ import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
 } from "@/features/study-logs/domain/daily-log.validation";
-import { validateStudyLogChallengeDay } from "@/features/study-logs/domain/challenge-day";
+import {
+   calculateChallengeTotalDays,
+   validateStudyLogChallengeDay,
+} from "@/features/study-logs/domain/challenge-day";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
@@ -75,14 +78,26 @@ export async function logStudyTimeAction(
          participant.challenge,
          now
       );
-      if (!canLogStudyTime(challengeStatus)) {
+      if (
+         !canLogStudyTime(
+            challengeStatus,
+            participant.challenge.resultsLockedAt
+         )
+      ) {
          return {
             ok: false,
             code: "CHALLENGE_NOT_ACTIVE",
             message:
-               "Study logging is only available during active challenges.",
+               participant.challenge.resultsLockedAt != null
+                  ? "Challenge results are locked. Study logging is closed."
+                  : "Study logging is only available during active challenges.",
          };
       }
+
+      const totalDays = calculateChallengeTotalDays(
+         participant.challenge.startAt,
+         participant.challenge.endAt
+      );
 
       const dayValidation = validateStudyLogChallengeDay(
          participant.challenge.startAt,
@@ -90,7 +105,8 @@ export async function logStudyTimeAction(
             challengeDay: parsed.data.challengeDay,
             date: parsed.data.date,
          },
-         now
+         now,
+         { totalDays }
       );
 
       if (!dayValidation.ok) {

@@ -5,6 +5,16 @@ Notable changes to HoldMeToIt, newest first — grouped by date, no version numb
 Entries tagged `[user]` are user-facing and shown to everyone. Untagged entries are
 internal (engineering, tooling, and infrastructure) and are shown to admins only.
 
+## 2026-10-12
+
+### Challenge Summary design token harmonization [user]
+
+Harmonized the post-lock Challenge Summary tab (`?tab=summary`) with the Obsidian design system, replacing all prototype colors with ratified tokens, dynamic team palettes, house verdict badges, and second-level mono tabular clock displays.
+
+### Migrated Challenge Wrapped modal to Tailwind CSS v4
+
+Migrated the challenge wrapped story modal to pure Tailwind CSS v4 utilities and removed the standalone CSS module (`challenge-wrapped-modal.module.css`), maintaining a 100% Tailwind CSS architecture.
+
 ## 2026-10-11
 
 ### Lock results after natural expiry [user]

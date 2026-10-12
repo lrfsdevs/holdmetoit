@@ -14,10 +14,15 @@ describe("challenge-tabs domain", () => {
          expect(CHALLENGE_TABS).toEqual([
             "overview",
             "leaderboard",
+            "summary",
             "manage",
             "audit",
          ]);
-         expect(PUBLIC_CHALLENGE_TABS).toEqual(["overview", "leaderboard"]);
+         expect(PUBLIC_CHALLENGE_TABS).toEqual([
+            "overview",
+            "leaderboard",
+            "summary",
+         ]);
          expect(ADMIN_CHALLENGE_TABS).toEqual(["manage", "audit"]);
          expect(DEFAULT_CHALLENGE_TAB).toBe("overview");
       });
@@ -91,6 +96,28 @@ describe("challenge-tabs domain", () => {
          expect(resolveAllowedChallengeTab(null, false)).toBe("overview");
          expect(resolveAllowedChallengeTab(undefined, true)).toBe("overview");
          expect(resolveAllowedChallengeTab("", false)).toBe("overview");
+      });
+
+      it("allows the summary tab by default and once results are locked", () => {
+         expect(resolveAllowedChallengeTab("summary", false)).toBe("summary");
+         expect(
+            resolveAllowedChallengeTab("summary", false, {
+               isSummaryVisible: true,
+            })
+         ).toBe("summary");
+      });
+
+      it("clamps the summary tab to overview while results are unlocked", () => {
+         expect(
+            resolveAllowedChallengeTab("summary", false, {
+               isSummaryVisible: false,
+            })
+         ).toBe(DEFAULT_CHALLENGE_TAB);
+         expect(
+            resolveAllowedChallengeTab("summary", true, {
+               isSummaryVisible: false,
+            })
+         ).toBe(DEFAULT_CHALLENGE_TAB);
       });
    });
 });

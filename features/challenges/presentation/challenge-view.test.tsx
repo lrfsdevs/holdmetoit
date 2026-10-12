@@ -5,6 +5,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
 import { ChallengeView } from "./challenge-view";
 
+vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
+   markWrappedSeenAction: vi.fn().mockResolvedValue({ ok: true }),
+   markWrappedSeenIfExpiredAction: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
 const replaceStateMock = vi.fn();
 let activeTabState: string = "overview";
 const setActiveTabMock = vi.fn((updater: unknown) => {
@@ -123,6 +128,8 @@ const mockChallenge: ChallengeScoreboardViewModel = {
       isLoggedIn: true,
       isEnrolled: true,
       participantId: "part-1",
+      isWrappedSeen: false,
+      isFeedbackFilled: false,
    },
 };
 

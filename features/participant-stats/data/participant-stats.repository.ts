@@ -61,14 +61,12 @@ export async function getChallengeParticipantStats(
                isLeave: true,
             },
          },
-         punishmentRecord: {
+         punishmentRecords: {
             select: {
-               isPunished: true,
                isPardoned: true,
                pardonReason: true,
-               hoursDeficitSeconds: true,
-               incompleteGoalsCount: true,
             },
+            take: 1,
          },
       },
    });
@@ -165,7 +163,7 @@ export async function getChallengeParticipantStats(
       daysRemaining: scoreboard.daysRemaining,
       isCompleted: scoreboard.status === "COMPLETED",
       status: participant.status,
-      punishmentRecord: participant.punishmentRecord,
+      punishmentRecord: participant.punishmentRecords[0] ?? null,
    });
 
    // 8. Viewer permissions

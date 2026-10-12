@@ -1,13 +1,22 @@
 import { prisma } from "@/core/db";
-import { evaluateParticipantPunishment } from "@/features/accountability/domain/punishment";
-import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
+import {
+   evaluateLockOutcome,
+   resolveWinningTeamIds,
+} from "@/features/accountability/domain/punishment";
+import {
+   getAuditTrail,
+   recordAuditEvent,
+} from "@/features/audit/data/audit-log.repository";
 import {
    assertCanKickoffChallenge,
    assertCanLockChallenge,
    calculateChallengeStatus,
+   ChallengeStateError,
    type ChallengeCreationInput,
 } from "@/features/challenges/domain/challenge-lifecycle";
 import { computeEventDetailsDiff } from "@/features/challenges/domain/event-audit-diff";
+import { sumLoggedSeconds } from "@/features/leaderboard/domain/catch-up-presentation";
+import { aggregateTeamScores } from "@/features/leaderboard/domain/leaderboard";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
 import { listAllChallenges } from "./challenge.repository";
 
@@ -58,7 +67,7 @@ export async function findAdminChallengeDetails(challengeId: string) {
                      },
                   },
                },
-               punishmentRecord: true,
+               punishmentRecords: true,
             },
             orderBy: { enrolledAt: "asc" },
          },
@@ -171,10 +180,11 @@ export async function lockChallengeResults(
    const challenge = await prisma.challenge.findUnique({
       where: { id: challengeId },
       include: {
+         teams: { select: { id: true } },
          participants: {
             include: {
                dailyStudyLogsV2: true,
-               punishmentRecord: true,
+               punishmentRecords: true,
             },
          },
       },
@@ -186,6 +196,29 @@ export async function lockChallengeResults(
 
    const currentStatus = calculateChallengeStatus(challenge);
    assertCanLockChallenge(currentStatus, challenge.resultsLockedAt);
+
+   const participantUserIds = challenge.participants.map(
+      (participant) => participant.userId
+   );
+
+   const weeklyTasks =
+      participantUserIds.length > 0
+         ? await prisma.task.findMany({
+              where: {
+                 challengeId,
+                 taskType: "WEEKLY",
+                 userId: { in: participantUserIds },
+              },
+              select: { userId: true, status: true },
+           })
+         : [];
+
+   const weeklyTasksByUser = new Map<string, { status: string }[]>();
+   for (const task of weeklyTasks) {
+      const userTasks = weeklyTasksByUser.get(task.userId) ?? [];
+      userTasks.push({ status: task.status });
+      weeklyTasksByUser.set(task.userId, userTasks);
+   }
 
    return prisma.$transaction(async (tx) => {
       // 1. Transition challenge status to COMPLETED by adjusting endAt (if ACTIVE) and setting resultsLockedAt
@@ -201,49 +234,76 @@ export async function lockChallengeResults(
          },
       });
 
-      // 2. Dual-Failure Punishment Evaluation (Law L6 / FEAT-PUN-01)
+      // 2. Three-condition lock evaluation (FEAT-PUN-01): saved = hours met AND all
+      //    challenge-linked weekly tasks completed AND in a winning team.
+      //    Equal team totals never punish — every team at the max is a winner.
+      const teamTotals = aggregateTeamScores(
+         challenge.teams,
+         challenge.participants.map((participant) => ({
+            teamId: participant.teamId ?? "no-assigned",
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+         }))
+      ).filter((aggregate) =>
+         challenge.teams.some((team) => team.id === aggregate.teamId)
+      );
+
+      const winningTeamIds = resolveWinningTeamIds(teamTotals);
+
+      const punishedParticipantIds: string[] = [];
+      const savedParticipantIds: string[] = [];
+
       for (const participant of challenge.participants) {
-         const logs = participant.dailyStudyLogsV2 ?? [];
-         const totalLoggedSeconds = logs.reduce(
-            (sum, log) => sum + log.durationSeconds,
-            0
-         );
+         const isExcused =
+            participant.status === "EXCUSED" ||
+            participant.punishmentRecords.some((record) => record.isPardoned);
 
-         const evaluation = evaluateParticipantPunishment(
-            participant.targetSeconds,
-            totalLoggedSeconds,
-            []
-         );
+         if (isExcused) {
+            continue;
+         }
 
-         const isPardoned = participant.punishmentRecord?.isPardoned ?? false;
-         const finalStatus = isPardoned
-            ? "EXCUSED"
-            : evaluation.isPunished
-              ? "PUNISHED"
-              : "NORMAL";
+         const isInWinningTeam =
+            participant.teamId != null &&
+            winningTeamIds.includes(participant.teamId);
 
-         await tx.challengeParticipant.update({
-            where: { id: participant.id },
-            data: { status: finalStatus },
+         const outcome = evaluateLockOutcome({
+            targetSeconds: participant.targetSeconds,
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+            weeklyTasks: weeklyTasksByUser.get(participant.userId) ?? [],
+            isInWinningTeam,
          });
 
-         await tx.punishmentRecord.upsert({
-            where: { participantId: participant.id },
-            create: {
+         if (outcome.isPunished) {
+            punishedParticipantIds.push(participant.id);
+         } else {
+            savedParticipantIds.push(participant.id);
+         }
+      }
+
+      if (savedParticipantIds.length > 0) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: savedParticipantIds } },
+            data: { status: "NORMAL" },
+         });
+      }
+
+      if (punishedParticipantIds.length > 0) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: punishedParticipantIds } },
+            data: { status: "PUNISHED" },
+         });
+      }
+
+      // Row presence = punished. Clear stale records but keep pardoned ones.
+      await tx.punishmentRecord.deleteMany({
+         where: { challengeId, isPardoned: false },
+      });
+
+      if (punishedParticipantIds.length > 0) {
+         await tx.punishmentRecord.createMany({
+            data: punishedParticipantIds.map((participantId) => ({
                challengeId,
-               participantId: participant.id,
-               isPunished: evaluation.isPunished,
-               hoursDeficitSeconds: evaluation.hoursDeficitSeconds,
-               incompleteGoalsCount: evaluation.incompleteGoals,
-               isPardoned,
-               pardonReason: participant.punishmentRecord?.pardonReason ?? null,
-               pardonedById: participant.punishmentRecord?.pardonedById ?? null,
-            },
-            update: {
-               isPunished: evaluation.isPunished,
-               hoursDeficitSeconds: evaluation.hoursDeficitSeconds,
-               incompleteGoalsCount: evaluation.incompleteGoals,
-            },
+               participantId,
+            })),
          });
       }
 
@@ -258,11 +318,15 @@ export async function lockChallengeResults(
          previousValue: {
             status: currentStatus,
             resultsLockedAt: challenge.resultsLockedAt,
+            endAt: challenge.endAt.toISOString(),
          },
          newValue: {
             status: "COMPLETED",
             resultsLockedAt: completedChallenge.resultsLockedAt,
             participantsEvaluated: challenge.participants.length,
+            winningTeamIds,
+            punishedParticipants: punishedParticipantIds.length,
+            savedParticipants: savedParticipantIds.length,
          },
          auditReason:
             "Host finalized results and locked challenge (FEAT-CHAL-05)",
@@ -271,6 +335,114 @@ export async function lockChallengeResults(
       return {
          ...completedChallenge,
          status: calculateChallengeStatus(completedChallenge),
+      };
+   });
+}
+
+/**
+ * Rollback for a mistaken lock: clears `resultsLockedAt`, resets every
+ * participant to `NORMAL`, deletes all punishment records for the challenge
+ * (pardoned ones included), and optionally resets the wrapped flags. The lock
+ * audit now records the previous `endAt`, so an early lock's original end time
+ * is restored automatically; older locks can pass `options.endAt` explicitly.
+ */
+export async function unlockChallengeResults(
+   challengeId: string,
+   actor: { id: string; username: string },
+   options?: { endAt?: Date; keepWrappedFlags?: boolean }
+) {
+   const challenge = await prisma.challenge.findUnique({
+      where: { id: challengeId },
+   });
+
+   if (!challenge) {
+      throw new Error("Challenge not found.");
+   }
+
+   if (challenge.resultsLockedAt == null) {
+      throw new ChallengeStateError("Challenge results are not locked.");
+   }
+
+   const lockedAt = challenge.resultsLockedAt;
+   const currentEndAt = challenge.endAt;
+   let restoredEndAt: Date | null = null;
+
+   if (options?.endAt) {
+      restoredEndAt = options.endAt;
+   } else {
+      const auditTrail = await getAuditTrail(challengeId);
+      const lockEvent = auditTrail.find(
+         (event) => event.actionType === "CHALLENGE_LOCKED"
+      );
+      const previousEndAt = (
+         lockEvent?.previousValue as
+            { endAt?: string | Date } | null | undefined
+      )?.endAt;
+
+      if (previousEndAt) {
+         const parsed = new Date(previousEndAt);
+         if (!Number.isNaN(parsed.getTime())) {
+            restoredEndAt = parsed;
+         }
+      }
+   }
+
+   const wrappedFlagsReset = !options?.keepWrappedFlags;
+
+   return prisma.$transaction(async (tx) => {
+      const unlockedChallenge = await tx.challenge.update({
+         where: { id: challengeId },
+         data: {
+            resultsLockedAt: null,
+            ...(restoredEndAt ? { endAt: restoredEndAt } : {}),
+         },
+      });
+
+      const participantsReset = await tx.challengeParticipant.updateMany({
+         where: { challengeId },
+         data: { status: "NORMAL" },
+      });
+
+      const recordsDeleted = await tx.punishmentRecord.deleteMany({
+         where: { challengeId },
+      });
+
+      if (wrappedFlagsReset) {
+         await tx.challengeParticipant.updateMany({
+            where: { challengeId },
+            data: { isWrappedSeen: false, isFeedbackFilled: false },
+         });
+      }
+
+      await recordAuditEvent({
+         actorId: actor.id,
+         actorUsername: actor.username,
+         actionType: "CHALLENGE_UNLOCKED",
+         targetEntityId: challengeId,
+         targetEntityType: "CHALLENGE",
+         targetEntityName: challenge.title,
+         challengeId,
+         previousValue: {
+            resultsLockedAt: lockedAt.toISOString(),
+            endAt: currentEndAt.toISOString(),
+         },
+         newValue: {
+            resultsLockedAt: null,
+            endAt: (restoredEndAt ?? currentEndAt).toISOString(),
+            participantsReset: participantsReset.count,
+            recordsDeleted: recordsDeleted.count,
+            wrappedFlagsReset,
+         },
+         auditReason: "Results unlock rollback",
+      });
+
+      return {
+         ...unlockedChallenge,
+         status: calculateChallengeStatus(unlockedChallenge),
+         participantsReset: participantsReset.count,
+         recordsDeleted: recordsDeleted.count,
+         wrappedFlagsReset,
+         restoredEndAt,
       };
    });
 }

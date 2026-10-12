@@ -45,6 +45,7 @@ model User {
   categories         Category[]
   tasks              Task[]
   feedbacks          Feedback[]
+  challengeFeedbacks ChallengeFeedback[]
   auditLogsWritten   AuditLog[] @relation("AuditLogsWritten")
 }
 
@@ -111,8 +112,10 @@ model Challenge {
   teams            Team[]
   participants     ChallengeParticipant[]
   punishments      PunishmentRecord[]
+  tasks            Task[]
   leaderboardEntries LeaderboardEntry[]
   auditLogs        AuditLog[]
+  challengeFeedbacks ChallengeFeedback[]
 
   @@index([hostId])
 }
@@ -144,6 +147,9 @@ model ChallengeParticipant {
   targetSeconds Int               @default(0)
   status        ParticipantStatus @default(NORMAL)
 
+  isWrappedSeen    Boolean @default(false)
+  isFeedbackFilled Boolean @default(false)
+
   enrolledAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -153,7 +159,7 @@ model ChallengeParticipant {
 
   dailyStudyLogs   DailyStudyLog[]
   dailyStudyLogsV2 DailyStudyLogV2[]
-  punishmentRecord PunishmentRecord?
+  punishmentRecords PunishmentRecord[]
 
   @@unique([challengeId, userId])
   @@index([challengeId])
@@ -225,6 +231,7 @@ model Category {
   name      String   @db.VarChar(255)
   taskType  TaskType @default(DAILY) @map("task_type")
   sortOrder Int      @default(0) @map("sort_order")
+  deletedAt DateTime? @map("deleted_at")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -240,22 +247,26 @@ model Task {
   id          String    @id @default(uuid())
   userId      String
   categoryId  String
+  challengeId String?   @map("challenge_id")
   title       String    @db.VarChar(255)
   taskType    TaskType  @map("task_type")
   sortOrder   Int        @default(0) @map("sort_order")
   isComplete  Boolean    @default(false) @map("is_complete")
   status      TaskStatus @default(TODO)
   dueDate     DateTime?  @map("due_date") @db.Date
+  deletedAt   DateTime?  @map("deleted_at")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
   completedAt DateTime?  @map("completed_at")
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  challenge Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
 
   @@index([userId, taskType])
   @@index([userId, dueDate])
   @@index([categoryId])
+  @@index([challengeId])
   @@map("tasks")
 }
 
@@ -264,12 +275,9 @@ model Task {
 // ---------------------------------------------------------------------------
 
 model PunishmentRecord {
-  id                   String  @id @default(cuid())
-  challengeId          String
-  participantId        String  @unique
-  isPunished           Boolean
-  hoursDeficitSeconds  Int     @default(0)
-  incompleteGoalsCount Int     @default(0)
+  id            String  @id @default(cuid())
+  challengeId   String
+  participantId String
 
   isPardoned   Boolean @default(false)
   pardonReason String?
@@ -283,7 +291,7 @@ model PunishmentRecord {
   pardonedBy  User?                @relation("PardonAdmin", fields: [pardonedById], references: [id], onDelete: SetNull)
 
   @@index([challengeId])
-  @@index([isPunished])
+  @@index([participantId])
 }
 
 // ---------------------------------------------------------------------------
@@ -354,6 +362,39 @@ model Feedback {
   @@index([discordStatus])
   @@index([userId])
   @@map("feedbacks")
+}
+
+// ---------------------------------------------------------------------------
+// Challenge Post-Event Feedback Survey
+// ---------------------------------------------------------------------------
+
+model ChallengeFeedback {
+  id                 String   @id @default(cuid())
+  challengeId        String   @map("challenge_id")
+  userId             String   @map("user_id")
+
+  // Survey Questions (8 community questions)
+  consistency        String   @map("consistency")
+  fairnessRating     Int      @map("fairness_rating")
+  trackingPreference String   @map("tracking_preference")
+  teamBattleFeedback String?  @map("team_battle_feedback") @db.Text
+  workSchoolHours    String   @map("work_school_hours")
+  soloStyle          String   @map("solo_style")
+  soloPunishment     String   @map("solo_punishment")
+  soloIdeas          String?  @map("solo_ideas") @db.Text
+
+  // Discord Audit & Timestamps
+  discordMessageId   String?  @map("discord_message_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("challenge_feedbacks")
 }
 
 // ---------------------------------------------------------------------------
