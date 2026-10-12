@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ import {
    lockChallengeResultsAction,
    reassignParticipantTeamAction,
    removeChallengeParticipantAction,
+   unlockChallengeResultsAction,
    updateChallengeAction,
 } from "@/features/challenges/api/challenge-admin.actions";
 import { discardChallengeImageUploadAction } from "@/features/challenges/api/punishment-pfp.actions";
@@ -59,6 +60,7 @@ import {
    isUtcDateRangeValid,
    parseUtcInputStringToIso,
 } from "@/features/challenges/domain/challenge-date-time";
+import { canLockChallenge } from "@/features/challenges/domain/challenge-lifecycle";
 
 interface ChallengeManageTabProps {
    challenge: ChallengeScoreboardViewModel;
@@ -215,6 +217,24 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
       type: "success" | "error";
       message: string;
    } | null>(null);
+
+   const [undoLockAvailable, setUndoLockAvailable] = useState(false);
+   const undoLockTimerRef = useRef<number | null>(null);
+
+   const clearUndoLockTimer = () => {
+      if (undoLockTimerRef.current !== null) {
+         window.clearTimeout(undoLockTimerRef.current);
+         undoLockTimerRef.current = null;
+      }
+   };
+
+   useEffect(() => {
+      return () => {
+         if (undoLockTimerRef.current !== null) {
+            window.clearTimeout(undoLockTimerRef.current);
+         }
+      };
+   }, []);
 
    // Form states
    const [title, setTitle] = useState(challenge.title);
@@ -512,7 +532,30 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
             setFeedback({
                type: "success",
                message:
-                  "Event finalized and locked. Dual-failure punishment evaluation complete.",
+                  "Event finalized and locked. Three-condition punishment evaluation complete.",
+            });
+            clearUndoLockTimer();
+            setUndoLockAvailable(true);
+            undoLockTimerRef.current = window.setTimeout(() => {
+               setUndoLockAvailable(false);
+               undoLockTimerRef.current = null;
+            }, 10_000);
+            router.refresh();
+         } else {
+            setFeedback({ type: "error", message: res.message });
+         }
+      });
+   };
+
+   const handleUndoLockResults = () => {
+      startTransition(async () => {
+         const res = await unlockChallengeResultsAction(challenge.id);
+         if (res.ok) {
+            clearUndoLockTimer();
+            setUndoLockAvailable(false);
+            setFeedback({
+               type: "success",
+               message: "Results unlocked — the finalization was reverted.",
             });
             router.refresh();
          } else {
@@ -554,6 +597,16 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                )}
                <span>{feedback.message}</span>
+               {feedback.type === "success" && undoLockAvailable && (
+                  <button
+                     type="button"
+                     onClick={handleUndoLockResults}
+                     disabled={isPending}
+                     className="ml-auto shrink-0 rounded-lg border border-[#4ade80]/40 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#4ade80] transition hover:bg-[#22c55e]/10 disabled:opacity-50"
+                  >
+                     Undo
+                  </button>
+               )}
             </div>
          )}
 
@@ -600,7 +653,10 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                      </Button>
                   )}
 
-                  {challenge.status === "ACTIVE" && (
+                  {canLockChallenge(
+                     challenge.status,
+                     challenge.resultsLockedAt
+                  ) && (
                      <Button
                         type="button"
                         onClick={handleLockResults}
@@ -614,6 +670,13 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                         )}
                         Lock Final Results
                      </Button>
+                  )}
+
+                  {Boolean(challenge.resultsLockedAt) && (
+                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#262626] border border-[#383838] text-xs text-[#a3a3a3]">
+                        <Lock className="h-3.5 w-3.5 text-[#eab308]" />
+                        <span>Results Locked</span>
+                     </div>
                   )}
                </div>
             </div>

@@ -16,6 +16,7 @@ import {
    resolveAllowedChallengeTab,
 } from "@/features/challenges/domain/challenge-tabs";
 import { resolveLeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
+import { logError, logEvents } from "@/core/observability/logger";
 
 interface ChallengePageProps {
    params: {
@@ -64,7 +65,8 @@ export default async function ChallengePage({
 
       const initialTab: ChallengeTab = resolveAllowedChallengeTab(
          searchParams?.tab,
-         isAdmin
+         isAdmin,
+         { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
       );
       const initialLeaderboardViewMode = resolveLeaderboardViewMode(
          searchParams?.view
@@ -79,7 +81,11 @@ export default async function ChallengePage({
          />
       );
    } catch (error) {
-      console.error("Failed to load challenge scoreboard:", error);
+      logError(logEvents.appError, {
+         scope: "challenge.page",
+         context: { challengeId: params.id },
+         error,
+      });
       return (
          <ErrorState
             title="Could not load scoreboard"

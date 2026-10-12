@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { ErrorState } from "@/components/state/error-state";
 import { Button } from "@/components/ui/button";
-import { captureLogRocketException } from "@/core/observability/logrocket";
+import { logError, logEvents } from "@/core/observability/logger";
 
 export default function ParticipantStatsError({
    error,
@@ -14,10 +14,11 @@ export default function ParticipantStatsError({
    reset: () => void;
 }) {
    useEffect(() => {
-      console.error("[ParticipantStatsError caught by route boundary]:", error);
-      captureLogRocketException(error, {
+      logError(logEvents.appError, {
+         scope: "participant.stats.boundary",
          tags: { boundary: "participant-stats-error" },
-         extra: { digest: error.digest ?? "" },
+         context: { digest: error.digest ?? "" },
+         error,
       });
    }, [error]);
 

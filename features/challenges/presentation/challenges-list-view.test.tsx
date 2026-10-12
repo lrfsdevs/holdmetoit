@@ -49,6 +49,7 @@ const mockChallenges: ChallengeCatalogItem[] = [
       endAt: new Date("2026-10-10T01:00:00.000Z"),
       eventBannerUrl: "https://example.com/banner.png",
       punishmentPfpUrl: null,
+      resultsLockedAt: null,
       hostId: "admin-1",
       createdAt: new Date("2026-10-01T00:00:00.000Z"),
       updatedAt: new Date("2026-10-01T00:00:00.000Z"),
@@ -73,6 +74,7 @@ const mockChallenges: ChallengeCatalogItem[] = [
       endAt: new Date("2026-11-07T01:00:00.000Z"),
       eventBannerUrl: null,
       punishmentPfpUrl: null,
+      resultsLockedAt: null,
       hostId: "admin-1",
       createdAt: new Date("2026-10-02T00:00:00.000Z"),
       updatedAt: new Date("2026-10-02T00:00:00.000Z"),
@@ -178,6 +180,7 @@ describe("ChallengesListView", () => {
          endAt: new Date("2026-10-10T01:00:00.000Z"),
          eventBannerUrl: null,
          punishmentPfpUrl: null,
+         resultsLockedAt: null,
          hostId: "admin-1",
          createdAt: new Date("2026-10-01T00:00:00.000Z"),
          updatedAt: new Date("2026-10-01T00:00:00.000Z"),
@@ -214,7 +217,9 @@ describe("ChallengesListView", () => {
       );
 
       // Search input
-      expect(html).toContain("Search challenges by title, format, host, team...");
+      expect(html).toContain(
+         "Search challenges by title, format, host, team..."
+      );
       // Status tabs
       expect(html).toContain("All (2)");
       expect(html).toContain("Active (1)");

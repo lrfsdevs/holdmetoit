@@ -1,63 +1,138 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
 
 @layer base {
-  :root {
-    --background: 0 0% 5%;
-    --foreground: 270 5% 96%;
+   :root {
+      --background: 0 0% 5%;
+      --foreground: 270 5% 96%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 100%;
+      --card: 0 0% 8%;
+      --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 100%;
+      --popover: 0 0% 11%;
+      --popover-foreground: 0 0% 100%;
 
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 5%;
+      --primary: 0 0% 100%;
+      --primary-foreground: 0 0% 5%;
 
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 100%;
+      --secondary: 0 0% 16%;
+      --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 53%;
+      --muted: 0 0% 16%;
+      --muted-foreground: 0 0% 53%;
 
-    --accent: 0 0% 16%;
-    --accent-foreground: 0 0% 100%;
+      --accent: 0 0% 16%;
+      --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+      --destructive: 0 84% 60%;
+      --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 16%;
-    --input: 0 0% 33%;
-    --ring: 0 0% 100%;
+      --border: 0 0% 16%;
+      --input: 0 0% 33%;
+      --ring: 0 0% 100%;
 
-    --radius: 0.75rem;
-  }
+      --radius: 0.75rem;
+   }
 
-  * {
-    @apply border-border;
-  }
+   * {
+      @apply border-border;
+   }
 
-  body {
-    @apply bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased;
-    background-color: #0d0d0d;
-  }
+   body {
+      @apply bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased;
+      background-color: #0d0d0d;
+   }
 
-  .font-sans-tabular {
-    font-feature-settings: "tnum" 1, "zero" 1;
-    font-variant-numeric: tabular-nums;
-  }
+   .font-sans-tabular {
+      font-feature-settings:
+         "tnum" 1,
+         "zero" 1;
+      font-variant-numeric: tabular-nums;
+   }
 }
 
 @layer utilities {
-  .no-scrollbar::-webkit-scrollbar,
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar,
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+   .no-scrollbar::-webkit-scrollbar,
+   .scrollbar-none::-webkit-scrollbar {
+      display: none;
+   }
+   .no-scrollbar,
+   .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+   }
+
+   @keyframes wrapped-slam {
+      0% {
+         transform: rotate(-22deg) scale(2.8);
+         opacity: 0;
+      }
+      60% {
+         opacity: 1;
+      }
+      100% {
+         transform: rotate(-9deg) scale(1);
+         opacity: 1;
+      }
+   }
+
+   @keyframes wrapped-hit {
+      0%,
+      100% {
+         translate: 0 0;
+      }
+      25% {
+         translate: -5px 3px;
+      }
+      50% {
+         translate: 5px -3px;
+      }
+      75% {
+         translate: -3px 2px;
+      }
+   }
+
+   @keyframes wrapped-nudge {
+      0%,
+      100% {
+         translate: 0 0;
+      }
+      25% {
+         translate: -7px 0;
+      }
+      75% {
+         translate: 7px 0;
+      }
+   }
+
+   @keyframes wrapped-draw {
+      to {
+         stroke-dashoffset: 0;
+      }
+   }
+
+   @keyframes wrapped-fadein {
+      from {
+         opacity: 0;
+      }
+      to {
+         opacity: 1;
+      }
+   }
+
+   .animate-wrapped-slam {
+      animation: wrapped-slam 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+   }
+   .animate-wrapped-hit {
+      animation: wrapped-hit 0.34s 0.18s;
+   }
+   .animate-wrapped-nudge {
+      animation: wrapped-nudge 0.4s;
+   }
+   .animate-wrapped-draw {
+      animation: wrapped-draw 1.1s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards;
+   }
+   .animate-wrapped-fadein {
+      animation: wrapped-fadein 0.6s 0.8s both;
+   }
 }

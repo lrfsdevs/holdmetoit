@@ -8,24 +8,23 @@
 
 ## 🔴 Critical / Immediate Fixes (Blocks Production)
 
-### 1. Lock Results Fails After Natural Expiry (D1)
+### 1. Lock Results Fails After Natural Expiry (D1) — ✅ RESOLVED (2026-10-11)
 
-**The single biggest bug in the platform.**
+**Resolution:**
 
-`features/challenges/domain/challenge-lifecycle.ts` L78-L87 — `assertCanLockChallenge()` throws `"Challenge results are already locked and finalized"` when status is `COMPLETED`. But challenge status is **derived from timestamps** via `calculateChallengeStatus()`: once `endAt` passes naturally, status becomes `COMPLETED` automatically. This means:
-
-- **Punishments are never evaluated** unless the host clicks "Lock" _before_ the clock runs out.
-- The entire Law L6 accountability system is broken for challenges that end naturally.
-
-**Fix:** Add a `resultsLockedAt DateTime?` column to `Challenge`. Let `assertCanLockChallenge` accept `COMPLETED` when `resultsLockedAt IS NULL`. Already documented in `HANDOFF.md` §6 as the exact next step.
+- Added `resultsLockedAt DateTime?` column to `Challenge` in `prisma/schema.prisma` and applied migration `20261011000000_add_results_locked_at_to_challenge`.
+- Updated `canLockChallenge` and `assertCanLockChallenge` in `features/challenges/domain/challenge-lifecycle.ts` to accept `resultsLockedAt`, permitting lock/finalization when status is `COMPLETED` and `resultsLockedAt` is null/undefined.
+- Updated `lockChallengeResults` in `challenge-admin.repository.ts` to pass `challenge.resultsLockedAt`, persist `resultsLockedAt = now` inside the transaction, and record audit details.
+- Updated `challenge-manage-tab.tsx` to conditionally display the "Lock Final Results" button whenever `canLockChallenge(challenge.status, challenge.resultsLockedAt)` is true, and display a "Results Locked" indicator once finalized.
+- Verified with unit tests (`challenge-lifecycle.test.ts`, `challenge-admin.repository.test.ts`), full typecheck, 833 green tests, and production build.
 
 ---
 
-### 2. Dual-Failure Runs on Hours Only — Law L6 Partial Violation (D4)
+### 2. Dual-Failure Runs on Hours Only — Law L6 Partial Violation (D4) — ✅ RESOLVED (2026-10-11)
 
-`lockChallengeResults` passes an empty `[]` for goals, so the Dual-Failure Invariant (`FEAT-PUN-01`) evaluates hours only. Weekly goals were dropped in migration `20261004030000` and replaced with user-scoped tasks that aren't linked to any challenge.
+`lockChallengeResults` passed an empty `[]` for goals, so the old Dual-Failure Invariant (`FEAT-PUN-01`) evaluated hours only. Weekly goals were dropped in migration `20261004030000`.
 
-**Impact:** The entire goal-failure half of Law L6 is a no-op. This is a **product decision** that needs team sign-off — either re-introduce challenge-scoped goals or formally amend Law L6 to hours-only.
+**Resolution (Decision 2026-10-11):** challenge-scoped goals returned as **challenge-linked tasks** (`Task.challengeId`; new tasks are stamped to the user's current challenge by default, with a one-time backfill for existing tasks). Law L6 was redefined as the **Three-Condition Accountability Invariant**: saved only when (1) all challenge-linked weekly tasks are completed, (2) target hours are met, and (3) the participant is in a winning team — ties never punish. `lockChallengeResults` now evaluates all three conditions (soft-deleted weekly tasks still count), and `PunishmentRecord` rows are created only for punished members while pardons are preserved.
 
 ---
 
@@ -53,7 +52,7 @@ The `feedbacks` table, `categories`, `tasks`, and related `sort_order` columns w
 
 ---
 
-### 5. npm Audit: Active Security Vulnerabilities
+### 5. ✅ Resolved (Session 81) — npm Audit: Security Vulnerabilities
 
 `npm audit` reports **multiple high-severity** CVEs:
 
@@ -63,7 +62,7 @@ The `feedbacks` table, `categories`, `tasks`, and related `sort_order` columns w
 | `braces` (via tailwindcss/chokidar)  | 🔴 High     | Stack exhaustion via nested patterns (GHSA-vfj7-8cjw-p6xm)                |
 | `@vitest/mocker`                     | 🟠 Moderate | Path traversal / arbitrary file read (GHSA-82fw-gwwq-j7x9)                |
 
-**Fix:** `npm audit fix` for `brace-expansion`. The `braces`/`tailwindcss` and `vitest` fixes require major version bumps (Tailwind v4, Vitest v5) — evaluate breaking changes first. At minimum, pin `brace-expansion` to a fixed version.
+**Resolved (Session 81):** `brace-expansion` re-resolved to the patched `1.1.21` / `2.1.7` / `5.0.12`; `braces` (via `chokidar`) removed by the Tailwind v4 migration; `@vitest/mocker` patched by the Vitest v5 bump. `npm audit` dropped from 20 → 8 advisories. The remaining 8 are **out of scope** here — they require Next.js 16 / `eslint-config-next` 16 majors (Next RSC/Image DoS + cache-poisoning advisories, `glob` CLI injection via `@next/eslint-plugin-next`, and the `postcss` copy nested inside Next 14).
 
 ---
 
@@ -83,7 +82,7 @@ If a user has no active challenge and no upcoming challenge, the cockpit falls b
 
 ---
 
-### 7. Fire-and-Forget DB Write in Auth Session Callback
+### 7. ✅ Resolved (Session 80) — Fire-and-Forget DB Write in Auth Session Callback
 
 `core/auth/index.ts` L64-L69:
 
@@ -94,6 +93,8 @@ prisma.user
 ```
 
 This silently swallows all errors. If the DB write fails, the session says `DEV` but the database still says `PARTICIPANT`. On next page load without cache, role could revert. Use `await` or log the error.
+
+**Resolved:** the `.catch` now reports the failure through the structured logger as `auth.role_sync_failed` with the user id.
 
 ---
 
@@ -135,11 +136,11 @@ Law L9 requires **Loading, Empty, and Error** states for every view. The root `e
 
 ---
 
-### 11. Duplicate Lockfiles (D10)
+### 11. ✅ Resolved (Session 81) — Duplicate Lockfiles (D10)
 
 Both `bun.lock` and `package-lock.json` exist. This creates install-time ambiguity and potential version drift between `bun install` and `npm install`.
 
-**Fix:** Pick one package manager and delete the other lockfile. Add the chosen one to `package.json` `"packageManager"` field.
+**Resolved (Session 81):** npm is the canonical manager (CI runs `npm ci`). `bun.lock` was deleted and `"packageManager": "npm@12.2.0"` added to `package.json`.
 
 ---
 
@@ -156,11 +157,11 @@ Several foreign key columns lack database indexes, causing **sequential scans** 
 
 ---
 
-### 13. Tailwind Content Purge Missing `core/` and `lib/`
+### 13. ✅ Resolved (Session 81) — Tailwind Content Purge Missing `core/` and `lib/`
 
 `tailwind.config.ts` scans `./app/`, `./components/`, and `./features/` but **not** `./core/` or `./lib/`. Files like `core/observability/logrocket-provider.tsx` that use Tailwind classes will have them purged in production builds.
 
-**Fix:** Add `"./core/**/*.{ts,tsx}"` and `"./lib/**/*.{ts,tsx}"` to the `content` array.
+**Resolved (Session 81):** both `"./core/**/*.{ts,tsx}"` and `"./lib/**/*.{ts,tsx}"` were added to the `tailwind.config.ts` `content` array during the Tailwind v4 migration.
 
 ---
 
@@ -189,7 +190,7 @@ The schema has two competing representations of team membership:
 
 ## 🟡 Low Priority — Quality of Life & Hardening
 
-### 16. `console.warn`/`console.error` in Production Code
+### 16. ✅ Resolved (Session 80) — `console.warn`/`console.error` in Production Code
 
 | File                          | Line | Statement                                                      |
 | ----------------------------- | ---- | -------------------------------------------------------------- |
@@ -199,9 +200,11 @@ The schema has two competing representations of team membership:
 
 **Fix:** Replace with `captureLogRocketException` or a proper server-side logger. Console statements in prod create noise in serverless logs.
 
+**Resolved:** all app-runtime `console.*` now route through the unified structured logger (`core/observability/logger.ts`), which emits severity-filtered JSON on the server and forwards to LogRocket on the client. Only the logger transport itself and `prisma/seed.ts` still call `console` directly.
+
 ---
 
-### 17. Hardcoded LogRocket App ID
+### 17. ✅ Resolved (Session 80) — Hardcoded LogRocket App ID
 
 `core/observability/logrocket.ts` L6:
 
@@ -211,11 +214,15 @@ export const LOGROCKET_APP_ID = "q9morb/holdmeintoit";
 
 This should be an env variable (`NEXT_PUBLIC_LOGROCKET_APP_ID`) and listed in `.env.example`. If the LogRocket project changes, you'd need a code deploy to update it.
 
+**Resolved:** the app id now reads `process.env.NEXT_PUBLIC_LOGROCKET_APP_ID` with the previous literal as a safe fallback; the release label is likewise env-driven (`NEXT_PUBLIC_APP_RELEASE`).
+
 ---
 
-### 18. Missing `NEXT_PUBLIC_LOGROCKET_APP_ID` in `.env.example`
+### 18. ✅ Resolved (Session 80) — Missing `NEXT_PUBLIC_LOGROCKET_APP_ID` in `.env.example`
 
 `.env.example` documents all Discord/Supabase env vars but is missing the LogRocket app ID and the `AUTH_URL` variable that's needed for production deploys.
+
+**Resolved:** `.env.example` now documents `LOG_LEVEL`, `NEXT_PUBLIC_LOG_LEVEL`, `NEXT_PUBLIC_LOGROCKET_APP_ID`, and `NEXT_PUBLIC_APP_RELEASE`. (`AUTH_URL` is present already.)
 
 ---
 
@@ -328,17 +335,19 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 
 | Category                        | Count  |
 | ------------------------------- | ------ |
-| 🔴 Critical (blocks production) | 5      |
-| 🟠 Medium (functional issues)   | 10     |
-| 🟡 Low (hardening / QoL)        | 12     |
+| 🔴 Critical (blocks production) | 4      |
+| 🟠 Medium (functional issues)   | 7      |
+| 🟡 Low (hardening / QoL)        | 9      |
 | 💡 Feature suggestions          | 5      |
-| **Total findings**              | **32** |
+| **Total findings**              | **25** |
+
+> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Law L6 amended to the Three-Condition Invariant with challenge-linked tasks).
 
 ### Recommended Fix Order
 
 1. **#1** — Lock Results bug (challenge finalization + `resultsLockedAt` column)
 2. **#4** — Schema drift (generate catch-up migration files)
-3. **#5** — `npm audit fix` for high-severity CVEs
+3. ~~**#5** — `npm audit fix` for high-severity CVEs~~ ✅ done (Session 81)
 4. **#12** — Add missing Prisma foreign key indexes
 5. **#3** — Restore deleted P0 UIs (Punishment Wall, PFP download, Pardon, Discord Summary)
 6. **#6** — Remove hardcoded seed challenge ID

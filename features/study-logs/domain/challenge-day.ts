@@ -2,243 +2,263 @@ const SECONDS_PER_DAY = 86_400;
 const MILLISECONDS_PER_DAY = SECONDS_PER_DAY * 1_000;
 
 export interface ChallengeDayBucket {
-  dayNumber: number;
-  dateKey: string;
+   dayNumber: number;
+   dateKey: string;
 }
 
 function toDate(value: Date | string): Date {
-  return value instanceof Date ? value : new Date(value);
+   return value instanceof Date ? value : new Date(value);
 }
 
 function formatUtcDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+   return date.toISOString().slice(0, 10);
 }
 
 export function formatDayDate(dateKey: string): string {
-  try {
-    const parts = dateKey.split("-").map(Number);
-    if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
-      const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      });
-    }
-  } catch {}
-  return dateKey;
+   try {
+      const parts = dateKey.split("-").map(Number);
+      if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+         const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+         return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+         });
+      }
+   } catch {}
+   return dateKey;
 }
 
 export function getChallengeDayNumber(
-  startAt: Date | string,
-  now: Date | string,
+   startAt: Date | string,
+   now: Date | string
 ): number {
-  const elapsedMilliseconds = toDate(now).getTime() - toDate(startAt).getTime();
+   const elapsedMilliseconds =
+      toDate(now).getTime() - toDate(startAt).getTime();
 
-  if (elapsedMilliseconds < 0) {
-    return 0;
-  }
+   if (elapsedMilliseconds < 0) {
+      return 0;
+   }
 
-  return Math.floor(elapsedMilliseconds / MILLISECONDS_PER_DAY) + 1;
+   return Math.floor(elapsedMilliseconds / MILLISECONDS_PER_DAY) + 1;
 }
 
 export function getChallengeDayDateKey(
-  startAt: Date | string,
-  dayNumber: number,
+   startAt: Date | string,
+   dayNumber: number
 ): string {
-  if (!Number.isInteger(dayNumber) || dayNumber < 1) {
-    throw new RangeError("Challenge day number must be a positive integer.");
-  }
+   if (!Number.isInteger(dayNumber) || dayNumber < 1) {
+      throw new RangeError("Challenge day number must be a positive integer.");
+   }
 
-  const dayStart = new Date(
-    toDate(startAt).getTime() + (dayNumber - 1) * MILLISECONDS_PER_DAY,
-  );
+   const dayStart = new Date(
+      toDate(startAt).getTime() + (dayNumber - 1) * MILLISECONDS_PER_DAY
+   );
 
-  return formatUtcDateKey(dayStart);
+   return formatUtcDateKey(dayStart);
+}
+
+export function calculateChallengeTotalDays(
+   startAt: Date | string,
+   endAt?: Date | string | null,
+   fallbackDays = 7
+): number {
+   if (!endAt) return fallbackDays;
+   const diffMs = toDate(endAt).getTime() - toDate(startAt).getTime();
+   if (diffMs <= 0) return fallbackDays;
+   return Math.max(1, Math.ceil(diffMs / MILLISECONDS_PER_DAY));
 }
 
 export function getChallengeDayBuckets(
-  startAt: Date | string,
-  now: Date | string,
+   startAt: Date | string,
+   now: Date | string,
+   totalDays?: number
 ): { current: ChallengeDayBucket; previous: ChallengeDayBucket | null } {
-  const currentDayNumber = Math.max(1, getChallengeDayNumber(startAt, now));
-  const current = {
-    dayNumber: currentDayNumber,
-    dateKey: getChallengeDayDateKey(startAt, currentDayNumber),
-  };
+   const rawDayNumber = getChallengeDayNumber(startAt, now);
+   const currentDayNumber =
+      totalDays && totalDays > 0
+         ? Math.max(1, Math.min(totalDays, rawDayNumber))
+         : Math.max(1, rawDayNumber);
+   const current = {
+      dayNumber: currentDayNumber,
+      dateKey: getChallengeDayDateKey(startAt, currentDayNumber),
+   };
 
-  if (currentDayNumber === 1) {
-    return { current, previous: null };
-  }
+   if (currentDayNumber === 1) {
+      return { current, previous: null };
+   }
 
-  const previousDayNumber = currentDayNumber - 1;
-  return {
-    current,
-    previous: {
-      dayNumber: previousDayNumber,
-      dateKey: getChallengeDayDateKey(startAt, previousDayNumber),
-    },
-  };
+   const previousDayNumber = currentDayNumber - 1;
+   return {
+      current,
+      previous: {
+         dayNumber: previousDayNumber,
+         dateKey: getChallengeDayDateKey(startAt, previousDayNumber),
+      },
+   };
 }
 
 export function getChallengeDayFromDateKey(
-  startAt: Date | string,
-  dateKey: string,
+   startAt: Date | string,
+   dateKey: string
 ): number {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
-    throw new TypeError("dateKey must be in YYYY-MM-DD format.");
-  }
+   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      throw new TypeError("dateKey must be in YYYY-MM-DD format.");
+   }
 
-  const day1Key = getChallengeDayDateKey(startAt, 1);
-  const [y1, m1, d1] = day1Key.split("-").map(Number);
-  const [y2, m2, d2] = dateKey.split("-").map(Number);
-  const utc1 = Date.UTC(y1, m1 - 1, d1);
-  const utc2 = Date.UTC(y2, m2 - 1, d2);
-  const diffDays = Math.round((utc2 - utc1) / MILLISECONDS_PER_DAY);
-  return diffDays + 1;
+   const day1Key = getChallengeDayDateKey(startAt, 1);
+   const [y1, m1, d1] = day1Key.split("-").map(Number);
+   const [y2, m2, d2] = dateKey.split("-").map(Number);
+   const utc1 = Date.UTC(y1, m1 - 1, d1);
+   const utc2 = Date.UTC(y2, m2 - 1, d2);
+   const diffDays = Math.round((utc2 - utc1) / MILLISECONDS_PER_DAY);
+   return diffDays + 1;
 }
 
 export interface ChallengeDayOption {
-  dayNumber: number;
-  dateKey: string;
-  label: string;
-  shortLabel: string;
-  weekday: string;
-  isToday: boolean;
-  isYesterday: boolean;
-  isFuture: boolean;
-  isPast: boolean;
+   dayNumber: number;
+   dateKey: string;
+   label: string;
+   shortLabel: string;
+   weekday: string;
+   isToday: boolean;
+   isYesterday: boolean;
+   isFuture: boolean;
+   isPast: boolean;
 }
 
 export function getChallengeDayOptions(
-  startAt: Date | string,
-  now: Date | string = new Date(),
-  totalDays = 7,
+   startAt: Date | string,
+   now: Date | string = new Date(),
+   totalDays = 7
 ): ChallengeDayOption[] {
-  const rawCurrentDayNumber = getChallengeDayNumber(startAt, now);
-  const daysCount = Math.max(totalDays, rawCurrentDayNumber);
-  const options: ChallengeDayOption[] = [];
+   const rawCurrentDayNumber = getChallengeDayNumber(startAt, now);
+   const options: ChallengeDayOption[] = [];
 
-  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  for (let d = 1; d <= daysCount; d++) {
-    const dateKey = getChallengeDayDateKey(startAt, d);
-    const [year, month, day] = dateKey.split("-").map(Number);
-    const dateObj = new Date(Date.UTC(year, month - 1, day));
-    const weekday = WEEKDAYS[dateObj.getUTCDay()];
+   for (let d = 1; d <= totalDays; d++) {
+      const dateKey = getChallengeDayDateKey(startAt, d);
+      const [year, month, day] = dateKey.split("-").map(Number);
+      const dateObj = new Date(Date.UTC(year, month - 1, day));
+      const weekday = WEEKDAYS[dateObj.getUTCDay()];
 
-    const isToday = rawCurrentDayNumber > 0 && d === rawCurrentDayNumber;
-    const isYesterday = rawCurrentDayNumber > 1 && d === rawCurrentDayNumber - 1;
-    const isFuture = rawCurrentDayNumber === 0 || d > rawCurrentDayNumber;
-    const isPast = rawCurrentDayNumber > 0 && d < rawCurrentDayNumber;
+      const isToday = rawCurrentDayNumber > 0 && d === rawCurrentDayNumber;
+      const isYesterday =
+         rawCurrentDayNumber > 1 && d === rawCurrentDayNumber - 1;
+      const isFuture = rawCurrentDayNumber === 0 || d > rawCurrentDayNumber;
+      const isPast = rawCurrentDayNumber > 0 && d < rawCurrentDayNumber;
 
-    let label = `Day ${d} (${weekday})`;
-    if (isToday) label = `Today (Day ${d})`;
-    else if (isYesterday) label = `Yesterday (Day ${d})`;
+      let label = `Day ${d} (${weekday})`;
+      if (isToday) label = `Today (Day ${d})`;
+      else if (isYesterday) label = `Yesterday (Day ${d})`;
 
-    options.push({
-      dayNumber: d,
-      dateKey,
-      label,
-      shortLabel: `Day ${d}`,
-      weekday,
-      isToday,
-      isYesterday,
-      isFuture,
-      isPast,
-    });
-  }
+      options.push({
+         dayNumber: d,
+         dateKey,
+         label,
+         shortLabel: `Day ${d}`,
+         weekday,
+         isToday,
+         isYesterday,
+         isFuture,
+         isPast,
+      });
+   }
 
-  return options;
+   return options;
 }
 
 export function getCalendarWeekDayOptions(
-  now: Date | string = new Date(),
+   now: Date | string = new Date()
 ): ChallengeDayOption[] {
-  const nowDate = toDate(now);
-  const nowYear = nowDate.getUTCFullYear();
-  const nowMonth = nowDate.getUTCMonth();
-  const nowDateNum = nowDate.getUTCDate();
-  const todayUtc = Date.UTC(nowYear, nowMonth, nowDateNum);
-  const todayObj = new Date(todayUtc);
-  const todayDateKey = formatUtcDateKey(todayObj);
+   const nowDate = toDate(now);
+   const nowYear = nowDate.getUTCFullYear();
+   const nowMonth = nowDate.getUTCMonth();
+   const nowDateNum = nowDate.getUTCDate();
+   const todayUtc = Date.UTC(nowYear, nowMonth, nowDateNum);
+   const todayObj = new Date(todayUtc);
+   const todayDateKey = formatUtcDateKey(todayObj);
 
-  // ISO week: Monday = 1, Sunday = 7
-  const dayOfWeek = todayObj.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
-  const daysSinceMonday = (dayOfWeek + 6) % 7;
-  const mondayUtc = todayUtc - daysSinceMonday * MILLISECONDS_PER_DAY;
+   // ISO week: Monday = 1, Sunday = 7
+   const dayOfWeek = todayObj.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+   const daysSinceMonday = (dayOfWeek + 6) % 7;
+   const mondayUtc = todayUtc - daysSinceMonday * MILLISECONDS_PER_DAY;
 
-  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const options: ChallengeDayOption[] = [];
+   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+   const options: ChallengeDayOption[] = [];
 
-  for (let i = 0; i < 7; i++) {
-    const dayUtc = mondayUtc + i * MILLISECONDS_PER_DAY;
-    const dayDate = new Date(dayUtc);
-    const dateKey = formatUtcDateKey(dayDate);
-    const weekday = WEEKDAYS[dayDate.getUTCDay()];
-    const dayNumber = i + 1;
-    const isToday = dateKey === todayDateKey;
-    const isYesterday = dayUtc === todayUtc - MILLISECONDS_PER_DAY;
-    const isFuture = dayUtc > todayUtc;
-    const isPast = dayUtc < todayUtc;
+   for (let i = 0; i < 7; i++) {
+      const dayUtc = mondayUtc + i * MILLISECONDS_PER_DAY;
+      const dayDate = new Date(dayUtc);
+      const dateKey = formatUtcDateKey(dayDate);
+      const weekday = WEEKDAYS[dayDate.getUTCDay()];
+      const dayNumber = i + 1;
+      const isToday = dateKey === todayDateKey;
+      const isYesterday = dayUtc === todayUtc - MILLISECONDS_PER_DAY;
+      const isFuture = dayUtc > todayUtc;
+      const isPast = dayUtc < todayUtc;
 
-    let label = `Day ${dayNumber} (${weekday})`;
-    if (isToday) label = `Today (${weekday})`;
-    else if (isYesterday) label = `Yesterday (${weekday})`;
+      let label = `Day ${dayNumber} (${weekday})`;
+      if (isToday) label = `Today (${weekday})`;
+      else if (isYesterday) label = `Yesterday (${weekday})`;
 
-    options.push({
-      dayNumber,
-      dateKey,
-      label,
-      shortLabel: weekday,
-      weekday,
-      isToday,
-      isYesterday,
-      isFuture,
-      isPast,
-    });
-  }
+      options.push({
+         dayNumber,
+         dateKey,
+         label,
+         shortLabel: weekday,
+         weekday,
+         isToday,
+         isYesterday,
+         isFuture,
+         isPast,
+      });
+   }
 
-  return options;
+   return options;
 }
 
 export function isChallengeDayInPast(
-  startAt: Date | string,
-  target: { dayNumber?: number; dateKey?: string },
-  now: Date | string = new Date(),
+   startAt: Date | string,
+   target: { dayNumber?: number; dateKey?: string },
+   now: Date | string = new Date()
 ): boolean {
-  const currentDay = getChallengeDayNumber(startAt, now);
-  if (currentDay === 0) return false;
-  if (target.dayNumber !== undefined) {
-    return target.dayNumber < currentDay;
-  }
-  if (target.dateKey) {
-    const todayKey = getChallengeDayDateKey(startAt, currentDay);
-    return target.dateKey < todayKey;
-  }
-  return false;
+   const currentDay = getChallengeDayNumber(startAt, now);
+   if (currentDay === 0) return false;
+   if (target.dayNumber !== undefined) {
+      return target.dayNumber < currentDay;
+   }
+   if (target.dateKey) {
+      const todayKey = getChallengeDayDateKey(startAt, currentDay);
+      return target.dateKey < todayKey;
+   }
+   return false;
 }
 
 export type ValidateAddTaskDayResult =
-  | { ok: true }
-  | { ok: false; code: "PAST_DAY_NOT_ALLOWED"; message: string };
+   { ok: true } | { ok: false; code: "PAST_DAY_NOT_ALLOWED"; message: string };
 
 export function validateAddTaskChallengeDay(
-  isPastDay: boolean,
+   isPastDay: boolean
 ): ValidateAddTaskDayResult {
-  if (isPastDay) {
-    return {
-      ok: false,
-      code: "PAST_DAY_NOT_ALLOWED",
-      message: "Adding new todo tasks to past challenge days is locked.",
-    };
-  }
-  return { ok: true };
+   if (isPastDay) {
+      return {
+         ok: false,
+         code: "PAST_DAY_NOT_ALLOWED",
+         message: "Adding new todo tasks to past challenge days is locked.",
+      };
+   }
+   return { ok: true };
 }
 
 export type ValidateMoveTaskDayResult =
-  | { ok: true }
-  | { ok: false; code: "PAST_DAY_MOVE_NOT_ALLOWED" | "TARGET_DAY_IN_PAST"; message: string };
+   | { ok: true }
+   | {
+        ok: false;
+        code: "PAST_DAY_MOVE_NOT_ALLOWED" | "TARGET_DAY_IN_PAST";
+        message: string;
+     };
 
 /**
  * Validates moving a daily todo task between challenge days.
@@ -246,157 +266,173 @@ export type ValidateMoveTaskDayResult =
  * - Moving tasks from present or future days to a day that has already passed in the challenge is strictly forbidden.
  */
 export function validateMoveTaskChallengeDay(
-  sourceDateKey: string,
-  targetDateKey: string,
-  todayDateKey: string,
+   sourceDateKey: string,
+   targetDateKey: string,
+   todayDateKey: string
 ): ValidateMoveTaskDayResult {
-  const isTargetPast = targetDateKey < todayDateKey;
-  const isSourcePast = sourceDateKey < todayDateKey;
+   const isTargetPast = targetDateKey < todayDateKey;
+   const isSourcePast = sourceDateKey < todayDateKey;
 
-  // Cannot move from present or future to a day that has already passed
-  if (!isSourcePast && isTargetPast) {
-    return {
-      ok: false,
-      code: "PAST_DAY_MOVE_NOT_ALLOWED",
-      message: "Cannot move tasks from present or future days to a day that has already passed.",
-    };
-  }
+   // Cannot move from present or future to a day that has already passed
+   if (!isSourcePast && isTargetPast) {
+      return {
+         ok: false,
+         code: "PAST_DAY_MOVE_NOT_ALLOWED",
+         message:
+            "Cannot move tasks from present or future days to a day that has already passed.",
+      };
+   }
 
-  // Cannot move into a past day that has already concluded
-  if (isTargetPast && sourceDateKey !== targetDateKey) {
-    return {
-      ok: false,
-      code: "TARGET_DAY_IN_PAST",
-      message: "Cannot move tasks into a past challenge day that has already concluded.",
-    };
-  }
+   // Cannot move into a past day that has already concluded
+   if (isTargetPast && sourceDateKey !== targetDateKey) {
+      return {
+         ok: false,
+         code: "TARGET_DAY_IN_PAST",
+         message:
+            "Cannot move tasks into a past challenge day that has already concluded.",
+      };
+   }
 
-  return { ok: true };
+   return { ok: true };
 }
 
 export type ValidateChallengeDayResult =
-  | { ok: true; dayNumber: number; dateKey: string }
-  | { ok: false; code: string; message: string };
+   | { ok: true; dayNumber: number; dateKey: string }
+   | { ok: false; code: string; message: string };
 
 export function validateStudyLogChallengeDay(
-  startAt: Date | string,
-  input: { challengeDay?: number; date?: string },
-  now: Date | string = new Date(),
-  options: { allowPastDays?: boolean } = {},
+   startAt: Date | string,
+   input: { challengeDay?: number; date?: string },
+   now: Date | string = new Date(),
+   options: { allowPastDays?: boolean; totalDays?: number } = {}
 ): ValidateChallengeDayResult {
-  const currentDayNumber = getChallengeDayNumber(startAt, now);
-  if (currentDayNumber === 0) {
-    return {
-      ok: false,
-      code: "FUTURE_DATE_NOT_ALLOWED",
-      message: "Cannot log study time for future dates.",
-    };
-  }
-
-  const todayDateKey = getChallengeDayDateKey(startAt, currentDayNumber);
-  const day1DateKey = getChallengeDayDateKey(startAt, 1);
-  const yesterdayDayNumber = currentDayNumber > 1 ? currentDayNumber - 1 : null;
-  const yesterdayDateKey = yesterdayDayNumber ? getChallengeDayDateKey(startAt, yesterdayDayNumber) : null;
-
-  let resolvedDayNumber: number;
-  let resolvedDateKey: string;
-
-  if (input.date) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+   const totalDays = options.totalDays ?? 7;
+   const rawCurrentDayNumber = getChallengeDayNumber(startAt, now);
+   const currentDayNumber =
+      totalDays > 0
+         ? Math.max(0, Math.min(totalDays, rawCurrentDayNumber))
+         : rawCurrentDayNumber;
+   if (currentDayNumber === 0) {
       return {
-        ok: false,
-        code: "INVALID_DATE_FORMAT",
-        message: "Date must be in YYYY-MM-DD format.",
+         ok: false,
+         code: "FUTURE_DATE_NOT_ALLOWED",
+         message: "Cannot log study time for future dates.",
       };
-    }
-    resolvedDayNumber = getChallengeDayFromDateKey(startAt, input.date);
-    resolvedDateKey = input.date;
+   }
 
-    if (
-      input.challengeDay !== undefined &&
-      input.challengeDay !== resolvedDayNumber
-    ) {
+   const todayDateKey = getChallengeDayDateKey(startAt, currentDayNumber);
+   const day1DateKey = getChallengeDayDateKey(startAt, 1);
+   const yesterdayDayNumber =
+      currentDayNumber > 1 ? currentDayNumber - 1 : null;
+   const yesterdayDateKey = yesterdayDayNumber
+      ? getChallengeDayDateKey(startAt, yesterdayDayNumber)
+      : null;
+
+   let resolvedDayNumber: number;
+   let resolvedDateKey: string;
+
+   if (input.date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+         return {
+            ok: false,
+            code: "INVALID_DATE_FORMAT",
+            message: "Date must be in YYYY-MM-DD format.",
+         };
+      }
+      resolvedDayNumber = getChallengeDayFromDateKey(startAt, input.date);
+      resolvedDateKey = input.date;
+
+      if (
+         input.challengeDay !== undefined &&
+         input.challengeDay !== resolvedDayNumber
+      ) {
+         return {
+            ok: false,
+            code: "MISMATCHED_DATE_AND_DAY",
+            message: "The provided challenge day and date do not match.",
+         };
+      }
+   } else if (input.challengeDay !== undefined) {
+      if (!Number.isInteger(input.challengeDay) || input.challengeDay < 1) {
+         return {
+            ok: false,
+            code: "DATE_BEFORE_CHALLENGE",
+            message:
+               "Cannot log study time for days before the challenge started.",
+         };
+      }
+      resolvedDayNumber = input.challengeDay;
+      resolvedDateKey = getChallengeDayDateKey(startAt, resolvedDayNumber);
+   } else {
       return {
-        ok: false,
-        code: "MISMATCHED_DATE_AND_DAY",
-        message: "The provided challenge day and date do not match.",
+         ok: false,
+         code: "MISSING_DAY_OR_DATE",
+         message: "Please specify a challenge day or date to log study time.",
       };
-    }
-  } else if (input.challengeDay !== undefined) {
-    if (!Number.isInteger(input.challengeDay) || input.challengeDay < 1) {
+   }
+
+   if (resolvedDayNumber < 1 || resolvedDateKey < day1DateKey) {
       return {
-        ok: false,
-        code: "DATE_BEFORE_CHALLENGE",
-        message: "Cannot log study time for days before the challenge started.",
+         ok: false,
+         code: "DATE_BEFORE_CHALLENGE",
+         message:
+            "Cannot log study time for dates before the challenge started.",
       };
-    }
-    resolvedDayNumber = input.challengeDay;
-    resolvedDateKey = getChallengeDayDateKey(startAt, resolvedDayNumber);
-  } else {
-    return {
-      ok: false,
-      code: "MISSING_DAY_OR_DATE",
-      message: "Please specify a challenge day or date to log study time.",
-    };
-  }
+   }
 
-  if (resolvedDayNumber < 1 || resolvedDateKey < day1DateKey) {
-    return {
-      ok: false,
-      code: "DATE_BEFORE_CHALLENGE",
-      message: "Cannot log study time for dates before the challenge started.",
-    };
-  }
+   if (
+      currentDayNumber === 0 ||
+      resolvedDayNumber > currentDayNumber ||
+      resolvedDateKey > todayDateKey
+   ) {
+      return {
+         ok: false,
+         code: "FUTURE_DATE_NOT_ALLOWED",
+         message: "Cannot log study time for future dates.",
+      };
+   }
 
-  if (
-    currentDayNumber === 0 ||
-    resolvedDayNumber > currentDayNumber ||
-    resolvedDateKey > todayDateKey
-  ) {
-    return {
-      ok: false,
-      code: "FUTURE_DATE_NOT_ALLOWED",
-      message: "Cannot log study time for future dates.",
-    };
-  }
+   if (options.allowPastDays) {
+      return {
+         ok: true,
+         dayNumber: resolvedDayNumber,
+         dateKey: resolvedDateKey,
+      };
+   }
 
-  if (options.allowPastDays) {
-    return {
+   const isToday =
+      currentDayNumber > 0 &&
+      resolvedDayNumber === currentDayNumber &&
+      resolvedDateKey === todayDateKey;
+   const isYesterday =
+      yesterdayDayNumber !== null &&
+      resolvedDayNumber === yesterdayDayNumber &&
+      resolvedDateKey === yesterdayDateKey;
+
+   if (!isToday && !isYesterday) {
+      return {
+         ok: false,
+         code: "ONLY_TODAY_OR_YESTERDAY_ALLOWED",
+         message:
+            "Participants can only log study time for today or yesterday. Contact a moderator to adjust earlier days.",
+      };
+   }
+
+   return {
       ok: true,
       dayNumber: resolvedDayNumber,
       dateKey: resolvedDateKey,
-    };
-  }
-
-  const isToday =
-    currentDayNumber > 0 &&
-    resolvedDayNumber === currentDayNumber &&
-    resolvedDateKey === todayDateKey;
-  const isYesterday =
-    yesterdayDayNumber !== null &&
-    resolvedDayNumber === yesterdayDayNumber &&
-    resolvedDateKey === yesterdayDateKey;
-
-  if (!isToday && !isYesterday) {
-    return {
-      ok: false,
-      code: "ONLY_TODAY_OR_YESTERDAY_ALLOWED",
-      message: "Participants can only log study time for today or yesterday. Contact a moderator to adjust earlier days.",
-    };
-  }
-
-  return {
-    ok: true,
-    dayNumber: resolvedDayNumber,
-    dateKey: resolvedDateKey,
-  };
+   };
 }
 
 export function validateAdminOverrideChallengeDay(
-  startAt: Date | string,
-  input: { challengeDay?: number; date?: string },
-  now: Date | string = new Date(),
+   startAt: Date | string,
+   input: { challengeDay?: number; date?: string },
+   now: Date | string = new Date(),
+   options: { totalDays?: number } = {}
 ): ValidateChallengeDayResult {
-  return validateStudyLogChallengeDay(startAt, input, now, { allowPastDays: true });
+   return validateStudyLogChallengeDay(startAt, input, now, {
+      allowPastDays: true,
+      totalDays: options.totalDays,
+   });
 }
-

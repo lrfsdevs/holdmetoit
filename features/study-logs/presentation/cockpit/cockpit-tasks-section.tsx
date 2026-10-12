@@ -30,10 +30,7 @@ import {
 } from "@/features/tasks/domain/task-reorder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-   captureLogRocketException,
-   trackLogRocketEvent,
-} from "@/core/observability/logrocket";
+import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
    deleteCategoryAction,
@@ -95,6 +92,8 @@ export interface CockpitTasksSectionProps {
    userId?: string | null;
    userTasks?: UserCategorizedTasks | null;
    challengeStartDate?: string;
+   challengeId?: string;
+   challengeStatus?: "UPCOMING" | "ACTIVE" | "COMPLETED";
    todayDate?: string;
    todayDayNumber?: number;
    totalChallengeDays?: number;
@@ -107,6 +106,8 @@ export function CockpitTasksSection({
    userId,
    userTasks,
    challengeStartDate,
+   challengeId,
+   challengeStatus,
    todayDate,
    todayDayNumber,
    totalChallengeDays = 7,
@@ -114,6 +115,8 @@ export function CockpitTasksSection({
    isAdmin = false,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
+   const linkableChallengeId =
+      challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
    const [addModalType, setAddModalType] = useState<"daily" | "weekly" | null>(
       null
    );
@@ -1943,6 +1946,7 @@ export function CockpitTasksSection({
             id: newTaskId,
             userId: userId ?? null,
             categoryId: targetCatId,
+            challengeId: linkableChallengeId,
             title: newTodoText.trim(),
             taskType,
             isComplete: nextCompleted,
@@ -1978,6 +1982,7 @@ export function CockpitTasksSection({
             payload: {
                id: newTaskId,
                categoryId: targetCatId,
+               challengeId: linkableChallengeId,
                title: newTodoText.trim(),
                taskType,
                isComplete: nextCompleted,

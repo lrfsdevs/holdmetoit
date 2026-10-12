@@ -10,11 +10,13 @@ vi.mock("next/link", () => ({
       href,
       children,
       className,
+      ...props
    }: {
       href: string;
       children: React.ReactNode;
       className?: string;
-   }) => createElement("a", { href, className }, children),
+      [key: string]: any;
+   }) => createElement("a", { href, className, ...props }, children),
 }));
 
 vi.mock("@/features/challenges/presentation/enrollment-modal", () => ({
@@ -56,6 +58,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: false,
          canLogStudyTime: true,
          isReadOnly: false,
+         isResultsLocked: false,
          userTasks: {
             categories: [
                {
@@ -161,6 +164,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: false,
          canLogStudyTime: false,
          isReadOnly: true,
+         isResultsLocked: true,
          userTasks: {
             categories: [],
             dailyCategories: [],
@@ -226,6 +230,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: true,
          canLogStudyTime: false,
          isReadOnly: false,
+         isResultsLocked: false,
          userTasks: {
             categories: [],
             dailyCategories: [],
@@ -294,5 +299,51 @@ describe("HomeCockpitView", () => {
       expect(html).not.toContain("You haven't logged today's hours");
       expect(html).toContain("Daily Todos");
       expect(html).toContain("Weekly Todos");
+   });
+
+   it("renders username next to Welcome as a link to user's profile when logged in with cockpit", () => {
+      const mockCockpit: any = {
+         challengeId: "chal-beta",
+         participant: {
+            id: "part-gamma",
+            userId: "user-beta",
+            displayName: "NrGSIayeR",
+         },
+         logs: [],
+         userTasks: {
+            categories: [],
+            dailyCategories: [],
+            weeklyCategories: [],
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-beta", displayName: "NrGSIayeR" },
+            cockpit: mockCockpit,
+         })
+      );
+
+      expect(html).toContain("Welcome");
+      expect(html).toContain(
+         'href="/challenge/chal-beta/participant/part-gamma"'
+      );
+      expect(html).toContain("NrGSIayeR");
+      expect(html).toContain('title="View profile for NrGSIayeR"');
+   });
+
+   it("renders username next to Welcome as plain text without link when unauthenticated", () => {
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: null,
+            cockpit: null,
+            displayName: "Guest",
+         })
+      );
+
+      expect(html).toContain("Welcome Guest");
+      expect(html).not.toContain('title="View profile for Guest"');
+      expect(html).not.toContain('href="/challenge/');
+      expect(html).not.toContain('href="/profile"');
    });
 });

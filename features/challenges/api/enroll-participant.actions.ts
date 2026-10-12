@@ -8,6 +8,9 @@ import { enrollParticipantInChallenge } from "@/features/challenges/data/partici
 import { validateWeeklyTargetSeconds } from "@/features/challenges/domain/target-hours.validation";
 import { composeDurationSeconds } from "@/features/study-logs/domain/daily-log.validation";
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { createLogger, logEvents } from "@/core/observability/logger";
+
+const logger = createLogger("challenge.enroll");
 
 const enrollParticipantSchema = z.object({
    challengeId: z.string().min(1),
@@ -70,8 +73,22 @@ export async function enrollInChallengeAction(
       revalidatePath("/");
       revalidatePath("/admin");
 
+      logger.info(logEvents.challengeEnrolled, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            userId: user.id,
+            teamId: resolvedTeamId,
+            targetSeconds,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
+      logger.error(logEvents.challengeEnrolled, {
+         context: { challengeId: input?.challengeId },
+         error,
+      });
+
       return {
          ok: false,
          code: "ENROLLMENT_FAILED",

@@ -16,6 +16,7 @@ import {
    lockChallengeResults,
    reassignParticipantTeam,
    removeChallengeParticipant,
+   unlockChallengeResults,
    updateAdminChallenge,
 } from "@/features/challenges/data/challenge-admin.repository";
 import { getStorageUrlConfig } from "@/core/storage/supabase-storage";
@@ -30,6 +31,9 @@ import {
 } from "@/features/challenges/domain/punishment-pfp";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { clearTeamColorCache } from "@/features/challenges/domain/team-colors";
+import { createLogger, logEvents } from "@/core/observability/logger";
+
+const logger = createLogger("challenge.admin");
 
 const BANNER_REQUIRED_MESSAGE = "Please upload an event header image.";
 const PFP_REQUIRED_MESSAGE = "Please upload a punishment PFP.";
@@ -128,11 +132,20 @@ export async function createChallengeAction(
       revalidatePath("/admin");
       revalidatePath("/admin/challenges");
 
+      logger.info(logEvents.challengeCreated, {
+         context: {
+            challengeId: challenge.id,
+            adminId: admin.id,
+            format: parsed.data.format,
+         },
+      });
+
       return {
          ok: true,
          data: { challengeId: challenge.id },
       };
    } catch (error) {
+      logger.error(logEvents.challengeCreated, { error });
       return {
          ok: false,
          code: "CREATION_FAILED",
@@ -166,8 +179,16 @@ export async function kickoffChallengeAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeKickoff, {
+         context: { challengeId, adminId: admin.id },
+      });
+
       return { ok: true };
    } catch (error) {
+      logger.error(logEvents.challengeKickoff, {
+         context: { challengeId },
+         error,
+      });
       return {
          ok: false,
          code: "KICKOFF_FAILED",
@@ -199,8 +220,16 @@ export async function lockChallengeResultsAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeLocked, {
+         context: { challengeId, adminId: admin.id },
+      });
+
       return { ok: true };
    } catch (error) {
+      logger.error(logEvents.challengeLocked, {
+         context: { challengeId },
+         error,
+      });
       return {
          ok: false,
          code: "LOCK_FAILED",
@@ -208,6 +237,49 @@ export async function lockChallengeResultsAction(
             error instanceof Error
                ? error.message
                : "Failed to finalize and lock results.",
+      };
+   }
+}
+
+export async function unlockChallengeResultsAction(
+   challengeId: string
+): Promise<AdminActionResult> {
+   try {
+      const admin = await requireAdminUser();
+      await unlockChallengeResults(challengeId, {
+         id: admin.id,
+         username: admin.username,
+      });
+
+      invalidateTags([
+         cacheTags.challengeScoreboard(challengeId),
+         cacheTags.challengeMetadata(challengeId),
+      ]);
+
+      revalidatePath(`/challenge/${challengeId}`);
+      revalidatePath(`/admin/challenges/${challengeId}`);
+      revalidatePath("/challenges");
+      revalidatePath("/admin");
+      revalidatePath("/dashboard");
+      revalidatePath("/");
+
+      logger.info(logEvents.challengeUnlocked, {
+         context: { challengeId, adminId: admin.id },
+      });
+
+      return { ok: true };
+   } catch (error) {
+      logger.error(logEvents.challengeUnlocked, {
+         context: { challengeId },
+         error,
+      });
+      return {
+         ok: false,
+         code: "UNLOCK_FAILED",
+         message:
+            error instanceof Error
+               ? error.message
+               : "Failed to unlock the final results.",
       };
    }
 }
@@ -262,9 +334,23 @@ export async function adminEnrollParticipantAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeEnrolled, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            userId: parsed.data.userId,
+            teamId: parsed.data.teamId,
+            targetSeconds: parsed.data.targetSeconds,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeEnrolled, {
+            context: { challengeId: input?.challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -272,6 +358,10 @@ export async function adminEnrollParticipantAction(
          };
       }
 
+      logger.error(logEvents.challengeEnrolled, {
+         context: { challengeId: input?.challengeId },
+         error,
+      });
       return {
          ok: false,
          code: "ENROLLMENT_FAILED",
@@ -408,9 +498,20 @@ export async function updateChallengeAction(
       revalidatePath("/admin");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeUpdated, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeUpdated, {
+            context: { challengeId: input?.challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -418,6 +519,10 @@ export async function updateChallengeAction(
          };
       }
 
+      logger.error(logEvents.challengeUpdated, {
+         context: { challengeId: input?.challengeId },
+         error,
+      });
       return {
          ok: false,
          code: "UPDATE_FAILED",
@@ -468,9 +573,22 @@ export async function reassignParticipantTeamAction(
       revalidatePath("/admin");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeParticipantReassigned, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: parsed.data.participantId,
+            newTeamId: parsed.data.newTeamId,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeParticipantReassigned, {
+            context: { challengeId: input?.challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -478,6 +596,13 @@ export async function reassignParticipantTeamAction(
          };
       }
 
+      logger.error(logEvents.challengeParticipantReassigned, {
+         context: {
+            challengeId: input?.challengeId,
+            participantId: input?.participantId,
+         },
+         error,
+      });
       return {
          ok: false,
          code: "REASSIGN_FAILED",
@@ -526,9 +651,21 @@ export async function removeChallengeParticipantAction(
       revalidatePath("/admin");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeParticipantRemoved, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: parsed.data.participantId,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeParticipantRemoved, {
+            context: { challengeId: input?.challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -536,6 +673,13 @@ export async function removeChallengeParticipantAction(
          };
       }
 
+      logger.error(logEvents.challengeParticipantRemoved, {
+         context: {
+            challengeId: input?.challengeId,
+            participantId: input?.participantId,
+         },
+         error,
+      });
       return {
          ok: false,
          code: "REMOVAL_FAILED",
@@ -546,7 +690,6 @@ export async function removeChallengeParticipantAction(
       };
    }
 }
-
 const adminUpdateParticipantTargetSchema = z.object({
    challengeId: z.string().min(1),
    participantId: z.string().min(1),
@@ -619,12 +762,25 @@ export async function adminUpdateParticipantTargetAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeTargetOverridden, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: parsed.data.participantId,
+            targetSeconds: updated.targetSeconds,
+            adminId: admin.id,
+         },
+      });
+
       return {
          ok: true,
          data: { targetSeconds: updated.targetSeconds },
       };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeTargetOverridden, {
+            context: { challengeId: input?.challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -632,6 +788,13 @@ export async function adminUpdateParticipantTargetAction(
          };
       }
 
+      logger.error(logEvents.challengeTargetOverridden, {
+         context: {
+            challengeId: input?.challengeId,
+            participantId: input?.participantId,
+         },
+         error,
+      });
       return {
          ok: false,
          code: "UPDATE_TARGET_FAILED",
@@ -678,12 +841,20 @@ export async function deleteChallengeAction(
       revalidatePath("/admin");
       revalidatePath("/");
 
+      logger.info(logEvents.challengeDeleted, {
+         context: { challengeId, adminId: admin.id },
+      });
+
       return {
          ok: true,
          data: { redirectTo: "/challenges" },
       };
    } catch (error) {
       if (error instanceof AdminAccessError) {
+         logger.debug(logEvents.challengeDeleted, {
+            context: { challengeId, code: error.code },
+            error,
+         });
          return {
             ok: false,
             code: error.code,
@@ -691,6 +862,10 @@ export async function deleteChallengeAction(
          };
       }
 
+      logger.error(logEvents.challengeDeleted, {
+         context: { challengeId },
+         error,
+      });
       return {
          ok: false,
          code: "DELETE_FAILED",

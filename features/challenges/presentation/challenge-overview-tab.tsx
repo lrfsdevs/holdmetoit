@@ -116,7 +116,7 @@ export function ChallengeOverviewTab({
                   </h2>
                   <p className="text-sm leading-relaxed text-[#d1d1d1]">
                      {challenge.title} is an automated study battle governed by
-                     the HoldMeToIt dual-failure accountability system. All
+                     the HoldMeToIt three-condition accountability system. All
                      scholars declare their individual target hours and weekly
                      milestone intentions before kickoff, commit to daily study
                      sessions, solve their deficits with the catch-up model, and

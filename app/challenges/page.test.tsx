@@ -90,6 +90,7 @@ function setChallenge(url: string | null) {
          status: "ACTIVE",
          eventBannerUrl: url,
          punishmentPfpUrl: punishmentUrl,
+         resultsLockedAt: null,
          hostId: "admin-1",
          createdAt: new Date("2026-10-01T00:00:00.000Z"),
          updatedAt: new Date("2026-10-01T00:00:00.000Z"),

@@ -226,25 +226,25 @@ describe("buildScoreboardViewModel", () => {
       expect(result.standings[1].rank).toBe(2);
    });
 
-   it("flags members with hours deficit or incomplete goals in punishment wall", () => {
+   it("flags members with live hours deficits in the punishment wall", () => {
       const result = buildScoreboardViewModel(
          mockChallenge,
          "user-1",
          fixedNow
       );
 
-      // SlothBrain has 7200s < 126000s and 2 incomplete goals
+      // SlothBrain has 7200s < 126000s (live deficit preview before lock)
       expect(result.punishmentWall.flaggedMembers).toHaveLength(2);
       // AuraStudier also hasn't met 35h yet (has 35100s) during ACTIVE sprint
       const sloth = result.punishmentWall.flaggedMembers.find(
          (m) => m.displayName === "SlothBrain"
       );
       expect(sloth).toBeDefined();
-      expect(sloth?.incompleteGoalsCount).toBe(0);
       expect(sloth?.hoursDeficitSeconds).toBe(118_800);
+      expect(sloth?.statusBadge).toBe("Catch-Up");
    });
 
-   it("marks completed challenge punishments accurately according to Law L6", () => {
+   it("marks completed challenge punishments from live deficits when results are unlocked", () => {
       const completedChallenge: RawChallengePayload = {
          ...mockChallenge,
          status: "COMPLETED",
@@ -278,6 +278,48 @@ describe("buildScoreboardViewModel", () => {
       expect(result.punishmentWall.flaggedMembers).toHaveLength(1);
       expect(result.punishmentWall.flaggedMembers[0].displayName).toBe(
          "SlothBrain"
+      );
+      expect(result.punishmentWall.flaggedMembers[0].statusBadge).toBe(
+         "Punished"
+      );
+   });
+
+   it("treats locked punishment records as the source of truth over live deficits", () => {
+      const lockedChallenge: RawChallengePayload = {
+         ...mockChallenge,
+         status: "COMPLETED",
+         resultsLockedAt: new Date("2026-09-09T00:00:00.000Z"),
+         participants: [
+            {
+               ...mockChallenge.participants[0],
+               // Personal deficit but saved at lock by the three-condition rule
+               dailyStudyLogs: [{ durationSeconds: 7_200 }],
+            },
+            {
+               ...mockChallenge.participants[1],
+               status: "PUNISHED",
+               punishmentRecords: [{ isPardoned: false, pardonReason: null }],
+            },
+         ],
+      };
+
+      const result = buildScoreboardViewModel(
+         lockedChallenge,
+         undefined,
+         fixedNow
+      );
+
+      expect(result.standings[0].paceStatus).toBe("serene");
+      expect(result.standings[0].paceLabel).toBe("Completed");
+
+      const punished = result.standings.find(
+         (s) => s.participantId === "part-2"
+      );
+      expect(punished?.paceStatus).toBe("punished");
+
+      expect(result.punishmentWall.flaggedMembers).toHaveLength(1);
+      expect(result.punishmentWall.flaggedMembers[0].participantId).toBe(
+         "part-2"
       );
       expect(result.punishmentWall.flaggedMembers[0].statusBadge).toBe(
          "Punished"
@@ -501,7 +543,7 @@ describe("normalizeScoreboardPayload", () => {
                   logDate: "2026-09-02T00:00:00.000Z",
                },
             ],
-            punishmentRecord: null,
+            punishmentRecords: [],
          },
       ],
    };

@@ -31,6 +31,9 @@ import {
    updateCategory,
    updateTask,
 } from "@/features/tasks/data/task.repository";
+import { createLogger, logEvents } from "@/core/observability/logger";
+
+const logger = createLogger("task");
 
 export interface TaskActionResult<T = unknown> {
    ok: boolean;
@@ -72,11 +75,19 @@ export async function createTaskAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskCreated, {
+         context: { userId: user.id, taskId: task.id },
+      });
       return { ok: true, data: task };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskCreated, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskCreated, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -108,6 +119,13 @@ export async function toggleTaskAction(
       });
 
       if (!updated) {
+         logger.debug(logEvents.taskToggled, {
+            context: {
+               userId: user.id,
+               taskId: parsed.data.taskId,
+               code: "NOT_FOUND",
+            },
+         });
          return {
             ok: false,
             code: "NOT_FOUND",
@@ -118,11 +136,23 @@ export async function toggleTaskAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskToggled, {
+         context: {
+            userId: user.id,
+            taskId: parsed.data.taskId,
+            isComplete: parsed.data.isComplete,
+         },
+      });
       return { ok: true, data: updated };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskToggled, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskToggled, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -152,6 +182,13 @@ export async function deleteTaskAction(
       });
 
       if (!deleted) {
+         logger.debug(logEvents.taskDeleted, {
+            context: {
+               userId: user.id,
+               taskId: parsed.data.taskId,
+               code: "NOT_FOUND",
+            },
+         });
          return {
             ok: false,
             code: "NOT_FOUND",
@@ -162,11 +199,19 @@ export async function deleteTaskAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskDeleted, {
+         context: { userId: user.id, taskId: parsed.data.taskId },
+      });
       return { ok: true };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskDeleted, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskDeleted, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -200,11 +245,19 @@ export async function createCategoryAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskCategoryCreated, {
+         context: { userId: user.id, categoryId: category.id },
+      });
       return { ok: true, data: category };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskCategoryCreated, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskCategoryCreated, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -238,6 +291,13 @@ export async function updateTaskAction(
       });
 
       if (!updated) {
+         logger.debug(logEvents.taskUpdated, {
+            context: {
+               userId: user.id,
+               taskId: parsed.data.taskId,
+               code: "NOT_FOUND",
+            },
+         });
          return {
             ok: false,
             code: "NOT_FOUND",
@@ -248,11 +308,19 @@ export async function updateTaskAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskUpdated, {
+         context: { userId: user.id, taskId: parsed.data.taskId },
+      });
       return { ok: true, data: updated };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskUpdated, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskUpdated, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -284,6 +352,13 @@ export async function updateCategoryAction(
       });
 
       if (!updated) {
+         logger.debug(logEvents.taskCategoryUpdated, {
+            context: {
+               userId: user.id,
+               categoryId: parsed.data.categoryId,
+               code: "NOT_FOUND",
+            },
+         });
          return {
             ok: false,
             code: "NOT_FOUND",
@@ -294,18 +369,33 @@ export async function updateCategoryAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskCategoryUpdated, {
+         context: { userId: user.id, categoryId: parsed.data.categoryId },
+      });
       return { ok: true, data: updated };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskCategoryUpdated, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
       if (error instanceof Error && error.message.includes("already exists")) {
+         logger.debug(logEvents.taskCategoryUpdated, {
+            context: {
+               categoryId: input?.categoryId,
+               code: "CONFLICT",
+            },
+            error,
+         });
          return {
             ok: false,
             code: "CONFLICT",
             message: error.message,
          };
       }
+      logger.error(logEvents.taskCategoryUpdated, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",
@@ -335,6 +425,13 @@ export async function deleteCategoryAction(
       });
 
       if (!deleted) {
+         logger.debug(logEvents.taskCategoryDeleted, {
+            context: {
+               userId: user.id,
+               categoryId: parsed.data.categoryId,
+               code: "NOT_FOUND",
+            },
+         });
          return {
             ok: false,
             code: "NOT_FOUND",
@@ -345,11 +442,19 @@ export async function deleteCategoryAction(
       revalidatePath("/");
       revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskCategoryDeleted, {
+         context: { userId: user.id, categoryId: parsed.data.categoryId },
+      });
       return { ok: true };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.taskCategoryDeleted, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
+      logger.error(logEvents.taskCategoryDeleted, { error });
       return {
          ok: false,
          code: "PERSISTENCE_ERROR",

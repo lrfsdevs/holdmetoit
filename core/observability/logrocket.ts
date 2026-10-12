@@ -3,7 +3,16 @@
 import LogRocket from "logrocket";
 import setupLogRocketReact from "logrocket-react";
 
-export const LOGROCKET_APP_ID = "q9morb/holdmeintoit";
+import { isLogRocketEnabled } from "./logrocket-config";
+
+const FALLBACK_LOGROCKET_APP_ID = "q9morb/holdmeintoit";
+const FALLBACK_RELEASE = "0.1.0";
+
+export const LOGROCKET_APP_ID =
+   process.env.NEXT_PUBLIC_LOGROCKET_APP_ID || FALLBACK_LOGROCKET_APP_ID;
+
+const LOGROCKET_RELEASE =
+   process.env.NEXT_PUBLIC_APP_RELEASE || FALLBACK_RELEASE;
 
 let initialized = false;
 
@@ -30,8 +39,12 @@ export function initLogRocket(): void {
       return;
    }
 
+   if (!isLogRocketEnabled()) {
+      return;
+   }
+
    LogRocket.init(LOGROCKET_APP_ID, {
-      release: "0.1.0",
+      release: LOGROCKET_RELEASE,
    });
    setupLogRocketReact();
    initialized = true;

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { ErrorState } from "@/components/state/error-state";
 import { Button } from "@/components/ui/button";
-import { captureLogRocketException } from "@/core/observability/logrocket";
+import { logError, logEvents } from "@/core/observability/logger";
 
 export default function AppError({
    error,
@@ -14,10 +14,11 @@ export default function AppError({
    reset: () => void;
 }) {
    useEffect(() => {
-      console.error("[AppError caught by root boundary]:", error);
-      captureLogRocketException(error, {
+      logError(logEvents.appError, {
+         scope: "app.boundary",
          tags: { boundary: "app-error" },
-         extra: { digest: error.digest ?? "" },
+         context: { digest: error.digest ?? "" },
+         error,
       });
    }, [error]);
 

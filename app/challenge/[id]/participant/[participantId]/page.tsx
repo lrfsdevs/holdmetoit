@@ -12,6 +12,7 @@ import {
 } from "@/features/auth/domain/preview-mode";
 import { getChallengeParticipantStats } from "@/features/participant-stats/data/participant-stats.repository";
 import { ParticipantStatsView } from "@/features/participant-stats/presentation/participant-stats-view";
+import { logError, logEvents } from "@/core/observability/logger";
 
 interface ParticipantStatsPageProps {
    params: {
@@ -34,10 +35,14 @@ export async function generateMetadata({
          params.participantId
       );
    } catch (error) {
-      console.error(
-         "[ParticipantStats] Failed to load stats for metadata:",
-         error
-      );
+      logError(logEvents.appError, {
+         scope: "participant.stats.metadata",
+         context: {
+            challengeId: params.id,
+            participantId: params.participantId,
+         },
+         error,
+      });
    }
 
    if (!stats) {
@@ -79,10 +84,15 @@ export default async function ParticipantStatsPage({
       );
    } catch (error) {
       statsFailed = true;
-      console.error(
-         "[ParticipantStats] Failed to load participant stats:",
-         error
-      );
+      logError(logEvents.appError, {
+         scope: "participant.stats.page",
+         context: {
+            challengeId: params.id,
+            participantId: params.participantId,
+            userId: session?.user?.id,
+         },
+         error,
+      });
    }
 
    const returnLeaderboardUrl = `/challenge/${params.id}?tab=leaderboard${

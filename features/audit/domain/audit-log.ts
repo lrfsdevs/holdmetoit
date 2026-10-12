@@ -7,6 +7,7 @@ export type AuditEventType =
    | "PARTICIPANT_PARDONED"
    | "CHALLENGE_KICKOFF"
    | "CHALLENGE_LOCKED"
+   | "CHALLENGE_UNLOCKED"
    | "CHALLENGE_CREATED"
    | "CHALLENGE_UPDATED"
    | "EVENT_DETAILS_UPDATED"
@@ -119,6 +120,8 @@ export function formatAuditActionHuman(action: AuditEventType): string {
          return "Event Kickoff Triggered";
       case "CHALLENGE_LOCKED":
          return "Final Results Locked";
+      case "CHALLENGE_UNLOCKED":
+         return "Final Results Unlocked";
       case "CHALLENGE_CREATED":
          return "Challenge Created";
       case "CHALLENGE_UPDATED":

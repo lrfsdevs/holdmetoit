@@ -248,10 +248,8 @@ describe("calculateParticipantAccountability", () => {
          isCompleted: true,
          status: "NORMAL",
          punishmentRecord: {
-            isPunished: true,
             isPardoned: false,
             pardonReason: null,
-            hoursDeficitSeconds: 36_000,
          },
       });
 
@@ -270,10 +268,8 @@ describe("calculateParticipantAccountability", () => {
          isCompleted: true,
          status: "EXCUSED",
          punishmentRecord: {
-            isPunished: true,
             isPardoned: true,
             pardonReason: "Medical emergency",
-            hoursDeficitSeconds: 36_000,
          },
       });
 

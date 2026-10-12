@@ -20,8 +20,14 @@ import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
 } from "@/features/study-logs/domain/daily-log.validation";
-import { validateStudyLogChallengeDay } from "@/features/study-logs/domain/challenge-day";
+import {
+   calculateChallengeTotalDays,
+   validateStudyLogChallengeDay,
+} from "@/features/study-logs/domain/challenge-day";
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { createLogger, logEvents } from "@/core/observability/logger";
+
+const logger = createLogger("study.log");
 
 const logStudyTimeSchema = z
    .object({
@@ -72,14 +78,26 @@ export async function logStudyTimeAction(
          participant.challenge,
          now
       );
-      if (!canLogStudyTime(challengeStatus)) {
+      if (
+         !canLogStudyTime(
+            challengeStatus,
+            participant.challenge.resultsLockedAt
+         )
+      ) {
          return {
             ok: false,
             code: "CHALLENGE_NOT_ACTIVE",
             message:
-               "Study logging is only available during active challenges.",
+               participant.challenge.resultsLockedAt != null
+                  ? "Challenge results are locked. Study logging is closed."
+                  : "Study logging is only available during active challenges.",
          };
       }
+
+      const totalDays = calculateChallengeTotalDays(
+         participant.challenge.startAt,
+         participant.challenge.endAt
+      );
 
       const dayValidation = validateStudyLogChallengeDay(
          participant.challenge.startAt,
@@ -87,7 +105,8 @@ export async function logStudyTimeAction(
             challengeDay: parsed.data.challengeDay,
             date: parsed.data.date,
          },
-         now
+         now,
+         { totalDays }
       );
 
       if (!dayValidation.ok) {
@@ -140,15 +159,40 @@ export async function logStudyTimeAction(
       revalidatePath(
          `/challenge/${parsed.data.challengeId}/participant/${participant.id}`
       );
+
+      logger.info(logEvents.studyLogAdded, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: participant.id,
+            userId: user.id,
+            logDate,
+            durationSeconds,
+            isLeave: Boolean(parsed.data.isLeave),
+         },
+      });
+
       return { ok: true };
    } catch (error) {
       if (error instanceof AuthError) {
+         logger.debug(logEvents.studyLogAdded, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
       }
 
       if (error instanceof ParticipantAccessError) {
+         logger.debug(logEvents.studyLogAdded, {
+            context: { code: "NOT_ENROLLED", challengeId: input?.challengeId },
+            error,
+         });
          return { ok: false, code: "NOT_ENROLLED", message: error.message };
       }
+
+      logger.error(logEvents.studyLogAdded, {
+         context: { challengeId: input?.challengeId },
+         error,
+      });
 
       return {
          ok: false,

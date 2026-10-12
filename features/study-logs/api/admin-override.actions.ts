@@ -13,6 +13,9 @@ import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
 } from "@/features/study-logs/domain/daily-log.validation";
+import { createLogger, logEvents } from "@/core/observability/logger";
+
+const logger = createLogger("study.log.admin");
 
 const adminOverrideSchema = z.object({
    challengeId: z.string().min(1),
@@ -103,8 +106,25 @@ export async function adminOverrideStudyHoursAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.studyLogOverride, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: parsed.data.participantId,
+            logDate: parsed.data.logDate,
+            durationSeconds,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
+      logger.error(logEvents.studyLogOverride, {
+         context: {
+            challengeId: input?.challengeId,
+            participantId: input?.participantId,
+         },
+         error,
+      });
       return {
          ok: false,
          code: "OVERRIDE_FAILED",
@@ -165,8 +185,23 @@ export async function adminResetParticipantOverallHoursAction(
       revalidatePath("/dashboard");
       revalidatePath("/");
 
+      logger.info(logEvents.studyLogTotalReset, {
+         context: {
+            challengeId: parsed.data.challengeId,
+            participantId: parsed.data.participantId,
+            adminId: admin.id,
+         },
+      });
+
       return { ok: true };
    } catch (error) {
+      logger.error(logEvents.studyLogTotalReset, {
+         context: {
+            challengeId: input?.challengeId,
+            participantId: input?.participantId,
+         },
+         error,
+      });
       return {
          ok: false,
          code: "RESET_FAILED",
