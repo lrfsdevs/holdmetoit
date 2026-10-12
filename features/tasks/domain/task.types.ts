@@ -3,45 +3,46 @@ export type TaskType = "DAILY" | "WEEKLY";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CROSSED_OUT";
 
 export interface TaskItem {
-  id: string;
-  userId: string;
-  categoryId: string;
-  title: string;
-  taskType: TaskType;
-  sortOrder?: number;
-  isComplete: boolean;
-  status?: TaskStatus;
-  dueDate?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt: Date | null;
+   id: string;
+   userId: string;
+   categoryId: string;
+   challengeId?: string | null;
+   title: string;
+   taskType: TaskType;
+   sortOrder?: number;
+   isComplete: boolean;
+   status?: TaskStatus;
+   dueDate?: string | null;
+   createdAt: Date;
+   updatedAt: Date;
+   completedAt: Date | null;
 }
 
 export interface CategoryItem {
-  id: string;
-  userId: string;
-  name: string;
-  taskType: TaskType;
-  sortOrder?: number;
-  createdAt: Date;
-  updatedAt: Date;
+   id: string;
+   userId: string;
+   name: string;
+   taskType: TaskType;
+   sortOrder?: number;
+   createdAt: Date;
+   updatedAt: Date;
 }
 
 export interface CategoryGroup {
-  id: string;
-  name: string;
-  taskType: TaskType;
-  sortOrder?: number;
-  isCollapsed: boolean;
-  tasks: TaskItem[];
+   id: string;
+   name: string;
+   taskType: TaskType;
+   sortOrder?: number;
+   isCollapsed: boolean;
+   tasks: TaskItem[];
 }
 
 export interface UserCategorizedTasks {
-  categories: CategoryItem[];
-  dailyCategories: CategoryGroup[];
-  weeklyCategories: CategoryGroup[];
-  totalDailyTasks: number;
-  completedDailyTasks: number;
-  totalWeeklyTasks: number;
-  completedWeeklyTasks: number;
+   categories: CategoryItem[];
+   dailyCategories: CategoryGroup[];
+   weeklyCategories: CategoryGroup[];
+   totalDailyTasks: number;
+   completedDailyTasks: number;
+   totalWeeklyTasks: number;
+   completedWeeklyTasks: number;
 }

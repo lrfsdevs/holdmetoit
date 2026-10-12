@@ -1,0 +1,11 @@
+services:
+   db:
+      image: postgres:16-alpine
+      restart: unless-stopped
+      shm_size: 128mb
+      environment:
+         POSTGRES_PASSWORD: postgres
+         POSTGRES_USER: postgres
+         POSTGRES_DB: holdmetoit
+      ports:
+         - "5433:5432"

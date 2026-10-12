@@ -28,8 +28,13 @@ vi.mock("@/core/db", () => {
          create: vi.fn(),
          findFirst: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn(),
          delete: vi.fn(),
       },
+      challengeParticipant: {
+         findMany: vi.fn(),
+      },
+      $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
    return { prisma: mockPrisma };
 });
@@ -37,6 +42,9 @@ vi.mock("@/core/db", () => {
 describe("task.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue(
+         [] as never
+      );
    });
 
    describe("getUserCategorizedTasks", () => {
@@ -248,6 +256,90 @@ describe("task.repository", () => {
          );
       });
 
+      it("links a new task to the current challenge when the user is enrolled", async () => {
+         vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue([
+            {
+               challenge: {
+                  id: "c_active",
+                  startAt: new Date(Date.now() - 86400000),
+                  endAt: new Date(Date.now() + 86400000),
+               },
+            },
+         ] as never);
+         vi.mocked(prisma.task.create).mockResolvedValue({
+            id: "task_linked",
+         } as never);
+
+         await createTask({
+            userId: "user_1",
+            title: "Linked task",
+            taskType: "WEEKLY",
+            categoryId: "cat_1",
+         });
+
+         expect(prisma.task.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               data: expect.objectContaining({ challengeId: "c_active" }),
+            })
+         );
+      });
+
+      it("prefers the active challenge over an upcoming one when both exist", async () => {
+         vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue([
+            {
+               challenge: {
+                  id: "c_upcoming",
+                  startAt: new Date(Date.now() + 86400000),
+                  endAt: new Date(Date.now() + 8 * 86400000),
+               },
+            },
+            {
+               challenge: {
+                  id: "c_active",
+                  startAt: new Date(Date.now() - 86400000),
+                  endAt: new Date(Date.now() + 86400000),
+               },
+            },
+         ] as never);
+         vi.mocked(prisma.task.create).mockResolvedValue({
+            id: "task_active",
+         } as never);
+
+         await createTask({
+            userId: "user_1",
+            title: "Active link",
+            taskType: "WEEKLY",
+            categoryId: "cat_1",
+         });
+
+         expect(prisma.task.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               data: expect.objectContaining({ challengeId: "c_active" }),
+            })
+         );
+      });
+
+      it("uses an explicit challengeId without resolving the current challenge", async () => {
+         vi.mocked(prisma.task.create).mockResolvedValue({
+            id: "task_explicit",
+         } as never);
+
+         await createTask({
+            userId: "user_1",
+            title: "Explicit link",
+            taskType: "WEEKLY",
+            categoryId: "cat_1",
+            challengeId: "c_explicit",
+         });
+
+         expect(prisma.challengeParticipant.findMany).not.toHaveBeenCalled();
+         expect(prisma.task.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               data: expect.objectContaining({ challengeId: "c_explicit" }),
+            })
+         );
+      });
+
       it("creates new category if newCategoryName is specified", async () => {
          vi.mocked(prisma.category.findFirst).mockResolvedValue(null);
          vi.mocked(prisma.category.create).mockResolvedValue({
@@ -370,13 +462,14 @@ describe("task.repository", () => {
    });
 
    describe("deleteTask", () => {
-      it("deletes task when owned by user", async () => {
+      it("soft-deletes task when owned by user", async () => {
          vi.mocked(prisma.task.findFirst).mockResolvedValue({
             id: "task_del",
             userId: "user_1",
          } as never);
-         vi.mocked(prisma.task.delete).mockResolvedValue({
+         vi.mocked(prisma.task.update).mockResolvedValue({
             id: "task_del",
+            deletedAt: new Date(),
          } as never);
 
          const result = await deleteTask({
@@ -384,9 +477,13 @@ describe("task.repository", () => {
             userId: "user_1",
          });
 
-         expect(result).toEqual({ id: "task_del" });
-         expect(prisma.task.delete).toHaveBeenCalledWith({
+         expect(result).toEqual({
+            id: "task_del",
+            deletedAt: expect.any(Date),
+         });
+         expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_del" },
+            data: { deletedAt: expect.any(Date) },
          });
       });
    });
@@ -704,13 +801,19 @@ describe("task.repository", () => {
    });
 
    describe("deleteCategory", () => {
-      it("deletes category when owned by user", async () => {
+      it("soft-deletes the category and its tasks, tombstoning the name", async () => {
          vi.mocked(prisma.category.findFirst).mockResolvedValue({
             id: "cat_del",
             userId: "user_1",
+            name: "Chemistry",
          } as never);
-         vi.mocked(prisma.category.delete).mockResolvedValue({
+         vi.mocked(prisma.task.updateMany).mockResolvedValue({
+            count: 2,
+         } as never);
+         vi.mocked(prisma.category.update).mockResolvedValue({
             id: "cat_del",
+            deletedAt: new Date(),
+            name: "Chemistry ·deleted·cat_del",
          } as never);
 
          const result = await deleteCategory({
@@ -718,10 +821,22 @@ describe("task.repository", () => {
             userId: "user_1",
          });
 
-         expect(result).toEqual({ id: "cat_del" });
-         expect(prisma.category.delete).toHaveBeenCalledWith({
-            where: { id: "cat_del" },
+         expect(prisma.task.updateMany).toHaveBeenCalledWith({
+            where: {
+               categoryId: "cat_del",
+               userId: "user_1",
+               deletedAt: null,
+            },
+            data: { deletedAt: expect.any(Date) },
          });
+         expect(prisma.category.update).toHaveBeenCalledWith({
+            where: { id: "cat_del" },
+            data: {
+               deletedAt: expect.any(Date),
+               name: expect.stringContaining("Chemistry ·deleted·cat_del"),
+            },
+         });
+         expect(result).toEqual(expect.objectContaining({ id: "cat_del" }));
       });
 
       it("returns null if category not found", async () => {
@@ -733,7 +848,8 @@ describe("task.repository", () => {
          });
 
          expect(result).toBeNull();
-         expect(prisma.category.delete).not.toHaveBeenCalled();
+         expect(prisma.category.update).not.toHaveBeenCalled();
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
       });
    });
 });
