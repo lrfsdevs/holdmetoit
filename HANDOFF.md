@@ -4,36 +4,36 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-10 (Session 82 — public date-based changelog page on `afnan-jr`)  
+> **Last Updated:** 2026-10-12 (Session 96 — Day 7 Grace Period Day Resolution on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-10, Session 82 — date-based changelog page on `afnan-jr`)                                                                                                                                                  |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                           |
-| `npm run test`                               | ✅ 80 files green (864/864 tests passing)                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean)                                                                                                                                                                             |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~93%** — Dedicated public /challenges catalog, participant statistics cockpit, multi-view search & team filtering, mod audit log, daily hours overrides, weekly target hours override & admin roster removal complete |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                 |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                             |
+| Gate                                         | Result (2026-10-12, Session 96 — Day 7 Grace Period Day Resolution on `afnan-jr`)                                                                                                                                                                                                                          |
+| :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                           |
+| `npm run test`                               | ✅ 90 files green (991/991 tests passing)                                                                                                                                                                                                                                                                  |
+| `npm run build`                              | ✅ 12 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`challenge_feedbacks`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal, Discord summary copy) |
+| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                 |
+| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                             |
 
 ### 1.1 Live Routes
 
-| Route                                         | Purpose                                                                                                | Access                                 |
-| :-------------------------------------------- | :----------------------------------------------------------------------------------------------------- | :------------------------------------- |
-| `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board         | Guest (local tasks only) / Participant |
-| `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)           | Public spectator / Participant / Admin |
-| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                | Public spectator                       |
-| `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Manage (admin only) · Event Audit | Public spectator                       |
-| `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                  | Public spectator / Participant / Admin |
-| `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                    | Public view, admin entry               |
-| `/admin`                                      | Server redirect to `/challenges`                                                                       | `ADMIN` / `DEV`                        |
-| `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                    | `ADMIN` / `DEV`                        |
-| `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                             | Anyone                                 |
-| `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                          | Authenticated                          |
+| Route                                         | Purpose                                                                                                                      | Access                                 |
+| :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- | :------------------------------------- |
+| `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board                               | Guest (local tasks only) / Participant |
+| `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)                                 | Public spectator / Participant / Admin |
+| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                      | Public spectator                       |
+| `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock) · Manage (admin only) · Event Audit | Public spectator                       |
+| `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                        | Public spectator / Participant / Admin |
+| `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                                          | Public view, admin entry               |
+| `/admin`                                      | Server redirect to `/challenges`                                                                                             | `ADMIN` / `DEV`                        |
+| `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                          | `ADMIN` / `DEV`                        |
+| `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                   | Anyone                                 |
+| `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                | Authenticated                          |
 
 > **Removed routes:** `/dashboard` (replaced by `/`) and `/admin/challenges/[id]/roster` (replaced by the Manage tab). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
 
@@ -50,45 +50,48 @@
 
 Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spec · ❌ Missing
 
-| Feature ID      | Feature                            | Status | Evidence / Gap                                                                                                                                                                                                                                                                                                                                 |
-| :-------------- | :--------------------------------- | :----: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FEAT-AUTH-01`  | Discord OAuth (`identify`)         |   ✅   | `core/auth/index.ts`; role synced on sign-in via `syncUserRoleFromDiscord`                                                                                                                                                                                                                                                                     |
-| `FEAT-AUTH-02`  | Public spectator mode              |   ✅   | `app/challenge/[id]/page.tsx` renders without a session                                                                                                                                                                                                                                                                                        |
-| `FEAT-CHAL-01`  | Multi-format challenge creator     |   ✅   | `/admin/challenges/new`; banner + PFP uploads go to Supabase Storage                                                                                                                                                                                                                                                                           |
-| `FEAT-CHAL-02`  | Host manual kickoff                |   ✅   | Manage tab → `kickoffChallengeAction` (sets `startAt = now`; status is derived from timestamps)                                                                                                                                                                                                                                                |
-| `FEAT-CHAL-05`  | Lock final results                 |   ✅   | Manage tab → `lockChallengeResultsAction`. Fix D1 resolved: `resultsLockedAt DateTime?` column added to `Challenge`; `canLockChallenge` and `assertCanLockChallenge` accept `COMPLETED` when results are not yet locked (`resultsLockedAt IS NULL`), allowing reliable post-expiry dual-failure evaluation; idempotently locked once finalized |
-| `FEAT-CHAL-06`  | Duo partner self-naming            |   ❌   | No participant-side duo naming code exists. Only hosts can rename teams (Manage tab → Team Identities)                                                                                                                                                                                                                                         |
-| `FEAT-AUDIT-01` | Append-only audit trail            |   ⚠️   | `features/audit/data/audit-log.repository.ts` stores events in PostgreSQL (`audit_logs`) and in-memory fallback. Event Audit tab UI live in `/challenge/[id]`.                                                                                                                                                                                 |
-| `FEAT-DECL-01`  | Declared target hours (`HH:MM:SS`) |   ✅   | Entered in the enrollment modal (1–105h). Note: `leaveDays` is accepted by the action but **silently discarded** (no column)                                                                                                                                                                                                                   |
-| `FEAT-DECL-02`  | Mandatory weekly goals checklist   |   ⚠️   | `WeeklyGoal` was dropped (migration `20261004030000`). It was replaced by **user-scoped** Daily/Weekly categorized tasks (`features/tasks/`) that are **not linked to any challenge**                                                                                                                                                          |
-| `FEAT-DECL-03`  | Declaration lock on `ACTIVE`       |   ✅   | Targets can't be edited after enrollment at all. Late enrollment is still allowed while `ACTIVE` (only `COMPLETED` blocks it)                                                                                                                                                                                                                  |
-| `FEAT-DECL-04`  | Host weekly target hours edit      |   ✅   | `AdminTargetOverrideModal`: mods/devs can adjust any participant's weekly target commitment (1h–105h) with immutable `TARGET_HOURS_OVERRIDE` audit logging; integrated across Manage tab, Leaderboard tab, and Participant Stats profile                                                                                                       |
-| `FEAT-LOG-01`   | Daily `HH:MM:SS` self-logging      |   ✅   | `daily-hours-modal.tsx`: participants restricted to today/yesterday self-logging (`ONLY_TODAY_OR_YESTERDAY_ALLOWED`), non-scrolling 7-day selector, native picker (`max=today`), domain guards                                                                                                                                                 |
-| `FEAT-LOG-02`   | 24h single-day limit               |   ✅   | `MAX_DAILY_LOG_SECONDS` in `daily-log.validation.ts`                                                                                                                                                                                                                                                                                           |
-| `FEAT-LOG-04`   | Admin inline hours override UI     |   ✅   | `AdminHoursOverrideModal`: mods and devs (`ADMIN`, `DEV`) can override any participant's hours for any day of the week (D1..D7) with mandatory audit reason; integrated into Manage tab roster & Leaderboard tab                                                                                                                               |
-| `FEAT-LEAD-01`  | Head-to-head scoreboard            |   ✅   | `challenge-leaderboard-tab.tsx`: matchup card with share % and team targets                                                                                                                                                                                                                                                                    |
-| `FEAT-LEAD-02`  | Unified standings table            |   ✅   | Desktop table plus mobile card layout. No "Goals Done" column (goals no longer exist)                                                                                                                                                                                                                                                          |
-| `FEAT-LEAD-03`  | Catch-up deficit engine            |   ✅   | `deficit.ts` + `cockpit-progress-card.tsx`                                                                                                                                                                                                                                                                                                     |
-| `FEAT-PUN-01`   | Dual-failure auto-flagging         |   ⚠️   | `lockChallengeResults` passes `[]` as goals, so **Law L6 runs on hours only**                                                                                                                                                                                                                                                                  |
-| `FEAT-PUN-02`   | Punishment Wall                    |   ❌   | `punishment-wall.tsx` was deleted in `88779bd`. The Overview tab only mentions it in copy                                                                                                                                                                                                                                                      |
-| `FEAT-PUN-03`   | Punishment PFP download button     |   ✅   | Overview tab contains dedicated Forfeit Avatar & Accountability card with image preview, Law L6 explanation, and direct "Download Forfeit PFP" button                                                                                                                                                                                          |
-| `FEAT-PUN-04`   | Host pardon                        |   ⚠️   | `adminPardonAction` exists; **no UI** (`admin-goals-pardons.tsx` was deleted in `364c7a1`)                                                                                                                                                                                                                                                     |
-| `FEAT-DISC-01`  | 1-click Discord summary copy       |   ⚠️   | `generateDiscordSummary()` is a pure domain function; **no UI** (`discord-summary-card.tsx` was deleted in `364c7a1`)                                                                                                                                                                                                                          |
+| Feature ID      | Feature                            | Status | Evidence / Gap                                                                                                                                                                                                                                                                                                                          |
+| :-------------- | :--------------------------------- | :----: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FEAT-AUTH-01`  | Discord OAuth (`identify`)         |   ✅   | `core/auth/index.ts`; role synced on sign-in via `syncUserRoleFromDiscord`                                                                                                                                                                                                                                                              |
+| `FEAT-AUTH-02`  | Public spectator mode              |   ✅   | `app/challenge/[id]/page.tsx` renders without a session                                                                                                                                                                                                                                                                                 |
+| `FEAT-CHAL-01`  | Multi-format challenge creator     |   ✅   | `/admin/challenges/new`; banner + PFP uploads go to Supabase Storage                                                                                                                                                                                                                                                                    |
+| `FEAT-CHAL-02`  | Host manual kickoff                |   ✅   | Manage tab → `kickoffChallengeAction` (sets `startAt = now`; status is derived from timestamps)                                                                                                                                                                                                                                         |
+| `FEAT-CHAL-05`  | Lock final results                 |   ✅   | Manage tab → `lockChallengeResultsAction`. Fix D1: `resultsLockedAt DateTime?` allows idempotent post-expiry locking. Session 83: lock now runs the three-condition evaluator (weekly tasks + hours + winning team; ties never punish) and writes `PunishmentRecord` rows only for punished members                                     |
+| `FEAT-CHAL-06`  | Duo partner self-naming            |   ❌   | No participant-side duo naming code exists. Only hosts can rename teams (Manage tab → Team Identities)                                                                                                                                                                                                                                  |
+| `FEAT-AUDIT-01` | Append-only audit trail            |   ⚠️   | `features/audit/data/audit-log.repository.ts` stores events in PostgreSQL (`audit_logs`) and in-memory fallback. Event Audit tab UI live in `/challenge/[id]`.                                                                                                                                                                          |
+| `FEAT-DECL-01`  | Declared target hours (`HH:MM:SS`) |   ✅   | Entered in the enrollment modal (1–105h). Note: `leaveDays` is accepted by the action but **silently discarded** (no column)                                                                                                                                                                                                            |
+| `FEAT-DECL-02`  | Mandatory weekly goals checklist   |   ✅   | Challenge-linked tasks: `Task.challengeId` (nullable; SetNull FK) + soft delete (`deletedAt`, tombstoned category names). New tasks are stamped to the user's current challenge via `resolveTaskChallengeId` (ACTIVE preferred, else soonest UPCOMING); one-time backfill linked all existing tasks to the October challenge            |
+| `FEAT-DECL-03`  | Declaration lock on `ACTIVE`       |   ✅   | Targets can't be edited after enrollment at all. Late enrollment is still allowed while `ACTIVE` (only `COMPLETED` blocks it)                                                                                                                                                                                                           |
+| `FEAT-DECL-04`  | Host weekly target hours edit      |   ✅   | `AdminTargetOverrideModal`: mods/devs can adjust any participant's weekly target commitment (1h–105h) with immutable `TARGET_HOURS_OVERRIDE` audit logging; integrated across Manage tab, Leaderboard tab, and Participant Stats profile                                                                                                |
+| `FEAT-LOG-01`   | Daily `HH:MM:SS` self-logging      |   ✅   | `daily-hours-modal.tsx`: participants restricted to today/yesterday self-logging (`ONLY_TODAY_OR_YESTERDAY_ALLOWED`), non-scrolling 7-day selector, native picker (`max=today`), domain guards                                                                                                                                          |
+| `FEAT-LOG-02`   | 24h single-day limit               |   ✅   | `MAX_DAILY_LOG_SECONDS` in `daily-log.validation.ts`                                                                                                                                                                                                                                                                                    |
+| `FEAT-LOG-04`   | Admin inline hours override UI     |   ✅   | `AdminHoursOverrideModal`: mods and devs (`ADMIN`, `DEV`) can override any participant's hours for any day of the week (D1..D7) with mandatory audit reason; integrated into Manage tab roster & Leaderboard tab                                                                                                                        |
+| `FEAT-LEAD-01`  | Head-to-head scoreboard            |   ✅   | `challenge-leaderboard-tab.tsx`: matchup card with share % and team targets                                                                                                                                                                                                                                                             |
+| `FEAT-LEAD-02`  | Unified standings table            |   ✅   | Desktop table plus mobile card layout. Standings now carry real weekly-task counts (challenge-linked, soft-deletes included) which also drive the sort tie-break — no "Goals Done" column                                                                                                                                               |
+| `FEAT-LEAD-03`  | Catch-up deficit engine            |   ✅   | `deficit.ts` + `cockpit-progress-card.tsx`                                                                                                                                                                                                                                                                                              |
+| `FEAT-PUN-01`   | Three-condition auto-flagging      |   ✅   | `evaluateLockOutcome` (pure): saved = hours met AND all challenge-linked weekly tasks complete (soft-deleted rows count) AND in a winning team; ties never punish (`resolveWinningTeamIds`). `PunishmentRecord` row presence = punished; pardons preserved                                                                              |
+| `FEAT-PUN-02`   | Punishment Wall                    |   ❌   | `punishment-wall.tsx` was deleted in `88779bd`. The Overview tab only mentions it in copy                                                                                                                                                                                                                                               |
+| `FEAT-PUN-03`   | Punishment PFP download button     |   ✅   | Overview tab contains dedicated Forfeit Avatar & Accountability card with image preview, Law L6 explanation, and direct "Download Forfeit PFP" button                                                                                                                                                                                   |
+| `FEAT-PUN-04`   | Host pardon                        |   ⚠️   | `adminPardonAction` preserved and adapted (findFirst update-or-create; `PunishmentRecord` keeps `isPardoned/pardonReason/pardonedById`); **no UI** (`admin-goals-pardons.tsx` was deleted in `364c7a1`)                                                                                                                                 |
+| `FEAT-WRAP-01`  | Challenge wrapped story popup      |   ✅   | `features/wrapped/presentation/challenge-wrapped-modal.tsx`: auto-opens for enrolled participants while locked; localStorage-first flags (`hmt:wrapped:{challengeId}`); `isWrappedSeen` flips at the feedback slide; 3-day window + page-load auto-seen (`markWrappedSeenIfExpiredAction`); feedback flow deferred (button ships empty) |
+| `FEAT-WRAP-02`  | Challenge wrapped summary tab      |   ✅   | `?tab=summary` (post-lock): `challenge-summary-tab.tsx` renders the challenge-level story for everyone plus the personal wrapped block (verdict, reasons, best day, vs-average, team share, daily bars, weekly tasks) for enrolled participants                                                                                         |
+| `FEAT-DISC-01`  | 1-click Discord summary copy       |   ⚠️   | `generateDiscordSummary()` is a pure domain function; **no UI** (`discord-summary-card.tsx` was deleted in `364c7a1`)                                                                                                                                                                                                                   |
 
 ### 2.1 Shipped Beyond the Original P0 Spec
 
-| Capability                                            | Location                                                     | Notes                                                                                                                                                                                              |
-| :---------------------------------------------------- | :----------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`               | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                |
-| Global Participant Preview Mode                       | `features/auth/presentation/auth-nav.tsx`, `preview-mode.ts` | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                             |
-| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`            | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                 |
-| LogRocket observability                               | `core/observability/`                                        | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                        |
-| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/` | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries |
-| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`    | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                            |
-| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`             | Matches the Figma                                                                                                                                                                                  |
-| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                  | Grants full admin plus developer access                                                                                                                                                            |
-| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`  | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                              |
-| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`      | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                        |
+| Capability                                            | Location                                                            | Notes                                                                                                                                                                                                              |
+| :---------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                |
+| Global Participant Preview Mode                       | `features/auth/presentation/auth-nav.tsx`, `preview-mode.ts`        | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
+| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                                 |
+| LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                        |
+| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                 |
+| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`           | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                                            |
+| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`                    | Matches the Figma                                                                                                                                                                                                  |
+| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                         | Grants full admin plus developer access                                                                                                                                                                            |
+| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`         | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                                              |
+| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`             | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                                        |
+| Challenge Wrapped & Three-Condition lock              | `features/wrapped/`, `features/accountability/domain/punishment.ts` | Post-lock wrapped (`?tab=summary` + auto-popup, localStorage-first flags, 3-day auto-seen); challenge-linked tasks + soft delete; `evaluateLockOutcome` saves only on tasks+hours+winning team (ties never punish) |
 
 ---
 
@@ -99,7 +102,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | D1  |    ✅    | **RESOLVED (2026-10-11):** Lock Results fails after natural expiry                                                                                                                                                                                                                                                                                                    | Added `resultsLockedAt DateTime?` column, updated lifecycle domain guards to permit lock on expired unlocked events, set `resultsLockedAt` inside transaction, and updated Manage tab UI |
 | D2  | 🔴 High  | Audit trail in-memory fallback needs full persistence validation                                                                                                                                                                                                                                                                                                      | Add migration check and verify Prisma `audit_logs` model insertion across all environments                                                                                               |
 | D3  | 🔴 High  | Two P0 features have backend code but no UI: pardon modal, Discord summary copy (Punishment PFP download & Target override complete)                                                                                                                                                                                                                                  | Rebuild them in Obsidian styling inside the Manage tab (admin pardon & Discord summary)                                                                                                  |
-| D4  |  🟠 Med  | Law L6 runs on hours only: goals aren't challenge-scoped any more                                                                                                                                                                                                                                                                                                     | **Product decision needed** (see §4)                                                                                                                                                     |
+| D4  |    ✅    | **RESOLVED (2026-10-11, Session 83):** Law L6 amended to the Three-Condition Invariant — challenge-linked weekly tasks (`Task.challengeId` + soft delete) + target hours + winning team; ties never punish. `lockChallengeResults` evaluates all three conditions and records only punished members                                                                   | —                                                                                                                                                                                        |
 | D5  |  🟠 Med  | Schema drift: the `feedbacks` table and the `sort_order` columns on `categories`/`tasks` were applied with `db push` and have **no migration files**. `prisma migrate deploy` on a fresh DB would produce an incomplete schema. **Partially resolved (Session 79):** `isLeave` migration (`20261010120000`) applied; CI now blocks schema changes without a migration | Generate catch-up migrations (`prisma migrate diff`) and `migrate resolve` them on existing DBs                                                                                          |
 | D6  |  🟡 Low  | `leaveDays` is collected in the enrollment modal and then discarded                                                                                                                                                                                                                                                                                                   | Either persist it and feed it into the deficit/target math, or remove it from the UI                                                                                                     |
 | D7  |  🟡 Low  | Manual leaderboard uses `Decimal` hours (Law L8 deviation)                                                                                                                                                                                                                                                                                                            | Migrate to integer `sessionSeconds`                                                                                                                                                      |
@@ -111,7 +114,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 4. Open Product Decisions (Require Team Sign-off)
 
-1. **Goals vs Law L6:** Should challenges get a challenge-scoped goal list again (e.g. link Weekly tasks to an enrollment), or should Law L6 be formally amended to hours-only? Until this is decided, `FEAT-DECL-02/04` and `FEAT-PUN-01` stay ⚠️.
+1. **~~Goals vs Law L6~~ — ✅ Resolved (2026-10-11, Session 83):** challenge-scoped goals returned as challenge-linked tasks (`Task.challengeId`, default stamping + soft delete); Law L6 amended to the Three-Condition Accountability Invariant (weekly tasks + hours + winning team; ties never punish).
 2. **Leave days:** Should declared leave days reduce the target or the days remaining in the catch-up math? Law L3 forbids grace passes, so this needs an explicit ruling.
 3. **Late enrollment while `ACTIVE`:** Is this intended? It's allowed today.
 4. **Design authority:** `DESIGN.md` now documents the Obsidian system (it replaced "Cozy Study Café" on 2026-10-04). Confirm this is ratified.
@@ -127,7 +130,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | L3 Catch-Up Deficit        |   ✅   | `deficit.ts`; no grace passes                                                                    |
 | L4 Discord Identity        |   ✅   | OAuth only; public spectator                                                                     |
 | L5 Admin Override Absolute |   ✅   | `adminOverrideStudyHoursAction` + `AdminHoursOverrideModal` live in Manage tab & Leaderboard tab |
-| L6 Dual-Failure            |   ⚠️   | Hours-only (D4)                                                                                  |
+| L6 Three-Condition         |   ✅   | Weekly tasks + hours + winning team; ties never punish (D4 resolved)                             |
 | L7 Pure Domain Isolation   |   ✅   | `domain/` folders are framework-free                                                             |
 | L8 Second-Level Precision  |   ⚠️   | Main logs ✅; manual leaderboard uses `Decimal` hours (D7)                                       |
 | L9 Zero-State Resilience   |   ✅   | `loading.tsx` on all routes; `EmptyState` / `ErrorState` components                              |
@@ -139,156 +142,192 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > [!IMPORTANT]
 > **EXACT NEXT STEP (For Incoming Agent):**
 >
-> 1. Complete D3 UI restoration:
->    - Restore host pardon modal (`FEAT-PUN-04`) in the Manage tab with Obsidian styling.
->    - Restore 1-click Discord summary copy (`FEAT-DISC-01`) in the Manage tab with clipboard embed.
->    - Restore dedicated Punishment Wall view/modal (`FEAT-PUN-02`).
-> 2. Reconcile remaining schema drift (D5): generate catch-up migrations for `feedbacks` and `categories`/`tasks` `sort_order` columns.
+> 1. Restore the remaining deleted P0 UIs:
+>    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
+>    - 1-click Discord summary copy (`FEAT-DISC-01`).
+>    - Punishment Wall (`FEAT-PUN-02`).
+> 2. Promote the migrations to the hosted DB when the team is ready:
+>    - `20261011120000_challenge_wrapped_flags_and_punishment_trim`
+>    - `20261011120100_challenge_linked_tasks_and_soft_delete`
+>    - `20261012120000_add_challenge_feedback_table`
+> 3. Reconcile remaining schema drift (D5): generate catch-up migrations for `feedbacks` and the `sort_order` columns.
 
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
-### Sessions 1–77 (Summarized)
+### Sessions 1–84 (Summarized)
 
-- Core domain math, Prisma models, Discord OAuth, participant cockpit, mobile pass, drag & drop across Daily/Weekly boards, offline-first IndexedDB task sync (`holdmetoit_db`), 2-card participant logging, admin 7-day hours overrides, law labels UI cleanup, moderator future hours prevention, cross-day task moving/rescheduling with validation, participant study log audit trail integration (`STUDY_LOG_ADDED`), dedicated public challenges catalog (`/challenges`) with role-gated admin controls, multi-view pagination guards (`DataPagination`), challenge-specific participant statistics profiles (`/challenge/[id]/participant/[participantId]`), multi-view search & team filtering with "View by Team" mode, dynamic team color palettes with WCAG AA contrast calculation (`team-colors.ts`), overall time reset to 0 (`executeAdminResetOverallHours`), and challenge tab reload URL sync (`challenge-tabs.ts`). Also: full migration of daily study logs from legacy V1 to `DailyStudyLogV2` (cockpit/participant-stats log resolution simplified). Also (Session 76, afnan): leaderboard view-mode URL sync (`?view=individual|today|team`) with `popstate` restoration and participant-profile breadcrumb/empty-state context preservation. Session 77 (afnan-jr): merged the "About" tab into Overview — `CHALLENGE_TABS` is now overview/leaderboard/manage/audit with a legacy `about`→`overview` redirect; the UTC timetable + description were folded into the Overview Welcome card, and a Forfeit Avatar download card was added.
+- Core domain math, Prisma models, Discord OAuth, participant cockpit, mobile pass, drag & drop across Daily/Weekly boards, offline-first IndexedDB task sync (`holdmetoit_db`), 2-card participant logging, admin 7-day hours overrides, law labels UI cleanup, moderator future hours prevention, cross-day task moving/rescheduling with validation, participant study log audit trail integration (`STUDY_LOG_ADDED`), dedicated public challenges catalog (`/challenges`) with role-gated admin controls, multi-view pagination guards (`DataPagination`), challenge-specific participant statistics profiles (`/challenge/[id]/participant/[participantId]`), multi-view search & team filtering with "View by Team" mode, dynamic team color palettes with WCAG AA contrast calculation (`team-colors.ts`), overall time reset to 0 (`executeAdminResetOverallHours`), and challenge tab reload URL sync (`challenge-tabs.ts`). Also: full migration of daily study logs from legacy V1 to `DailyStudyLogV2` (cockpit/participant-stats log resolution simplified). Also (Session 76, afnan): leaderboard view-mode URL sync (`?view=individual|today|team`) with `popstate` restoration and participant-profile breadcrumb/empty-state context preservation. Session 77 (afnan-jr): merged the "About" tab into Overview — `CHALLENGE_TABS` is now overview/leaderboard/manage/audit with a legacy `about`→`overview` redirect; the UTC timetable + description were folded into the Overview Welcome card, and a Forfeit Avatar download card was added. Session 78: Admin roster participant removal and target-hours override UI. Session 79: PR #67 `isLeave` production regression fixed with migration. Session 80: Structured logger. Session 81: Dependabot, Vitest 5, Fix D1 results lock. Session 82: Changelog page. Session 83: Challenge Wrapped + Three-Condition lock + challenge-linked tasks and soft delete. Session 84: Result unlock rollback action + CLI scripts.
 
-### Session 78 — 2026-10-10 (afnan-jr + krish — merged `dev` into `main`)
+### Sessions 85–88 (Summarized)
 
-- **Agent Role:** Admin Operations & Broadcaster Agent, Data & Identity Agent, Participant UI Agent, Scoring & Engine Agent.
-- **Admin Roster Participant Removal (afnan-jr):**
-   - **Repository (`features/challenges/data/challenge-admin.repository.ts`):** Added `removeChallengeParticipant`. Guards participant existence and blocks removal when the derived status is `COMPLETED` (allows `UPCOMING`/`ACTIVE`). Inside a transaction, deletes dependent rows explicitly in order — `dailyStudyLogV2` → `punishmentRecord` → `leaderboardEntry` (by `challengeId` + `userId`) → `teamMember` (by `userId` + `challengeId`) — then the `challengeParticipant`, and appends a `ROSTER_EDIT` audit event (previous roster state, `newValue: null`, required reason). The explicit deletes cover the `LeaderboardEntry`/`TeamMember` rows that do not cascade from `ChallengeParticipant`.
-   - **Server Action (`features/challenges/api/challenge-admin.actions.ts`):** Added `removeChallengeParticipantAction` with a Zod schema (`challengeId`, `participantId`, `reason` min 3 chars), `requireAdminUser()` guard, scoreboard cache invalidation, and path revalidation.
-   - **Presentation (`features/challenges/presentation/challenge-manage-tab.tsx`):** Added a destructive `UserMinus` control per roster row (hidden on `COMPLETED` challenges) and a confirmation modal requiring an audit reason, with success/error feedback. Removal is applied optimistically via local state (no `router.refresh()`), so the modal closes and only the removed row disappears instead of the whole route re-rendering.
-   - **Test Suite:** Added repository tests (ordered deletes + audit, not-found, completed rejection) and action tests (success, short reason, non-admin), and extended the `challengeParticipant` Prisma mock with `delete`.
-- **Participant Target Hours Override, Full Category DnD, Accessible Submit Button & Upstream Dev Merge (krish):**
-   - **Option for Mods/Devs to Edit Weekly Goal Hours (`FEAT-DECL-04`, Issue #63):**
-      - Added `"TARGET_HOURS_OVERRIDE"` to `AuditEventType` union and immutable audit logs.
-      - Implemented `adminUpdateParticipantTarget` in `challenge-admin.repository.ts` and `adminUpdateParticipantTargetAction`.
-      - Built `AdminTargetOverrideModal` (`admin-target-override-modal.tsx`) with Obsidian styling, `HH:MM:SS` duration inputs, quick hour presets (15h–60h), difference preview (fixed negative duration crash with `Math.abs`), and reason audit field.
-      - Integrated "Edit target" buttons into Manage tab, Leaderboard tab, and Participant Stats profile.
-   - **Dragging of To-Do Categories to Other Days (Issue #58):**
-      - Added pure domain reordering functions `moveCategoryToDay`, `calculateReorderIndex`, and date helpers in `task-reorder.ts` with domain validation (forbids moving into past days).
-      - Updated `cockpit-tasks-section.tsx`: category headers are draggable, child dragover propagation handled, day pill drag-over highlights, and IndexedDB sync.
-   - **Reposition Submit & Action Buttons in Modal (Issue #52):**
-      - Restructured `DailyHoursModal` actions so the primary submit button and leave toggle are directly accessible without scrolling on mobile viewports.
-   - **Leave Visual Feedback & Profile Linkage (`FEAT-LOG-01`):**
-      - Added `isLeave` column to `DailyStudyLog` / `DailyStudyLogV2` in Prisma schema.
-      - Reflected leave badges (`🌴 On Leave`) across Home Cockpit banner, Participant Profile stats, and daily history charts.
-- **Merge Integration:** Unified `dev` into `main`. The divergent `challenge-admin` repository/action/test conflicts were resolved by keeping **both** the roster-removal feature and the weekly target-hours override feature.
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (76/76 test files passing, 825/825 tests green)
-   - `npm run build` ✅ (11 routes compiled successfully)
-- **NEXT STEP:** Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence).
+- **Session 85:** Ported `holdmetoit Wrapped.html` into `challenge-wrapped-modal.tsx` with 5-slide flow, pure domain story models (`wrapped-story.ts`), count-up, charts, and hold-to-reveal stamp.
+- **Session 86:** Unified Challenge Summary tab (`challenge-summary-tab.tsx`) to Obsidian dark tokens and migrated wrapped modal from CSS modules to Tailwind CSS v4.
+- **Session 87:** Harmonized wrapped modal to Obsidian tokens, eliminated prototype hexes/variables, fixed icon button flex expansion, and built desktop 16:9 2-column split responsive layout.
+- **Session 88:** Implemented dynamic midpoint anchoring for Slide 2 best-day label to eliminate right-column collisions, and edge-aware tooltip translation.
+   - `npm run test` passed (85 test files, 936/936 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (completed in Session 89):** Challenge Feedback Backend Bridge & Discord Channel 1558594247895289877.
 
-### Session 79 — 2026-10-10 (afnan-jr — PR #67 regression diagnosis, DB fix & re-land)
+### Session 89 — 2026-10-12 (afnan-jr — 8-Question Challenge Feedback Survey Dialog & Discord Channel 1558594247895289877)
 
-- **Agent Role:** Data & Identity Agent, Participant UI Agent.
-- **Incident Diagnosis (PR #67 → PR #68 rollback):**
-   - Root cause: `isLeave` was added to `prisma/schema.prisma` in PR #67 but never reached the database — no migration existed anywhere in history and `build` only runs `prisma generate`. The DB is push-managed (D5). Live introspection confirmed `"study_logs_v2"` was missing the column (while `"DailyStudyLog"` already had it from an earlier manual push).
-   - Result: every Prisma query selecting/including `isLeave` threw `P2022` at request time. `app/page.tsx` silently caught it into `cockpit = null`, so enrolled users saw the unenrolled ENROLL banner; the participant profile page propagated the throw to the error boundary. Logging hours, the admin Manage tab, and Lock Final Results were broken by the same drift; the leaderboard kept working because its query uses an explicit `select` without `isLeave`.
-   - Full diagnostic report: `~/.commandcode/plans/pr67-regression-diagnostic-report.md`.
-- **Database Fix (`prisma/migrations/20261010120000_add_is_leave_to_study_logs`):**
-   - Idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS "isLeave" BOOLEAN NOT NULL DEFAULT false` on both log tables; applied to the shared Supabase DB via `prisma db execute` and verified by re-introspection.
-   - **Runbook:** DB column first, then deploy — additive columns are safe in both directions. Never run `migrate dev` against the drifted DB (reset risk).
-- **PR #67 Re-land:** `git revert 62fd70a` (revert-of-revert). Do NOT re-land via a plain `dev` → `main` merge — `4cbcfb9` is already in main's history via `682cc90`, so a plain merge silently keeps the features reverted.
-- **Error Surfacing (Law L9):**
-   - `app/page.tsx`: removed the silent catch around `getParticipantCockpit` — errors now surface via `app/error.tsx` instead of faking the "not enrolled" state.
-   - `app/challenge/[id]/participant/[participantId]/page.tsx`: guarded `generateMetadata` + page body; renders `ErrorState` + "Return to Leaderboard" on failure.
-   - Added route-level `error.tsx` with LogRocket capture (partial ISSUES.md #10); regression tests added for both error paths.
-- **CI Guard:** `scripts/check-schema-migration.sh` + `.github/workflows/ci.yml` — fails any PR changing `prisma/schema.prisma` without a `prisma/migrations` change, and runs typecheck/test/build (repo previously had zero GitHub workflows; PR "checks" were Vercel builds only).
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (76 files, 827/827 tests green)
-   - `npm run build` ✅ (11 routes compiled successfully)
-- **NEXT STEP:** Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); D5 catch-up migrations (`feedbacks`, `sort_order`) as the follow-up stretch.
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Data & Identity Agent.
+- **Pure Domain Schema & Embed Builder (`features/wrapped/domain/`):**
+   - Updated `challenge-feedback.schema.ts` defining `submitChallengeFeedbackSchema` covering the 8 community survey questions:
+      1. Consistency: `"Yes, significantly"` / `"Somewhat"` / `"No, it did not make a difference"`
+      2. Fairness rating: `1` (Unfair) to `5` (Very Fair)
+      3. Tracking method preference: `"Strictly YPT"` / `"Allow all apps with no restrictions"`
+      4. Team Battle suggestions & complaints: textarea (max 2000 chars)
+      5. Work/school hours target adjustment: `"Yes, include work and school hours"` / `"No, dont include them"`
+      6. Solo Challenge operating style: `"Competitive (Keep a leaderboard)"` / `"Laid-back (Personal goals for role rewards)"`
+      7. Solo punishment PFP system: `"Yes, keep the punishment"` / `"No, remove the punishment"`
+      8. Solo Challenge ideas & thoughts: textarea (max 2000 chars)
+   - Updated `challenge-feedback-embed.ts` generating Obsidian-styled Discord embeds (`0x22c55e` emerald, dynamic stars, submitter mention `<@discordId>`, scannable inline fields for multiple-choice responses, and full-width fields for multiline feedback).
+- **Discord Dispatch Service (`features/wrapped/data/challenge-feedback.service.ts`):**
+   - Configured channel resolution: defaults to `1558594247895289877` (with `process.env.DISCORD_CHALLENGE_FEEDBACK_CHANNEL_ID` override).
+   - Wired REST API v10 bot messaging (`POST /channels/1558594247895289877/messages`) with robust error handling and fail-soft behavior so downstream rate-limits or network glitches do not disrupt user persistence.
+- **Server Action & DB Persistence (`features/wrapped/api/wrapped.actions.ts`):**
+   - Updated `submitChallengeFeedbackAction(rawInput)`: authenticates session, verifies challenge enrollment (`requireOwnedParticipant`), updates `ChallengeParticipant.isFeedbackFilled = true` in PostgreSQL, dispatches the formatted embed to Discord, revalidates scoreboard cache tags (`challengeScoreboard(challengeId)`), and logs structured diagnostics.
+- **Obsidian Survey Dialog UI (`features/wrapped/presentation/challenge-feedback-dialog.tsx`):**
+   - Created `ChallengeFeedbackDialog` with clean Obsidian styling:
+      - 2-section progressive layout: _Part 1: Team Battles Review_ and _Part 2: Upcoming Solo Challenge_.
+      - Interactive selectable card chips with emerald/blue active borders and radio indicators.
+      - 1–5 numerical scale buttons with "Unfair" and "Very Fair" anchor labels.
+      - Obsidian dark multiline textareas (`bg-[#1c1c1c] border-[#292929]`).
+      - Inline error alerts if required questions are unanswered.
+      - Submitting spinner and celebratory Thank You screen with emerald checkmark on completion.
+   - Wired Slide 5 "Give feedback" button in `challenge-wrapped-modal.tsx`: opens `ChallengeFeedbackDialog`, triggers `writeWrappedLocalState(challengeId, { feedback: true })`, and automatically closes the wrapped story upon completion.
+- **Environment Documentation:**
+   - Added `DISCORD_CHALLENGE_FEEDBACK_CHANNEL_ID="1558594247895289877"` to `.env.example` and local `.env`.
+- **Unit Testing & Verification:**
+   - Added unit test suites `challenge-feedback.schema.test.ts`, `challenge-feedback-embed.test.ts`, `challenge-feedback.service.test.ts`, `challenge-feedback-dialog.test.tsx`, and updated `wrapped.actions.test.ts` (35 new tests added, 89 test files total).
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (89 test files, 971/971 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (completed in Session 90):** Feedback Dialog Obsidian Tokens Harmonization, Badge Removal & Unified Flow.
 
-### Session 80 — 2026-10-10 (afnan-jr — structured event logging & failure diagnostics)
+### Session 90 — 2026-10-12 (afnan-jr — Feedback Dialog Obsidian Tokens Harmonization, Badge Removal & Unified Single-Section Flow)
 
-- **Agent Role:** Observability / cross-cutting infrastructure.
-- **Unified severity-filtered logger (`core/observability/`):**
-   - Pure domain model (Law L7, zero framework imports, Vitest-covered): `domain/log-level.ts` (`LogLevel`, `parseLogLevel`, `shouldEmit`), `domain/log-entry.ts` (`buildLogEntry`, `serializeError`, `formatLogEntry`), `domain/log-events.ts` (typed `LogEventName` catalog).
-   - `logger.ts` facade — `logEvent`, `logDebug/Info/Warn/Error`, `createLogger(scope)`. Server emits one-line JSON (captured by serverless logs); client logs to console and **dynamically** imports LogRocket to forward events (`track`) and errors (`captureException`, preserving `tags`). Every entry point is fail-safe (never throws).
-   - Thresholds: server `LOG_LEVEL` (default `info` in prod / `debug` otherwise); client `NEXT_PUBLIC_LOG_LEVEL` (default `warn` in prod / `debug` otherwise). `error` always emits.
-- **Full event-surface instrumentation:**
-   - All 24 server actions in `features/*/api/*.actions.ts`: success → `info` event, unexpected failures → `error` (serialized stack + context), expected control-flow errors (auth / access / not-found / conflict) → `debug`.
-   - `app/api/tasks/sync` and `app/api/feedback` route handlers; Auth.js `events.signIn` (`auth.discord_signin`, `auth.user_synced`) and the previously swallowed role-sync `.catch` (`auth.role_sync_failed`, resolves ISSUES #7); the three error boundaries and three server pages now emit `app.error`.
-- **Console exodus (ISSUES #16):** every app-runtime `console.*` (storage, audit repo, image cleanup, task-sync repo, client IndexedDB helper, boundaries, pages, routes) now routes through the logger; only the logger transport and `prisma/seed.ts` still call `console`. Removed the dead `captureLogRocketException` import in `cockpit-tasks-section.tsx`.
-- **Env (ISSUES #17/#18):** `NEXT_PUBLIC_LOGROCKET_APP_ID` + `NEXT_PUBLIC_APP_RELEASE` now env-drive LogRocket (safe fallbacks); documented `LOG_LEVEL`, `NEXT_PUBLIC_LOG_LEVEL`, `NEXT_PUBLIC_LOGROCKET_APP_ID`, `NEXT_PUBLIC_APP_RELEASE` in `.env.example`. No new dependencies (stack stays LogRocket-only); no DB table or migration.
-- **Tests:** added 14 unit tests (`core/observability/domain/*.test.ts`); updated 5 existing assertions that spied on old `console.*` output to assert on structured logger output.
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (78 files, 841/841 tests green)
-   - `npm run build` ✅ (11 routes compiled successfully)
-- **NEXT STEP:** Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); D5 catch-up migrations (`feedbacks`, `sort_order`) as the follow-up stretch.
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Header Badge Removal (`features/wrapped/presentation/challenge-feedback-dialog.tsx`):**
+   - Removed `<SparklesIcon>` badge/pill before "Challenge Feedback" heading in dialog header.
+   - Heading is now clean and directly rendered: `font-display font-bold text-lg sm:text-xl text-[#f4f3f6] tracking-tight`.
+- **Unified Single-Section Flow (Elimination of Part 1 / Part 2):**
+   - Removed `Part 1 · Team Battles Review` and `Part 2 · Upcoming Solo Challenge` section headers and dividing lines.
+   - Merged all 8 community survey questions into a single cohesive, sequentially flowing Obsidian form.
+- **Obsidian Dark Token Harmonization (`DESIGN.md` §2):**
+   - Replaced all Part 2 blue accents (`#3b82f6`, `#102d40`/40) with project-standard Obsidian Emerald tokens (`#22c55e`, `#144520`/40) for radio buttons, active selection rings, and required asterisks.
+   - Standardized option card states: unselected options use `bg-[#1c1c1c] border-[#292929] text-[#d1d1d1] hover:border-[#434343] hover:text-[#f4f3f6]`; selected options use `bg-[#144520]/40 border-[#22c55e] text-[#f4f3f6]`.
+   - Harmonized dialog container radius to `rounded-2xl sm:rounded-3xl` and footer to `rounded-b-2xl sm:rounded-b-3xl`.
+   - Upgraded both multiline textareas (Q4 and Q8) with unified Obsidian tokens: `bg-[#1c1c1c] border-[#292929] placeholder-[#868686]/70 focus:border-[#22c55e] focus:ring-1 focus:ring-[#22c55e]/40`.
+- **Slide 5 Copy Precision (`features/wrapped/presentation/challenge-wrapped-modal.tsx`):**
+   - Updated kicker from `"Anonymous · 2 minutes"` to `"Community Feedback · 2 minutes"`.
+   - Updated description to `"Tell us what worked and what didn't. Your feedback helps shape future challenges."` to reflect submitter name logging in Discord.
+- **Unit Testing & Verification:**
+   - Updated `features/wrapped/presentation/challenge-feedback-dialog.test.tsx` asserting the absence of "Part 1" and "Part 2" section headers and verifying unified form structure.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (89 test files, 971/971 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (completed in Session 91):** Dedicated ChallengeFeedback PostgreSQL Table, Repository & Dual-Persistence Pipeline.
 
-### Session 81 — 2026-10-10 (afnan-jr — consolidated dependabot dependency migration)
+### Session 91 — 2026-10-12 (afnan-jr — Dedicated ChallengeFeedback PostgreSQL Table, Repository & Dual-Persistence Pipeline)
 
-- **Agent Role:** Cross-cutting / dependency & toolchain maintenance.
-- **Scope:** Folded five open dependabot PRs (#71–#75) into one branch (`afnan-jr`) instead of merging them individually, then performed the required migrations and fixed the resulting breakages.
-   - #71 `source-map-js` 1.2.1 → 1.2.2 (transitive) — folded via lockfile.
-   - #72 `brace-expansion` → 1.1.21 / 2.1.7 / 5.0.12 (GHSA DoS) — forced with `npm update` (plain `npm install` kept the vulnerable pins).
-   - #73 `vitest` 3.2.7 → **5.0.3** (+ drops `tinypool`); #74 (vitest 4.1.11) dropped as the superseded major.
-   - #75 `tailwindcss` 3.4.19 → **4.3.3** (+ drops `postcss-selector-parser`, `chokidar`/`braces`).
-- **Toolchain migration:**
-   - `vitest.config.ts`: replaced the deprecated `esbuild: { jsx: "automatic" }` (ignored by Vitest 5's Vite 8 / Rolldown) with `oxc: { jsx: { runtime: "automatic" } }`; normalized `test.exclude` to globs (`**/node_modules/**`, `**/.next/**`, `**/prototype/**`).
-   - Tailwind v4: `postcss.config.mjs` now loads `@tailwindcss/postcss`; `app/globals.css` uses `@import "tailwindcss"; @config "../tailwind.config.ts";` (compat bridge keeps the JS design config + `tailwindcss-animate`); `tailwind.config.ts` `darkMode` normalized `["class"]` → `"class"` (v4 type) and `content` extended with `./core` + `./lib` (ISSUES #13).
-   - **Node floor:** Vitest 5 requires Node `^22.12.0`; CI `node-version` bumped `20` → `22`, `engines.node: ">=22.12.0"` added, `packageManager: "npm@12.2.0"`.
-   - Single lockfile: `bun.lock` deleted (ISSUES #11/D10); `package-lock.json` regenerated and verified with `npm ci`.
-- **Verification (all gates green):**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (79 files, 844/844 tests green — no test-source changes required; the v5 mocker kept all `vi.mock` patterns working)
-   - `npm run build` ✅ (11 routes compiled)
-   - Built + dev CSS bundles inspected: `animate-in` / `--tw-enter-opacity` / `zoom-in-95` (tailwindcss-animate), `rounded-3xl`, `hsl(var(--border))`, and font vars all emitted; `/challenges` dev render returns HTTP 200.
-   - `npm audit`: 20 → 8 advisories (ISSUES #5 resolved; remaining are Next 14 / `eslint-config-next` majors, out of scope).
-- **Known warning (non-blocking):** Vite warns that `vitest.config.ts` uses ESM syntax while loaded as CommonJS — future Vite majors default to the native config loader, so rename to `vitest.config.mts` (or add `"type": "module"`) when that lands.
-- **NEXT STEP:** Unchanged — Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); then D5 catch-up migrations (`feedbacks`, `sort_order`).
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent.
+- **Prisma Schema & PostgreSQL Migration (`prisma/`):**
+   - Added `ChallengeFeedback` model to `prisma/schema.prisma` with fields: `id` (cuid), `challengeId`, `userId`, `consistency`, `fairnessRating` (Int), `trackingPreference`, `teamBattleSuggestions` (optional Text), `workSchoolAdjust`, `soloOperatingStyle`, `soloSuggestions` (optional Text), `soloPunishment`, `discordMessageId` (optional VarChar), `createdAt`, `updatedAt`.
+   - Added composite unique index `@@unique([challengeId, userId])` to enforce strict idempotent feedback persistence per user per challenge.
+   - Linked reverse relations on `User` (`challengeFeedbacks ChallengeFeedback[]`) and `Challenge` (`challengeFeedbacks ChallengeFeedback[]`) with cascade delete on participant/challenge deletion.
+   - Created migration `prisma/migrations/20261012120000_add_challenge_feedback_table/migration.sql` and generated updated Prisma client.
+- **Dedicated Data Repository (`features/wrapped/data/challenge-feedback.repository.ts`):**
+   - Created repository methods with strict error handling and optional transaction client injection (`dbOrTx`):
+      - `saveChallengeFeedback(data, tx?)`: Idempotent upsert matching `challengeId_userId`.
+      - `getChallengeFeedback(challengeId, userId)`: Fetches specific participant submission.
+      - `listChallengeFeedbacks(challengeId)`: Retrieves all challenge feedback records.
+      - `updateChallengeFeedbackDiscordMessageId(id, discordMessageId)`: Records dispatched Discord message ID.
+- **Server Action Dual-Persistence Pipeline (`features/wrapped/api/wrapped.actions.ts`):**
+   - Updated `submitChallengeFeedbackAction(rawInput)` to execute dual persistence:
+      1. Authenticates session and validates input schema via Zod (`submitChallengeFeedbackSchema`).
+      2. Runs ACID transaction via `prisma.$transaction`: marks `ChallengeParticipant.isFeedbackFilled = true` AND saves/upserts the full response in `ChallengeFeedback`.
+      3. Dispatches formatted Obsidian Discord embed to channel `1558594247895289877` via bot token.
+      4. Upon successful Discord message delivery, records `discordMessageId` on the `ChallengeFeedback` record.
+      5. Returns `{ success: true, feedbackId: feedbackRecord.id }`.
+   - Fail-soft architecture: If Discord webhook or API fails or rate-limits, data is already safely committed in PostgreSQL and participant progress is never blocked.
+- **Unit Testing & Verification:**
+   - Added `features/wrapped/data/challenge-feedback.repository.test.ts` (4 unit tests passing).
+   - Updated `features/wrapped/api/wrapped.actions.test.ts` to assert transactional DB upsert and `feedbackId` return.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (90 test files, 975/975 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (completed in Session 92):** Wrapped Modal Starting Slide Fix & Server Reset Reconciliation.
 
-### Session 82 — 2026-10-10 (afnan-jr — public date-based changelog page)
+### Session 92 — 2026-10-12 (afnan-jr — Wrapped Modal Starting Slide Fix & Server Reset Reconciliation)
 
-- **Agent Role:** Participant UI Agent (new public informational surface).
-- **Feature — date-grouped changelog (`/changelog`) rendered from the root `CHANGELOG.md`:**
-   - **Source of truth (`CHANGELOG.md`):** single date-wise file at the repo root, populated from this HANDOFF log + `git log`. `## YYYY-MM-DD` groups entries; `### Title [user]` is user-facing (visible to everyone) and an untagged `### Title` is internal (admins only).
-   - **Domain (`features/changelog/domain/changelog.ts`):** pure, framework-free `parseChangelogMarkdown` (dependency-free — no MDX/`gray-matter`), plus `sortGroupsByDate` (newest first, stable), `selectVisibleGroups(groups, isAdmin)`, and `formatEntryDate` (native `Intl`, UTC-pinned). Law L7; 15 Vitest cases in `changelog.test.ts`.
-   - **Data (`features/changelog/data/changelog.repository.ts`):** reads + parses the root `CHANGELOG.md`, returning `[]` on failure to drive the empty state.
-   - **Presentation (`features/changelog/presentation/changelog-view.tsx`):** server component filtering by effective admin (participant-preview respected); internal entries carry an "Internal" pill; rendered with the existing Obsidian system + `EmptyState` fallback.
-   - **Route (`app/changelog/`):** `layout.tsx` (AppHeader shell mirroring `/challenges`), `page.tsx` (resolves effective admin state + reads the file), `loading.tsx` (skeleton), `error.tsx` (LogRocket-instrumented `ErrorState` + retry) — Law L9 loading/empty/error states covered.
-   - **Access:** public route deliberately **unlinked** from `AppHeader` (URL-only) — a future nav link can be added beside "Challenges".
-   - **Deploy (`next.config.mjs`):** `experimental.outputFileTracingIncludes["/changelog"] = ["./CHANGELOG.md"]` so the dynamic route ships the file on Vercel (verified present in `page.js.nft.json`).
-   - **Removed:** the earlier `features/changelog/data/changelog-entries.ts` TS constant, superseded by `CHANGELOG.md` as the single source.
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (80 files, 858/858 tests green)
-   - `npm run build` ✅ (12 routes compiled; `/changelog` trace includes `CHANGELOG.md`)
-- **NEXT STEP:** Unchanged — Fix D1 + D2 (challenge finalization after natural expiry & audit log persistence); then D5 catch-up migrations (`feedbacks`, `sort_order`).
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Root Cause Resolution (`features/wrapped/presentation/challenge-wrapped-modal.tsx`):**
+   - Eliminated `setSlideIndex(mergedSeen ? FEEDBACK_SLIDE_INDEX : 0)` which was forcing the modal to skip slides 0–3 and open directly on Slide 4 (Feedback).
+   - Unconditionally initialized modal to `setSlideIndex(0)` upon opening. The modal now always presents the wrapped story from the beginning.
+   - Initialized `seenReportedRef.current = effectiveSeen` when opening, ensuring `markWrappedSeenAction` is not triggered on initial mount.
+   - Guaranteed `markWrappedSeenAction(id)` and `seen: true` only execute when the participant actively advances to and views Slide 4 (`FEEDBACK_SLIDE_INDEX`).
+- **Server Authority & Cache Invalidation:**
+   - Added proactive reconciliation: when the server delivers `isWrappedSeen === false` or `isFeedbackFilled === false`, `localStorage` is updated immediately to `{ seen: false }` or `{ feedback: false }`.
+   - Fixes the bug where clearing DB flags in PostgreSQL had no effect due to stale browser cache resurrecting `mergedSeen = true`.
+- **Database Reset & Testing Verification:**
+   - Reset Afnan's participant record (`cmtqgnr7o0000sbp1ua33e720`) in PostgreSQL to `isWrappedSeen = false` and `isFeedbackFilled = false`.
+   - Added unit test in `features/wrapped/presentation/challenge-wrapped-modal.test.tsx` verifying Slide 0 active visibility on open.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (90 test files, 976/976 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (completed in Session 95):** Cockpit Banner Post-Expiry State & Lock-Gated Outcome.
 
-### Session 81 — 2026-10-11 (krish — Fix D1: Challenge Lock Results After Natural Expiry)
+### Session 95 — 2026-10-12 (afnan-jr — Lock-Gated Cockpit Banner & Unlocked Post-Expiry Logging State)
 
-- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Admin Operations & Broadcaster Agent.
-- **Problem & Root Cause (D1, ISSUES.md #1, Issue #77):**
-   - Challenge lifecycle status is derived dynamically via `calculateChallengeStatus(startAt, endAt)`. When a challenge naturally expired (`currentTime >= endTime`), its derived status immediately transitioned to `COMPLETED`.
-   - `assertCanLockChallenge("COMPLETED")` threw `ChallengeStateError("Challenge results are already locked and finalized.")`, and the Manage tab button `Lock Final Results` was guarded by `challenge.status === "ACTIVE"`.
-   - Result: if the host did not manually click "Lock Final Results" _before_ the timer expired, the challenge could never be locked, punishments were never evaluated, and Law L6 was broken for naturally ended events.
-- **Implementation & Resolution:**
-   - **Schema & Migration (`prisma/schema.prisma` & `prisma/migrations/20261011000000_add_results_locked_at_to_challenge/migration.sql`):**
-      - Added `resultsLockedAt DateTime?` to `Challenge`.
-      - Applied idempotent migration `ALTER TABLE "Challenge" ADD COLUMN IF NOT EXISTS "resultsLockedAt" TIMESTAMP(3);` to Supabase DB via `prisma db execute`.
-   - **Domain Lifecycle (`features/challenges/domain/challenge-lifecycle.ts`):**
-      - Updated `canLockChallenge(statusOrChallenge, resultsLockedAt?)` and `assertCanLockChallenge(statusOrChallenge, resultsLockedAt?)` to allow locking when status is `COMPLETED` and `resultsLockedAt` is null/undefined.
-      - Throws `ChallengeStateError("Challenge results are already locked and finalized.")` only when `resultsLockedAt != null`.
-      - Exported `isChallengeResultsLocked`.
-   - **Repository (`features/challenges/data/challenge-admin.repository.ts`):**
-      - `lockChallengeResults` now passes `challenge.resultsLockedAt` into `assertCanLockChallenge`, updates `resultsLockedAt = now` in `tx.challenge.update`, and logs `resultsLockedAt` in the audit event.
-   - **Presentation (`features/challenges/presentation/challenge-manage-tab.tsx` & `leaderboard-data.ts`):**
-      - Added `resultsLockedAt` to `RawChallengePayload` and `ChallengeScoreboardViewModel`.
-      - Manage tab now uses `canLockChallenge(challenge.status, challenge.resultsLockedAt)` to render "Lock Final Results" for both active challenges and expired unfinalized challenges.
-      - Renders a clean "Results Locked" indicator once finalized.
-   - **Test Suite Updates:**
-      - Added domain lifecycle unit tests in `challenge-lifecycle.test.ts` for expired unfinalized challenges, already-locked rejections, and object inputs.
-      - Added repository tests in `challenge-admin.repository.test.ts` asserting post-expiry lock evaluation, `resultsLockedAt` persistence, and idempotency protection.
-- **Quality Gates Verified:**
-   - `npm run typecheck` ✅ (0 errors)
-   - `npm run test` ✅ (78 files, 847/847 tests green)
-   - `npm run build` ✅ (11 routes compiled, 0 errors)
-- **NEXT STEP:** Restore deleted P0 UIs (host pardon modal, 1-click Discord summary copy, Punishment Wall).
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Root Cause & Diagnosis:**
+   - `calculateChallengeStatus(challenge, now)` evaluates to `"COMPLETED"` the moment `now >= endAt` (natural expiry at the start of Day 8).
+   - In `determineBannerVariant` (`features/study-logs/domain/cockpit-banner.ts`), `challengeStatus === "COMPLETED"` caused the cockpit banner to immediately render `CHALLENGE_COMPLETED`: _"Congrats, your team secured 1st in this challenge"_ before the host had locked results (`resultsLockedAt === null`).
+   - This prematurely finalized the user's dashboard view, hiding daily study progress and preventing participants from logging pending final-day hours before moderation.
+- **Pure Domain Lock Gating (`features/study-logs/domain/cockpit-banner.ts`):**
+   - Extended `BannerEvaluationInput` with `isResultsLocked?: boolean`.
+   - Updated `determineBannerVariant` to gate `CHALLENGE_COMPLETED` strictly on `input.isResultsLocked === true`.
+   - When an event expires naturally but results remain unlocked (`!isResultsLocked`), the banner falls through to standard daily logging states:
+      - `STUDIED_TODAY` if today's hours are logged.
+      - `NOT_LOGGED_TODAY` if today's hours are not logged.
+      - `FORGOT_YESTERDAY` if yesterday was missed.
+      - `ON_LEAVE_TODAY` if on approved leave.
+- **Lifecycle & Logging Permission Harmonization (`features/challenges/domain/challenge-lifecycle.ts`):**
+   - Updated `canLogStudyTime(status, resultsLockedAt?)` and `isChallengeReadOnly(status, resultsLockedAt?)`:
+      - Before results are locked (`resultsLockedAt == null`), study logging remains open for valid days (`status !== "UPCOMING"`).
+      - Once results are locked (`resultsLockedAt != null`), study logging closes unconditionally.
+   - Updated `logStudyTimeAction` to pass `participant.challenge.resultsLockedAt` and display clear error message if locked.
+- **Cockpit Data Hydration (`features/study-logs/data/cockpit-data.ts` & `cockpit-banner-card.tsx`):**
+   - Added `isResultsLocked: boolean` and `resultsLockedAt?: string | null` to `CockpitViewModel`.
+   - Hydrated `isResultsLocked = participant.challenge.resultsLockedAt != null` in `getParticipantCockpit`.
+   - Refined `isYesterdayMissed` to remain active on unlocked post-expiry events: `!isResultsLocked && challengeStatus !== "UPCOMING" && ...`
+   - Gated expensive `teamRank` scoreboard resolution strictly behind `if (isResultsLocked)`.
+   - Passed `isResultsLocked` from `CockpitBannerCard` to `determineBannerVariant`.
+- **Unit Testing & Verification:**
+   - Added 5 new unit tests to `cockpit-banner.test.ts` verifying all post-expiry unlocked and locked permutations.
+   - Added 5 new unit tests to `challenge-lifecycle.test.ts` asserting lock-aware logging eligibility.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (90 test files, 984/984 tests green).
+- **Session 96 (2026-10-12) — Day 7 Grace Period Day Resolution (Post-Day 7 Unlocked Capping at Day 7):**
+   - **Issue Reported:** During the post-Day 7 grace period (when a 7-day challenge has ended naturally but host has not yet locked results), the system calculated calendar days as Day 8. Consequently, the cockpit banner treated Day 8 as "today", found 0 seconds logged, and rendered `"You haven't logged today's hours"` even when participants had already logged Day 7, while opening modal options for an invalid Day 8.
+   - **Pure Domain Days Math (`features/study-logs/domain/challenge-day.ts`):**
+      - Added `calculateChallengeTotalDays(startAt, endAt?, fallbackDays = 7)` to compute exact duration in integer days.
+      - Updated `getChallengeDayBuckets(startAt, now, totalDays?)` to optionally cap `currentDayNumber` to `totalDays`. When capped, `current.dayNumber` is `totalDays` (Day 7) and `previous.dayNumber` is `totalDays - 1` (Day 6).
+      - Updated `getChallengeDayOptions(startAt, now, totalDays = 7)` to always generate exactly `totalDays` options, preventing any 8th day option from appearing.
+      - Updated `validateStudyLogChallengeDay` to accept `options.totalDays` and cap `currentDayNumber` during grace periods so that Day 7 logs validate as "today" and Day 6 logs as "yesterday".
+   - **Cockpit Data Grace Period Resolution (`features/study-logs/data/cockpit-data.ts`):**
+      - Computed `isGracePeriod = !isResultsLocked && challengeStatus === "COMPLETED" && rawBuckets.current.dayNumber > totalDays`.
+      - When `isGracePeriod` is true, hydrates `challengeDayBuckets` capped to `totalDays` (Day 7), mapping `todayDate` and `todayDayNumber` to Day 7 and `yesterdayDate` / `yesterdayDayNumber` to Day 6.
+      - `todayLog` therefore resolves the user's Day 7 study log. If already logged, `determineBannerVariant` correctly renders `STUDIED_TODAY` (`"Wow, you studied [hours] today"`) instead of falsely claiming they haven't logged.
+      - Added `totalChallengeDays: totalDays` to `CockpitViewModel` and piped it into `CockpitTasksSection` and `DailyHoursModal` in `home-cockpit-view.tsx`.
+   - **Leaderboard Standings Grace Period (`features/leaderboard/data/leaderboard-data.ts`):**
+      - Synced `todayDateKey` in `buildScoreboardViewModel` to resolve Day 7's date key during `isGracePeriod`, ensuring the standings table's "Today" column shows Day 7 study time instead of blank Day 8.
+   - **Verification:**
+      - Added unit tests in `challenge-day.test.ts` verifying `calculateChallengeTotalDays`, `getChallengeDayBuckets`, `getChallengeDayOptions`, and `validateStudyLogChallengeDay` during Day 7 grace periods.
+      - `npm run typecheck` passed (0 errors).
+      - `npm run test` passed (90 test files, 991/991 tests green).
+      - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).

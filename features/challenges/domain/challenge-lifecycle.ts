@@ -45,11 +45,26 @@ export function canEditDeclarations(status: ChallengeStatus): boolean {
    return status === "UPCOMING";
 }
 
-export function canLogStudyTime(status: ChallengeStatus): boolean {
+export function canLogStudyTime(
+   status: ChallengeStatus,
+   resultsLockedAt?: Date | string | null
+): boolean {
+   if (status === "UPCOMING") {
+      return false;
+   }
+   if (resultsLockedAt !== undefined) {
+      return resultsLockedAt == null;
+   }
    return status === "ACTIVE";
 }
 
-export function isChallengeReadOnly(status: ChallengeStatus): boolean {
+export function isChallengeReadOnly(
+   status: ChallengeStatus,
+   resultsLockedAt?: Date | string | null
+): boolean {
+   if (resultsLockedAt !== undefined) {
+      return resultsLockedAt != null;
+   }
    return status === "COMPLETED";
 }
 

@@ -6,6 +6,8 @@ import {
    calculateChallengeStatus,
    canKickoffChallenge,
    canLockChallenge,
+   canLogStudyTime,
+   isChallengeReadOnly,
    isChallengeResultsLocked,
    validateChallengeCreation,
    ChallengeStateError,
@@ -244,6 +246,37 @@ describe("challenge lifecycle domain (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(result.errors.teams).toBe(
             "Team names must be unique within the challenge."
          );
+      });
+   });
+
+   describe("canLogStudyTime & isChallengeReadOnly with resultsLockedAt", () => {
+      it("allows study logging on ACTIVE challenges when results are not locked", () => {
+         expect(canLogStudyTime("ACTIVE")).toBe(true);
+         expect(canLogStudyTime("ACTIVE", null)).toBe(true);
+      });
+
+      it("allows study logging on COMPLETED challenges before results are locked (natural expiry grace period)", () => {
+         expect(canLogStudyTime("COMPLETED", null)).toBe(true);
+      });
+
+      it("forbids study logging on UPCOMING challenges regardless of lock status", () => {
+         expect(canLogStudyTime("UPCOMING")).toBe(false);
+         expect(canLogStudyTime("UPCOMING", null)).toBe(false);
+      });
+
+      it("forbids study logging once challenge results are locked", () => {
+         const lockedAt = new Date("2026-10-12T12:00:00Z");
+         expect(canLogStudyTime("ACTIVE", lockedAt)).toBe(false);
+         expect(canLogStudyTime("COMPLETED", lockedAt)).toBe(false);
+      });
+
+      it("evaluates isChallengeReadOnly based on lock and status", () => {
+         const lockedAt = new Date("2026-10-12T12:00:00Z");
+         expect(isChallengeReadOnly("COMPLETED")).toBe(true);
+         expect(isChallengeReadOnly("ACTIVE")).toBe(false);
+         expect(isChallengeReadOnly("COMPLETED", lockedAt)).toBe(true);
+         expect(isChallengeReadOnly("ACTIVE", lockedAt)).toBe(true);
+         expect(isChallengeReadOnly("COMPLETED", null)).toBe(false);
       });
    });
 });

@@ -20,11 +20,11 @@
 
 ---
 
-### 2. Dual-Failure Runs on Hours Only — Law L6 Partial Violation (D4)
+### 2. Dual-Failure Runs on Hours Only — Law L6 Partial Violation (D4) — ✅ RESOLVED (2026-10-11)
 
-`lockChallengeResults` passes an empty `[]` for goals, so the Dual-Failure Invariant (`FEAT-PUN-01`) evaluates hours only. Weekly goals were dropped in migration `20261004030000` and replaced with user-scoped tasks that aren't linked to any challenge.
+`lockChallengeResults` passed an empty `[]` for goals, so the old Dual-Failure Invariant (`FEAT-PUN-01`) evaluated hours only. Weekly goals were dropped in migration `20261004030000`.
 
-**Impact:** The entire goal-failure half of Law L6 is a no-op. This is a **product decision** that needs team sign-off — either re-introduce challenge-scoped goals or formally amend Law L6 to hours-only.
+**Resolution (Decision 2026-10-11):** challenge-scoped goals returned as **challenge-linked tasks** (`Task.challengeId`; new tasks are stamped to the user's current challenge by default, with a one-time backfill for existing tasks). Law L6 was redefined as the **Three-Condition Accountability Invariant**: saved only when (1) all challenge-linked weekly tasks are completed, (2) target hours are met, and (3) the participant is in a winning team — ties never punish. `lockChallengeResults` now evaluates all three conditions (soft-deleted weekly tasks still count), and `PunishmentRecord` rows are created only for punished members while pardons are preserved.
 
 ---
 
@@ -341,7 +341,7 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 | 💡 Feature suggestions          | 5      |
 | **Total findings**              | **25** |
 
-> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13.
+> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Law L6 amended to the Three-Condition Invariant with challenge-linked tasks).
 
 ### Recommended Fix Order
 

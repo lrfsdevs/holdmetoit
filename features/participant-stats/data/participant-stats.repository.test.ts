@@ -62,7 +62,7 @@ describe("getChallengeParticipantStats repository", () => {
             isOverride: true,
          },
       ],
-      punishmentRecord: null,
+      punishmentRecords: [],
    };
 
    const mockScoreboard = {

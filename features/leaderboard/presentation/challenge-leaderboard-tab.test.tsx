@@ -121,8 +121,8 @@ describe("ChallengeLeaderboardTab", () => {
             targetSeconds: 126_000,
             targetClock: "35:00:00",
             completionPercentage: 20,
-            goalsCompletedCount: 0,
-            goalsTotalCount: 0,
+            weeklyTasksCompletedCount: 0,
+            weeklyTasksTotalCount: 0,
             paceStatus: "catch-up",
             paceLabel: "Catch-Up",
             deficitSeconds: 100_800,
@@ -137,6 +137,8 @@ describe("ChallengeLeaderboardTab", () => {
          isLoggedIn: true,
          isEnrolled: true,
          participantId: "part-1",
+         isWrappedSeen: false,
+         isFeedbackFilled: false,
       },
    };
 

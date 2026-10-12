@@ -78,6 +78,9 @@ describe("audit log domain (FEAT-AUDIT-01)", () => {
       expect(formatAuditActionHuman("CHALLENGE_LOCKED")).toBe(
          "Final Results Locked"
       );
+      expect(formatAuditActionHuman("CHALLENGE_UNLOCKED")).toBe(
+         "Final Results Unlocked"
+      );
       expect(formatAuditActionHuman("PARTICIPANT_PARDONED")).toBe(
          "Participant Pardoned"
       );

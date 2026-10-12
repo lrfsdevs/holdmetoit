@@ -54,6 +54,7 @@ export function CockpitBannerCard({
       todayLoggedSeconds: effectiveTodaySeconds,
       todayIsLeave: cockpit?.todayIsLeave,
       isYesterdayMissed: cockpit?.isYesterdayMissed ?? false,
+      isResultsLocked: cockpit?.isResultsLocked ?? false,
    });
 
    if (bannerVariant === "NONE") {

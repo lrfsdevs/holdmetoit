@@ -56,6 +56,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: false,
          canLogStudyTime: true,
          isReadOnly: false,
+         isResultsLocked: false,
          userTasks: {
             categories: [
                {
@@ -161,6 +162,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: false,
          canLogStudyTime: false,
          isReadOnly: true,
+         isResultsLocked: true,
          userTasks: {
             categories: [],
             dailyCategories: [],
@@ -226,6 +228,7 @@ describe("HomeCockpitView", () => {
          canEditDeclarations: true,
          canLogStudyTime: false,
          isReadOnly: false,
+         isResultsLocked: false,
          userTasks: {
             categories: [],
             dailyCategories: [],

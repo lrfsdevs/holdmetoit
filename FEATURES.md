@@ -23,47 +23,49 @@ All features are strictly tagged with their planned deployment phase:
 
 ## 2. Master Feature Catalog (Quick Matrix)
 
-| Feature ID      | Feature Name                                                   | Module              | Phase  | Target Persona        |                   Implementation Status                   |
-| :-------------- | :------------------------------------------------------------- | :------------------ | :----: | :-------------------- | :-------------------------------------------------------: |
-| `FEAT-AUTH-01`  | Discord OAuth 2.0 Authentication                               | Auth & Identity     | `[P0]` | Participant, Admin    |                         ✅ `DONE`                         |
-| `FEAT-AUTH-02`  | Public Read-Only Spectator Mode                                | Auth & Identity     | `[P0]` | Spectator / Public    |                         ✅ `DONE`                         |
-| `FEAT-AUTH-03`  | Multi-Guild Tenant Isolation                                   | Auth & Identity     | `[V2]` | System                |                        ⏸️ Planned                         |
-| `FEAT-CHAL-01`  | Multi-Format Challenge Creator (Team, Duo, Solo)               | Challenge Ops       | `[P0]` | Admin                 |                         ✅ `DONE`                         |
-| `FEAT-CHAL-02`  | Host Manual Event Kickoff Trigger                              | Challenge Ops       | `[P0]` | Admin                 |                         ✅ `DONE`                         |
-| `FEAT-CHAL-03`  | Automated Countdown Timer & Expiration                         | Challenge Ops       | `[P1]` | System                | ⚠️ Timestamp lifecycle active; background worker pending  |
-| `FEAT-CHAL-04`  | Auto-Balancer Snake Draft & 15h Cap                            | Challenge Ops       | `[V1]` | Admin                 |                        ⏸️ Planned                         |
-| `FEAT-CHAL-05`  | Event Lock & Freeze Final Results                              | Challenge Ops       | `[P0]` | Admin                 |   ⚠️ Backend action exists; needs natural expiry bugfix   |
-| `FEAT-CHAL-06`  | Duo Partner Self-Naming & Dynamic Team Identities              | Challenge Ops       | `[P0]` | Participant, Admin    | ⚠️ Team identities live; participant self-naming pending  |
-| `FEAT-AUDIT-01` | Append-Only Immutable System Audit Trail                       | Admin & Audit       | `[P0]` | Admin, System         |         ⚠️ In-memory store; DB model & UI pending         |
-| `FEAT-DECL-01`  | Declared Target Hours (`HH:MM:SS`)                             | Declarations        | `[P0]` | Participant           |                         ✅ `DONE`                         |
-| `FEAT-DECL-02`  | Mandatory Weekly Goals Checklist                               | Declarations        | `[P0]` | Participant           |   ⚠️ Decoupled to user tasks; challenge linkage pending   |
-| `FEAT-DECL-03`  | Pre-Kickoff Declaration Lock                                   | Declarations        | `[P0]` | System                |                         ✅ `DONE`                         |
-| `FEAT-DECL-04`  | Host Goal Unlock & Mid-Event Edit                              | Declarations        | `[P0]` | Admin                 |            ⚠️ Pending challenge goals decision            |
-| `FEAT-LOG-01`   | Daily Clock-Time Self-Logging (`HH:MM:SS`)                     | Study Logging       | `[P0]` | Participant           |                    ✅ `DONE` (at `/`)                     |
-| `FEAT-LOG-02`   | 24-Hour Single-Day Limit Validation                            | Study Logging       | `[P0]` | System                |                         ✅ `DONE`                         |
-| `FEAT-LOG-03`   | Direct YPT API Bot Ingestion Endpoint                          | Study Logging       | `[P1]` | System / Teammate Bot |                        ⏸️ Planned                         |
-| `FEAT-LOG-04`   | Admin Inline Hours Override Grid                               | Study Logging       | `[P0]` | Admin                 |       ⚠️ Backend action live; Manage tab UI pending       |
-| `FEAT-LEAD-01`  | Head-to-Head Live Match Scoreboard                             | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                         |
-| `FEAT-LEAD-02`  | Unified Roster Standings Table                                 | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                         |
-| `FEAT-LEAD-03`  | Dynamic Daily Catch-Up Deficit Engine                          | Standings & Math    | `[P0]` | Participant           |                         ✅ `DONE`                         |
-| `FEAT-LEAD-04`  | Overflow Diminishing Returns Scoring Engine                    | Standings & Math    | `[V1]` | System                |                        ⏸️ Planned                         |
-| `FEAT-LEAD-05`  | Host Manual Weekly Hours Board                                 | Standings & Math    | `[P0]` | Admin, All Users      |           ✅ `DONE` (`/challenge/[id]/manual`)            |
-| `FEAT-LEAD-06`  | Challenge-Specific Participant Statistics & Read-Only Profiles | Standings & Math    | `[P0]` | All Users             | ✅ `DONE` (`/challenge/[id]/participant/[participantId]`) |
-| `FEAT-TASK-01`  | Offline-First Categorized To-Do Board                          | Tasks & Sync        | `[P0]` | All Users             |          ✅ `DONE` (IndexedDB + background sync)          |
-| `FEAT-TASK-02`  | Drag-and-Drop Task & Category Reordering                       | Tasks & Sync        | `[P0]` | All Users             |            ✅ `DONE` (HTML5 DnD + `sortOrder`)            |
-| `FEAT-FEED-01`  | In-App Feedback & Discord Embed Dispatch                       | Observability       | `[P1]` | All Users             |             ✅ `DONE` (`POST /api/feedback`)              |
-| `FEAT-PUN-01`   | Dual-Failure Auto-Flagging Engine                              | Accountability      | `[P0]` | System                |             ⚠️ Hours evaluated; goals pending             |
-| `FEAT-PUN-02`   | Punishment Wall & Deficit Roster                               | Accountability      | `[P0]` | All Users             |        ⚠️ Public UI component pending restoration         |
-| `FEAT-PUN-03`   | Direct Punishment PFP Asset Download                           | Accountability      | `[P0]` | Flagged Member        |      ⚠️ Storage download button pending restoration       |
-| `FEAT-PUN-04`   | Host Pardon / Excuse Override                                  | Accountability      | `[P0]` | Admin                 |            ⚠️ Backend action live; UI pending             |
-| `FEAT-PUN-05`   | Hall of Accountability Historical Archive                      | Accountability      | `[V1]` | All Users             |                        ⏸️ Planned                         |
-| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 |          ⚠️ Generator function live; UI pending           |
-| `FEAT-DISC-02`  | 24/7 `@HoldMeToItBot` Slash Commands                           | Discord Broadcaster | `[P1]` | Discord Users         |                        ⏸️ Planned                         |
-| `FEAT-DISC-03`  | Automated Daily & Final Results Embeds                         | Discord Broadcaster | `[P1]` | Discord Channel       |                        ⏸️ Planned                         |
-| `FEAT-GAME-01`  | Daily Challenge Streaks                                        | Gamification        | `[V1]` | Participant           |                        ⏸️ Planned                         |
-| `FEAT-GAME-02`  | Condition-Based Achievement Badges (5 Types)                   | Gamification        | `[V1]` | Participant           |                        ⏸️ Planned                         |
-| `FEAT-GAME-03`  | Member Profile Cockpit (`/profile/[id]`)                       | Gamification        | `[V1]` | All Users             |                        ⏸️ Planned                         |
-| `FEAT-DUEL-01`  | Spontaneous 1v1 Mutual Study Sprint Duels                      | P2P Battles         | `[V2]` | Discord Members       |                        ⏸️ Planned                         |
+| Feature ID      | Feature Name                                                   | Module              | Phase  | Target Persona        |                   Implementation Status                    |
+| :-------------- | :------------------------------------------------------------- | :------------------ | :----: | :-------------------- | :--------------------------------------------------------: |
+| `FEAT-AUTH-01`  | Discord OAuth 2.0 Authentication                               | Auth & Identity     | `[P0]` | Participant, Admin    |                         ✅ `DONE`                          |
+| `FEAT-AUTH-02`  | Public Read-Only Spectator Mode                                | Auth & Identity     | `[P0]` | Spectator / Public    |                         ✅ `DONE`                          |
+| `FEAT-AUTH-03`  | Multi-Guild Tenant Isolation                                   | Auth & Identity     | `[V2]` | System                |                         ⏸️ Planned                         |
+| `FEAT-CHAL-01`  | Multi-Format Challenge Creator (Team, Duo, Solo)               | Challenge Ops       | `[P0]` | Admin                 |                         ✅ `DONE`                          |
+| `FEAT-CHAL-02`  | Host Manual Event Kickoff Trigger                              | Challenge Ops       | `[P0]` | Admin                 |                         ✅ `DONE`                          |
+| `FEAT-CHAL-03`  | Automated Countdown Timer & Expiration                         | Challenge Ops       | `[P1]` | System                |  ⚠️ Timestamp lifecycle active; background worker pending  |
+| `FEAT-CHAL-04`  | Auto-Balancer Snake Draft & 15h Cap                            | Challenge Ops       | `[V1]` | Admin                 |                         ⏸️ Planned                         |
+| `FEAT-CHAL-05`  | Event Lock & Freeze Final Results                              | Challenge Ops       | `[P0]` | Admin                 |  ✅ `DONE` (`resultsLockedAt`, idempotent lock, 10s undo)  |
+| `FEAT-CHAL-06`  | Duo Partner Self-Naming & Dynamic Team Identities              | Challenge Ops       | `[P0]` | Participant, Admin    |  ⚠️ Team identities live; participant self-naming pending  |
+| `FEAT-AUDIT-01` | Append-Only Immutable System Audit Trail                       | Admin & Audit       | `[P0]` | Admin, System         |         ⚠️ In-memory store; DB model & UI pending          |
+| `FEAT-DECL-01`  | Declared Target Hours (`HH:MM:SS`)                             | Declarations        | `[P0]` | Participant           |                         ✅ `DONE`                          |
+| `FEAT-DECL-02`  | Mandatory Weekly Goals Checklist                               | Declarations        | `[P0]` | Participant           |      ✅ `DONE` (challenge-linked tasks + soft delete)      |
+| `FEAT-DECL-03`  | Pre-Kickoff Declaration Lock                                   | Declarations        | `[P0]` | System                |                         ✅ `DONE`                          |
+| `FEAT-DECL-04`  | Host Goal Unlock & Mid-Event Edit                              | Declarations        | `[P0]` | Admin                 |            ⚠️ Pending challenge goals decision             |
+| `FEAT-LOG-01`   | Daily Clock-Time Self-Logging (`HH:MM:SS`)                     | Study Logging       | `[P0]` | Participant           |                     ✅ `DONE` (at `/`)                     |
+| `FEAT-LOG-02`   | 24-Hour Single-Day Limit Validation                            | Study Logging       | `[P0]` | System                |                         ✅ `DONE`                          |
+| `FEAT-LOG-03`   | Direct YPT API Bot Ingestion Endpoint                          | Study Logging       | `[P1]` | System / Teammate Bot |                         ⏸️ Planned                         |
+| `FEAT-LOG-04`   | Admin Inline Hours Override Grid                               | Study Logging       | `[P0]` | Admin                 |       ⚠️ Backend action live; Manage tab UI pending        |
+| `FEAT-LEAD-01`  | Head-to-Head Live Match Scoreboard                             | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                          |
+| `FEAT-LEAD-02`  | Unified Roster Standings Table                                 | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                          |
+| `FEAT-LEAD-03`  | Dynamic Daily Catch-Up Deficit Engine                          | Standings & Math    | `[P0]` | Participant           |                         ✅ `DONE`                          |
+| `FEAT-LEAD-04`  | Overflow Diminishing Returns Scoring Engine                    | Standings & Math    | `[V1]` | System                |                         ⏸️ Planned                         |
+| `FEAT-LEAD-05`  | Host Manual Weekly Hours Board                                 | Standings & Math    | `[P0]` | Admin, All Users      |            ✅ `DONE` (`/challenge/[id]/manual`)            |
+| `FEAT-LEAD-06`  | Challenge-Specific Participant Statistics & Read-Only Profiles | Standings & Math    | `[P0]` | All Users             | ✅ `DONE` (`/challenge/[id]/participant/[participantId]`)  |
+| `FEAT-TASK-01`  | Offline-First Categorized To-Do Board                          | Tasks & Sync        | `[P0]` | All Users             |          ✅ `DONE` (IndexedDB + background sync)           |
+| `FEAT-TASK-02`  | Drag-and-Drop Task & Category Reordering                       | Tasks & Sync        | `[P0]` | All Users             |            ✅ `DONE` (HTML5 DnD + `sortOrder`)             |
+| `FEAT-FEED-01`  | In-App Feedback & Discord Embed Dispatch                       | Observability       | `[P1]` | All Users             |              ✅ `DONE` (`POST /api/feedback`)              |
+| `FEAT-PUN-01`   | Three-Condition Auto-Flagging Engine                           | Accountability      | `[P0]` | System                | ✅ `DONE` (weekly tasks + hours + winning team; ties safe) |
+| `FEAT-PUN-02`   | Punishment Wall & Deficit Roster                               | Accountability      | `[P0]` | All Users             |         ⚠️ Public UI component pending restoration         |
+| `FEAT-PUN-03`   | Direct Punishment PFP Asset Download                           | Accountability      | `[P0]` | Flagged Member        |       ⚠️ Storage download button pending restoration       |
+| `FEAT-PUN-04`   | Host Pardon / Excuse Override                                  | Accountability      | `[P0]` | Admin                 |             ⚠️ Backend action live; UI pending             |
+| `FEAT-PUN-05`   | Hall of Accountability Historical Archive                      | Accountability      | `[V1]` | All Users             |                         ⏸️ Planned                         |
+| `FEAT-WRAP-01`  | Challenge Wrapped Story Popup                                  | Post-Event          | `[P0]` | Participant           |      ✅ `DONE` (auto-popup, 3-day window + auto-seen)      |
+| `FEAT-WRAP-02`  | Challenge Wrapped Summary Tab (`?tab=summary`)                 | Post-Event          | `[P0]` | All Users             |         ✅ `DONE` (spectators + personal wrapped)          |
+| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 |           ⚠️ Generator function live; UI pending           |
+| `FEAT-DISC-02`  | 24/7 `@HoldMeToItBot` Slash Commands                           | Discord Broadcaster | `[P1]` | Discord Users         |                         ⏸️ Planned                         |
+| `FEAT-DISC-03`  | Automated Daily & Final Results Embeds                         | Discord Broadcaster | `[P1]` | Discord Channel       |                         ⏸️ Planned                         |
+| `FEAT-GAME-01`  | Daily Challenge Streaks                                        | Gamification        | `[V1]` | Participant           |                         ⏸️ Planned                         |
+| `FEAT-GAME-02`  | Condition-Based Achievement Badges (5 Types)                   | Gamification        | `[V1]` | Participant           |                         ⏸️ Planned                         |
+| `FEAT-GAME-03`  | Member Profile Cockpit (`/profile/[id]`)                       | Gamification        | `[V1]` | All Users             |                         ⏸️ Planned                         |
+| `FEAT-DUEL-01`  | Spontaneous 1v1 Mutual Study Sprint Duels                      | P2P Battles         | `[V2]` | Discord Members       |                         ⏸️ Planned                         |
 
 ---
 
@@ -159,8 +161,8 @@ All features are strictly tagged with their planned deployment phase:
 
 ### §5.2 Weekly Goals & Tasks Architecture `[P0]`
 
-- **Status & Decoupling:** In the current architecture (Session 30/33), tasks were decoupled from challenge enrollments into user-scoped Daily and Weekly categorized tasks (`FEAT-TASK-01` / `FEAT-TASK-02`).
-- **Product Gate:** A product decision is pending (`HANDOFF.md` §4) on whether to re-introduce challenge-scoped goals or amend Law L6 to evaluate hours only.
+- **Challenge-Linked Tasks (Decision 2026-10-11):** Tasks carry an optional `challengeId` (`Task.challengeId`). While a user is enrolled in a challenge that is not locked/ended, every task created after enrollment is stamped to that challenge by default (`resolveTaskChallengeId` — the ACTIVE challenge is preferred, else the soonest `UPCOMING`); with no ongoing challenge they are standalone. A one-time backfill linked all pre-existing tasks to the current October challenge. This resolves the earlier Product Gate: challenge-scoped goals return as challenge-linked weekly tasks.
+- **Soft Delete:** Tasks and categories are soft-deleted (`deletedAt`; category names are tombstoned so they can be re-used). Deleted-while-incomplete weekly tasks still count at lock, closing the delete-to-pass loophole.
 
 ### §5.3 Pre-Kickoff Declaration Lock `[P0]`
 
@@ -250,16 +252,23 @@ All features are strictly tagged with their planned deployment phase:
 
 ## 8. Module Specifications: Accountability & Punishment
 
-### §8.1 Dual-Failure Auto-Flagging Engine `[P0]`
+### §8.1 Three-Condition Auto-Flagging Engine `[P0]`
 
-- **Trigger:** Evaluated automatically upon event conclusion:
-  $$\text{Is Punished} = (\text{Logged Seconds} < \text{Target Seconds}) \lor (\text{Incomplete Goals} > 0)$$
-- **Current State:** Evaluates hours deficit; goals condition is currently bypassed pending resolution of challenge-scoped goals architecture.
-- **Result:** Failed participants assigned status `PUNISHED`.
+- **Trigger:** Evaluated automatically when the host locks final results (`resultsLockedAt` is set and the challenge becomes `COMPLETED`).
+- **Rule:** A participant is **saved only if ALL three hold**:
+   1. **Challenge-linked weekly tasks** — every `Task` linked to this challenge with `taskType = "WEEKLY"` has `status = "COMPLETED"`. Soft-deleted rows are still counted (a task deleted while incomplete counts as incomplete); an empty board is vacuously complete.
+   2. **Weekly goal met** — `totalLoggedSeconds >= targetSeconds`.
+   3. **Winning team** — no other team has strictly more combined hours. **Equal totals never punish**: every team at the maximum counts as a winner.
+
+   Otherwise the participant is **punished regardless of team** — winning-team members can be punished for missed tasks/hours, and losing-team members are punished even with perfect personal stats.
+
+- **Result:** Punished participants are assigned status `PUNISHED` and receive a `PunishmentRecord` row (row presence = punished; `evaluatedAt` stamped). Pardons are preserved via `isPardoned` / `pardonReason` / `pardonedById`; excused participants keep `EXCUSED`.
+- **Ties & teamless:** ties (including all-equal and all-zero totals) never produce a losing side. Teamless participants fail the team condition (expected to disappear once Discord-role-based team detection ships).
+- **Rollback:** a mistaken lock is recoverable — the Manage tab shows a **10-second Undo** prompt right after locking, and the local-only ops script `npm run db:unlock-results` performs the same full revert (statuses → `NORMAL`, all punishment records removed, wrapped flags reset, pre-lock `endAt` restored from the lock audit). Every rollback appends a `CHALLENGE_UNLOCKED` audit event.
 
 ### §8.2 Punishment Wall & Deficit Roster `[P0]`
 
-- **Display:** Public overview section showing flagged members, their missing hours deficit, and unfinished tasks. UI component scheduled for restoration in the Overview tab.
+- **Display:** Public overview section showing flagged members. Before the host locks results it previews live deficit catch-up members; after lock it reflects the final `PUNISHED` / `EXCUSED` records. UI component scheduled for restoration in the Overview tab.
 
 ### §8.3 Direct Punishment PFP Asset Download `[P0]`
 
@@ -272,6 +281,13 @@ All features are strictly tagged with their planned deployment phase:
 ### §8.5 Hall of Accountability Historical Archive `[V1]`
 
 - **Description:** Permanent record tracking total punishments incurred, target completion rate, and redemption history across past challenges.
+
+### §8.6 Challenge Wrapped (Story Popup & Summary Tab) `[P0]`
+
+- **Availability:** Once the host locks results, a `Summary` tab (`?tab=summary`) appears alongside Overview and Leaderboard for everyone (spectators get the challenge-level story; enrolled participants also get their personal block). An auto-opening story popup targets enrolled participants.
+- **Popup Lifecycle:** The popup reopens on each visit until the wrapped has been seen AND feedback has been filled, capped at **3 days after lock** (`WRAPPED_POPUP_WINDOW_DAYS = 3`): if `isWrappedSeen` is still false after 3 days, a page-load check auto-sets it (`markWrappedSeenIfExpiredAction`). `isWrappedSeen` flips when the viewer reaches the feedback slide; both flags are mirrored to `localStorage` (`hmt:wrapped:{challengeId}`) with the local value taking precedence.
+- **Feedback flow:** deferred — the feedback slide's button ships empty and `isFeedbackFilled` stays false until the feedback collection flow lands.
+- **Presentation (2026-10-11):** the popup is a 1:1 port of the `holdmetoit Wrapped.html` reference — grayscale slide surfaces with the card `grayscale(100%)` filter, dot navigation, count-up stat, you-vs-average chart with crosshair tooltip, hold-to-reveal verdict stamp, swipe/keyboard navigation, and reduced-motion handling. Typography uses the app's Inter/Outfit (no extra font loads).
 
 ---
 
@@ -340,6 +356,7 @@ All features are strictly tagged with their planned deployment phase:
 - **Zero UI Latency:** Toggle, create, edit, delete, and reorder mutations execute instantly (0ms) against local IndexedDB without waiting for server response.
 - **Silent Background Sync:** Listens to `window.online` and `document.visibilitychange` events to drain `queued_mutations` via `POST /api/tasks/sync`. Transactions process atomically on PostgreSQL with FIFO execution and queue compaction.
 - **Guest-to-User Migration:** Unauthenticated guest tasks stored locally in IndexedDB are automatically migrated and bound to the authenticated user ID upon Discord OAuth sign-in (`migrateGuestDataToUser`).
+- **Challenge Linkage & Soft Delete:** New tasks are stamped with the user's current challenge by default (`resolveTaskChallengeId`) and stay standalone when no challenge is ongoing; deletion is a soft delete (`deletedAt`, tombstoned category names) so the lock evaluation can still account for deleted-while-incomplete weekly tasks.
 
 ### §12.2 Drag-and-Drop Task & Category Reordering (`FEAT-TASK-02`)
 

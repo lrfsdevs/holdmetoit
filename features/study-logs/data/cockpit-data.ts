@@ -11,7 +11,10 @@ import {
    sumLoggedSeconds,
 } from "@/features/leaderboard/domain/catch-up-presentation";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
-import { getChallengeDayBuckets } from "@/features/study-logs/domain/challenge-day";
+import {
+   calculateChallengeTotalDays,
+   getChallengeDayBuckets,
+} from "@/features/study-logs/domain/challenge-day";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
@@ -63,6 +66,9 @@ export interface CockpitViewModel {
    teamRank: number | null;
    remainingDailyAllowanceSeconds: number;
    challengeStartDate?: string;
+   totalChallengeDays?: number;
+   isResultsLocked: boolean;
+   resultsLockedAt?: string | null;
 }
 
 function formatUtcDateKey(date: Date): string {
@@ -80,10 +86,26 @@ export async function getParticipantCockpit(
    }
 
    const now = new Date();
-   const challengeDayBuckets = getChallengeDayBuckets(
+   const totalDays = calculateChallengeTotalDays(
+      participant.challenge.startAt,
+      participant.challenge.endAt
+   );
+   const challengeStatus = calculateChallengeStatus(participant.challenge, now);
+   const resultsLockedAt = participant.challenge.resultsLockedAt;
+   const isResultsLocked = resultsLockedAt != null;
+
+   const rawBuckets = getChallengeDayBuckets(
       participant.challenge.startAt,
       now
    );
+   const isGracePeriod =
+      !isResultsLocked &&
+      challengeStatus === "COMPLETED" &&
+      rawBuckets.current.dayNumber > totalDays;
+
+   const challengeDayBuckets = isGracePeriod
+      ? getChallengeDayBuckets(participant.challenge.startAt, now, totalDays)
+      : rawBuckets;
    const todayDate = challengeDayBuckets.current.dateKey;
    const yesterdayDate = challengeDayBuckets.previous?.dateKey;
 
@@ -106,14 +128,14 @@ export async function getParticipantCockpit(
       : undefined;
    const yesterdayLoggedSeconds = yesterdayLog?.durationSeconds ?? 0;
 
-   const challengeStatus = calculateChallengeStatus(participant.challenge, now);
    const isYesterdayMissed =
-      challengeStatus === "ACTIVE" &&
+      !isResultsLocked &&
+      challengeStatus !== "UPCOMING" &&
       challengeDayBuckets.previous !== null &&
       yesterdayLog === undefined;
 
    let teamRank: number | null = null;
-   if (challengeStatus === "COMPLETED") {
+   if (isResultsLocked) {
       try {
          const scoreboard = await getChallengeScoreboard(
             participant.challengeId,
@@ -166,8 +188,10 @@ export async function getParticipantCockpit(
       totalLoggedSeconds,
       totalLoggedClock: formatSecondsToClock(totalLoggedSeconds),
       canEditDeclarations: canEditDeclarations(challengeStatus),
-      canLogStudyTime: canLogStudyTime(challengeStatus),
-      isReadOnly: isChallengeReadOnly(challengeStatus),
+      canLogStudyTime: canLogStudyTime(challengeStatus, resultsLockedAt),
+      isReadOnly: isChallengeReadOnly(challengeStatus, resultsLockedAt),
+      isResultsLocked,
+      resultsLockedAt: resultsLockedAt ? resultsLockedAt.toISOString() : null,
       userTasks,
       logs: participantLogs.map((log) => ({
          logDate: formatUtcDateKey(log.logDate),
@@ -193,5 +217,6 @@ export async function getParticipantCockpit(
       teamRank,
       remainingDailyAllowanceSeconds,
       challengeStartDate: formatUtcDateKey(participant.challenge.startAt),
+      totalChallengeDays: totalDays,
    };
 }

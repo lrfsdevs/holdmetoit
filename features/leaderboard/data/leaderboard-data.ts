@@ -1,8 +1,5 @@
 import { prisma } from "@/core/db";
-import {
-   evaluateParticipantPunishment,
-   type WeeklyGoalStatus,
-} from "@/features/accountability/domain/punishment";
+import { calculateRemainingDeficit } from "@/features/leaderboard/domain/deficit";
 import {
    calculateInclusiveDaysRemaining,
    sumLoggedSeconds,
@@ -19,6 +16,7 @@ import {
 } from "@/features/study-logs/domain/duration";
 import {
    getChallengeDayBuckets,
+   getChallengeDayDateKey,
    getChallengeDayNumber,
 } from "@/features/study-logs/domain/challenge-day";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
@@ -76,8 +74,8 @@ export interface ScoreboardStandingEntry {
    targetSeconds: number;
    targetClock: string;
    completionPercentage: number;
-   goalsCompletedCount: number;
-   goalsTotalCount: number;
+   weeklyTasksCompletedCount: number;
+   weeklyTasksTotalCount: number;
    paceStatus: ParticipantPaceStatus;
    paceLabel: string;
    status?: string | null;
@@ -95,7 +93,6 @@ export interface FlaggedPunishmentMember {
    teamIcon: string | null;
    hoursDeficitSeconds: number;
    hoursDeficitClock: string;
-   incompleteGoalsCount: number;
    isPardoned: boolean;
    pardonReason: string | null;
    statusBadge: "Catch-Up" | "Punished" | "Excused";
@@ -130,6 +127,8 @@ export interface ChallengeScoreboardViewModel {
       isLoggedIn: boolean;
       isEnrolled: boolean;
       participantId: string | null;
+      isWrappedSeen: boolean;
+      isFeedbackFilled: boolean;
    };
 }
 
@@ -157,6 +156,10 @@ export interface RawChallengePayload {
       teamId: string | null;
       targetSeconds: number;
       status: "NORMAL" | "DEFICIT" | "EXCUSED" | "PUNISHED";
+      isWrappedSeen?: boolean;
+      isFeedbackFilled?: boolean;
+      weeklyTasksCompletedCount?: number;
+      weeklyTasksTotalCount?: number;
       user: {
          id: string;
          displayName: string | null;
@@ -169,13 +172,10 @@ export interface RawChallengePayload {
          logDate?: Date | string;
          status?: string | null;
       }>;
-      punishmentRecord?: {
-         isPunished: boolean;
+      punishmentRecords?: Array<{
          isPardoned: boolean;
          pardonReason: string | null;
-         hoursDeficitSeconds: number;
-         incompleteGoalsCount: number;
-      } | null;
+      }>;
    }>;
 }
 
@@ -224,6 +224,7 @@ export function buildScoreboardViewModel(
    now = new Date()
 ): ChallengeScoreboardViewModel {
    const status = challenge.status ?? calculateChallengeStatus(challenge, now);
+   const isResultsLocked = challenge.resultsLockedAt != null;
    const isUpcoming = status === "UPCOMING";
    const targetDate = isUpcoming ? challenge.startAt : challenge.endAt;
    const daysRemaining = calculateInclusiveDaysRemaining(targetDate, now);
@@ -364,8 +365,13 @@ export function buildScoreboardViewModel(
 
    // 4. Standings rows (FEAT-LEAD-02)
    const teamLookup = new Map(challenge.teams.map((t) => [t.id, t]));
-   const todayDateKey = getChallengeDayBuckets(challenge.startAt, now).current
-      .dateKey;
+   const isGracePeriod =
+      !isResultsLocked &&
+      status === "COMPLETED" &&
+      getChallengeDayNumber(challenge.startAt, now) > totalDays;
+   const todayDateKey = isGracePeriod
+      ? getChallengeDayDateKey(challenge.startAt, totalDays)
+      : getChallengeDayBuckets(challenge.startAt, now).current.dateKey;
 
    const participantRows = challenge.participants.map((p) => {
       const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
@@ -381,8 +387,8 @@ export function buildScoreboardViewModel(
          todayLog?.status ??
          p.dailyStudyLogs[p.dailyStudyLogs.length - 1]?.status ??
          null;
-      const goalsCompletedCount = 0;
-      const goalsTotalCount = 0;
+      const weeklyTasksCompletedCount = p.weeklyTasksCompletedCount ?? 0;
+      const weeklyTasksTotalCount = p.weeklyTasksTotalCount ?? 0;
       const deficitSeconds = Math.max(0, p.targetSeconds - totalLoggedSeconds);
 
       const completionPercentage =
@@ -393,18 +399,25 @@ export function buildScoreboardViewModel(
               )
             : 100;
 
+      const punishmentRecords = p.punishmentRecords ?? [];
+      const isPardonedRecord =
+         p.status === "EXCUSED" ||
+         punishmentRecords.some((record) => record.isPardoned);
+      const isPunishedRecord =
+         p.status === "PUNISHED" ||
+         punishmentRecords.some((record) => !record.isPardoned);
+
       let paceStatus: ParticipantPaceStatus = "on-track";
       let paceLabel = "On Track";
 
       if (status === "COMPLETED") {
-         if (p.status === "EXCUSED" || p.punishmentRecord?.isPardoned) {
+         if (isPardonedRecord) {
             paceStatus = "excused";
             paceLabel = "Excused";
-         } else if (
-            p.status === "PUNISHED" ||
-            p.punishmentRecord?.isPunished ||
-            deficitSeconds > 0
-         ) {
+         } else if (isPunishedRecord) {
+            paceStatus = "punished";
+            paceLabel = "Punished";
+         } else if (!isResultsLocked && deficitSeconds > 0) {
             paceStatus = "punished";
             paceLabel = "Punished";
          } else {
@@ -452,8 +465,8 @@ export function buildScoreboardViewModel(
          targetSeconds: p.targetSeconds,
          targetClock: formatSecondsToClock(p.targetSeconds),
          completionPercentage,
-         goalsCompletedCount,
-         goalsTotalCount,
+         weeklyTasksCompletedCount,
+         weeklyTasksTotalCount,
          paceStatus,
          paceLabel,
          status: liveStatus,
@@ -462,13 +475,13 @@ export function buildScoreboardViewModel(
       };
    });
 
-   // Sort descending by totalLoggedSeconds, then more goals completed
+   // Sort descending by totalLoggedSeconds, then more weekly tasks completed
    participantRows.sort((a, b) => {
       if (b.totalLoggedSeconds !== a.totalLoggedSeconds) {
          return b.totalLoggedSeconds - a.totalLoggedSeconds;
       }
-      if (b.goalsCompletedCount !== a.goalsCompletedCount) {
-         return b.goalsCompletedCount - a.goalsCompletedCount;
+      if (b.weeklyTasksCompletedCount !== a.weeklyTasksCompletedCount) {
+         return b.weeklyTasksCompletedCount - a.weeklyTasksCompletedCount;
       }
       return a.displayName.localeCompare(b.displayName);
    });
@@ -480,7 +493,7 @@ export function buildScoreboardViewModel(
       })
    );
 
-   // 5. Punishment Wall data (FEAT-PUN-02, FEAT-PUN-03, Law L6)
+   // 5. Punishment Wall data (FEAT-PUN-02, FEAT-PUN-03, FEAT-PUN-01)
    const isEventCompleted = status === "COMPLETED";
    const defaultPunishmentPfp = "/assets/punishment_pfp.jpg";
 
@@ -488,37 +501,32 @@ export function buildScoreboardViewModel(
 
    for (const p of challenge.participants) {
       const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
-
-      const evaluation = evaluateParticipantPunishment(
+      const hoursDeficitSeconds = calculateRemainingDeficit(
          p.targetSeconds,
-         totalLoggedSeconds,
-         []
+         totalLoggedSeconds
       );
 
-      const isExplicitlyPunished =
-         p.status === "PUNISHED" || Boolean(p.punishmentRecord?.isPunished);
+      const punishmentRecords = p.punishmentRecords ?? [];
       const isPardoned =
-         p.status === "EXCUSED" || Boolean(p.punishmentRecord?.isPardoned);
+         p.status === "EXCUSED" ||
+         punishmentRecords.some((record) => record.isPardoned);
+      const isExplicitlyPunished =
+         p.status === "PUNISHED" ||
+         punishmentRecords.some((record) => !record.isPardoned);
 
-      const shouldFlag = isEventCompleted
-         ? evaluation.isPunished || isExplicitlyPunished
-         : evaluation.isPunished &&
-           (evaluation.hoursDeficitSeconds > 0 ||
-              evaluation.incompleteGoals > 0);
+      // Locked results are the source of truth; before lock the wall previews
+      // live deficit catch-up members.
+      const shouldFlag = isResultsLocked
+         ? isPardoned || isExplicitlyPunished
+         : isPardoned || isExplicitlyPunished || hoursDeficitSeconds > 0;
 
       if (shouldFlag) {
          const team = p.teamId ? teamLookup.get(p.teamId) : null;
-         const hoursDeficitSeconds =
-            p.punishmentRecord?.hoursDeficitSeconds ??
-            evaluation.hoursDeficitSeconds;
-         const incompleteGoalsCount =
-            p.punishmentRecord?.incompleteGoalsCount ??
-            evaluation.incompleteGoals;
 
          let statusBadge: "Catch-Up" | "Punished" | "Excused" = "Catch-Up";
          if (isPardoned) {
             statusBadge = "Excused";
-         } else if (isEventCompleted || isExplicitlyPunished) {
+         } else if (isExplicitlyPunished || isEventCompleted) {
             statusBadge = "Punished";
          }
 
@@ -536,20 +544,17 @@ export function buildScoreboardViewModel(
             teamIcon: team?.iconEmoji ?? "⏳",
             hoursDeficitSeconds,
             hoursDeficitClock: formatSecondsToClock(hoursDeficitSeconds),
-            incompleteGoalsCount,
             isPardoned,
-            pardonReason: p.punishmentRecord?.pardonReason ?? null,
+            pardonReason:
+               punishmentRecords.find((record) => record.isPardoned)
+                  ?.pardonReason ?? null,
             statusBadge,
          });
       }
    }
 
    // Sort flagged members by deficit descending
-   flaggedMembers.sort(
-      (a, b) =>
-         b.hoursDeficitSeconds - a.hoursDeficitSeconds ||
-         b.incompleteGoalsCount - a.incompleteGoalsCount
-   );
+   flaggedMembers.sort((a, b) => b.hoursDeficitSeconds - a.hoursDeficitSeconds);
 
    const currentUserParticipant = currentUserId
       ? challenge.participants.find((p) => p.userId === currentUserId)
@@ -607,14 +612,16 @@ export function buildScoreboardViewModel(
          isLoggedIn: Boolean(currentUserId),
          isEnrolled: Boolean(currentUserParticipant),
          participantId: currentUserParticipant?.id ?? null,
+         isWrappedSeen: currentUserParticipant?.isWrappedSeen ?? false,
+         isFeedbackFilled: currentUserParticipant?.isFeedbackFilled ?? false,
       },
    };
 }
 
 async function getCachedChallengeScoreboardPayload(challengeId: string) {
    const read = unstable_cache(
-      () =>
-         prisma.challenge.findUnique({
+      async () => {
+         const challenge = await prisma.challenge.findUnique({
             where: { id: challengeId },
             include: {
                teams: {
@@ -638,19 +645,71 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                            status: true,
                         },
                      },
-                     punishmentRecord: {
+                     punishmentRecords: {
                         select: {
-                           isPunished: true,
                            isPardoned: true,
                            pardonReason: true,
-                           hoursDeficitSeconds: true,
-                           incompleteGoalsCount: true,
                         },
                      },
                   },
                },
             },
-         }),
+         });
+
+         if (!challenge) {
+            return null;
+         }
+
+         // Challenge-linked weekly task counts (mirrors the lock evaluation:
+         // soft-deleted rows are intentionally included).
+         const participantUserIds = challenge.participants.map(
+            (participant) => participant.userId
+         );
+         const weeklyTasks =
+            participantUserIds.length > 0
+               ? await prisma.task.findMany({
+                    where: {
+                       challengeId,
+                       taskType: "WEEKLY",
+                       userId: { in: participantUserIds },
+                    },
+                    select: { userId: true, status: true },
+                 })
+               : [];
+
+         const weeklyTaskCounts = new Map<
+            string,
+            { completed: number; total: number }
+         >();
+         for (const task of weeklyTasks) {
+            const counts = weeklyTaskCounts.get(task.userId) ?? {
+               completed: 0,
+               total: 0,
+            };
+            counts.total += 1;
+            if (task.status === "COMPLETED") {
+               counts.completed += 1;
+            }
+            weeklyTaskCounts.set(task.userId, counts);
+         }
+
+         return {
+            ...challenge,
+            participants: challenge.participants.map((participant) => {
+               const counts = weeklyTaskCounts.get(participant.userId) ?? {
+                  completed: 0,
+                  total: 0,
+               };
+
+               return {
+                  ...participant,
+                  dailyStudyLogs: participant.dailyStudyLogsV2,
+                  weeklyTasksCompletedCount: counts.completed,
+                  weeklyTasksTotalCount: counts.total,
+               };
+            }),
+         };
+      },
       ["challenge-scoreboard-payload", challengeId],
       {
          revalidate: CACHE_REVALIDATE_SECONDS.stable,
@@ -663,16 +722,8 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
       return null;
    }
 
-   const mappedChallenge = {
-      ...challenge,
-      participants: challenge.participants.map((participant) => ({
-         ...participant,
-         dailyStudyLogs: participant.dailyStudyLogsV2,
-      })),
-   };
-
    return normalizeScoreboardPayload(
-      mappedChallenge as unknown as SerializedChallengePayload
+      challenge as unknown as SerializedChallengePayload
    );
 }
 

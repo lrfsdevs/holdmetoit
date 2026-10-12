@@ -18,6 +18,8 @@
       "db:validate": "DATABASE_URL=postgresql://localhost:5432/holdmetoit prisma validate",
       "db:push": "prisma db push",
       "db:seed": "prisma db seed",
+      "db:link-tasks": "tsx --env-file=.env scripts/link-tasks-to-challenge.ts",
+      "db:unlock-results": "tsx --env-file=.env scripts/unlock-challenge-results.ts",
       "postinstall": "prisma generate",
       "format": "prettier --write .",
       "format:check": "prettier --check .",

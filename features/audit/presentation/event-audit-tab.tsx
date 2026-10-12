@@ -100,6 +100,8 @@ function getActionBadgeStyle(action: AuditEventType): string {
          return "bg-[#22c55e]/15 text-[#4ade80] border-[#22c55e]/30";
       case "CHALLENGE_LOCKED":
          return "bg-[#eab308]/15 text-[#facc15] border-[#eab308]/30";
+      case "CHALLENGE_UNLOCKED":
+         return "bg-[#f97316]/15 text-[#fdba74] border-[#f97316]/30";
       case "PARTICIPANT_PARDONED":
          return "bg-[#38bdf8]/15 text-[#7dd3fc] border-[#38bdf8]/30";
       case "CHALLENGE_CREATED":
@@ -207,6 +209,7 @@ export function EventAuditTab({
                "CHALLENGE_CREATED",
                "CHALLENGE_KICKOFF",
                "CHALLENGE_LOCKED",
+               "CHALLENGE_UNLOCKED",
                "CHALLENGE_DELETED",
                "PARTICIPANT_PARDONED",
             ];

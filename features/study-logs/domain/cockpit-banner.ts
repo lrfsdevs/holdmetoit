@@ -23,11 +23,12 @@ export interface BannerEvaluationInput {
    todayLoggedSeconds: number;
    todayIsLeave?: boolean;
    isYesterdayMissed: boolean;
+   isResultsLocked?: boolean;
 }
 
 /**
  * Determines which banner variant to render based on user participation,
- * challenge lifecycle status, and daily logging recency.
+ * challenge lifecycle status, lock finalization, and daily logging recency.
  */
 export function determineBannerVariant(
    input: BannerEvaluationInput
@@ -45,8 +46,8 @@ export function determineBannerVariant(
       return "NONE";
    }
 
-   // 2. Challenge has ended: Display outcome / standings placement
-   if (input.challengeStatus === "COMPLETED") {
+   // 2. Challenge results are locked: Display outcome / standings placement
+   if (input.isResultsLocked) {
       return "CHALLENGE_COMPLETED";
    }
 
