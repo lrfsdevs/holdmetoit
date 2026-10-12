@@ -135,41 +135,4 @@
    .animate-wrapped-fadein {
       animation: wrapped-fadein 0.6s 0.8s both;
    }
-
-   @keyframes shy-nudge {
-      0%,
-      86%,
-      100% {
-         transform: translateX(0);
-      }
-      92% {
-         transform: translateX(-9px);
-      }
-   }
-
-   @keyframes shy-blink {
-      0%,
-      94%,
-      100% {
-         transform: scaleY(1);
-      }
-      97% {
-         transform: scaleY(0.1);
-      }
-   }
-
-   .animate-shy-nudge {
-      animation: shy-nudge 5s ease-in-out 2s infinite;
-   }
-
-   .animate-shy-blink {
-      animation: shy-blink 5s infinite 3s;
-   }
-
-   @media (prefers-reduced-motion: reduce) {
-      .animate-shy-nudge,
-      .animate-shy-blink {
-         animation: none !important;
-      }
-   }
 }

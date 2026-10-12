@@ -8,40 +8,40 @@ import { FeedbackTriggerButton } from "@/features/feedback/presentation/feedback
 import "./globals.css";
 
 const fontSans = Inter({
-   subsets: ["latin"],
-   variable: "--font-sans",
-   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
 const fontDisplay = Outfit({
-   subsets: ["latin"],
-   variable: "--font-display",
-   display: "swap",
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-   title: "HoldMeToIt",
-   description:
-      "Gamified study accountability and challenge management for Discord communities.",
+  title: "HoldMeToIt",
+  description:
+    "Gamified study accountability and challenge management for Discord communities.",
 };
 
 export default async function RootLayout({
-   children,
+  children,
 }: Readonly<{
-   children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-   const session = await auth();
+  const session = await auth();
 
-   return (
-      <html
-         lang="en"
-         className={`dark ${fontSans.variable} ${fontDisplay.variable}`}
-      >
-         <body className="min-h-screen overflow-x-clip bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased selection:bg-[#292929] selection:text-[#ffffff]">
-            <LogRocketProvider user={session?.user ?? null} />
-            {children}
-            <FeedbackTriggerButton />
-         </body>
-      </html>
-   );
+  return (
+    <html
+      lang="en"
+      className={`dark ${fontSans.variable} ${fontDisplay.variable}`}
+    >
+      <body className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased selection:bg-[#292929] selection:text-[#ffffff]">
+        <LogRocketProvider user={session?.user ?? null} />
+        {children}
+        <FeedbackTriggerButton />
+      </body>
+    </html>
+  );
 }
