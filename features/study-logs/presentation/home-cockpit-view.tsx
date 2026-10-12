@@ -13,6 +13,8 @@ import {
 } from "./cockpit";
 import type { CockpitViewModel } from "@/features/study-logs/data/cockpit-data";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import { DashboardWrapped } from "@/features/wrapped/presentation/dashboard-wrapped";
 
 export interface HomeCockpitViewProps {
    displayName?: string;
@@ -39,6 +41,7 @@ export interface HomeCockpitViewProps {
          iconEmoji: string | null;
       }>;
    } | null;
+   wrappedChallenge?: ChallengeScoreboardViewModel | null;
    userTasks?: UserCategorizedTasks | null;
    isAdmin?: boolean;
    profileUrl?: string;
@@ -52,6 +55,7 @@ export function HomeCockpitView({
    user,
    cockpit,
    upcomingChallenge,
+   wrappedChallenge,
    userTasks,
    isAdmin,
    profileUrl,
@@ -214,6 +218,8 @@ export function HomeCockpitView({
                showTrigger={false}
             />
          )}
+
+         {wrappedChallenge && <DashboardWrapped challenge={wrappedChallenge} />}
       </div>
    );
 }
