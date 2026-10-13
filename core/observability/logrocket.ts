@@ -54,7 +54,12 @@ export function identifyLogRocketUser(
    userId: string,
    traits?: LogRocketUserTraits
 ): void {
-   if (typeof window === "undefined" || !userId) {
+   if (
+      typeof window === "undefined" ||
+      !isLogRocketEnabled() ||
+      !initialized ||
+      !userId
+   ) {
       return;
    }
 
@@ -70,7 +75,7 @@ export function trackLogRocketEvent(
    eventName: string,
    properties?: LogRocketEventProps
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
@@ -93,7 +98,7 @@ export function captureLogRocketException(
       extra?: Record<string, string | number | boolean>;
    }
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
@@ -109,7 +114,7 @@ export function captureLogRocketMessage(
    message: string,
    extra?: Record<string, string | number | boolean>
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
