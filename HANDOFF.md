@@ -4,18 +4,18 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-12 (Session 97 — dev integration merge: profile routes + wrapped + grace period resolution)  
+> **Last Updated:** 2026-10-13 (Session 98 — Dashboard Page-Load Wrapped, Shy Card & Mobile Responsive Hardening on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-12, Session 96 — Day 7 Grace Period Day Resolution on `afnan-jr`)                                                                                                                                                                                                                          |
+| Gate                                         | Result (2026-10-13, Session 98 — Dashboard Page-Load Wrapped, Shy Card & Mobile Responsive Hardening on `afnan-jr`)                                                                                                                                                                                        |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                           |
-| `npm run test`                               | ✅ 90 files green (991/991 tests passing)                                                                                                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
+| `npm run test`                               | ✅ 94 files green (1018/1018 tests passing)                                                                                                                                                                                                                                                                |
+| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`challenge_feedbacks`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal, Discord summary copy) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                 |
 | Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                             |
@@ -392,4 +392,38 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates Verified:**
    - `npm run typecheck` ✅ (0 errors).
    - `npm run test` ✅ (90 test files, 992/992 tests green).
+
+### Session 98 — 2026-10-13 (Dashboard Page-Load Wrapped, Shy Card Discovery & Mobile Viewport Hardening)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Data & Identity Agent.
+- **Feature Scope:** Implemented post-event Challenge Wrapped dashboard discovery with responsive shy card and mobile viewport containment:
+   - **Page-Load Wrapped Fetching (`app/page.tsx` & `features/challenges/data/challenge.repository.ts`):**
+      - Added `findLatestCompletedChallengeForWrapped(userId?, now = new Date())` to fetch the completed challenge within 3 days of completion (`resultsLockedAt` or `endAt`).
+      - On dashboard page load (`/`), if an eligible challenge exists for the authenticated participant, fetches `getChallengeScoreboard` and passes `wrappedChallenge` to `HomeCockpitView`.
+   - **Pure Domain Lifecycle (`features/wrapped/domain/wrapped.ts`):**
+      - Updated `isWrappedWindowOpen` and `isWrappedWindowExpired` to support challenge objects with either `resultsLockedAt` or `endAt` (3-day window: $\text{now} < \text{completionDate} + 3\text{ days}$).
+      - Added pure calculation helpers `isChallengeCompleted` and `getChallengeCompletionDate`.
+      - Added unit tests in `features/wrapped/domain/wrapped.test.ts` verifying all 3-day window boundary conditions.
+   - **Shy Card Discovery Component (`features/wrapped/presentation/wrapped-shy-card.tsx`):**
+      - Implemented the Shy Card UI with Obsidian Dark theme tokens (`#141414`, `#292929`, `#22c55e`).
+      - **Desktop ($\ge 768\text{px}$) Parked:** Sits off the right canvas edge (`md:left-full md:-translate-x-[64px] md:-translate-y-[16px] md:-rotate-12 md:scale-75`), border emerald, with blinking eyes looking towards screen and 5s `@keyframes shy-nudge` animation, nudging on hover (`md:hover:-translate-x-[76px] md:hover:-rotate-8`).
+      - **Mobile ($< 768\text{px}$) Parked:** Docked tab strictly inside viewport coordinates (`right-0 top-1/2 -translate-y-1/2 w-[58px] h-[44px] rounded-l-2xl border-l-2 border-y-2 border-r-0 border-[#22c55e]`). Eyes are centered (`justify-center`) inside the snug 58px tab. Revealed card content uses `hidden md:flex` when parked, guaranteeing zero layout void expansion and zero horizontal overflow on mobile viewports ($\ge 360\text{px}$).
+      - **Open State:** Centered card / mobile bottom-sheet overlay (`inset-x-3 bottom-4 md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 w-auto max-w-[360px] md:w-[320px] mx-auto`) with `max-h-[85dvh] md:max-h-none overflow-y-auto`, safe-area insets (`env(safe-area-inset-bottom)`), $\ge 42\text{px}$–$44\text{px}$ touch targets, and swipe-down/right to dismiss on touch devices.
+      - Displays challenge title, verdict badge (Saved/Punished/Excused), hours studied vs target, leaderboard rank, team status, "Replay Wrapped Story" button, "View Full Summary" link, and "Hide again" button.
+      - Full keyboard accessibility (Space/Enter to open, Escape to close) and `prefers-reduced-motion: reduce` support.
+   - **Dashboard Coordinator (`features/wrapped/presentation/dashboard-wrapped.tsx`):**
+      - Auto-pops up `ChallengeWrappedModal` on dashboard load if unseen (`isWrappedSeen === false`).
+      - Once seen/dismissed, parks `WrappedShyCard` on screen edge.
+      - Clicking "Replay Story" on the shy card re-opens `ChallengeWrappedModal`.
+   - **Mobile Viewport Hardening & Overflow Containment (`app/layout.tsx`, `features/auth/presentation/auth-nav.tsx`, `components/state/cockpit-skeleton.tsx`, `tailwind.config.ts`):**
+      - Added `overflow-x-hidden` to `<html>` and `<body>` in `app/layout.tsx` to prevent horizontal canvas drift and ensure fixed overlays dock correctly at physical screen boundaries on mobile ($\le 372\text{px}$).
+      - Configured `xs: "400px"` screen breakpoint in `tailwind.config.ts`.
+      - Hardened `AppHeader` against overflow: `overflow-x-hidden`, `shrink min-w-0` on children with `gap-1 sm:gap-2`.
+      - Compacted `ParticipantPreviewButton` on mobile (`px-1.5 xs:px-2.5`, hiding text label on `< xs`, showing `"Preview"` on `xs:`).
+      - Added truncation and responsive max-width to `UserNav` capsule (`max-w-[85px] xs:max-w-[120px] sm:max-w-none`, truncating `displayName` to 36px on small viewports).
+      - Constrained `CockpitSkeleton` layout with `max-w-4xl mx-auto px-4 py-8 sm:py-12`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` ✅ (0 errors).
+   - `npm run test` ✅ (94 test files, 1018/1018 tests green).
+   - `npm run build` ✅ (11 routes compiled cleanly).
 - **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).

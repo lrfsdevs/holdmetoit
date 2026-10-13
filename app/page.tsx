@@ -7,7 +7,11 @@ import {
 } from "@/features/auth/domain/preview-mode";
 import { HomeCockpitView } from "@/features/study-logs/presentation/home-cockpit-view";
 import { getParticipantCockpit } from "@/features/study-logs/data/cockpit-data";
-import { findLatestAvailableChallenge } from "@/features/challenges/data/challenge.repository";
+import {
+   findLatestAvailableChallenge,
+   findLatestCompletedChallengeForWrapped,
+} from "@/features/challenges/data/challenge.repository";
+import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +68,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       }
    }
 
+   let wrappedChallenge = null;
+   if (session?.user?.id) {
+      try {
+         const eligibleChallenge = await findLatestCompletedChallengeForWrapped(
+            session.user.id
+         );
+         if (eligibleChallenge) {
+            wrappedChallenge = await getChallengeScoreboard(
+               eligibleChallenge.id,
+               session.user.id
+            );
+         }
+      } catch {
+         wrappedChallenge = null;
+      }
+   }
+
    const displayName = session?.user?.displayName || session?.user?.name || "";
 
    const effectiveUser = session?.user
@@ -96,6 +117,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                user={effectiveUser}
                cockpit={cockpit}
                upcomingChallenge={upcomingChallenge}
+               wrappedChallenge={wrappedChallenge}
                userTasks={userTasks}
                isAdmin={isAdmin}
                profileUrl={profileUrl}
