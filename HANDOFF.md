@@ -4,21 +4,21 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-14 (Session 102 — Database Table Names Standardized to PascalCase on `afnan-jr`)  
+> **Last Updated:** 2026-10-14 (Session 105 — Participant Leave Budget & Canonical Study Log Unification on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-14, Session 102 — Table Names Standardized to PascalCase on `afnan-jr`)                                                                                                                                                                                              |
-| :------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                     |
-| `npm run test`                               | ✅ 93 files green (1027/1027 tests passing)                                                                                                                                                                                                                                          |
-| `npm run build`                              | ✅ 10 routes compiled (production build clean)                                                                                                                                                                                                                                       |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`challenge_feedbacks`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                           |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                       |
+| Gate                                         | Result (2026-10-14, Session 105 — Leave Budget & Canonical Study Log Unification on `afnan-jr`)                                                                                                                                                                                    |
+| :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                   |
+| `npm run test`                               | ✅ 93 files green (1037/1037 tests passing)                                                                                                                                                                                                                                        |
+| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                     |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
+| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                         |
+| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                     |
 
 ### 1.1 Live Routes
 
