@@ -14,7 +14,7 @@ All features are strictly tagged with their planned deployment phase:
 
 | Phase Tag | Phase Name                    | Target Window | Core Focus                                                                                                                                      |
 | :-------- | :---------------------------- | :-----------: | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[P0]`    | **MVP Core**                  |   ~10 Days    | Spreadsheet replacement: self-logging in `HH:MM:SS`, live scoreboard, mandatory goals, auto-punishments, PFP download, 1-click Discord summary. |
+| `[P0]`    | **MVP Core**                  |   ~10 Days    | Spreadsheet replacement: self-logging in `HH:MM:SS`, live scoreboard, mandatory goals, auto-punishments, PFP download.                          |
 | `[P1]`    | **Automation & Integrations** |    2 Weeks    | YPT API Bot automated ingestion, 24/7 `@HoldMeToItBot` Discord bot, auto-expiring countdown timers.                                             |
 | `[V1]`    | **Gamification & Fair Math**  |   2–3 Weeks   | Overflow diminishing returns ($\alpha=0.5$), Auto-balancer snake draft (15h cap), daily challenge streaks, achievement badges, member profiles. |
 | `[V2]`    | **Spontaneous Duels & Scale** |    2 Weeks    | Peer-to-peer 1v1 sprint duels (mutual consent, zero mod overhead), multi-guild schema readiness.                                                |
@@ -59,7 +59,7 @@ All features are strictly tagged with their planned deployment phase:
 | `FEAT-PUN-05`   | Hall of Accountability Historical Archive                      | Accountability      | `[V1]` | All Users             |                         ⏸️ Planned                         |
 | `FEAT-WRAP-01`  | Challenge Wrapped Story Popup                                  | Post-Event          | `[P0]` | Participant           |      ✅ `DONE` (auto-popup, 3-day window + auto-seen)      |
 | `FEAT-WRAP-02`  | Challenge Wrapped Summary Tab (`?tab=summary`)                 | Post-Event          | `[P0]` | All Users             |         ✅ `DONE` (spectators + personal wrapped)          |
-| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 |           ⚠️ Generator function live; UI pending           |
+| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 | ❌ `REMOVED` (superseded by in-app Challenge Summary tab)  |
 | `FEAT-DISC-02`  | 24/7 `@HoldMeToItBot` Slash Commands                           | Discord Broadcaster | `[P1]` | Discord Users         |                         ⏸️ Planned                         |
 | `FEAT-DISC-03`  | Automated Daily & Final Results Embeds                         | Discord Broadcaster | `[P1]` | Discord Channel       |                         ⏸️ Planned                         |
 | `FEAT-GAME-01`  | Daily Challenge Streaks                                        | Gamification        | `[V1]` | Participant           |                         ⏸️ Planned                         |
@@ -293,10 +293,9 @@ All features are strictly tagged with their planned deployment phase:
 
 ## 9. Module Specifications: Discord Broadcaster & Bot
 
-### §9.1 1-Click Formatted Markdown Summary Copy `[P0]`
+### §9.1 1-Click Formatted Markdown Summary Copy `[P0]` (Removed)
 
-- **Location:** Challenge Manage Tab (`/challenge/:id?tab=manage`).
-- **Action:** One-click button copies formatted Discord markdown generated via `generateDiscordSummary` containing event title, dates, final team scores, winner announcement, podium, and punishment roster. UI copy button restoration scheduled in Manage tab.
+- **Status:** Removed. Superseded by the in-app Challenge Summary tab (`/challenge/:id?tab=summary`) and personal Wrapped story dialog. Standings and results are viewed directly in the application.
 
 ### §9.2 24/7 `@HoldMeToItBot` Slash Commands `[P1]`
 

@@ -31,13 +31,13 @@ flowchart LR
 ```
 
 - **Sprint 1 (09-05 → 09-08):** Scaffolding, domain math, Discord OAuth, cockpit, scoreboard, and admin ops. This delivered nearly all P0 features in cozy-café styling.
-- **Sprint 2 (10-03 → 10-06):** Moved to the Obsidian design (Figma) and consolidated `/dashboard` into `/`. Status became timestamp-derived. `WeeklyGoal` was replaced by user-scoped Daily/Weekly tasks with offline sync and drag & drop. Also added: feedback system, LogRocket, Supabase image uploads, the manual weekly leaderboard, and the `DEV` role. **Side effect:** the UIs for the override grid, pardons, Discord summary, Punishment Wall, and PFP download were removed and haven't been rebuilt.
+- **Sprint 2 (10-03 → 10-06):** Moved to the Obsidian design (Figma) and consolidated `/dashboard` into `/`. Status became timestamp-derived. `WeeklyGoal` was replaced by user-scoped Daily/Weekly tasks with offline sync and drag & drop. Also added: feedback system, LogRocket, Supabase image uploads, the manual weekly leaderboard, and the `DEV` role. **Side effect:** the UIs for the override grid, pardons, Punishment Wall, and PFP download were removed and haven't been rebuilt.
 
 ### 0.3 P0 Features Blocking Gate 1
 
 | Blocker                                                                                  | Feature IDs                                   |
 | :--------------------------------------------------------------------------------------- | :-------------------------------------------- |
-| No UI for host override, pardon, or Discord summary copy                                 | `FEAT-LOG-04`, `FEAT-PUN-04`, `FEAT-DISC-01`  |
+| No UI for host override or pardon                                                        | `FEAT-LOG-04`, `FEAT-PUN-04`                  |
 | No Punishment Wall or PFP download                                                       | `FEAT-PUN-02`, `FEAT-PUN-03`                  |
 | Lock fails after natural expiry, so punishments are never evaluated                      | `FEAT-CHAL-05`, `FEAT-PUN-01`                 |
 | Audit trail not persisted (in-memory)                                                    | `FEAT-AUDIT-01`                               |
@@ -63,7 +63,7 @@ flowchart TD
         A1["Self-Logging in HH:MM:SS"] --> A2["Live Scoreboard & Standings"]
         A2 --> A3["Mandatory Goals Checklist"]
         A3 --> A4["Dual-Failure Auto-Punishments"]
-        A4 --> A5["1-Click Formatted Discord Summary"]
+        A4 --> A5["In-App Challenge Summary & Wrapped"]
     end
 
     subgraph P1["Phase 1: P1 Automation & Bot"]
@@ -148,7 +148,7 @@ Eradicate manual host labor. Deliver a robust, reliable web application capable 
 7. **Dual-Failure Auto-Punishment:** Auto-flags participants who fail their hours target OR leave declared tasks unfinished.
 8. **Direct Punishment PFP Download:** Instant one-click download of the punishment asset directly from the web app.
 9. **Admin Manual Override Grid:** Host inline-edit capability to adjust any participant's logged hours or unlock tasks in case of emergency.
-10.   **1-Click Discord Summary Generator:** Formatted markdown text generator ready to copy-paste into `#study-announcements`.
+10.   ~~**1-Click Discord Summary Generator:**~~ _(Removed in favor of in-app Challenge Summary Tab & Wrapped story)_.
 
 ### 3.3 Database Entities at Phase 0 (as implemented in `prisma/schema.prisma`)
 

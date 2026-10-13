@@ -37,7 +37,7 @@ These features have working backend code but **zero UI** — deleted in commits 
 | Punishment Wall (`FEAT-PUN-02`)         | `punishment.ts` domain logic         | ❌ `punishment-wall.tsx` deleted                                    |
 | Punishment PFP Download (`FEAT-PUN-03`) | PFP upload to Supabase works         | ❌ No download button anywhere                                      |
 | Host Pardon Modal (`FEAT-PUN-04`)       | `adminPardonAction` exists           | ❌ `admin-goals-pardons.tsx` deleted                                |
-| Discord Summary Copy (`FEAT-DISC-01`)   | `generateDiscordSummary()` works     | ❌ `discord-summary-card.tsx` deleted                               |
+| Discord Summary Copy (`FEAT-DISC-01`)   | Superseded by Summary tab & Wrapped  | ❌ Removed from scope                                               |
 | Host Goal/Target Edit (`FEAT-DECL-04`)  | `adminUpdateParticipantTargetAction` | ✅ Wired to `AdminTargetOverrideModal` (Manage, Leaderboard, Stats) |
 
 ---
@@ -335,7 +335,7 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 2. **#4** — Schema drift (generate catch-up migration files)
 3. ~~**#5** — `npm audit fix` for high-severity CVEs~~ ✅ done (Session 81)
 4. **#12** — Add missing Prisma foreign key indexes
-5. **#3** — Restore deleted P0 UIs (Punishment Wall, PFP download, Pardon, Discord Summary)
+5. **#3** — Restore deleted P0 UIs (Punishment Wall, PFP download, Pardon)
 6. **#6** — Remove hardcoded seed challenge ID
 7. **#7** — Fix fire-and-forget DB write in auth callback
 8. **#10** — Add missing `error.tsx` / `not-found.tsx` route files

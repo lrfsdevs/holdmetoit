@@ -17,7 +17,7 @@ Study challenges in Discord communities (running weekly team accountability duel
 - **The Catch-Up Deficit Engine:** Zero grace days. Missed hours dynamically roll over into remaining challenge days with real-time pace guidance.
 - **Team vs Team Match Scoreboard:** Live head-to-head banner (e.g., _Bees vs Butterflies_), lead delta (`+Xh Ym Zs ahead`), and unified standings table.
 - **Dual-Failure Accountability & Punishment PFP:** Automatic flagging if hours or goals fail, paired with a direct 1-click **Download Punishment PFP** button.
-- **Discord Integration:** Frictionless Discord OAuth login with public read-only spectator mode and a 1-click formatted markdown summary copy generator for hosts.
+- **Discord Integration:** Frictionless Discord OAuth login with public read-only spectator mode.
 
 ---
 
@@ -76,7 +76,7 @@ app/                     # Next.js App Router routes
 core/                    # auth (Auth.js), db (Prisma client), storage (Supabase), observability (LogRocket)
 features/<slice>/        # Vertical slices: domain/ · data/ · api/ · presentation/
 │                        #   accountability, audit, auth, challenges, e2e, feedback,
-│                        #   leaderboard, notifications, study-logs, tasks
+│                        #   leaderboard, study-logs, tasks
 components/              # shadcn/ui primitives + shared Loading/Empty/Error states
 prisma/                  # schema.prisma, migrations/, seed.ts
 ```
@@ -85,12 +85,12 @@ prisma/                  # schema.prisma, migrations/, seed.ts
 
 ## 👥 Engineering Roles & Responsibilities
 
-| Role                 | Primary Layer Responsibilities                                                                                                                           |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Data & Identity**  | Database schema, Prisma migrations, Auth.js Discord OAuth, session hydration, and repositories.                                                          |
-| **Scoring & Engine** | Pure domain math, `HH:MM:SS` duration converters, team score aggregations, catch-up deficit calculator, Vitest suite.                                    |
-| **Participant UI**   | Home cockpit, `HH:MM:SS` Log Hours modal, Daily/Weekly task board, progress meters, mobile responsiveness (360px+).                                      |
-| **Admin Operations** | Host wizard, Manage tab (teams, assignments, kickoff/lock), admin inline hours override, pardons, 1-click Discord summary generator, Punishment PFP hub. |
+| Role                 | Primary Layer Responsibilities                                                                                        |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------------- |
+| **Data & Identity**  | Database schema, Prisma migrations, Auth.js Discord OAuth, session hydration, and repositories.                       |
+| **Scoring & Engine** | Pure domain math, `HH:MM:SS` duration converters, team score aggregations, catch-up deficit calculator, Vitest suite. |
+| **Participant UI**   | Home cockpit, `HH:MM:SS` Log Hours modal, Daily/Weekly task board, progress meters, mobile responsiveness (360px+).   |
+| **Admin Operations** | Host wizard, Manage tab (teams, assignments, kickoff/lock), admin inline hours override, pardons, Punishment PFP hub. |
 
 ---
 
