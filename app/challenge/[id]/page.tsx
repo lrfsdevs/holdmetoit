@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 
-import { EmptyState } from "@/components/state/empty-state";
 import { ErrorState } from "@/components/state/error-state";
-import { Button } from "@/components/ui/button";
 import { auth } from "@/core/auth";
 import {
    getEffectiveAdminState,
@@ -43,43 +41,9 @@ export default async function ChallengePage({
       searchParamAs: searchParams?.as,
    });
 
+   let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
-      const challenge = await getChallengeScoreboard(
-         params.id,
-         session?.user?.id
-      );
-
-      if (!challenge) {
-         return (
-            <EmptyState
-               title="Challenge not found"
-               description="We couldn't locate this study challenge in our records. It may not exist or might still be in draft setup."
-               action={
-                  <Button asChild variant="secondary" className="min-h-[44px]">
-                     <Link href="/">Return to Study Lounge</Link>
-                  </Button>
-               }
-            />
-         );
-      }
-
-      const initialTab: ChallengeTab = resolveAllowedChallengeTab(
-         searchParams?.tab,
-         isAdmin,
-         { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
-      );
-      const initialLeaderboardViewMode = resolveLeaderboardViewMode(
-         searchParams?.view
-      );
-
-      return (
-         <ChallengeView
-            challenge={challenge}
-            initialTab={initialTab}
-            isAdmin={isAdmin}
-            initialLeaderboardViewMode={initialLeaderboardViewMode}
-         />
-      );
+      challenge = await getChallengeScoreboard(params.id, session?.user?.id);
    } catch (error) {
       logError(logEvents.appError, {
          scope: "challenge.page",
@@ -93,4 +57,26 @@ export default async function ChallengePage({
          />
       );
    }
+
+   if (!challenge || challenge.isDeleted) {
+      notFound();
+   }
+
+   const initialTab: ChallengeTab = resolveAllowedChallengeTab(
+      searchParams?.tab,
+      isAdmin,
+      { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
+   );
+   const initialLeaderboardViewMode = resolveLeaderboardViewMode(
+      searchParams?.view
+   );
+
+   return (
+      <ChallengeView
+         challenge={challenge}
+         initialTab={initialTab}
+         isAdmin={isAdmin}
+         initialLeaderboardViewMode={initialLeaderboardViewMode}
+      />
+   );
 }

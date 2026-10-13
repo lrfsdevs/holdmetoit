@@ -38,6 +38,7 @@ export interface ScoreboardTeam {
    targetHours: number;
    completionPercentage: number;
    isLeader: boolean;
+   isDeleted?: boolean;
 }
 
 export interface ScoreboardMatchHeader {
@@ -112,6 +113,8 @@ export interface ChallengeScoreboardViewModel {
    punishmentPfpUrl: string | null;
    format: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
    status: "UPCOMING" | "ACTIVE" | "COMPLETED";
+   isDeleted?: boolean;
+   deletionTime?: string | null;
    resultsLockedAt?: string | null;
    startAt: string;
    endAt: string;
@@ -137,6 +140,8 @@ export interface RawChallengePayload {
    title: string;
    format: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
    status?: "UPCOMING" | "ACTIVE" | "COMPLETED";
+   isDeleted?: boolean;
+   deletionTime?: Date | null;
    resultsLockedAt?: Date | null;
    startAt: Date;
    endAt: Date;
@@ -591,6 +596,7 @@ export function buildScoreboardViewModel(
       punishmentPfpUrl: challenge.punishmentPfpUrl,
       format: challenge.format,
       status,
+      isDeleted: challenge.isDeleted ?? false,
       resultsLockedAt: challenge.resultsLockedAt
          ? new Date(challenge.resultsLockedAt).toISOString()
          : null,
@@ -621,10 +627,11 @@ export function buildScoreboardViewModel(
 async function getCachedChallengeScoreboardPayload(challengeId: string) {
    const read = unstable_cache(
       async () => {
-         const challenge = await prisma.challenge.findUnique({
-            where: { id: challengeId },
+         const challenge = await prisma.challenge.findFirst({
+            where: { id: challengeId, isDeleted: false },
             include: {
                teams: {
+                  where: { isDeleted: false },
                   orderBy: { sortOrder: "asc" },
                },
                participants: {

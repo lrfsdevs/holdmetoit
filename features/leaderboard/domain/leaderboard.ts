@@ -2,6 +2,7 @@ import { DurationRangeError } from "@/features/study-logs/domain/duration";
 
 export interface TeamRef {
    id: string;
+   isDeleted?: boolean;
 }
 
 export interface ParticipantLogEntry {
@@ -35,8 +36,9 @@ export function aggregateTeamScores(
    logs: readonly ParticipantLogEntry[]
 ): TeamAggregateScore[] {
    const totals = new Map<string, number>();
+   const activeTeams = teams.filter((team) => !team.isDeleted);
 
-   for (const team of teams) {
+   for (const team of activeTeams) {
       totals.set(team.id, 0);
    }
 
@@ -49,7 +51,7 @@ export function aggregateTeamScores(
 
    const aggregates: TeamAggregateScore[] = [];
 
-   for (const team of teams) {
+   for (const team of activeTeams) {
       aggregates.push({
          teamId: team.id,
          totalSeconds: totals.get(team.id) ?? 0,

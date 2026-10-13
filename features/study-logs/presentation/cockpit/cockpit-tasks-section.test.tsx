@@ -685,4 +685,68 @@ describe("CockpitTasksSection", () => {
          'title="Drag category to reorder, move to day or across boards"'
       );
    });
+
+   it("filters out soft-deleted categories and tasks (isDeleted = true) from the rendered cockpit", () => {
+      const tasksWithDeleted: UserCategorizedTasks = {
+         ...mockTasks,
+         dailyCategories: [
+            ...mockTasks.dailyCategories,
+            {
+               id: "cat_deleted_daily",
+               name: "Ghost Category",
+               taskType: "DAILY",
+               isCollapsed: false,
+               isDeleted: true,
+               tasks: [
+                  {
+                     id: "t_ghost_1",
+                     userId: "user_1",
+                     categoryId: "cat_deleted_daily",
+                     title: "Ghost Task Inside Deleted Category",
+                     taskType: "DAILY",
+                     isComplete: false,
+                     status: "TODO",
+                     isDeleted: true,
+                     createdAt: new Date("2026-10-04T10:00:00Z"),
+                     updatedAt: new Date("2026-10-04T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         weeklyCategories: [
+            {
+               ...mockTasks.weeklyCategories[0],
+               tasks: [
+                  ...mockTasks.weeklyCategories[0].tasks,
+                  {
+                     id: "t_ghost_weekly",
+                     userId: "user_1",
+                     categoryId: mockTasks.weeklyCategories[0].id,
+                     title: "Ghost Weekly Task",
+                     taskType: "WEEKLY",
+                     isComplete: false,
+                     status: "TODO",
+                     isDeleted: true,
+                     createdAt: new Date("2026-10-04T10:00:00Z"),
+                     updatedAt: new Date("2026-10-04T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userTasks: tasksWithDeleted,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      expect(html).not.toContain("Ghost Category");
+      expect(html).not.toContain("Ghost Task Inside Deleted Category");
+      expect(html).not.toContain("Ghost Weekly Task");
+   });
 });

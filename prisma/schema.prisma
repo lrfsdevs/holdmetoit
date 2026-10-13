@@ -109,6 +109,9 @@ model Challenge {
   updatedAt DateTime @updatedAt
 
   challengeColor   String?
+  isDeleted        Boolean         @default(false) @map("is_deleted")
+  deletionTime     DateTime?       @map("deletion_time")
+
   teams            Team[]
   participants     ChallengeParticipant[]
   punishments      PunishmentRecord[]
@@ -118,6 +121,7 @@ model Challenge {
   challengeFeedbacks ChallengeFeedback[]
 
   @@index([hostId])
+  @@index([isDeleted, startAt])
 }
 
 model Team {
@@ -131,12 +135,15 @@ model Team {
   maxMembers  Int?
   sortOrder   Int    @default(0)
 
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletionTime DateTime? @map("deletion_time")
+
   challenge    Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   participants ChallengeParticipant[]
   members      TeamMember[]
 
   @@unique([challengeId, name])
-  @@index([challengeId])
+  @@index([challengeId, isDeleted])
 }
 
 model ChallengeParticipant {
@@ -226,47 +233,49 @@ model DailyStudyLogV2 {
 // ---------------------------------------------------------------------------
 
 model Category {
-  id        String   @id @default(uuid())
-  userId    String
-  name      String   @db.VarChar(255)
-  taskType  TaskType @default(DAILY) @map("task_type")
-  sortOrder Int      @default(0) @map("sort_order")
-  deletedAt DateTime? @map("deleted_at")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(uuid())
+  userId       String
+  name         String    @db.VarChar(255)
+  taskType     TaskType  @default(DAILY) @map("task_type")
+  sortOrder    Int       @default(0) @map("sort_order")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletionTime DateTime? @map("deletion_time")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks Task[]
 
   @@unique([userId, name, taskType])
-  @@index([userId, taskType])
+  @@index([userId, taskType, isDeleted])
   @@map("categories")
 }
 
 model Task {
-  id          String    @id @default(uuid())
-  userId      String
-  categoryId  String
-  challengeId String?   @map("challenge_id")
-  title       String    @db.VarChar(255)
-  taskType    TaskType  @map("task_type")
-  sortOrder   Int        @default(0) @map("sort_order")
-  isComplete  Boolean    @default(false) @map("is_complete")
-  status      TaskStatus @default(TODO)
-  dueDate     DateTime?  @map("due_date") @db.Date
-  deletedAt   DateTime?  @map("deleted_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  completedAt DateTime?  @map("completed_at")
+  id           String     @id @default(uuid())
+  userId       String
+  categoryId   String
+  challengeId  String?    @map("challenge_id")
+  title        String     @db.VarChar(255)
+  taskType     TaskType   @map("task_type")
+  sortOrder    Int        @default(0) @map("sort_order")
+  isComplete   Boolean    @default(false) @map("is_complete")
+  status       TaskStatus @default(TODO)
+  dueDate      DateTime?  @map("due_date") @db.Date
+  isDeleted    Boolean    @default(false) @map("is_deleted")
+  deletionTime DateTime?  @map("deletion_time")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  completedAt  DateTime?  @map("completed_at")
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   category  Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   challenge Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
 
-  @@index([userId, taskType])
+  @@index([userId, taskType, isDeleted])
   @@index([userId, dueDate])
-  @@index([categoryId])
-  @@index([challengeId])
+  @@index([categoryId, isDeleted])
+  @@index([challengeId, isDeleted])
   @@map("tasks")
 }
 

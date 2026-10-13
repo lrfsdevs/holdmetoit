@@ -41,12 +41,12 @@ export async function processBatchSync(
                      const existing = await tx.category.findFirst({
                         where: {
                            OR: [
-                              { id: catId, deletedAt: null },
+                              { id: catId, isDeleted: false },
                               {
                                  userId,
                                  name: explicitName,
                                  taskType,
-                                 deletedAt: null,
+                                 isDeleted: false,
                               },
                            ],
                         },
@@ -96,7 +96,7 @@ export async function processBatchSync(
                                        taskType,
                                        name: targetName,
                                        id: { not: catId },
-                                       deletedAt: null,
+                                       isDeleted: false,
                                     },
                                  }
                               );
@@ -113,7 +113,7 @@ export async function processBatchSync(
 
                      if (Object.keys(dataToUpdate).length > 0) {
                         await tx.category.updateMany({
-                           where: { id: catId, userId, deletedAt: null },
+                           where: { id: catId, userId, isDeleted: false },
                            data: dataToUpdate,
                         });
 
@@ -142,14 +142,15 @@ export async function processBatchSync(
                      });
 
                      await tx.task.updateMany({
-                        where: { categoryId: catId, userId, deletedAt: null },
-                        data: { deletedAt: now },
+                        where: { categoryId: catId, userId, isDeleted: false },
+                        data: { isDeleted: true, deletionTime: now },
                      });
 
                      await tx.category.updateMany({
                         where: { id: catId, userId },
                         data: {
-                           deletedAt: now,
+                           isDeleted: true,
+                           deletionTime: now,
                            ...(currentCategory
                               ? {
                                    name: buildCategoryTombstoneName(
@@ -282,7 +283,7 @@ export async function processBatchSync(
                      }
 
                      await tx.task.updateMany({
-                        where: { id: taskId, userId, deletedAt: null },
+                        where: { id: taskId, userId, isDeleted: false },
                         data: dataToUpdate,
                      });
                   }
@@ -290,7 +291,7 @@ export async function processBatchSync(
                   const taskIds = (payload.taskIds as string[]) || [];
                   for (let i = 0; i < taskIds.length; i++) {
                      await tx.task.updateMany({
-                        where: { id: taskIds[i], userId, deletedAt: null },
+                        where: { id: taskIds[i], userId, isDeleted: false },
                         data: { sortOrder: i },
                      });
                   }
@@ -302,7 +303,7 @@ export async function processBatchSync(
                      const finalIsComplete = status === "COMPLETED";
 
                      await tx.task.updateMany({
-                        where: { id: taskId, userId, deletedAt: null },
+                        where: { id: taskId, userId, isDeleted: false },
                         data: {
                            isComplete: finalIsComplete,
                            status,
@@ -313,8 +314,11 @@ export async function processBatchSync(
                } else if (m.action === "DELETE") {
                   if (taskId) {
                      await tx.task.updateMany({
-                        where: { id: taskId, userId, deletedAt: null },
-                        data: { deletedAt: new Date() },
+                        where: { id: taskId, userId, isDeleted: false },
+                        data: {
+                           isDeleted: true,
+                           deletionTime: new Date(),
+                        },
                      });
                   }
                }

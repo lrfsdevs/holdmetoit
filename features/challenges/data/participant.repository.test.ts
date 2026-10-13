@@ -42,7 +42,11 @@ describe("participant repository", () => {
          const result = await findParticipantForUser("u_1", "chal_1");
          expect(result).toEqual(mockParticipant);
          expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith({
-            where: { userId: "u_1", challengeId: "chal_1" },
+            where: {
+               userId: "u_1",
+               challengeId: "chal_1",
+               challenge: { isDeleted: false },
+            },
             include: {
                challenge: true,
                team: true,
@@ -127,7 +131,11 @@ describe("participant repository", () => {
          const result = await findOwnedParticipant("u_1", "c_1");
          expect(result).toEqual(mockRecord);
          expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith({
-            where: { userId: "u_1", challengeId: "c_1" },
+            where: {
+               userId: "u_1",
+               challengeId: "c_1",
+               challenge: { isDeleted: false },
+            },
             include: { challenge: true },
          });
       });
@@ -225,6 +233,61 @@ describe("participant repository", () => {
                targetSeconds: 126000,
             })
          ).rejects.toThrow("User is already enrolled in this challenge.");
+      });
+
+      it("rejects enrollment when challenge is soft-deleted or not found", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            id: "c_deleted",
+            isDeleted: true,
+         } as never);
+
+         await expect(
+            enrollParticipantInChallenge({
+               challengeId: "c_deleted",
+               userId: "u_1",
+               teamId: "t_1",
+               targetSeconds: 126000,
+            })
+         ).rejects.toThrow("Challenge not found.");
+
+         expect(prisma.challenge.findUnique).toHaveBeenCalledWith({
+            where: { id: "c_deleted" },
+         });
+      });
+
+      it("rejects enrollment when team is soft-deleted or not found", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            id: "c_1",
+            isDeleted: false,
+            startAt: new Date(Date.now() + 86400000),
+            endAt: new Date(Date.now() + 7 * 86400000),
+         } as never);
+
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            null
+         );
+
+         vi.mocked(prisma.team.findUnique).mockResolvedValue({
+            id: "t_deleted",
+            isDeleted: true,
+            challengeId: "c_1",
+            maxMembers: 5,
+            _count: { participants: 0 },
+         } as never);
+
+         await expect(
+            enrollParticipantInChallenge({
+               challengeId: "c_1",
+               userId: "u_1",
+               teamId: "t_deleted",
+               targetSeconds: 126000,
+            })
+         ).rejects.toThrow("Selected team does not belong to this challenge.");
+
+         expect(prisma.team.findUnique).toHaveBeenCalledWith({
+            where: { id: "t_deleted" },
+            include: { _count: { select: { participants: true } } },
+         });
       });
 
       it("rejects enrollment when selected team is full", async () => {
