@@ -48,7 +48,7 @@ describe("getChallengeParticipantStats repository", () => {
          endAt: new Date("2026-10-08T00:00:00.000Z"),
          hostId: "admin_user",
       },
-      dailyStudyLogsV2: [
+      dailyStudyLogs: [
          {
             id: "log_1",
             logDate: new Date("2026-10-01T00:00:00.000Z"),

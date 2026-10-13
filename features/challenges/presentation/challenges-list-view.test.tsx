@@ -45,6 +45,8 @@ const mockChallenges: ChallengeCatalogItem[] = [
       format: "TEAM_VS_TEAM",
       challengeColor: null,
       status: "ACTIVE",
+      isDeleted: false,
+      deletionTime: null,
       startAt: new Date("2026-10-04T01:00:00.000Z"),
       endAt: new Date("2026-10-10T01:00:00.000Z"),
       eventBannerUrl: "https://example.com/banner.png",
@@ -70,6 +72,8 @@ const mockChallenges: ChallengeCatalogItem[] = [
       format: "SOLOS",
       challengeColor: null,
       status: "UPCOMING",
+      isDeleted: false,
+      deletionTime: null,
       startAt: new Date("2026-11-01T01:00:00.000Z"),
       endAt: new Date("2026-11-07T01:00:00.000Z"),
       eventBannerUrl: null,
@@ -176,6 +180,8 @@ describe("ChallengesListView", () => {
          format: "TEAM_VS_TEAM" as const,
          challengeColor: null,
          status: "ACTIVE" as const,
+         isDeleted: false,
+         deletionTime: null,
          startAt: new Date("2026-10-04T01:00:00.000Z"),
          endAt: new Date("2026-10-10T01:00:00.000Z"),
          eventBannerUrl: null,
@@ -229,5 +235,42 @@ describe("ChallengesListView", () => {
       expect(html).toContain("All Formats");
       expect(html).toContain("Team vs Team");
       expect(html).toContain("Solo Battles");
+   });
+
+   it("filters out soft-deleted challenges (isDeleted = true) from the rendered list and counts", () => {
+      const challengesWithDeleted: ChallengeCatalogItem[] = [
+         ...mockChallenges,
+         {
+            id: "chal-deleted-1",
+            title: "Secret Deleted Challenge",
+            format: "SOLOS",
+            challengeColor: null,
+            status: "ACTIVE",
+            startAt: new Date("2026-10-04T01:00:00.000Z"),
+            endAt: new Date("2026-10-10T01:00:00.000Z"),
+            eventBannerUrl: null,
+            punishmentPfpUrl: null,
+            resultsLockedAt: null,
+            isDeleted: true,
+            deletionTime: new Date(),
+            hostId: "admin-1",
+            createdAt: new Date("2026-10-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+            host: null,
+            teams: [],
+            _count: { participants: 0 },
+         },
+      ];
+
+      const html = renderToStaticMarkup(
+         <ChallengesListView
+            challenges={challengesWithDeleted}
+            canManageChallenges={false}
+         />
+      );
+
+      expect(html).not.toContain("Secret Deleted Challenge");
+      // All count should still be 2, not 3
+      expect(html).toContain("All (2)");
    });
 });

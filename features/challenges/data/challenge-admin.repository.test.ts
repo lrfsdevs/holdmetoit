@@ -26,8 +26,10 @@ vi.mock("@/core/db", () => {
          delete: vi.fn(),
       },
       team: {
+         findMany: vi.fn(),
          findUnique: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn(),
          create: vi.fn(),
          deleteMany: vi.fn(),
       },
@@ -39,17 +41,12 @@ vi.mock("@/core/db", () => {
          delete: vi.fn(),
          deleteMany: vi.fn(),
       },
-      dailyStudyLogV2: {
+      dailyStudyLog: {
          deleteMany: vi.fn(),
       },
       task: {
          findMany: vi.fn(),
-      },
-      leaderboardEntry: {
-         deleteMany: vi.fn(),
-      },
-      teamMember: {
-         deleteMany: vi.fn(),
+         updateMany: vi.fn(),
       },
       punishmentRecord: {
          upsert: vi.fn(),
@@ -226,7 +223,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             teamId: "t_1",
             targetSeconds: 36000,
             status: "NORMAL",
-            dailyStudyLogsV2: [{ durationSeconds: 36000 }],
+            dailyStudyLogs: [{ durationSeconds: 36000 }],
             punishmentRecords: [],
             ...overrides,
          };
@@ -246,7 +243,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
                }),
             ]) as never
          );
@@ -293,7 +290,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
                }),
             ]) as never
          );
@@ -322,13 +319,13 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 36000 }],
+                  dailyStudyLogs: [{ durationSeconds: 36000 }],
                }),
                mockParticipant({
                   id: "p_2",
                   userId: "u_2",
                   teamId: "t_2",
-                  dailyStudyLogsV2: [{ durationSeconds: 72000 }],
+                  dailyStudyLogs: [{ durationSeconds: 72000 }],
                }),
             ]) as never
          );
@@ -427,7 +424,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                   teamId: "t_1",
                   targetSeconds: 20000,
                   status: "NORMAL",
-                  dailyStudyLogsV2: [{ durationSeconds: 25000 }], // Exceeded target
+                  dailyStudyLogs: [{ durationSeconds: 25000 }], // Exceeded target
                   punishmentRecords: [],
                },
             ],
@@ -965,7 +962,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
    });
 
    describe("deleteAdminChallenge", () => {
-      it("deletes all related entities and challenge in correct order", async () => {
+      it("soft-deletes challenge, teams, and tasks while recording audit trail", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
             id: "c_1",
             title: "Test Challenge",
@@ -973,8 +970,13 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             endAt: new Date(Date.now() + 7 * 86400000),
          } as never);
 
-         const mockDeleted = { id: "c_1", title: "Test Challenge" };
-         vi.mocked(prisma.challenge.delete).mockResolvedValue(
+         const mockDeleted = {
+            id: "c_1",
+            title: "Test Challenge",
+            isDeleted: true,
+            deletionTime: new Date(),
+         };
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
             mockDeleted as never
          );
 
@@ -984,15 +986,28 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
 
          expect(result).toEqual(mockDeleted);
-         expect(prisma.dailyStudyLogV2.deleteMany).toHaveBeenCalled();
-         expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalled();
-         expect(prisma.leaderboardEntry.deleteMany).toHaveBeenCalled();
-         expect(prisma.challengeParticipant.deleteMany).toHaveBeenCalled();
-         expect(prisma.teamMember.deleteMany).toHaveBeenCalled();
-         expect(prisma.team.deleteMany).toHaveBeenCalled();
-         expect(prisma.challenge.delete).toHaveBeenCalledWith({
-            where: { id: "c_1" },
+         expect(prisma.team.updateMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_1", isDeleted: false },
+            data: {
+               isDeleted: true,
+               deletionTime: expect.any(Date),
+            },
          });
+         expect(prisma.task.updateMany).toHaveBeenCalledWith({
+            where: { challengeId: "c_1", isDeleted: false },
+            data: {
+               isDeleted: true,
+               deletionTime: expect.any(Date),
+            },
+         });
+         expect(prisma.challenge.update).toHaveBeenCalledWith({
+            where: { id: "c_1" },
+            data: {
+               isDeleted: true,
+               deletionTime: expect.any(Date),
+            },
+         });
+         expect(prisma.challenge.delete).not.toHaveBeenCalled();
       });
    });
 
@@ -1028,17 +1043,11 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             participantId: "p_1",
             removedName: "Afnan",
          });
-         expect(prisma.dailyStudyLogV2.deleteMany).toHaveBeenCalledWith({
+         expect(prisma.dailyStudyLog.deleteMany).toHaveBeenCalledWith({
             where: { participantId: "p_1" },
          });
          expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({
             where: { participantId: "p_1" },
-         });
-         expect(prisma.leaderboardEntry.deleteMany).toHaveBeenCalledWith({
-            where: { challengeId: "c_1", userId: "u_1" },
-         });
-         expect(prisma.teamMember.deleteMany).toHaveBeenCalledWith({
-            where: { userId: "u_1", team: { challengeId: "c_1" } },
          });
          expect(prisma.challengeParticipant.delete).toHaveBeenCalledWith({
             where: { id: "p_1" },

@@ -11,12 +11,12 @@
 
 HoldMeToIt is developed collaboratively by autonomous agents and human developers organized into four specialized functional roles:
 
-| Role / Agent ID                          | Scope / Focus                                                                                                                                                             | Primary Layer Responsibilities                                                                                          |
-| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- |
-| **Data & Identity Agent**                | Database schema, Prisma migrations, Auth.js Discord OAuth, User/Challenge/Team/Task repositories, session hydration                                                       | `prisma/`, `core/db/`, `core/auth/`, `features/auth/`, `features/challenges/data/`                                      |
-| **Scoring & Engine Agent**               | Domain business math, `HH:MM:SS` duration converters, cumulative team aggregations, dynamic catch-up deficit engine, dual-failure punishment validator, Vitest test suite | `features/leaderboard/domain/`, `features/study-logs/domain/`, `features/accountability/domain/`, domain unit tests     |
-| **Participant UI Agent**                 | Student cockpit views, `HH:MM:SS` duration self-logging input, interactive weekly goal checklist, progress meters, mobile viewport responsiveness (360px+)                | `features/study-logs/presentation/`, `features/declarations/presentation/`, `app/(dashboard)/`, Tailwind components     |
-| **Admin Operations & Broadcaster Agent** | Host wizard, team balancer & roster editor, admin inline hours override grid, challenge lock/freeze controls, 1-click Discord summary generator, Punishment PFP hub       | `features/challenges/presentation/`, `features/notifications/`, `features/accountability/presentation/`, `app/(admin)/` |
+| Role / Agent ID                          | Scope / Focus                                                                                                                                                             | Primary Layer Responsibilities                                                                                      |
+| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------ |
+| **Data & Identity Agent**                | Database schema, Prisma migrations, Auth.js Discord OAuth, User/Challenge/Team/Task repositories, session hydration                                                       | `prisma/`, `core/db/`, `core/auth/`, `features/auth/`, `features/challenges/data/`                                  |
+| **Scoring & Engine Agent**               | Domain business math, `HH:MM:SS` duration converters, cumulative team aggregations, dynamic catch-up deficit engine, dual-failure punishment validator, Vitest test suite | `features/leaderboard/domain/`, `features/study-logs/domain/`, `features/accountability/domain/`, domain unit tests |
+| **Participant UI Agent**                 | Student cockpit views, `HH:MM:SS` duration self-logging input, interactive weekly goal checklist, progress meters, mobile viewport responsiveness (360px+)                | `features/study-logs/presentation/`, `features/declarations/presentation/`, `app/(dashboard)/`, Tailwind components |
+| **Admin Operations & Broadcaster Agent** | Host wizard, team balancer & roster editor, admin inline hours override grid, challenge lock/freeze controls, Punishment PFP hub                                          | `features/challenges/presentation/`, `features/accountability/presentation/`, `app/(admin)/`                        |
 
 ### 1.1 Equality & Collaboration Posture
 
@@ -250,7 +250,6 @@ journey
       Admin Locks Final Results: 5: Admin
       Three-Condition Flags Punishments: 5: System
       Punishment PFP Download Enabled: 5: System
-      1-Click Discord Summary Copied: 5: Admin
 ```
 
 ### J1: Discord OAuth Login & Profile Provisioning
@@ -288,11 +287,11 @@ journey
 - **Database Assertion:** `DailyStudyLog` updated with `durationSeconds = 13500`, `isOverride = true`, `overrideById = adminUserId`; leaderboard re-aggregates.
 - **Laws Gated:** Law L5 (Admin Override Absolute).
 
-### J6: Event Lock, Three-Condition Auto-Punishment & Discord Summary
+### J6: Event Lock, Three-Condition Auto-Punishment & Result Finalization
 
 - **Trigger:** Challenge duration reaches end time; Host clicks "Lock Final Results".
-- **Action:** System evaluates all enrolled members on the three conditions (challenge-linked weekly tasks, target hours, winning team — ties never punish). Host clicks "Copy Discord Summary".
-- **Database Assertion:** Challenge transitions to `COMPLETED`; `PunishmentRecord` rows created for punished members (row presence = punished; pardons preserved). The wrapped becomes available (Summary tab + popup). Clipboard receives formatted markdown embed.
+- **Action:** System evaluates all enrolled members on the three conditions (challenge-linked weekly tasks, target hours, winning team — ties never punish). Challenge status becomes `COMPLETED`.
+- **Database Assertion:** Challenge transitions to `COMPLETED`; `PunishmentRecord` rows created for punished members (row presence = punished; pardons preserved). The wrapped becomes available (Summary tab + popup).
 - **Laws Gated:** Law L2 (Spreadsheet Exorcism), Law L6 (Three-Condition Accountability Invariant).
 
 ---

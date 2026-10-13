@@ -29,16 +29,19 @@ export function ChallengesListView({
    >("ALL");
    const [currentPage, setCurrentPage] = useState(1);
 
-   const countAll = challenges.length;
-   const countActive = challenges.filter((c) => c.status === "ACTIVE").length;
-   const countUpcoming = challenges.filter(
+   const activeChallenges = challenges.filter((c) => !c.isDeleted);
+   const countAll = activeChallenges.length;
+   const countActive = activeChallenges.filter(
+      (c) => c.status === "ACTIVE"
+   ).length;
+   const countUpcoming = activeChallenges.filter(
       (c) => c.status === "UPCOMING"
    ).length;
-   const countCompleted = challenges.filter(
+   const countCompleted = activeChallenges.filter(
       (c) => c.status === "COMPLETED"
    ).length;
 
-   const filteredChallenges = challenges.filter((c) => {
+   const filteredChallenges = activeChallenges.filter((c) => {
       // 1. Status Filter
       if (statusFilter !== "ALL" && c.status !== statusFilter) {
          return false;
@@ -61,9 +64,9 @@ export function ChallengesListView({
             (c.host?.displayName &&
                c.host.displayName.toLowerCase().includes(q)) ||
             (c.host?.username && c.host.username.toLowerCase().includes(q));
-         const teamMatch = c.teams?.some((t) =>
-            t.name.toLowerCase().includes(q)
-         );
+         const teamMatch = c.teams
+            ?.filter((t) => !t.isDeleted)
+            .some((t) => t.name.toLowerCase().includes(q));
          if (!titleMatch && !formatMatch && !hostMatch && !teamMatch) {
             return false;
          }
@@ -84,8 +87,7 @@ export function ChallengesListView({
       setCurrentPage(1);
    };
 
-   const totalPages =
-      Math.ceil(filteredChallenges.length / PAGE_SIZE) || 1;
+   const totalPages = Math.ceil(filteredChallenges.length / PAGE_SIZE) || 1;
    const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
    const paginatedChallenges = filteredChallenges.slice(
@@ -305,7 +307,8 @@ export function ChallengesListView({
                   No challenges match your search and filter criteria.
                </p>
                <p className="text-xs text-[#868686]">
-                  Try adjusting your search terms or clearing status and format filters.
+                  Try adjusting your search terms or clearing status and format
+                  filters.
                </p>
                <Button
                   type="button"
@@ -325,15 +328,14 @@ export function ChallengesListView({
                   data-testid="challenges-grid"
                >
                   {paginatedChallenges.map((c) => {
-                     const formattedDate = new Date(c.startAt).toLocaleDateString(
-                        "en-US",
-                        {
-                           day: "numeric",
-                           month: "short",
-                           year: "numeric",
-                           timeZone: "UTC",
-                        }
-                     );
+                     const formattedDate = new Date(
+                        c.startAt
+                     ).toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        timeZone: "UTC",
+                     });
 
                      const statusLabel =
                         c.status === "ACTIVE"

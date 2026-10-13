@@ -201,6 +201,8 @@ export function HomeCockpitView({
             challengeStartDate={cockpit?.challengeStartDate}
             totalChallengeDays={cockpit?.totalChallengeDays}
             isAdmin={effectiveIsAdmin}
+            plannedLeaveDays={cockpit?.plannedLeaveDays}
+            usedLeaveDays={cockpit?.usedLeaveDays}
          />
 
          {isLoggedIn && (upcomingChallenge || cockpit) && (

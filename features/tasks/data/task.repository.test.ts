@@ -469,7 +469,8 @@ describe("task.repository", () => {
          } as never);
          vi.mocked(prisma.task.update).mockResolvedValue({
             id: "task_del",
-            deletedAt: new Date(),
+            isDeleted: true,
+            deletionTime: new Date(),
          } as never);
 
          const result = await deleteTask({
@@ -479,11 +480,15 @@ describe("task.repository", () => {
 
          expect(result).toEqual({
             id: "task_del",
-            deletedAt: expect.any(Date),
+            isDeleted: true,
+            deletionTime: expect.any(Date),
          });
          expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_del" },
-            data: { deletedAt: expect.any(Date) },
+            data: {
+               isDeleted: true,
+               deletionTime: expect.any(Date),
+            },
          });
       });
    });
@@ -812,7 +817,8 @@ describe("task.repository", () => {
          } as never);
          vi.mocked(prisma.category.update).mockResolvedValue({
             id: "cat_del",
-            deletedAt: new Date(),
+            isDeleted: true,
+            deletionTime: new Date(),
             name: "Chemistry ·deleted·cat_del",
          } as never);
 
@@ -825,14 +831,18 @@ describe("task.repository", () => {
             where: {
                categoryId: "cat_del",
                userId: "user_1",
-               deletedAt: null,
+               isDeleted: false,
             },
-            data: { deletedAt: expect.any(Date) },
+            data: {
+               isDeleted: true,
+               deletionTime: expect.any(Date),
+            },
          });
          expect(prisma.category.update).toHaveBeenCalledWith({
             where: { id: "cat_del" },
             data: {
-               deletedAt: expect.any(Date),
+               isDeleted: true,
+               deletionTime: expect.any(Date),
                name: expect.stringContaining("Chemistry ·deleted·cat_del"),
             },
          });

@@ -24,6 +24,10 @@ import {
    calculateChallengeTotalDays,
    validateStudyLogChallengeDay,
 } from "@/features/study-logs/domain/challenge-day";
+import {
+   MAX_LEAVES_ERROR,
+   MaximumLeavesExceededError,
+} from "@/features/study-logs/domain/leave-allowance";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
@@ -187,6 +191,24 @@ export async function logStudyTimeAction(
             error,
          });
          return { ok: false, code: "NOT_ENROLLED", message: error.message };
+      }
+
+      if (
+         error instanceof MaximumLeavesExceededError ||
+         (error instanceof Error && error.message === MAX_LEAVES_ERROR)
+      ) {
+         logger.warn(logEvents.studyLogAdded, {
+            context: {
+               code: "MAX_LEAVES_REACHED",
+               challengeId: input?.challengeId,
+            },
+            error,
+         });
+         return {
+            ok: false,
+            code: "MAX_LEAVES_REACHED",
+            message: MAX_LEAVES_ERROR,
+         };
       }
 
       logger.error(logEvents.studyLogAdded, {

@@ -41,6 +41,8 @@ export interface DailyHoursModalProps {
    challengeStartDate?: string;
    totalChallengeDays?: number;
    isAdmin?: boolean;
+   plannedLeaveDays?: number;
+   usedLeaveDays?: number;
 }
 
 export function DailyHoursModal({
@@ -66,6 +68,8 @@ export function DailyHoursModal({
    challengeStartDate,
    totalChallengeDays = 7,
    isAdmin = false,
+   plannedLeaveDays,
+   usedLeaveDays,
 }: DailyHoursModalProps) {
    const router = useRouter();
    const showYesterdayOption = Boolean(isYesterdayMissed && yesterdayDate);
@@ -450,6 +454,16 @@ export function DailyHoursModal({
    };
 
    const handleMarkAsLeave = () => {
+      if (
+         !isSelectedDateLeave &&
+         plannedLeaveDays !== undefined &&
+         usedLeaveDays !== undefined &&
+         usedLeaveDays >= plannedLeaveDays
+      ) {
+         setFeedback("Maximum leaves taken for the challenge");
+         return;
+      }
+
       setLeavePending(true);
       if (isSelectedDateLeave) {
          setIsLeaveMode(false);
@@ -814,15 +828,26 @@ export function DailyHoursModal({
                )}
 
                <div className="flex items-center justify-between gap-2 pt-3">
-                  <Button
-                     type="button"
-                     variant="ghost"
-                     onClick={onClose}
-                     disabled={isPending}
-                     className="h-10 px-4 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
-                  >
-                     Cancel
-                  </Button>
+                  <div className="flex items-center gap-2">
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={onClose}
+                        disabled={isPending}
+                        className="h-10 px-4 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
+                     >
+                        Cancel
+                     </Button>
+                     {plannedLeaveDays !== undefined && (
+                        <span className="text-[11px] font-sans-tabular text-[#a1a1a1]">
+                           🌴 Leaves:{" "}
+                           <strong className="text-[#ffffff]">
+                              {usedLeaveDays ?? 0}
+                           </strong>
+                           /{plannedLeaveDays}
+                        </span>
+                     )}
+                  </div>
 
                   <div className="flex items-center gap-2">
                      <Button

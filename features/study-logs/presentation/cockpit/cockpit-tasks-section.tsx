@@ -213,23 +213,27 @@ export function CockpitTasksSection({
             userTasks?.dailyCategories &&
             userTasks.dailyCategories.length > 0
          ) {
-            return userTasks.dailyCategories.map((c) => ({
-               id: c.id,
-               name: c.name,
-               isCollapsed: false,
-               tasks: c.tasks.map((t) => ({
-                  id: t.id,
-                  text: t.title,
-                  completed: t.isComplete,
-                  status:
-                     (t.status as TaskStatus) ||
-                     (t.isComplete ? "COMPLETED" : "TODO"),
-                  dueDate: t.dueDate ?? null,
-                  createdAt: t.createdAt
-                     ? new Date(t.createdAt).toISOString()
-                     : undefined,
-               })),
-            }));
+            return userTasks.dailyCategories
+               .filter((c) => !c.isDeleted)
+               .map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  isCollapsed: false,
+                  tasks: c.tasks
+                     .filter((t) => !t.isDeleted)
+                     .map((t) => ({
+                        id: t.id,
+                        text: t.title,
+                        completed: t.isComplete,
+                        status:
+                           (t.status as TaskStatus) ||
+                           (t.isComplete ? "COMPLETED" : "TODO"),
+                        dueDate: t.dueDate ?? null,
+                        createdAt: t.createdAt
+                           ? new Date(t.createdAt).toISOString()
+                           : undefined,
+                     })),
+               }));
          }
          return [];
       }
@@ -241,23 +245,27 @@ export function CockpitTasksSection({
             userTasks?.weeklyCategories &&
             userTasks.weeklyCategories.length > 0
          ) {
-            return userTasks.weeklyCategories.map((c) => ({
-               id: c.id,
-               name: c.name,
-               isCollapsed: false,
-               tasks: c.tasks.map((t) => ({
-                  id: t.id,
-                  text: t.title,
-                  completed: t.isComplete,
-                  status:
-                     (t.status as TaskStatus) ||
-                     (t.isComplete ? "COMPLETED" : "TODO"),
-                  dueDate: t.dueDate ?? null,
-                  createdAt: t.createdAt
-                     ? new Date(t.createdAt).toISOString()
-                     : undefined,
-               })),
-            }));
+            return userTasks.weeklyCategories
+               .filter((c) => !c.isDeleted)
+               .map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  isCollapsed: false,
+                  tasks: c.tasks
+                     .filter((t) => !t.isDeleted)
+                     .map((t) => ({
+                        id: t.id,
+                        text: t.title,
+                        completed: t.isComplete,
+                        status:
+                           (t.status as TaskStatus) ||
+                           (t.isComplete ? "COMPLETED" : "TODO"),
+                        dueDate: t.dueDate ?? null,
+                        createdAt: t.createdAt
+                           ? new Date(t.createdAt).toISOString()
+                           : undefined,
+                     })),
+               }));
          }
          return [];
       }
@@ -442,12 +450,12 @@ export function CockpitTasksSection({
                   }
                }
 
-               const sortedCats = [...localCats].sort(
-                  (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-               );
-               const sortedTasks = [...localTasks].sort(
-                  (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-               );
+               const sortedCats = [...localCats]
+                  .filter((c) => !c.isDeleted)
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+               const sortedTasks = [...localTasks]
+                  .filter((t) => !t.isDeleted)
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
                const tasksToHeal: LocalTaskRecord[] = [];
 
@@ -564,8 +572,9 @@ export function CockpitTasksSection({
                }
             } else if (userTasks && userTasks.categories.length > 0) {
                logTaskSync("Seeding IndexedDB from server userTasks...");
-               const seedCats: LocalCategoryRecord[] = userTasks.categories.map(
-                  (c) => ({
+               const seedCats: LocalCategoryRecord[] = userTasks.categories
+                  .filter((c) => !c.isDeleted)
+                  .map((c) => ({
                      id: c.id,
                      userId: userId || null,
                      name: c.name,
@@ -574,12 +583,15 @@ export function CockpitTasksSection({
                      createdAt: new Date(c.createdAt).toISOString(),
                      updatedAt: new Date(c.updatedAt).toISOString(),
                      syncState: "synced",
-                  })
-               );
+                  }));
 
                const seedTasks: LocalTaskRecord[] = [
-                  ...userTasks.dailyCategories.flatMap((c) => c.tasks),
-                  ...userTasks.weeklyCategories.flatMap((c) => c.tasks),
+                  ...userTasks.dailyCategories
+                     .filter((c) => !c.isDeleted)
+                     .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
+                  ...userTasks.weeklyCategories
+                     .filter((c) => !c.isDeleted)
+                     .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
                ].map((t) => ({
                   id: t.id,
                   userId: userId || null,

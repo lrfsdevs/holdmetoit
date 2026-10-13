@@ -88,6 +88,8 @@ function setChallenge(url: string | null) {
          startAt: new Date("2026-10-01T00:00:00.000Z"),
          endAt: new Date("2026-10-07T00:00:00.000Z"),
          status: "ACTIVE",
+         isDeleted: false,
+         deletionTime: null,
          eventBannerUrl: url,
          punishmentPfpUrl: punishmentUrl,
          resultsLockedAt: null,
