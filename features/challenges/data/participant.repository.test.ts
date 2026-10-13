@@ -51,7 +51,7 @@ describe("participant repository", () => {
                challenge: true,
                team: true,
                user: true,
-               dailyStudyLogsV2: { orderBy: { logDate: "asc" } },
+               dailyStudyLogs: { orderBy: { logDate: "asc" } },
             },
          });
       });
@@ -187,6 +187,7 @@ describe("participant repository", () => {
                challengeId: "c_1",
                teamId: "t_1",
                targetSeconds: 126000,
+               plannedLeaveDays: 0,
                status: "NORMAL",
             },
             include: {
@@ -356,6 +357,7 @@ describe("participant repository", () => {
                challengeId: "c_1",
                teamId: null,
                targetSeconds: 126000,
+               plannedLeaveDays: 0,
                status: "NORMAL",
             },
             include: {

@@ -58,7 +58,7 @@ export async function findAdminChallengeDetails(challengeId: string) {
                   },
                },
                team: true,
-               dailyStudyLogsV2: {
+               dailyStudyLogs: {
                   orderBy: { logDate: "asc" },
                   include: {
                      overrideBy: {
@@ -185,7 +185,7 @@ export async function lockChallengeResults(
          teams: { select: { id: true } },
          participants: {
             include: {
-               dailyStudyLogsV2: true,
+               dailyStudyLogs: true,
                punishmentRecords: true,
             },
          },
@@ -243,7 +243,7 @@ export async function lockChallengeResults(
          challenge.teams,
          challenge.participants.map((participant) => ({
             teamId: participant.teamId ?? "no-assigned",
-            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
          }))
       ).filter((aggregate) =>
          challenge.teams.some((team) => team.id === aggregate.teamId)
@@ -269,7 +269,7 @@ export async function lockChallengeResults(
 
          const outcome = evaluateLockOutcome({
             targetSeconds: participant.targetSeconds,
-            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
             weeklyTasks: weeklyTasksByUser.get(participant.userId) ?? [],
             isInWinningTeam,
          });
@@ -890,7 +890,7 @@ export async function removeChallengeParticipant(params: {
       "Participant";
 
    return prisma.$transaction(async (tx) => {
-      await tx.dailyStudyLogV2.deleteMany({
+      await tx.dailyStudyLog.deleteMany({
          where: { participantId: params.participantId },
       });
 

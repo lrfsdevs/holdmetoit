@@ -645,11 +645,12 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                            image: true,
                         },
                      },
-                     dailyStudyLogsV2: {
+                     dailyStudyLogs: {
                         select: {
                            durationSeconds: true,
                            logDate: true,
                            status: true,
+                           isLeave: true,
                         },
                      },
                      punishmentRecords: {
@@ -710,7 +711,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
 
                return {
                   ...participant,
-                  dailyStudyLogs: participant.dailyStudyLogsV2,
+                  dailyStudyLogs: participant.dailyStudyLogs,
                   weeklyTasksCompletedCount: counts.completed,
                   weeklyTasksTotalCount: counts.total,
                };

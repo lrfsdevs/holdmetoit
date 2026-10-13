@@ -1,6 +1,7 @@
 import { prisma } from "@/core/db";
 import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
+import { assertLeaveAllowance } from "@/features/study-logs/domain/leave-allowance";
 
 function toUtcDateOnly(dateInput: string | Date): Date {
    if (typeof dateInput === "string") {
@@ -42,9 +43,21 @@ export async function upsertDailyStudyLog(params: UpsertDailyStudyLogParams) {
    const logDate = toUtcDateOnly(params.logDate);
    const isLeave = Boolean(params.isLeave);
 
-   let existingLog = null;
-   if (params.actor && params.challengeId) {
-      existingLog = await prisma.dailyStudyLogV2.findUnique({
+   return prisma.$transaction(async (tx) => {
+      const participant = await tx.challengeParticipant.findUnique({
+         where: { id: params.participantId },
+         select: {
+            id: true,
+            plannedLeaveDays: true,
+            usedLeaveDays: true,
+         },
+      });
+
+      if (!participant) {
+         throw new Error("Participant not found.");
+      }
+
+      const existingLog = await tx.dailyStudyLog.findUnique({
          where: {
             participantId_logDate: {
                participantId: params.participantId,
@@ -52,66 +65,81 @@ export async function upsertDailyStudyLog(params: UpsertDailyStudyLogParams) {
             },
          },
       });
-   }
 
-   const updatedLog = await prisma.dailyStudyLogV2.upsert({
-      where: {
-         participantId_logDate: {
+      // Pure domain check for leave allowance and quota calculation
+      const nextUsedLeaveDays = assertLeaveAllowance({
+         plannedLeaveDays: participant.plannedLeaveDays,
+         usedLeaveDays: participant.usedLeaveDays,
+         isExistingLogLeave: Boolean(existingLog?.isLeave),
+         isLeave,
+      });
+
+      if (nextUsedLeaveDays !== participant.usedLeaveDays) {
+         await tx.challengeParticipant.update({
+            where: { id: params.participantId },
+            data: { usedLeaveDays: nextUsedLeaveDays },
+         });
+      }
+
+      const updatedLog = await tx.dailyStudyLog.upsert({
+         where: {
+            participantId_logDate: {
+               participantId: params.participantId,
+               logDate,
+            },
+         },
+         create: {
             participantId: params.participantId,
             logDate,
+            durationSeconds: params.durationSeconds,
+            isLeave,
+            status: "Offline",
          },
-      },
-      create: {
-         participantId: params.participantId,
-         logDate,
-         durationSeconds: params.durationSeconds,
-         isLeave,
-         status: "Offline",
-      },
-      update: {
-         durationSeconds: params.durationSeconds,
-         isLeave,
-         isOverride: false,
-         overrideById: null,
-         overrideReason: null,
-      },
-   });
-
-   if (params.actor && params.challengeId) {
-      const dateKey = formatUtcDateKey(updatedLog.logDate);
-      await recordAuditEvent({
-         actorId: params.actor.id,
-         actorUsername: params.actor.username,
-         actorDisplayName: params.actor.displayName ?? null,
-         actorImage: params.actor.image ?? null,
-         actionType: "STUDY_LOG_ADDED",
-         targetEntityId: updatedLog.id,
-         targetEntityType: "DAILY_STUDY_LOG",
-         targetEntityName: params.actor.displayName || params.actor.username,
-         challengeId: params.challengeId,
-         previousValue: existingLog
-            ? {
-                 durationSeconds: existingLog.durationSeconds,
-                 durationClock: formatSecondsToClock(
-                    existingLog.durationSeconds
-                 ),
-                 logDate: dateKey,
-              }
-            : null,
-         newValue: {
-            durationSeconds: updatedLog.durationSeconds,
-            durationClock: formatSecondsToClock(updatedLog.durationSeconds),
-            logDate: dateKey,
+         update: {
+            durationSeconds: params.durationSeconds,
+            isLeave,
+            isOverride: false,
+            overrideById: null,
+            overrideReason: null,
          },
-         auditReason: isLeave
-            ? `Marked as leave (${formatSecondsToClock(updatedLog.durationSeconds)})`
-            : existingLog
-              ? `Updated study time from ${formatSecondsToClock(existingLog.durationSeconds)} to ${formatSecondsToClock(updatedLog.durationSeconds)}`
-              : `Logged ${formatSecondsToClock(updatedLog.durationSeconds)} of study time`,
       });
-   }
 
-   return updatedLog;
+      if (params.actor && params.challengeId) {
+         const dateKey = formatUtcDateKey(updatedLog.logDate);
+         await recordAuditEvent({
+            actorId: params.actor.id,
+            actorUsername: params.actor.username,
+            actorDisplayName: params.actor.displayName ?? null,
+            actorImage: params.actor.image ?? null,
+            actionType: "STUDY_LOG_ADDED",
+            targetEntityId: updatedLog.id,
+            targetEntityType: "DAILY_STUDY_LOG",
+            targetEntityName: params.actor.displayName || params.actor.username,
+            challengeId: params.challengeId,
+            previousValue: existingLog
+               ? {
+                    durationSeconds: existingLog.durationSeconds,
+                    durationClock: formatSecondsToClock(
+                       existingLog.durationSeconds
+                    ),
+                    logDate: dateKey,
+                 }
+               : null,
+            newValue: {
+               durationSeconds: updatedLog.durationSeconds,
+               durationClock: formatSecondsToClock(updatedLog.durationSeconds),
+               logDate: dateKey,
+            },
+            auditReason: isLeave
+               ? `Marked as leave (${formatSecondsToClock(updatedLog.durationSeconds)})`
+               : existingLog
+                 ? `Updated study time from ${formatSecondsToClock(existingLog.durationSeconds)} to ${formatSecondsToClock(updatedLog.durationSeconds)}`
+                 : `Logged ${formatSecondsToClock(updatedLog.durationSeconds)} of study time`,
+         });
+      }
+
+      return updatedLog;
+   });
 }
 
 export async function findDailyLog(
@@ -120,7 +148,7 @@ export async function findDailyLog(
 ) {
    const normalized = toUtcDateOnly(logDate);
 
-   return prisma.dailyStudyLogV2.findUnique({
+   return prisma.dailyStudyLog.findUnique({
       where: {
          participantId_logDate: {
             participantId,

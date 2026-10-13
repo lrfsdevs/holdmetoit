@@ -41,7 +41,7 @@ vi.mock("@/core/db", () => {
          delete: vi.fn(),
          deleteMany: vi.fn(),
       },
-      dailyStudyLogV2: {
+      dailyStudyLog: {
          deleteMany: vi.fn(),
       },
       task: {
@@ -223,7 +223,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             teamId: "t_1",
             targetSeconds: 36000,
             status: "NORMAL",
-            dailyStudyLogsV2: [{ durationSeconds: 36000 }],
+            dailyStudyLogs: [{ durationSeconds: 36000 }],
             punishmentRecords: [],
             ...overrides,
          };
@@ -243,7 +243,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
                }),
             ]) as never
          );
@@ -290,7 +290,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 40000 }],
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
                }),
             ]) as never
          );
@@ -319,13 +319,13 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
                mockParticipant({
-                  dailyStudyLogsV2: [{ durationSeconds: 36000 }],
+                  dailyStudyLogs: [{ durationSeconds: 36000 }],
                }),
                mockParticipant({
                   id: "p_2",
                   userId: "u_2",
                   teamId: "t_2",
-                  dailyStudyLogsV2: [{ durationSeconds: 72000 }],
+                  dailyStudyLogs: [{ durationSeconds: 72000 }],
                }),
             ]) as never
          );
@@ -424,7 +424,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                   teamId: "t_1",
                   targetSeconds: 20000,
                   status: "NORMAL",
-                  dailyStudyLogsV2: [{ durationSeconds: 25000 }], // Exceeded target
+                  dailyStudyLogs: [{ durationSeconds: 25000 }], // Exceeded target
                   punishmentRecords: [],
                },
             ],
@@ -1043,7 +1043,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             participantId: "p_1",
             removedName: "Afnan",
          });
-         expect(prisma.dailyStudyLogV2.deleteMany).toHaveBeenCalledWith({
+         expect(prisma.dailyStudyLog.deleteMany).toHaveBeenCalledWith({
             where: { participantId: "p_1" },
          });
          expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({

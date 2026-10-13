@@ -10,7 +10,7 @@ export async function findParticipantForUser(
       challenge: true,
       team: true,
       user: true,
-      dailyStudyLogsV2: {
+      dailyStudyLogs: {
          orderBy: { logDate: "asc" as const },
       },
    };
@@ -93,6 +93,7 @@ export async function enrollParticipantInChallenge(params: {
    challengeId: string;
    teamId?: string | null;
    targetSeconds?: number;
+   plannedLeaveDays?: number;
 }) {
    const hasTeam = Boolean(params.teamId && params.teamId !== "no-assigned");
 
@@ -150,6 +151,7 @@ export async function enrollParticipantInChallenge(params: {
          challengeId: params.challengeId,
          teamId: hasTeam ? params.teamId! : null,
          targetSeconds: params.targetSeconds ?? 0,
+         plannedLeaveDays: params.plannedLeaveDays ?? 0,
          status: "NORMAL",
       },
       include: {

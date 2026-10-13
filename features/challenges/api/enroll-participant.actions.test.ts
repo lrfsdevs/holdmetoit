@@ -54,6 +54,7 @@ describe("enrollInChallengeAction (FEAT-CHAL-02)", () => {
          challengeId: "c_1",
          teamId: "t_1",
          targetSeconds: 126000,
+         plannedLeaveDays: 0,
       });
    });
 
@@ -156,6 +157,7 @@ describe("enrollInChallengeAction (FEAT-CHAL-02)", () => {
          challengeId: "c_1",
          teamId: null,
          targetSeconds: 126000,
+         plannedLeaveDays: 2,
       });
    });
 });

@@ -54,7 +54,7 @@ vi.mock("@/core/db", () => ({
          update: vi.fn(),
          updateMany: vi.fn(),
       },
-      dailyStudyLogV2: {
+      dailyStudyLog: {
          findUnique: vi.fn(),
          upsert: vi.fn(),
       },
@@ -321,7 +321,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
    // =========================================================================
    describe("Journey J5: Host Manual Hours Override", () => {
       it("allows host to correct member hours with is_override=true and records in audit trail", async () => {
-         vi.mocked(prisma.dailyStudyLogV2.findUnique).mockResolvedValue({
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue({
             id: "log_1",
             participantId: "part_1",
             durationSeconds: 0,
@@ -329,7 +329,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
             participant: { challengeId: "chal_1" },
          } as never);
 
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue({
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({
             id: "log_1",
             participantId: "part_1",
             durationSeconds: 13500, // 03:45:00
@@ -423,7 +423,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
                   teamId: "team_bees",
                   targetSeconds: 30 * 3600,
                   status: "NORMAL",
-                  dailyStudyLogsV2: [{ durationSeconds: 25 * 3600 }], // 5h deficit
+                  dailyStudyLogs: [{ durationSeconds: 25 * 3600 }], // 5h deficit
                   punishmentRecords: [],
                },
             ],

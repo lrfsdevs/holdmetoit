@@ -6,23 +6,38 @@ import {
    findDailyLog,
    upsertDailyStudyLog,
 } from "@/features/study-logs/data/daily-study-log.repository";
+import { MAX_LEAVES_ERROR } from "@/features/study-logs/domain/leave-allowance";
 
 vi.mock("@/features/audit/data/audit-log.repository", () => ({
    recordAuditEvent: vi.fn().mockResolvedValue({ id: "audit_1" }),
 }));
 
-vi.mock("@/core/db", () => ({
-   prisma: {
-      dailyStudyLogV2: {
+vi.mock("@/core/db", () => {
+   const mockPrisma = {
+      $transaction: vi.fn(async (cb: (tx: unknown) => unknown) =>
+         cb(mockPrisma)
+      ),
+      challengeParticipant: {
+         findUnique: vi.fn(),
+         update: vi.fn(),
+      },
+      dailyStudyLog: {
          upsert: vi.fn(),
          findUnique: vi.fn(),
       },
-   },
-}));
+   };
+   return { prisma: mockPrisma };
+});
 
 describe("dailyStudyLog repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      // Default participant mock with planned leaves
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+         id: "part_1",
+         plannedLeaveDays: 2,
+         usedLeaveDays: 0,
+      } as never);
    });
 
    describe("upsertDailyStudyLog", () => {
@@ -35,7 +50,8 @@ describe("dailyStudyLog repository", () => {
             isOverride: false,
          };
 
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue(
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue(
             mockResult as never
          );
 
@@ -48,7 +64,7 @@ describe("dailyStudyLog repository", () => {
          expect(result).toEqual(mockResult);
 
          const expectedUtcDate = new Date(Date.UTC(2026, 8, 6));
-         expect(prisma.dailyStudyLogV2.upsert).toHaveBeenCalledWith({
+         expect(prisma.dailyStudyLog.upsert).toHaveBeenCalledWith({
             where: {
                participantId_logDate: {
                   participantId: "part_1",
@@ -73,9 +89,13 @@ describe("dailyStudyLog repository", () => {
       });
 
       it("resets override flags on self-logging update", async () => {
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue(
-            {} as never
-         );
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_2",
+            plannedLeaveDays: 2,
+            usedLeaveDays: 0,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
 
          await upsertDailyStudyLog({
             participantId: "part_2",
@@ -83,7 +103,7 @@ describe("dailyStudyLog repository", () => {
             durationSeconds: 7_200,
          });
 
-         const callArgs = vi.mocked(prisma.dailyStudyLogV2.upsert).mock
+         const callArgs = vi.mocked(prisma.dailyStudyLog.upsert).mock
             .calls[0][0];
          expect(callArgs.update).toEqual({
             durationSeconds: 7_200,
@@ -94,10 +114,14 @@ describe("dailyStudyLog repository", () => {
          });
       });
 
-      it("persists isLeave when marked as leave", async () => {
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue(
-            {} as never
-         );
+      it("persists isLeave and increments usedLeaveDays when marked as leave", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_3",
+            plannedLeaveDays: 3,
+            usedLeaveDays: 1,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
 
          await upsertDailyStudyLog({
             participantId: "part_3",
@@ -106,10 +130,87 @@ describe("dailyStudyLog repository", () => {
             isLeave: true,
          });
 
-         const callArgs = vi.mocked(prisma.dailyStudyLogV2.upsert).mock
+         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
+            where: { id: "part_3" },
+            data: { usedLeaveDays: 2 },
+         });
+
+         const callArgs = vi.mocked(prisma.dailyStudyLog.upsert).mock
             .calls[0][0];
          expect(callArgs.create.isLeave).toBe(true);
          expect(callArgs.update.isLeave).toBe(true);
+      });
+
+      it("rejects marking as leave when participant has used all planned leaves", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_at_limit",
+            plannedLeaveDays: 2,
+            usedLeaveDays: 2,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+
+         await expect(
+            upsertDailyStudyLog({
+               participantId: "part_at_limit",
+               logDate: "2026-09-09",
+               durationSeconds: 0,
+               isLeave: true,
+            })
+         ).rejects.toThrow(MAX_LEAVES_ERROR);
+
+         expect(prisma.dailyStudyLog.upsert).not.toHaveBeenCalled();
+      });
+
+      it("allows idempotent re-saving of an existing leave day without incrementing count", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_at_limit",
+            plannedLeaveDays: 2,
+            usedLeaveDays: 2,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue({
+            id: "existing_leave_log",
+            participantId: "part_at_limit",
+            isLeave: true,
+            durationSeconds: 0,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
+
+         await upsertDailyStudyLog({
+            participantId: "part_at_limit",
+            logDate: "2026-09-09",
+            durationSeconds: 0,
+            isLeave: true,
+         });
+
+         expect(prisma.challengeParticipant.update).not.toHaveBeenCalled();
+         expect(prisma.dailyStudyLog.upsert).toHaveBeenCalled();
+      });
+
+      it("decrements usedLeaveDays when switching an existing leave day back to study hours", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_undo_leave",
+            plannedLeaveDays: 2,
+            usedLeaveDays: 2,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue({
+            id: "existing_leave_log",
+            participantId: "part_undo_leave",
+            isLeave: true,
+            durationSeconds: 0,
+         } as never);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
+
+         await upsertDailyStudyLog({
+            participantId: "part_undo_leave",
+            logDate: "2026-09-09",
+            durationSeconds: 3600,
+            isLeave: false,
+         });
+
+         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
+            where: { id: "part_undo_leave" },
+            data: { usedLeaveDays: 1 },
+         });
       });
 
       it("records a STUDY_LOG_ADDED audit event on initial study log creation", async () => {
@@ -121,8 +222,8 @@ describe("dailyStudyLog repository", () => {
             isOverride: false,
          };
 
-         vi.mocked(prisma.dailyStudyLogV2.findUnique).mockResolvedValue(null);
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue(
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue(
             mockResult as never
          );
 
@@ -176,10 +277,10 @@ describe("dailyStudyLog repository", () => {
             isOverride: false,
          };
 
-         vi.mocked(prisma.dailyStudyLogV2.findUnique).mockResolvedValue(
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(
             existingLog as never
          );
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue(
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue(
             updatedResult as never
          );
 
@@ -229,7 +330,7 @@ describe("dailyStudyLog repository", () => {
             durationSeconds: 3_600,
          };
 
-         vi.mocked(prisma.dailyStudyLogV2.findUnique).mockResolvedValue(
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(
             mockLog as never
          );
 
@@ -237,7 +338,7 @@ describe("dailyStudyLog repository", () => {
          expect(log).toEqual(mockLog);
 
          const expectedUtcDate = new Date(Date.UTC(2026, 8, 8));
-         expect(prisma.dailyStudyLogV2.findUnique).toHaveBeenCalledWith({
+         expect(prisma.dailyStudyLog.findUnique).toHaveBeenCalledWith({
             where: {
                participantId_logDate: {
                   participantId: "part_3",

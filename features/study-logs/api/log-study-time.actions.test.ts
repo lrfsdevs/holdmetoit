@@ -360,4 +360,39 @@ describe("logStudyTimeAction", () => {
       });
       expect(dailyStudyLogRepo.upsertDailyStudyLog).not.toHaveBeenCalled();
    });
+
+   it("handles MaximumLeavesExceededError with MAX_LEAVES_REACHED and exact message", async () => {
+      vi.mocked(requireSessionModule.requireSessionUser).mockResolvedValue({
+         id: "usr_1",
+      } as never);
+
+      vi.mocked(
+         requireParticipantModule.requireOwnedParticipant
+      ).mockResolvedValue({
+         id: "part_1",
+         challenge: {
+            startAt: new Date("2026-10-05T18:00:00.000Z"),
+            endAt: new Date("2026-10-12T18:00:00.000Z"),
+         },
+      } as never);
+
+      vi.mocked(dailyStudyLogRepo.upsertDailyStudyLog).mockRejectedValue(
+         new Error("Maximum leaves taken for the challenge")
+      );
+
+      const result = await logStudyTimeAction({
+         challengeId: "chal_1",
+         challengeDay: 1,
+         hours: 0,
+         minutes: 0,
+         seconds: 0,
+         isLeave: true,
+      });
+
+      expect(result).toEqual({
+         ok: false,
+         code: "MAX_LEAVES_REACHED",
+         message: "Maximum leaves taken for the challenge",
+      });
+   });
 });

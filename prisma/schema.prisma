@@ -38,7 +38,6 @@ model User {
   hostedChallenges Challenge[] @relation("ChallengeHost")
   participations ChallengeParticipant[]
   overriddenLogs   DailyStudyLog[]   @relation("LogOverrideAdmin")
-  overriddenLogsV2 DailyStudyLogV2[] @relation("LogOverrideAdminV2")
   pardonsIssued  PunishmentRecord[] @relation("PardonAdmin")
   categories         Category[]
   tasks              Task[]
@@ -148,6 +147,8 @@ model ChallengeParticipant {
   userId        String
   teamId        String?
   targetSeconds Int               @default(0)
+  plannedLeaveDays Int            @default(0)
+  usedLeaveDays    Int            @default(0)
   status        ParticipantStatus @default(NORMAL)
 
   isWrappedSeen    Boolean @default(false)
@@ -161,7 +162,6 @@ model ChallengeParticipant {
   team      Team?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   dailyStudyLogs   DailyStudyLog[]
-  dailyStudyLogsV2 DailyStudyLogV2[]
   punishmentRecords PunishmentRecord[]
 
   @@unique([challengeId, userId])
@@ -179,32 +179,6 @@ model DailyStudyLog {
   participantId   String
   logDate         DateTime @db.Date
   durationSeconds Int      @default(0)
-  isLeave         Boolean  @default(false)
-
-  isOverride     Boolean @default(false)
-  overrideById   String?
-  overrideReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  participant  ChallengeParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  overrideBy   User?                @relation("LogOverrideAdmin", fields: [overrideById], references: [id], onDelete: SetNull)
-
-  @@unique([participantId, logDate])
-  @@index([participantId])
-  @@index([logDate])
-}
-
-// ---------------------------------------------------------------------------
-// Study logging V2 (YPT Bot Ingestion WIP - clone of DailyStudyLog)
-// ---------------------------------------------------------------------------
-
-model DailyStudyLogV2 {
-  id              String   @id @default(cuid())
-  participantId   String
-  logDate         DateTime @db.Date
-  durationSeconds Int      @default(0)
   status          String?
   isLeave         Boolean  @default(false)
 
@@ -216,7 +190,7 @@ model DailyStudyLogV2 {
   updatedAt DateTime @updatedAt
 
   participant  ChallengeParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  overrideBy   User?                @relation("LogOverrideAdminV2", fields: [overrideById], references: [id], onDelete: SetNull)
+  overrideBy   User?                @relation("LogOverrideAdmin", fields: [overrideById], references: [id], onDelete: SetNull)
 
   @@unique([participantId, logDate])
   @@index([participantId])
