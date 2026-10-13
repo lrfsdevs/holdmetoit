@@ -10,14 +10,18 @@ export async function findParticipantForUser(
       challenge: true,
       team: true,
       user: true,
-      dailyStudyLogsV2: {
+      dailyStudyLogs: {
          orderBy: { logDate: "asc" as const },
       },
    };
 
    if (challengeId) {
       return prisma.challengeParticipant.findFirst({
-         where: { userId, challengeId },
+         where: {
+            userId,
+            challengeId,
+            challenge: { isDeleted: false },
+         },
          include,
       });
    }
@@ -26,6 +30,7 @@ export async function findParticipantForUser(
       where: {
          userId,
          challenge: {
+            isDeleted: false,
             startAt: { lte: now },
             endAt: { gt: now },
          },
@@ -42,6 +47,7 @@ export async function findParticipantForUser(
       where: {
          userId,
          challenge: {
+            isDeleted: false,
             startAt: { gt: now },
          },
       },
@@ -57,6 +63,7 @@ export async function findParticipantForUser(
       where: {
          userId,
          challenge: {
+            isDeleted: false,
             endAt: { lte: now },
          },
       },
@@ -73,6 +80,7 @@ export async function findOwnedParticipant(
       where: {
          userId,
          challengeId,
+         challenge: { isDeleted: false },
       },
       include: {
          challenge: true,
@@ -85,6 +93,7 @@ export async function enrollParticipantInChallenge(params: {
    challengeId: string;
    teamId?: string | null;
    targetSeconds?: number;
+   plannedLeaveDays?: number;
 }) {
    const hasTeam = Boolean(params.teamId && params.teamId !== "no-assigned");
 
@@ -112,7 +121,7 @@ export async function enrollParticipantInChallenge(params: {
          : Promise.resolve(null),
    ]);
 
-   if (!challenge) {
+   if (!challenge || challenge.isDeleted) {
       throw new Error("Challenge not found.");
    }
 
@@ -125,7 +134,7 @@ export async function enrollParticipantInChallenge(params: {
    }
 
    if (hasTeam) {
-      if (!team || team.challengeId !== params.challengeId) {
+      if (!team || team.isDeleted || team.challengeId !== params.challengeId) {
          throw new Error("Selected team does not belong to this challenge.");
       }
 
@@ -142,6 +151,7 @@ export async function enrollParticipantInChallenge(params: {
          challengeId: params.challengeId,
          teamId: hasTeam ? params.teamId! : null,
          targetSeconds: params.targetSeconds ?? 0,
+         plannedLeaveDays: params.plannedLeaveDays ?? 0,
          status: "NORMAL",
       },
       include: {

@@ -41,11 +41,24 @@ describe("challenge.repository", () => {
             where: { id: "chal-1" },
             include: {
                teams: {
+                  where: { isDeleted: false },
                   orderBy: { sortOrder: "asc" },
                },
             },
          });
          expect(result).toEqual(mockChallenge);
+      });
+
+      it("returns null if challenge is soft-deleted", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValueOnce({
+            id: "chal-del",
+            title: "Deleted Challenge",
+            isDeleted: true,
+            teams: [],
+         } as any);
+
+         const result = await findChallengeWithTeamsById("chal-del");
+         expect(result).toBeNull();
       });
    });
 

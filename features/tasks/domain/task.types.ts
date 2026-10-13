@@ -13,6 +13,8 @@ export interface TaskItem {
    isComplete: boolean;
    status?: TaskStatus;
    dueDate?: string | null;
+   isDeleted?: boolean;
+   deletionTime?: Date | string | null;
    createdAt: Date;
    updatedAt: Date;
    completedAt: Date | null;
@@ -24,6 +26,8 @@ export interface CategoryItem {
    name: string;
    taskType: TaskType;
    sortOrder?: number;
+   isDeleted?: boolean;
+   deletionTime?: Date | string | null;
    createdAt: Date;
    updatedAt: Date;
 }
@@ -34,6 +38,8 @@ export interface CategoryGroup {
    taskType: TaskType;
    sortOrder?: number;
    isCollapsed: boolean;
+   isDeleted?: boolean;
+   deletionTime?: Date | string | null;
    tasks: TaskItem[];
 }
 

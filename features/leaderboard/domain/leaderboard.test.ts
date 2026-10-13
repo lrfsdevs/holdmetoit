@@ -66,6 +66,18 @@ describe("aggregateTeamScores", () => {
       ]);
    });
 
+   it("excludes teams marked as isDeleted", () => {
+      const result = aggregateTeamScores(
+         [
+            { id: "bees", isDeleted: false },
+            { id: "butterflies", isDeleted: true },
+         ],
+         [{ teamId: "bees", loggedSeconds: 1_000 }]
+      );
+
+      expect(result).toEqual([{ teamId: "bees", totalSeconds: 1_000 }]);
+   });
+
    it("rejects negative logged seconds", () => {
       expect(() =>
          aggregateTeamScores(teams, [{ teamId: "bees", loggedSeconds: -1 }])

@@ -64,6 +64,7 @@ export async function enrollInChallengeAction(
          challengeId: parsed.data.challengeId,
          teamId: resolvedTeamId,
          targetSeconds,
+         plannedLeaveDays: parsed.data.leaveDays ?? 0,
       });
 
       invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -62,6 +62,10 @@ export function ChallengeOverviewTab({
       setIsOverrideModalOpen(true);
    };
    const { standings, teams } = challenge;
+   const activeTeams = useMemo(
+      () => teams?.filter((t) => !t.isDeleted) || [],
+      [teams]
+   );
 
    const filteredParticipants = standings.filter((p) => {
       const q = searchQuery.toLowerCase().trim();
@@ -102,7 +106,7 @@ export function ChallengeOverviewTab({
       safeParticipantPage * participantPageSize
    );
 
-   const teamA = teams[0];
+   const teamA = activeTeams[0];
 
    return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -336,7 +340,7 @@ export function ChallengeOverviewTab({
                         )}
                      </div>
 
-                     {teams.length > 0 && (
+                     {activeTeams.length > 0 && (
                         <div className="relative">
                            <select
                               value={selectedTeamId}
@@ -349,7 +353,7 @@ export function ChallengeOverviewTab({
                               <option value="ALL">
                                  All Teams ({standings.length})
                               </option>
-                              {teams.map((t) => (
+                              {activeTeams.map((t) => (
                                  <option key={t.id} value={t.id}>
                                     {t.iconEmoji ? `${t.iconEmoji} ` : ""}
                                     {t.name} ({t.companionCount})

@@ -40,7 +40,7 @@ export async function executeAdminHoursOverride(params: AdminOverrideInput) {
       throw new Error("Cannot log or edit study time for future dates.");
    }
 
-   const existingLog = await prisma.dailyStudyLogV2.findUnique({
+   const existingLog = await prisma.dailyStudyLog.findUnique({
       where: {
          participantId_logDate: {
             participantId: params.participantId,
@@ -57,7 +57,7 @@ export async function executeAdminHoursOverride(params: AdminOverrideInput) {
       },
    });
 
-   const updatedLog = await prisma.dailyStudyLogV2.upsert({
+   const updatedLog = await prisma.dailyStudyLog.upsert({
       where: {
          participantId_logDate: {
             participantId: params.participantId,
@@ -143,7 +143,7 @@ export async function executeAdminResetOverallHours(
       where: { id: params.participantId },
       include: {
          user: { select: { displayName: true, username: true } },
-         dailyStudyLogsV2: true,
+         dailyStudyLogs: true,
       },
    });
 
@@ -151,14 +151,14 @@ export async function executeAdminResetOverallHours(
       throw new Error("Participant not found.");
    }
 
-   const logs = participant.dailyStudyLogsV2 ?? [];
+   const logs = participant.dailyStudyLogs ?? [];
    const previousTotalSeconds = logs.reduce(
       (acc, log) => acc + log.durationSeconds,
       0
    );
 
    if (logs.length > 0) {
-      await prisma.dailyStudyLogV2.updateMany({
+      await prisma.dailyStudyLog.updateMany({
          where: { participantId: params.participantId },
          data: {
             durationSeconds: 0,
@@ -169,7 +169,7 @@ export async function executeAdminResetOverallHours(
       });
    } else {
       const today = toUtcDateOnly(new Date());
-      await prisma.dailyStudyLogV2.create({
+      await prisma.dailyStudyLog.create({
          data: {
             participantId: params.participantId,
             logDate: today,

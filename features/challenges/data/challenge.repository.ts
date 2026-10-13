@@ -10,14 +10,21 @@ export type ChallengeWithTeams = Prisma.ChallengeGetPayload<{
 export async function findChallengeWithTeamsById(
    challengeId: string
 ): Promise<ChallengeWithTeams | null> {
-   return prisma.challenge.findUnique({
+   const challenge = await prisma.challenge.findUnique({
       where: { id: challengeId },
       include: {
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
          },
       },
    });
+
+   if (!challenge || challenge.isDeleted) {
+      return null;
+   }
+
+   return challenge;
 }
 
 export async function findLatestAvailableChallenge(
@@ -25,9 +32,10 @@ export async function findLatestAvailableChallenge(
 ): Promise<ChallengeWithTeams | null> {
    // First check for UPCOMING challenges that participants can enroll in
    const upcoming = await prisma.challenge.findFirst({
-      where: { startAt: { gt: now } },
+      where: { startAt: { gt: now }, isDeleted: false },
       include: {
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
          },
       },
@@ -43,9 +51,11 @@ export async function findLatestAvailableChallenge(
       where: {
          startAt: { lte: now },
          endAt: { gt: now },
+         isDeleted: false,
       },
       include: {
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
          },
       },
@@ -55,6 +65,7 @@ export async function findLatestAvailableChallenge(
 
 export async function listAllChallenges() {
    const challenges = await prisma.challenge.findMany({
+      where: { isDeleted: false },
       include: {
          host: {
             select: {
@@ -65,6 +76,7 @@ export async function listAllChallenges() {
             },
          },
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
          },
          _count: {
@@ -97,6 +109,7 @@ export async function findLatestCompletedChallengeForWrapped(
          where: {
             userId,
             challenge: {
+               isDeleted: false,
                OR: [
                   { resultsLockedAt: { not: null, gte: threeDaysAgo } },
                   {
@@ -110,6 +123,7 @@ export async function findLatestCompletedChallengeForWrapped(
             challenge: {
                include: {
                   teams: {
+                     where: { isDeleted: false },
                      orderBy: { sortOrder: "asc" },
                   },
                },
@@ -128,6 +142,7 @@ export async function findLatestCompletedChallengeForWrapped(
 
    return prisma.challenge.findFirst({
       where: {
+         isDeleted: false,
          OR: [
             { resultsLockedAt: { not: null, gte: threeDaysAgo } },
             {
@@ -138,6 +153,7 @@ export async function findLatestCompletedChallengeForWrapped(
       },
       include: {
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
          },
       },

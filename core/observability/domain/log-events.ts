@@ -29,9 +29,6 @@ export const logEvents = {
    studyLogOverride: "study_log.override",
    studyLogTotalReset: "study_log.total_reset",
 
-   leaderboardManualLogged: "leaderboard.manual_logged",
-   leaderboardManualBatchLogged: "leaderboard.manual_batch_logged",
-
    accountabilityPardoned: "accountability.pardoned",
 
    wrappedSeen: "wrapped.seen",

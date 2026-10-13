@@ -4,21 +4,21 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-13 (Session 98 — Dashboard Page-Load Wrapped, Shy Card & Mobile Responsive Hardening on `afnan-jr`)  
+> **Last Updated:** 2026-10-14 (Session 105 — Participant Leave Budget & Canonical Study Log Unification on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-13, Session 98 — Dashboard Page-Load Wrapped, Shy Card & Mobile Responsive Hardening on `afnan-jr`)                                                                                                                                                                                        |
-| :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                           |
-| `npm run test`                               | ✅ 94 files green (1018/1018 tests passing)                                                                                                                                                                                                                                                                |
-| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                                             |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`challenge_feedbacks`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal, Discord summary copy) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                 |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                             |
+| Gate                                         | Result (2026-10-14, Session 105 — Leave Budget & Canonical Study Log Unification on `afnan-jr`)                                                                                                                                                                                    |
+| :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                   |
+| `npm run test`                               | ✅ 93 files green (1037/1037 tests passing)                                                                                                                                                                                                                                        |
+| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                     |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
+| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                         |
+| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                     |
 
 ### 1.1 Live Routes
 
@@ -29,14 +29,13 @@
 | `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                      | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                        | Public spectator / Participant / Admin |
-| `/challenge/[id]/manual`                      | Manual weekly slot-hours leaderboard (host-entered)                                                                          | Public view, admin entry               |
 | `/admin`                                      | Server redirect to `/challenges`                                                                                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                          | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                      | Authenticated                          |
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                   | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                | Authenticated                          |
 
-> **Removed routes:** `/dashboard` (replaced by `/`) and `/admin/challenges/[id]/roster` (replaced by the Manage tab). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
+> **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
 
 ### 1.2 RBAC Model
 
@@ -76,7 +75,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | `FEAT-PUN-04`   | Host pardon                        |   ⚠️   | `adminPardonAction` preserved and adapted (findFirst update-or-create; `PunishmentRecord` keeps `isPardoned/pardonReason/pardonedById`); **no UI** (`admin-goals-pardons.tsx` was deleted in `364c7a1`)                                                                                                                                 |
 | `FEAT-WRAP-01`  | Challenge wrapped story popup      |   ✅   | `features/wrapped/presentation/challenge-wrapped-modal.tsx`: auto-opens for enrolled participants while locked; localStorage-first flags (`hmt:wrapped:{challengeId}`); `isWrappedSeen` flips at the feedback slide; 3-day window + page-load auto-seen (`markWrappedSeenIfExpiredAction`); feedback flow deferred (button ships empty) |
 | `FEAT-WRAP-02`  | Challenge wrapped summary tab      |   ✅   | `?tab=summary` (post-lock): `challenge-summary-tab.tsx` renders the challenge-level story for everyone plus the personal wrapped block (verdict, reasons, best day, vs-average, team share, daily bars, weekly tasks) for enrolled participants                                                                                         |
-| `FEAT-DISC-01`  | 1-click Discord summary copy       |   ⚠️   | `generateDiscordSummary()` is a pure domain function; **no UI** (`discord-summary-card.tsx` was deleted in `364c7a1`)                                                                                                                                                                                                                   |
+| `FEAT-DISC-01`  | 1-click Discord summary copy       |   ❌   | Removed (superseded by in-app Challenge Summary tab & personal Wrapped story dialog)                                                                                                                                                                                                                                                    |
 
 ### 2.1 Shipped Beyond the Original P0 Spec
 
@@ -102,11 +101,11 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | :-: | :------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D1  |    ✅    | **RESOLVED (2026-10-11):** Lock Results fails after natural expiry                                                                                                                                                                                                                                                                                                    | Added `resultsLockedAt DateTime?` column, updated lifecycle domain guards to permit lock on expired unlocked events, set `resultsLockedAt` inside transaction, and updated Manage tab UI |
 | D2  | 🔴 High  | Audit trail in-memory fallback needs full persistence validation                                                                                                                                                                                                                                                                                                      | Add migration check and verify Prisma `audit_logs` model insertion across all environments                                                                                               |
-| D3  | 🔴 High  | Two P0 features have backend code but no UI: pardon modal, Discord summary copy (Punishment PFP download & Target override complete)                                                                                                                                                                                                                                  | Rebuild them in Obsidian styling inside the Manage tab (admin pardon & Discord summary)                                                                                                  |
+| D3  | 🔴 High  | One P0 feature has backend code but no UI: host pardon modal (Punishment PFP download & Target override complete; Discord summary copy removed)                                                                                                                                                                                                                       | Rebuild host pardon modal in Obsidian styling inside the Manage tab                                                                                                                      |
 | D4  |    ✅    | **RESOLVED (2026-10-11, Session 83):** Law L6 amended to the Three-Condition Invariant — challenge-linked weekly tasks (`Task.challengeId` + soft delete) + target hours + winning team; ties never punish. `lockChallengeResults` evaluates all three conditions and records only punished members                                                                   | —                                                                                                                                                                                        |
 | D5  |  🟠 Med  | Schema drift: the `feedbacks` table and the `sort_order` columns on `categories`/`tasks` were applied with `db push` and have **no migration files**. `prisma migrate deploy` on a fresh DB would produce an incomplete schema. **Partially resolved (Session 79):** `isLeave` migration (`20261010120000`) applied; CI now blocks schema changes without a migration | Generate catch-up migrations (`prisma migrate diff`) and `migrate resolve` them on existing DBs                                                                                          |
-| D6  |  🟡 Low  | `leaveDays` is collected in the enrollment modal and then discarded                                                                                                                                                                                                                                                                                                   | Either persist it and feed it into the deficit/target math, or remove it from the UI                                                                                                     |
-| D7  |  🟡 Low  | Manual leaderboard uses `Decimal` hours (Law L8 deviation)                                                                                                                                                                                                                                                                                                            | Migrate to integer `sessionSeconds`                                                                                                                                                      |
+| D6  |    ✅    | **RESOLVED (2026-10-14, Session 105):** Challenge Participant Leave Budget feature implemented: `plannedLeaveDays` collected on enrollment, `usedLeaveDays` tracked transactionally on `ChallengeParticipant` upon daily study logs with `isLeave: true`. Quota enforced (`Maximum leaves taken for the challenge`).                                                  | —                                                                                                                                                                                        |
+| D7  |    ✅    | **RESOLVED (2026-10-14, Session 101):** Manual leaderboard and Decimal sessionHours removed; all tracking handled via DailyStudyLogV2 in integer seconds                                                                                                                                                                                                              | —                                                                                                                                                                                        |
 | D8  |  🟡 Low  | Stale `revalidatePath("/dashboard")` calls; `DISCORD_DEV_IDS` alias; `DEFAULT_FEEDBACK_CHANNEL_ID` hardcoded                                                                                                                                                                                                                                                          | Clean up                                                                                                                                                                                 |
 | D9  |  🟡 Low  | "E2E J1–J6" suite (`features/e2e/quality-matrix-j1-j6.test.ts`) mocks Prisma; there's no real browser E2E                                                                                                                                                                                                                                                             | Add Playwright journeys once the D3 UIs are back                                                                                                                                         |
 | D10 |  🟡 Low  | Duplicate lockfiles (`bun.lock` + `package-lock.json`); `npm audit` reports 20 vulns (3 critical)                                                                                                                                                                                                                                                                     | Pick one package manager; run `npm audit` triage                                                                                                                                         |
@@ -116,7 +115,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ## 4. Open Product Decisions (Require Team Sign-off)
 
 1. **~~Goals vs Law L6~~ — ✅ Resolved (2026-10-11, Session 83):** challenge-scoped goals returned as challenge-linked tasks (`Task.challengeId`, default stamping + soft delete); Law L6 amended to the Three-Condition Accountability Invariant (weekly tasks + hours + winning team; ties never punish).
-2. **Leave days:** Should declared leave days reduce the target or the days remaining in the catch-up math? Law L3 forbids grace passes, so this needs an explicit ruling.
+2. **~~Leave days~~ — ✅ Resolved (2026-10-14, Session 105):** Challenge participant leave budget implemented. Declared leave days (`plannedLeaveDays`) are budgeted on enrollment; logging `isLeave = true` increments `usedLeaveDays` up to quota with `"Maximum leaves taken for the challenge"`.
 3. **Late enrollment while `ACTIVE`:** Is this intended? It's allowed today.
 4. **Design authority:** `DESIGN.md` now documents the Obsidian system (it replaced "Cozy Study Café" on 2026-10-04). Confirm this is ratified.
 
@@ -124,17 +123,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 5. Foundational Laws — Compliance Snapshot
 
-| Law                        | Status | Note                                                                                             |
-| :------------------------- | :----: | :----------------------------------------------------------------------------------------------- |
-| L1 Mathematical Unity      |   ✅   | Single `Team` entity with `maxMembers`                                                           |
-| L2 Spreadsheet Exorcism    |   ✅   | Full-week admin override UI and auto-aggregating standings eliminate manual arithmetic           |
-| L3 Catch-Up Deficit        |   ✅   | `deficit.ts`; no grace passes                                                                    |
-| L4 Discord Identity        |   ✅   | OAuth only; public spectator                                                                     |
-| L5 Admin Override Absolute |   ✅   | `adminOverrideStudyHoursAction` + `AdminHoursOverrideModal` live in Manage tab & Leaderboard tab |
-| L6 Three-Condition         |   ✅   | Weekly tasks + hours + winning team; ties never punish (D4 resolved)                             |
-| L7 Pure Domain Isolation   |   ✅   | `domain/` folders are framework-free                                                             |
-| L8 Second-Level Precision  |   ⚠️   | Main logs ✅; manual leaderboard uses `Decimal` hours (D7)                                       |
-| L9 Zero-State Resilience   |   ✅   | `loading.tsx` on all routes; `EmptyState` / `ErrorState` components                              |
+| Law                        | Status | Note                                                                                                                                      |
+| :------------------------- | :----: | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| L1 Mathematical Unity      |   ✅   | Single `Team` entity with `maxMembers`                                                                                                    |
+| L2 Spreadsheet Exorcism    |   ✅   | Full-week admin override UI and auto-aggregating standings eliminate manual arithmetic                                                    |
+| L3 Catch-Up Deficit        |   ✅   | `deficit.ts`; no grace passes                                                                                                             |
+| L4 Discord Identity        |   ✅   | OAuth only; public spectator                                                                                                              |
+| L5 Admin Override Absolute |   ✅   | `adminOverrideStudyHoursAction` + `AdminHoursOverrideModal` live in Manage tab & Leaderboard tab                                          |
+| L6 Three-Condition         |   ✅   | Weekly tasks + hours + winning team; ties never punish (D4 resolved)                                                                      |
+| L7 Pure Domain Isolation   |   ✅   | `domain/` folders are framework-free                                                                                                      |
+| L8 Second-Level Precision  |   ✅   | 100% compliant. All durations and logs use integer seconds (`DailyStudyLogV2`); legacy `Decimal` manual leaderboard removed (D7 resolved) |
+| L9 Zero-State Resilience   |   ✅   | Full boundary coverage: localized `error.tsx`, root & dynamic `not-found.tsx`, `loading.tsx` skeletons, and hardened `global-error.tsx`   |
 
 ---
 
@@ -145,7 +144,6 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 >
 > 1. Restore the remaining deleted P0 UIs:
 >    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
->    - 1-click Discord summary copy (`FEAT-DISC-01`).
 >    - Punishment Wall (`FEAT-PUN-02`).
 > 2. Promote the migrations to the hosted DB when the team is ready:
 >    - `20261011120000_challenge_wrapped_flags_and_punishment_trim`
@@ -426,4 +424,184 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` ✅ (0 errors).
    - `npm run test` ✅ (94 test files, 1018/1018 tests green).
    - `npm run build` ✅ (11 routes compiled cleanly).
+
+### Session 99 — 2026-10-13 (Full Route Boundaries Coverage: Localized error.tsx, Root & Dynamic not-found.tsx, Missing loading.tsx Skeletons & Hardened global-error.tsx)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:** Implement end-to-end boundary coverage across all Next.js App Router route segments to satisfy **Law L9 (Zero-State & Error Resilience)** and the **Obsidian Dark Design System**.
+- **Root Resilience & `global-error.tsx` Hardening:**
+   - **`app/global-error.tsx`:** Upgraded from primitive stub to hardened Obsidian boundary with self-contained inline fallback styles (guaranteeing rendering even if CSS/Tailwind fails to load), LogRocket initialization, structured logger invocation, error digest display (`error.digest`), accessible "Try again" (`reset()`) button, and secondary "Return to Lounge" navigation link (`min-h-[44px]` touch targets).
+   - **`app/not-found.tsx`:** Created root 404 handler for any unmapped routes across the platform with Obsidian dark tokens (`#141414`, `#262626`, `#22c55e`), responsive container, and return action linking to `/`.
+   - **`app/error.tsx`:** Enhanced root error boundary with dual recovery actions ("Try again" + "Return to Study Lounge") and responsive layout.
+- **Localized Route Error Boundaries (`error.tsx`):**
+   - Implemented localized error boundaries with structured diagnostics logging (`logError`), accessible `reset()` retry triggers, and contextual fallback exits:
+      - `app/challenges/error.tsx` — Challenges directory error boundary.
+      - `app/challenge/[id]/error.tsx` — Challenge scoreboard & tabs error boundary.
+      - `app/challenge/[id]/manual/error.tsx` — Weekly manual leaderboard error boundary.
+      - `app/admin/error.tsx` — Admin console operations error boundary.
+      - `app/admin/challenges/new/error.tsx` — Multi-step challenge creator wizard error boundary.
+      - `app/profile/error.tsx` — Dynamic participant profile resolver error boundary.
+- **Dynamic 404 Boundaries (`not-found.tsx`) & `notFound()` Integration:**
+   - Created segment-level 404 boundaries with contextual recovery navigation:
+      - `app/challenge/[id]/not-found.tsx` — Displays when a challenge record is not found in DB.
+      - `app/challenge/[id]/participant/[participantId]/not-found.tsx` — Displays when a participant is not found in the challenge.
+      - `app/challenge/[id]/manual/not-found.tsx` — Displays when a manual challenge record is not found.
+   - Refactored server components to call Next.js's native `notFound()` instead of inline 200 OK `<EmptyState>` components, guaranteeing legitimate HTTP 404 status codes.
+- **Missing Loading Skeletons (`loading.tsx`):**
+   - `app/admin/challenges/new/loading.tsx` — Wizard header, step pill indicators, and form field skeletons.
+   - `app/profile/loading.tsx` — Obsidian dark spinning loader for seamless redirect resolution.
+- **Unit Testing & Verification:**
+   - Created test suite `components/state/route-boundaries.test.tsx` (14 unit tests passing).
+   - Updated `app/challenge/[id]/page.test.tsx` and `app/challenge/[id]/participant/[participantId]/page.test.tsx` asserting `notFound()` calls.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (95 test files, 1032/1032 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
+
+### Session 100 — 2026-10-13 (Soft Deletion Architecture for Challenges, Teams, Categories, and Tasks)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations Agent.
+- **Scope & Objectives:** Implement end-to-end soft deletion across `Challenge`, `Team`, `Category`, and `Task` entities with database migration, domain integrity, tombstoned unique constraints, client-side exclusion filters, and zero data loss.
+- **Database Schema & Migrations (`prisma/schema.prisma`):**
+   - Added `isDeleted Boolean @default(false)` and `deletionTime DateTime?` to:
+      - `Challenge`: with index `@@index([isDeleted, startAt])`.
+      - `Team`: with index `@@index([challengeId, isDeleted])`.
+      - `Category`: with index `@@index([userId, isDeleted])`.
+      - `Task`: with indexes `@@index([userId, taskType, isDeleted])`, `@@index([categoryId, isDeleted])`, `@@index([challengeId, isDeleted])`.
+   - Generated Prisma client with `npx prisma generate`.
+   - Created migration `prisma/migrations/20261013000000_add_soft_delete_to_challenges_teams_categories_tasks/migration.sql` with backfill converting legacy `deleted_at` timestamps to `deletion_time` with `is_deleted = true`. Executed safely via `prisma db execute` (zero data loss on existing `ypt_bot_logs` and challenge data). Documented in `prisma/migrations/README.md`.
+- **Domain Logic & Invariant Guards:**
+   - **Tombstone Naming (`features/challenges/domain/team-deletion.ts`):** Created `buildTeamTombstoneName(name, id)` to rename soft-deleted teams to `<name> ·deleted·<id>` so hosts can recreate teams with the same name without violating Postgres `@@unique([challengeId, name])`.
+   - **Score Aggregation (`features/leaderboard/domain/leaderboard.ts`):** Updated `aggregateTeamScores` to ignore `isDeleted` teams from leaderboard standings calculations.
+   - **Law L6 Accountability Invariant Preserved (`features/leaderboard/data/leaderboard-data.ts`):** Weekly tasks that were soft-deleted while incomplete still count as incomplete in the three-condition lock evaluation to eliminate "delete-to-pass" loopholes.
+- **Data Repositories & Server Actions:**
+   - `challenge.repository.ts`: `findChallengeWithTeamsById`, `findLatestAvailableChallenge`, `listAllChallenges`, `findLatestCompletedChallengeForWrapped` all filter `isDeleted: false` on challenges and teams.
+   - `challenge-admin.repository.ts`: `findAdminChallengeDetails` rejects soft-deleted challenges; `updateAdminChallengeDetails` soft-deletes removed teams with tombstoned names; `deleteAdminChallenge` executes atomic soft deletion of challenge, active teams, and tasks inside a single interactive transaction with audit trail logging.
+   - `participant.repository.ts`: `findParticipantForUser`, `findOwnedParticipant`, and `enrollParticipantInChallenge` validate `challenge.isDeleted: false` and `team.isDeleted: false`.
+   - `task.repository.ts` & `task-sync.repository.ts`: all queries and mutations updated from `deletedAt: null` to `isDeleted: false`, with soft deletes recording `{ isDeleted: true, deletionTime: now }`.
+- **Client Presentation & Defense-in-Depth Filtering:**
+   - `features/challenges/presentation/challenges-list-view.tsx`: filters `activeChallenges = challenges.filter(c => !c.isDeleted)` and excludes soft-deleted teams from search text matching.
+   - `features/challenges/presentation/challenge-overview-tab.tsx`: filters `activeTeams = teams?.filter(t => !t.isDeleted)` for head-to-head match cards, team rosters, and team select filter dropdown.
+   - `features/challenges/presentation/challenge-manage-tab.tsx`: initializes and resets team rosters filtering out `t.isDeleted`.
+   - `features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: filters out `isDeleted` categories and tasks during IndexedDB reading, cloud sync state hydration, and initial category seeding.
+   - `features/wrapped/presentation/dashboard-wrapped.tsx`: suppresses wrapped modal and shy card if `challenge.isDeleted`.
+   - `app/challenge/[id]/page.tsx`: triggers `notFound()` if `challenge.isDeleted`.
+- **Unit Testing & Verification:**
+   - Added unit test suite `features/challenges/domain/team-deletion.test.ts` (2 tests).
+   - Added tests in `challenges-list-view.test.tsx` and `cockpit-tasks-section.test.tsx` verifying client-side soft deletion exclusion.
+   - Updated repository test suites (`challenge.repository.test.ts`, `challenge-admin.repository.test.ts`, `participant.repository.test.ts`, `task.repository.test.ts`, `task-sync.repository.test.ts`).
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (96 test files, 1040/1040 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
 - **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 101 — 2026-10-14 (Manual Leaderboard Feature Removal & 100% Law L8 Compliance)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations Agent.
+- **Scope & Objectives:** Fully remove the redundant manual weekly leaderboard (`FEAT-LEAD-05` / `/challenge/[id]/manual`), drop legacy tables (`leaderboard_entries`, `team_members`), eliminate technical debt D7 (Law L8 Decimal deviation), and consolidate all team membership under `ChallengeParticipant.teamId`.
+- **Files Deleted:**
+   - Routes: `app/challenge/[id]/manual/page.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`
+   - Presentation: `features/leaderboard/presentation/manual-leaderboard-view.tsx`, `manual-leaderboard-view.test.tsx`
+   - Actions: `features/leaderboard/api/manual-leaderboard.actions.ts`
+   - Repository: `features/leaderboard/data/manual-leaderboard.repository.ts`, `manual-leaderboard.repository.test.ts`
+   - Domain: `features/leaderboard/domain/manual-leaderboard.ts`, `manual-leaderboard.test.ts`
+- **Database Schema & Migrations (`prisma/schema.prisma`):**
+   - Removed `model LeaderboardEntry` (`leaderboard_entries` table) and `model TeamMember` (`team_members` table).
+   - Removed relations from `User` (`teamMemberships`, `leaderboardEntries`), `Challenge` (`leaderboardEntries`), and `Team` (`members`).
+   - Created migration `prisma/migrations/20261013010000_remove_manual_leaderboard_tables/migration.sql` and executed via `prisma db execute`. Documented in `prisma/migrations/README.md`.
+- **Cross-Cutting Code Cleanups:**
+   - `features/challenges/data/challenge-admin.repository.ts`: Removed `tx.leaderboardEntry.deleteMany` and `tx.teamMember.deleteMany` from `adminRemoveParticipantFromChallenge`.
+   - `features/challenges/data/challenge-admin.repository.test.ts`: Removed `leaderboardEntry` and `teamMember` mock setups and assertions.
+   - `components/state/route-boundaries.test.tsx`: Removed `ManualLeaderboardNotFound` and `ManualLeaderboardError` imports and unit tests.
+   - `core/observability/domain/log-events.ts`: Removed `leaderboardManualLogged` and `leaderboardManualBatchLogged`.
+- **Documentation Updates:**
+   - `FEATURES.md`: Marked `FEAT-LEAD-05` as removed (superseded by `AdminHoursOverrideModal` which uses canonical second-level integer duration precision).
+   - `README.md`, `ROADMAP.md`, `ISSUES.md`: Updated to remove `/manual` route references and mark `TeamMember` ambiguity resolved.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1027/1027 tests green).
+   - `npm run build` passed (10 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 102 — 2026-10-14 (Database Table Names Standardized to PascalCase)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Standardize 100% of application database table names in PostgreSQL to PascalCase, eliminating mixed casing (snake_case vs PascalCase) across models.
+- **Database Schema Changes (`prisma/schema.prisma`):**
+   - Removed `@@map(...)` from all models (`DailyStudyLogV2`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, `AuditLog`), allowing Prisma to naturally map every model to its PascalCase model name.
+   - All 15 application tables now follow a uniform PascalCase convention: `Account`, `AuditLog`, `Category`, `Challenge`, `ChallengeFeedback`, `ChallengeParticipant`, `DailyStudyLog`, `DailyStudyLogV2`, `Feedback`, `PunishmentRecord`, `Session`, `Task`, `Team`, `User`, `VerificationToken`.
+- **Database Migration:**
+   - Created migration `prisma/migrations/20261014000000_standardize_tables_to_pascal_case/migration.sql` with safe table renames (`study_logs_v2` -> `DailyStudyLogV2`, `categories` -> `Category`, `tasks` -> `Task`, `feedbacks` -> `Feedback`, `challenge_feedbacks` -> `ChallengeFeedback`, `audit_logs` -> `AuditLog`).
+   - Executed safely on local PostgreSQL via `prisma db execute` with verified zero data loss across all tables (Category: 103 rows, Task: 241 rows, AuditLog: 226 rows, DailyStudyLogV2: 228 rows, Feedback: 8 rows, etc.).
+   - Documented migration in `prisma/migrations/README.md`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1027/1027 tests green).
+   - `npm run build` passed (10 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 103 — 2026-10-14 (Database Column Names Standardized to camelCase)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Standardize 100% of application database column names in PostgreSQL to camelCase, eliminating all `@map(...)` column directives across all models (`Challenge`, `Team`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, `AuditLog`) so that DB columns and TypeScript Prisma client properties match 1:1.
+- **Database Schema Changes (`prisma/schema.prisma`):**
+   - Removed every `@map(...)` column annotation from `Challenge`, `Team`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, and `AuditLog`.
+   - With all tables in PascalCase and all columns in camelCase, 100% of the application schema is uniform with zero translation layers.
+- **Database Migration:**
+   - Created migration `prisma/migrations/20261014010000_standardize_columns_to_camel_case/migration.sql` with safe column renames across all 7 models.
+   - Executed safely on local PostgreSQL via `prisma db execute` with verified zero data loss across all tables (`Challenge`: 1 row, `Team`: 2 rows, `Category`: 103 rows, `Task`: 241 rows, `Feedback`: 8 rows, `AuditLog`: 226 rows, etc.).
+   - Verified that `scripts/check-schema-migration.sh` passes.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1027/1027 tests green).
+   - `npm run build` passed (10 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 104 — 2026-10-14 (Removal of Discord Summary Feature)
+
+- **Agent Role:** Admin Operations & Broadcaster Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Fully remove the Discord Summary feature (`FEAT-DISC-01`), eliminating dead domain code, test suites, and documentation references.
+- **Code & Test Removals:**
+   - Deleted `features/notifications/domain/discord-summary.ts` and `features/notifications/domain/discord-summary.test.ts`.
+   - Removed empty directory `features/notifications/`.
+   - Updated E2E Quality Matrix test `features/e2e/quality-matrix-j1-j6.test.ts`: removed `generateDiscordSummary` import and Step 3 assertion from Journey J6. J6 now focuses cleanly on Event Lock and Three-Condition Auto-Punishment evaluation.
+- **Documentation Alignments:**
+   - Updated `AGENTS.md`: removed `features/notifications/` and Discord summary copy step from J6 Mermaid diagram and specification.
+   - Updated `FEATURES.md`: marked `FEAT-DISC-01` as removed (superseded by Challenge Summary tab and personal Wrapped dialog).
+   - Updated `README.md`, `ROADMAP.md`, `ISSUES.md`: removed Discord summary generator references and resolved Defect D3 Discord summary debt.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (92 test files, 1024/1024 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
+- **NEXT STEP (completed in Session 105):** Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1.
+
+### Session 105 — 2026-10-14 (Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent.
+- **Scope & Objectives:**
+   1. Implement the Challenge Participant Leave Budget feature: collect `plannedLeaveDays` upon enrollment, track `usedLeaveDays` on `ChallengeParticipant`, and enforce quota when logging study days with `isLeave: true`. If `usedLeaveDays >= plannedLeaveDays`, return exact error: `"Maximum leaves taken for the challenge"`.
+   2. Remove all traces ("namo nishaan") of `DailyStudyLog` (V1) and unify the active `DailyStudyLogV2` into the canonical `DailyStudyLog` across the entire database, schema, repositories, actions, and test suites.
+- **Pure Domain & Validation (`features/study-logs/domain/`):**
+   - Created `leave-allowance.ts` with `validateLeaveAllowance()`, `assertLeaveAllowance()`, `MAX_LEAVES_ERROR = "Maximum leaves taken for the challenge"`, and `MaximumLeavesExceededError`.
+   - Added unit test suite `leave-allowance.test.ts` (9 tests covering quota enforcement, zero-leave edge cases, idempotent re-saves, and unmarking decrement).
+- **Database Migration & Schema (`prisma/`):**
+   - Created migration `prisma/migrations/20261014020000_unify_study_logs_and_add_leave_budget/migration.sql`:
+      - Dropped legacy unused `"DailyStudyLog"` (V1) table cascade.
+      - Renamed `"DailyStudyLogV2"` to canonical `"DailyStudyLog"`.
+      - Renamed legacy constraints and indexes to canonical names (`DailyStudyLog_pkey`, `DailyStudyLog_overrideById_fkey`, `DailyStudyLog_participantId_fkey`, `DailyStudyLog_logDate_idx`, `DailyStudyLog_participantId_idx`, `DailyStudyLog_participantId_logDate_key`).
+      - Added `plannedLeaveDays` and `usedLeaveDays` (default 0) to `ChallengeParticipant`.
+      - Backfilled existing `usedLeaveDays` count from study logs where `isLeave = true`.
+   - Executed migration safely via `prisma db execute` (228 active logs preserved 100%).
+   - Updated `prisma/schema.prisma` removing `DailyStudyLogV2`, removing `overriddenLogsV2` and `dailyStudyLogsV2`, adding `plannedLeaveDays` and `usedLeaveDays` to `ChallengeParticipant`.
+- **Application Code & Repositories:**
+   - `features/study-logs/data/daily-study-log.repository.ts`: updated `upsertDailyStudyLog` to run in a transaction, validate leave quota against participant's budget, update `ChallengeParticipant.usedLeaveDays`, and use canonical `prisma.dailyStudyLog`.
+   - `features/study-logs/api/log-study-time.actions.ts`: catches `MaximumLeavesExceededError` and returns `{ ok: false, code: "MAX_LEAVES_REACHED", message: "Maximum leaves taken for the challenge" }`.
+   - `features/challenges/data/participant.repository.ts`: accepts and stores `plannedLeaveDays` in `enrollParticipantInChallenge`.
+   - `features/challenges/api/enroll-participant.actions.ts`: passes `leaveDays` -> `plannedLeaveDays`.
+   - Replaced `dailyStudyLogsV2`/`dailyStudyLogV2` with `dailyStudyLogs`/`dailyStudyLog` across all repository, service, and test files (`admin-override.repository.ts`, `cockpit-data.ts`, `challenge-admin.repository.ts`, `leaderboard-data.ts`, `participant-stats.repository.ts`, and all corresponding test suites).
+   - `features/study-logs/presentation/daily-hours-modal.tsx`: displays leave budget counter (`🌴 Leaves: {usedLeaveDays}/{plannedLeaveDays}`), guards `handleMarkAsLeave` against exhausted quotas with `"Maximum leaves taken for the challenge"`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1037/1037 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
+   - `bash scripts/check-schema-migration.sh origin/main` passed.
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
