@@ -98,17 +98,9 @@ This silently swallows all errors. If the DB write fails, the session says `DEV`
 
 ---
 
-### 8. Manual Leaderboard Uses `Decimal` Hours — Law L8 Violation (D7)
+### 8. ✅ Resolved (Session 101) — Manual Leaderboard Uses `Decimal` Hours (D7)
 
-`prisma/schema.prisma` L278:
-
-```prisma
-sessionHours Decimal @map("session_hours") @db.Decimal(6, 2)
-```
-
-Law L8 mandates **integer total seconds** for all durations. The manual leaderboard stores floating-point hours, which introduces rounding discrepancies.
-
-**Fix:** Migrate to `sessionSeconds Int` and update the domain/presentation layers.
+Removed the legacy manual leaderboard (`/challenge/[id]/manual`) and dropped `leaderboard_entries`. All hour adjustments and overrides now use the canonical `DailyStudyLogV2` model via `AdminHoursOverrideModal` in second-level integer duration precision, bringing the codebase into 100% compliance with **Law L8**.
 
 ---
 
@@ -128,7 +120,6 @@ The enrollment modal collects a `leaveDays` input from participants, but the val
 | `app/admin/`                                      | ✅            | ❌          | ❌              |
 | `app/admin/challenges/new/`                       | ❌            | ❌          | ❌              |
 | `app/challenge/[id]/`                             | ✅            | ❌          | ❌              |
-| `app/challenge/[id]/manual/`                      | ✅            | ❌          | ❌              |
 | `app/challenge/[id]/participant/[participantId]/` | ✅            | ✅          | ❌              |
 | `app/challenges/`                                 | ✅            | ❌          | ❌              |
 
@@ -177,14 +168,9 @@ Uses POSIX inline variable syntax (`VAR=val cmd`) which fails on PowerShell/CMD.
 
 ---
 
-### 15. Dual Team-Membership Modeling — Two Sources of Truth
+### 15. ✅ Resolved (Session 101) — Dual Team-Membership Modeling (Consolidated)
 
-The schema has two competing representations of team membership:
-
-- `ChallengeParticipant.teamId` → links participants to teams
-- `TeamMember(teamId, userId)` → a separate join table
-
-`Team` has both `participants ChallengeParticipant[]` and `members TeamMember[]`. This creates ambiguity about which is authoritative. Consider consolidating.
+Removed the legacy `TeamMember(teamId, userId)` table along with the manual leaderboard removal. `ChallengeParticipant.teamId` is now the single, authoritative representation of team membership across the entire platform.
 
 ---
 

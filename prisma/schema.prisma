@@ -40,8 +40,6 @@ model User {
   overriddenLogs   DailyStudyLog[]   @relation("LogOverrideAdmin")
   overriddenLogsV2 DailyStudyLogV2[] @relation("LogOverrideAdminV2")
   pardonsIssued  PunishmentRecord[] @relation("PardonAdmin")
-  teamMemberships    TeamMember[]
-  leaderboardEntries LeaderboardEntry[]
   categories         Category[]
   tasks              Task[]
   feedbacks          Feedback[]
@@ -116,7 +114,6 @@ model Challenge {
   participants     ChallengeParticipant[]
   punishments      PunishmentRecord[]
   tasks            Task[]
-  leaderboardEntries LeaderboardEntry[]
   auditLogs        AuditLog[]
   challengeFeedbacks ChallengeFeedback[]
 
@@ -140,7 +137,6 @@ model Team {
 
   challenge    Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   participants ChallengeParticipant[]
-  members      TeamMember[]
 
   @@unique([challengeId, name])
   @@index([challengeId, isDeleted])
@@ -301,43 +297,6 @@ model PunishmentRecord {
 
   @@index([challengeId])
   @@index([participantId])
-}
-
-// ---------------------------------------------------------------------------
-// Manual Weekly Leaderboard (Slice: Manual Weekly Challenge Leaderboard)
-// ---------------------------------------------------------------------------
-
-model TeamMember {
-  teamId    String   @map("team_id")
-  userId    String   @map("user_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([teamId, userId])
-  @@index([userId])
-  @@index([teamId])
-  @@map("team_members")
-}
-
-model LeaderboardEntry {
-  id           String   @id @default(cuid()) @map("entry_id")
-  challengeId  String   @map("challenge_id")
-  userId       String   @map("user_id")
-  sessionHours Decimal  @map("session_hours") @db.Decimal(6, 2)
-  slotDate     DateTime @map("slot_date") @db.Date
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("last_updated_at")
-
-  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([challengeId, userId, slotDate])
-  @@index([challengeId, slotDate])
-  @@index([userId])
-  @@map("leaderboard_entries")
 }
 
 // ---------------------------------------------------------------------------

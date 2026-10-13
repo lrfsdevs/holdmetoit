@@ -47,7 +47,7 @@ All features are strictly tagged with their planned deployment phase:
 | `FEAT-LEAD-02`  | Unified Roster Standings Table                                 | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                          |
 | `FEAT-LEAD-03`  | Dynamic Daily Catch-Up Deficit Engine                          | Standings & Math    | `[P0]` | Participant           |                         ✅ `DONE`                          |
 | `FEAT-LEAD-04`  | Overflow Diminishing Returns Scoring Engine                    | Standings & Math    | `[V1]` | System                |                         ⏸️ Planned                         |
-| `FEAT-LEAD-05`  | Host Manual Weekly Hours Board                                 | Standings & Math    | `[P0]` | Admin, All Users      |            ✅ `DONE` (`/challenge/[id]/manual`)            |
+| `FEAT-LEAD-05`  | Host Manual Weekly Hours Board (Deprecated)                    | Standings & Math    | `[P0]` | Admin, All Users      |   🚫 `REMOVED` (superseded by Admin Hours Override Grid)   |
 | `FEAT-LEAD-06`  | Challenge-Specific Participant Statistics & Read-Only Profiles | Standings & Math    | `[P0]` | All Users             | ✅ `DONE` (`/challenge/[id]/participant/[participantId]`)  |
 | `FEAT-TASK-01`  | Offline-First Categorized To-Do Board                          | Tasks & Sync        | `[P0]` | All Users             |          ✅ `DONE` (IndexedDB + background sync)           |
 | `FEAT-TASK-02`  | Drag-and-Drop Task & Category Reordering                       | Tasks & Sync        | `[P0]` | All Users             |            ✅ `DONE` (HTML5 DnD + `sortOrder`)             |
@@ -229,11 +229,11 @@ All features are strictly tagged with their planned deployment phase:
       $$\text{If } L \le T_{\text{daily}}: \quad \text{TeamScore} = L$$
       $$\text{If } L > T_{\text{daily}}: \quad \text{TeamScore} = T_{\text{daily}} + 0.5 \times (L - T_{\text{daily}})$$
 
-### §7.5 Host Manual Weekly Hours Board `[P0]`
+### §7.5 Host Manual Weekly Hours Board `[REMOVED]`
 
 - **Feature ID:** `FEAT-LEAD-05`
-- **Route:** `/challenge/:id/manual`
-- **Description:** Host slot-by-slot entry workbench allowing administrators to directly log and adjust participant hours across arbitrary challenge dates without requiring participants to self-log.
+- **Route:** ~`/challenge/:id/manual`~ (Deprecated & Removed)
+- **Status:** Removed in favor of the canonical **Admin Hours Override Grid** (`FEAT-LOG-04` / `AdminHoursOverrideModal`), which directly adjusts second-level integer duration precision (`DailyStudyLogV2`) with audit trail logging, fully enforcing **Law L8** and eliminating legacy `Decimal(6,2)` tables.
 
 ### §7.6 Challenge-Specific Participant Statistics & Read-Only Profiles `[P0]`
 

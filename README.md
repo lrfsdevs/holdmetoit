@@ -71,7 +71,7 @@ The project maintains a lean, highly focused documentation and specification sui
 app/                     # Next.js App Router routes
 ├── page.tsx             # Home cockpit (/)
 ├── admin/               # Admin console + /admin/challenges/new wizard
-├── challenge/[id]/      # Public challenge view (+ /manual weekly board)
+├── challenge/[id]/      # Public challenge view (Overview, Leaderboard, Summary, Manage, Audit)
 └── api/                 # auth, feedback, tasks/sync route handlers
 core/                    # auth (Auth.js), db (Prisma client), storage (Supabase), observability (LogRocket)
 features/<slice>/        # Vertical slices: domain/ · data/ · api/ · presentation/
