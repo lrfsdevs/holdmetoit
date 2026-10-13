@@ -4,14 +4,14 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-14 (Session 101 — Manual Leaderboard Removal & 100% Law L8 Compliance on `afnan-jr`)  
+> **Last Updated:** 2026-10-14 (Session 102 — Database Table Names Standardized to PascalCase on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-14, Session 101 — Manual Leaderboard Removal on `afnan-jr`)                                                                                                                                                                                                                                |
+| Gate                                         | Result (2026-10-14, Session 102 — Table Names Standardized to PascalCase on `afnan-jr`)                                                                                                                                                                                                                    |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                           |
 | `npm run test`                               | ✅ 93 files green (1027/1027 tests passing)                                                                                                                                                                                                                                                                |
@@ -517,6 +517,40 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Documentation Updates:**
    - `FEATURES.md`: Marked `FEAT-LEAD-05` as removed (superseded by `AdminHoursOverrideModal` which uses canonical second-level integer duration precision).
    - `README.md`, `ROADMAP.md`, `ISSUES.md`: Updated to remove `/manual` route references and mark `TeamMember` ambiguity resolved.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1027/1027 tests green).
+   - `npm run build` passed (10 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 102 — 2026-10-14 (Database Table Names Standardized to PascalCase)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Standardize 100% of application database table names in PostgreSQL to PascalCase, eliminating mixed casing (snake_case vs PascalCase) across models.
+- **Database Schema Changes (`prisma/schema.prisma`):**
+   - Removed `@@map(...)` from all models (`DailyStudyLogV2`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, `AuditLog`), allowing Prisma to naturally map every model to its PascalCase model name.
+   - All 15 application tables now follow a uniform PascalCase convention: `Account`, `AuditLog`, `Category`, `Challenge`, `ChallengeFeedback`, `ChallengeParticipant`, `DailyStudyLog`, `DailyStudyLogV2`, `Feedback`, `PunishmentRecord`, `Session`, `Task`, `Team`, `User`, `VerificationToken`.
+- **Database Migration:**
+   - Created migration `prisma/migrations/20261014000000_standardize_tables_to_pascal_case/migration.sql` with safe table renames (`study_logs_v2` -> `DailyStudyLogV2`, `categories` -> `Category`, `tasks` -> `Task`, `feedbacks` -> `Feedback`, `challenge_feedbacks` -> `ChallengeFeedback`, `audit_logs` -> `AuditLog`).
+   - Executed safely on local PostgreSQL via `prisma db execute` with verified zero data loss across all tables (Category: 103 rows, Task: 241 rows, AuditLog: 226 rows, DailyStudyLogV2: 228 rows, Feedback: 8 rows, etc.).
+   - Documented migration in `prisma/migrations/README.md`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (93 test files, 1027/1027 tests green).
+   - `npm run build` passed (10 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), 1-click Discord summary copy (`FEAT-DISC-01`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 103 — 2026-10-14 (Database Column Names Standardized to camelCase)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Standardize 100% of application database column names in PostgreSQL to camelCase, eliminating all `@map(...)` column directives across all models (`Challenge`, `Team`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, `AuditLog`) so that DB columns and TypeScript Prisma client properties match 1:1.
+- **Database Schema Changes (`prisma/schema.prisma`):**
+   - Removed every `@map(...)` column annotation from `Challenge`, `Team`, `Category`, `Task`, `Feedback`, `ChallengeFeedback`, and `AuditLog`.
+   - With all tables in PascalCase and all columns in camelCase, 100% of the application schema is uniform with zero translation layers.
+- **Database Migration:**
+   - Created migration `prisma/migrations/20261014010000_standardize_columns_to_camel_case/migration.sql` with safe column renames across all 7 models.
+   - Executed safely on local PostgreSQL via `prisma db execute` with verified zero data loss across all tables (`Challenge`: 1 row, `Team`: 2 rows, `Category`: 103 rows, `Task`: 241 rows, `Feedback`: 8 rows, `AuditLog`: 226 rows, etc.).
+   - Verified that `scripts/check-schema-migration.sh` passes.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (93 test files, 1027/1027 tests green).

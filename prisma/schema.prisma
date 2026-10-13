@@ -107,8 +107,8 @@ model Challenge {
   updatedAt DateTime @updatedAt
 
   challengeColor   String?
-  isDeleted        Boolean         @default(false) @map("is_deleted")
-  deletionTime     DateTime?       @map("deletion_time")
+  isDeleted        Boolean         @default(false)
+  deletionTime     DateTime?
 
   teams            Team[]
   participants     ChallengeParticipant[]
@@ -132,8 +132,8 @@ model Team {
   maxMembers  Int?
   sortOrder   Int    @default(0)
 
-  isDeleted    Boolean   @default(false) @map("is_deleted")
-  deletionTime DateTime? @map("deletion_time")
+  isDeleted    Boolean   @default(false)
+  deletionTime DateTime?
 
   challenge    Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   participants ChallengeParticipant[]
@@ -221,7 +221,6 @@ model DailyStudyLogV2 {
   @@unique([participantId, logDate])
   @@index([participantId])
   @@index([logDate])
-  @@map("study_logs_v2")
 }
 
 // ---------------------------------------------------------------------------
@@ -232,10 +231,10 @@ model Category {
   id           String    @id @default(uuid())
   userId       String
   name         String    @db.VarChar(255)
-  taskType     TaskType  @default(DAILY) @map("task_type")
-  sortOrder    Int       @default(0) @map("sort_order")
-  isDeleted    Boolean   @default(false) @map("is_deleted")
-  deletionTime DateTime? @map("deletion_time")
+  taskType     TaskType  @default(DAILY)
+  sortOrder    Int       @default(0)
+  isDeleted    Boolean   @default(false)
+  deletionTime DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -244,25 +243,24 @@ model Category {
 
   @@unique([userId, name, taskType])
   @@index([userId, taskType, isDeleted])
-  @@map("categories")
 }
 
 model Task {
   id           String     @id @default(uuid())
   userId       String
   categoryId   String
-  challengeId  String?    @map("challenge_id")
+  challengeId  String?
   title        String     @db.VarChar(255)
-  taskType     TaskType   @map("task_type")
-  sortOrder    Int        @default(0) @map("sort_order")
-  isComplete   Boolean    @default(false) @map("is_complete")
+  taskType     TaskType
+  sortOrder    Int        @default(0)
+  isComplete   Boolean    @default(false)
   status       TaskStatus @default(TODO)
-  dueDate      DateTime?  @map("due_date") @db.Date
-  isDeleted    Boolean    @default(false) @map("is_deleted")
-  deletionTime DateTime?  @map("deletion_time")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  completedAt  DateTime?  @map("completed_at")
+  dueDate      DateTime?  @db.Date
+  isDeleted    Boolean    @default(false)
+  deletionTime DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  completedAt  DateTime?
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   category  Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -272,7 +270,6 @@ model Task {
   @@index([userId, dueDate])
   @@index([categoryId, isDeleted])
   @@index([challengeId, isDeleted])
-  @@map("tasks")
 }
 
 // ---------------------------------------------------------------------------
@@ -305,31 +302,30 @@ model PunishmentRecord {
 
 model Feedback {
   id                 String                @id @default(cuid())
-  feedbackNumber     Int                   @default(autoincrement()) @map("feedback_number")
+  feedbackNumber     Int                   @default(autoincrement())
   type               FeedbackType
   title              String                @db.VarChar(255)
   description        String                @db.Text
   url                String                @db.VarChar(1024)
   status             FeedbackStatus        @default(OPEN)
 
-  logrocketSessionId String?               @map("logrocket_session_id")
+  logrocketSessionId String?
 
-  discordStatus      DiscordDeliveryStatus @default(PENDING) @map("discord_status")
-  discordMessageId   String?               @map("discord_message_id")
-  discordChannelId   String?               @map("discord_channel_id")
+  discordStatus      DiscordDeliveryStatus @default(PENDING)
+  discordMessageId   String?
+  discordChannelId   String?
 
-  userId             String?               @map("user_id")
+  userId             String?
   user               User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  createdAt          DateTime              @default(now()) @map("created_at")
-  updatedAt          DateTime              @updatedAt @map("updated_at")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   @@unique([feedbackNumber])
   @@index([type])
   @@index([status])
   @@index([discordStatus])
   @@index([userId])
-  @@map("feedbacks")
 }
 
 // ---------------------------------------------------------------------------
@@ -338,23 +334,23 @@ model Feedback {
 
 model ChallengeFeedback {
   id                 String   @id @default(cuid())
-  challengeId        String   @map("challenge_id")
-  userId             String   @map("user_id")
+  challengeId        String
+  userId             String
 
   // Survey Questions (8 community questions)
-  consistency        String   @map("consistency")
-  fairnessRating     Int      @map("fairness_rating")
-  trackingPreference String   @map("tracking_preference")
-  teamBattleFeedback String?  @map("team_battle_feedback") @db.Text
-  workSchoolHours    String   @map("work_school_hours")
-  soloStyle          String   @map("solo_style")
-  soloPunishment     String   @map("solo_punishment")
-  soloIdeas          String?  @map("solo_ideas") @db.Text
+  consistency        String
+  fairnessRating     Int
+  trackingPreference String
+  teamBattleFeedback String?  @db.Text
+  workSchoolHours    String
+  soloStyle          String
+  soloPunishment     String
+  soloIdeas          String?  @db.Text
 
   // Discord Audit & Timestamps
-  discordMessageId   String?  @map("discord_message_id")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  discordMessageId   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -362,7 +358,6 @@ model ChallengeFeedback {
   @@unique([challengeId, userId])
   @@index([challengeId, createdAt(sort: Desc)])
   @@index([userId])
-  @@map("challenge_feedbacks")
 }
 
 // ---------------------------------------------------------------------------
@@ -371,19 +366,19 @@ model ChallengeFeedback {
 
 model AuditLog {
   id               String   @id @default(cuid())
-  challengeId      String?  @map("challenge_id")
-  actorId          String?  @map("actor_id")
-  actorUsername    String   @map("actor_username")
-  actorDisplayName String?  @map("actor_display_name")
-  actorImage       String?  @map("actor_image")
-  actionType       String   @map("action_type") @db.VarChar(64)
-  targetEntityId   String   @map("target_entity_id")
-  targetEntityType String   @map("target_entity_type") @db.VarChar(64)
-  targetEntityName String?  @map("target_entity_name") @db.VarChar(255)
-  previousValue    Json?    @map("previous_value")
-  newValue         Json?    @map("new_value")
-  auditReason      String?  @map("audit_reason") @db.Text
-  createdAt        DateTime @default(now()) @map("created_at")
+  challengeId      String?
+  actorId          String?
+  actorUsername    String
+  actorDisplayName String?
+  actorImage       String?
+  actionType       String   @db.VarChar(64)
+  targetEntityId   String
+  targetEntityType String   @db.VarChar(64)
+  targetEntityName String?  @db.VarChar(255)
+  previousValue    Json?
+  newValue         Json?
+  auditReason      String?  @db.Text
+  createdAt        DateTime @default(now())
 
   challenge Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
   actor     User?      @relation("AuditLogsWritten", fields: [actorId], references: [id], onDelete: SetNull)
@@ -391,7 +386,6 @@ model AuditLog {
   @@index([challengeId, createdAt(sort: Desc)])
   @@index([actorId])
   @@index([actionType])
-  @@map("audit_logs")
 }
 
 // ---------------------------------------------------------------------------

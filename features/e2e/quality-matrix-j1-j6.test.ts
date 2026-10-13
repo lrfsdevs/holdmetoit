@@ -42,7 +42,6 @@ import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
 } from "@/features/study-logs/domain/daily-log.validation";
-import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
 
 vi.mock("@/core/db", () => ({
    prisma: {
