@@ -34,6 +34,14 @@ vi.mock("@/features/tasks/api/task.actions", () => ({
    toggleTaskAction: vi.fn(),
 }));
 
+vi.mock("@/features/wrapped/presentation/dashboard-wrapped", () => ({
+   DashboardWrapped: ({ challenge }: { challenge: any }) =>
+      createElement("div", {
+         "data-testid": "dashboard-wrapped",
+         "data-challenge-id": challenge?.id,
+      }),
+}));
+
 describe("HomeCockpitView", () => {
    it("renders correctly with fractional paceSecondsPerDay without throwing DurationRangeError", () => {
       const mockCockpit: CockpitViewModel = {
@@ -345,5 +353,18 @@ describe("HomeCockpitView", () => {
       expect(html).not.toContain('title="View profile for Guest"');
       expect(html).not.toContain('href="/challenge/');
       expect(html).not.toContain('href="/profile"');
+   });
+
+   it("renders DashboardWrapped when wrappedChallenge is provided", () => {
+      const mockChallenge: any = { id: "chal-wrapped-1" };
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-1", displayName: "Afnan" },
+            wrappedChallenge: mockChallenge,
+         })
+      );
+
+      expect(html).toContain('data-testid="dashboard-wrapped"');
+      expect(html).toContain('data-challenge-id="chal-wrapped-1"');
    });
 });
