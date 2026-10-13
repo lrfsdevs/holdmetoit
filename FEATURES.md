@@ -3,7 +3,7 @@
 > **Document Version:** 2.0  
 > **Source of Truth:** Repository Root — Authoritative Product Feature Catalog  
 > **Rule:** Every screen, user flow, and functional capability across all product phases is detailed here.  
-> **Last Updated:** 2026-10-06  
+> **Last Updated:** 2026-10-14  
 > **Status:** Active Master Specification (Updated with Phase 0/1 implementation reality)
 
 ---
@@ -34,15 +34,16 @@ All features are strictly tagged with their planned deployment phase:
 | `FEAT-CHAL-04`  | Auto-Balancer Snake Draft & 15h Cap                            | Challenge Ops       | `[V1]` | Admin                 |                         ⏸️ Planned                         |
 | `FEAT-CHAL-05`  | Event Lock & Freeze Final Results                              | Challenge Ops       | `[P0]` | Admin                 |  ✅ `DONE` (`resultsLockedAt`, idempotent lock, 10s undo)  |
 | `FEAT-CHAL-06`  | Duo Partner Self-Naming & Dynamic Team Identities              | Challenge Ops       | `[P0]` | Participant, Admin    |  ⚠️ Team identities live; participant self-naming pending  |
-| `FEAT-AUDIT-01` | Append-Only Immutable System Audit Trail                       | Admin & Audit       | `[P0]` | Admin, System         |         ⚠️ In-memory store; DB model & UI pending          |
+| `FEAT-AUDIT-01` | Append-Only Immutable System Audit Trail                       | Admin & Audit       | `[P0]` | Admin, System         | ✅ `DONE` (PostgreSQL `AuditLog` model + Event Audit tab)  |
 | `FEAT-DECL-01`  | Declared Target Hours (`HH:MM:SS`)                             | Declarations        | `[P0]` | Participant           |                         ✅ `DONE`                          |
 | `FEAT-DECL-02`  | Mandatory Weekly Goals Checklist                               | Declarations        | `[P0]` | Participant           |      ✅ `DONE` (challenge-linked tasks + soft delete)      |
 | `FEAT-DECL-03`  | Pre-Kickoff Declaration Lock                                   | Declarations        | `[P0]` | System                |                         ✅ `DONE`                          |
-| `FEAT-DECL-04`  | Host Goal Unlock & Mid-Event Edit                              | Declarations        | `[P0]` | Admin                 |            ⚠️ Pending challenge goals decision             |
+| `FEAT-DECL-04`  | Host Goal Unlock & Mid-Event Edit                              | Declarations        | `[P0]` | Admin                 |  ✅ `DONE` (Wired to `AdminTargetOverrideModal` in tabs)   |
 | `FEAT-LOG-01`   | Daily Clock-Time Self-Logging (`HH:MM:SS`)                     | Study Logging       | `[P0]` | Participant           |                     ✅ `DONE` (at `/`)                     |
 | `FEAT-LOG-02`   | 24-Hour Single-Day Limit Validation                            | Study Logging       | `[P0]` | System                |                         ✅ `DONE`                          |
 | `FEAT-LOG-03`   | Direct YPT API Bot Ingestion Endpoint                          | Study Logging       | `[P1]` | System / Teammate Bot |                         ⏸️ Planned                         |
-| `FEAT-LOG-04`   | Admin Inline Hours Override Grid                               | Study Logging       | `[P0]` | Admin                 |       ⚠️ Backend action live; Manage tab UI pending        |
+| `FEAT-LOG-04`   | Admin Inline Hours Override Grid                               | Study Logging       | `[P0]` | Admin                 |     ✅ `DONE` (`AdminHoursOverrideModal` live in tabs)     |
+| `FEAT-LOG-05`   | Participant Planned Leave Budget & Quota Enforcement           | Study Logging       | `[P0]` | Participant           |   ✅ `DONE` (`plannedLeaveDays` + `usedLeaveDays` check)   |
 | `FEAT-LEAD-01`  | Head-to-Head Live Match Scoreboard                             | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                          |
 | `FEAT-LEAD-02`  | Unified Roster Standings Table                                 | Standings & Math    | `[P0]` | All Users             |                         ✅ `DONE`                          |
 | `FEAT-LEAD-03`  | Dynamic Daily Catch-Up Deficit Engine                          | Standings & Math    | `[P0]` | Participant           |                         ✅ `DONE`                          |
@@ -54,12 +55,12 @@ All features are strictly tagged with their planned deployment phase:
 | `FEAT-FEED-01`  | In-App Feedback & Discord Embed Dispatch                       | Observability       | `[P1]` | All Users             |              ✅ `DONE` (`POST /api/feedback`)              |
 | `FEAT-PUN-01`   | Three-Condition Auto-Flagging Engine                           | Accountability      | `[P0]` | System                | ✅ `DONE` (weekly tasks + hours + winning team; ties safe) |
 | `FEAT-PUN-02`   | Punishment Wall & Deficit Roster                               | Accountability      | `[P0]` | All Users             |         ⚠️ Public UI component pending restoration         |
-| `FEAT-PUN-03`   | Direct Punishment PFP Asset Download                           | Accountability      | `[P0]` | Flagged Member        |       ⚠️ Storage download button pending restoration       |
+| `FEAT-PUN-03`   | Direct Punishment PFP Asset Download                           | Accountability      | `[P0]` | Flagged Member        |    ✅ `DONE` (Live in Overview tab Forfeit Avatar card)    |
 | `FEAT-PUN-04`   | Host Pardon / Excuse Override                                  | Accountability      | `[P0]` | Admin                 |             ⚠️ Backend action live; UI pending             |
 | `FEAT-PUN-05`   | Hall of Accountability Historical Archive                      | Accountability      | `[V1]` | All Users             |                         ⏸️ Planned                         |
 | `FEAT-WRAP-01`  | Challenge Wrapped Story Popup                                  | Post-Event          | `[P0]` | Participant           |      ✅ `DONE` (auto-popup, 3-day window + auto-seen)      |
 | `FEAT-WRAP-02`  | Challenge Wrapped Summary Tab (`?tab=summary`)                 | Post-Event          | `[P0]` | All Users             |         ✅ `DONE` (spectators + personal wrapped)          |
-| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 | ❌ `REMOVED` (superseded by in-app Challenge Summary tab)  |
+| `FEAT-DISC-01`  | 1-Click Formatted Markdown Summary Copy                        | Discord Broadcaster | `[P0]` | Admin                 |  🚫 `REMOVED` (superseded by Summary tab; purged in S104)  |
 | `FEAT-DISC-02`  | 24/7 `@HoldMeToItBot` Slash Commands                           | Discord Broadcaster | `[P1]` | Discord Users         |                         ⏸️ Planned                         |
 | `FEAT-DISC-03`  | Automated Daily & Final Results Embeds                         | Discord Broadcaster | `[P1]` | Discord Channel       |                         ⏸️ Planned                         |
 | `FEAT-GAME-01`  | Daily Challenge Streaks                                        | Gamification        | `[V1]` | Participant           |                         ⏸️ Planned                         |
@@ -132,13 +133,13 @@ All features are strictly tagged with their planned deployment phase:
 
 - **Route:** `/challenge/:id?tab=manage` (Manage tab)
 - **Action:** Host clicks "Lock Final Results". Freezes all participant data rows and triggers the final punishment evaluation (`lockChallengeResultsAction`).
-- **Lifecycle Invariant:** Dynamic status is derived via `calculateChallengeStatus(startAt, endAt)`. Note: A known defect currently prevents locking if the challenge natural end timestamp has already elapsed (`assertCanLockChallenge` rejects `COMPLETED`); a fix is prioritized to allow idempotent finalization post-expiry (`HANDOFF.md` D1).
+- **Lifecycle Invariant:** Dynamic status is derived via `calculateChallengeStatus(startAt, endAt)`. Challenges track `resultsLockedAt` in the database, allowing idempotent result locking and punishment evaluation even after natural expiration.
 
 ### §4.6 Append-Only Immutable System Audit Trail `[P0]`
 
 - **Feature ID:** `FEAT-AUDIT-01`
 - **Description:** An immutable, tamper-proof audit log recording administrative actions, manual hours adjustments, pardons, and challenge kickoff/lock transitions.
-- **Implementation Note:** Events are generated via `recordAuditEvent` in `features/audit/data/audit-log.repository.ts`. Currently held in-memory; persisting to a dedicated `AuditLog` database model and rendering the Host Console timeline UI is scheduled in `HANDOFF.md` D2/D3.
+- **Implementation Note:** Events are generated via `recordAuditEvent` in `features/audit/data/audit-log.repository.ts`, persisted to the relational `AuditLog` database model (with in-memory fallback), and rendered in the admin Event Audit tab (`/challenge/:id?tab=audit`).
 
 ### §4.7 Duo Partner Self-Naming & Pre-Kickoff Locking `[P0]`
 
@@ -171,7 +172,7 @@ All features are strictly tagged with their planned deployment phase:
 ### §5.4 Host Target & Goal Administration `[P0]`
 
 - **Purpose:** Accommodate real-life emergency adjustments.
-- **Action:** Admins have backend repository methods (`updateParticipantTargetSeconds`) to adjust targets; UI integration into the Manage tab is scheduled.
+- **Action:** Admins adjust participant targets via `AdminTargetOverrideModal` across the Manage, Leaderboard, and Participant Statistics tabs, with changes persisted and recorded in the audit trail (`FEAT-AUDIT-01`).
 
 ---
 
@@ -196,8 +197,17 @@ All features are strictly tagged with their planned deployment phase:
 
 ### §6.4 Admin Inline Hours Override Grid `[P0]`
 
-- **Location:** Manage tab (`/challenge/:id?tab=manage`)
-- **Capability:** Action `adminOverrideStudyHoursAction` updates logs with `isOverride = true`, recording `overrideById` and reason. Rebuilding the inline grid UI inside the Manage tab is prioritized in `HANDOFF.md` D3.
+- **Location:** Manage, Leaderboard, and Overview tabs (`/challenge/:id`)
+- **Capability:** Full administrative hours adjustments supported via `AdminHoursOverrideModal`. Admins adjust participant study logs for any challenge day with second-level integer duration precision, recording `isOverride = true`, `overrideById = adminUserId`, and an immutable audit reason (`FEAT-AUDIT-01`).
+
+### §6.5 Challenge Participant Leave Budget & Quota Enforcement `[P0]`
+
+- **Feature ID:** `FEAT-LOG-05`
+- **Enrollment Planned Leaves:** Participants declare their planned rest/leave days budget (`plannedLeaveDays` $\ge 0$) upon challenge enrollment.
+- **Daily Leave Logging:** When logging for a day, participants can mark `isLeave = true` via `DailyHoursModal`.
+- **Transactional Quota Enforcement:** If a participant attempts to log a new leave day when `usedLeaveDays >= plannedLeaveDays`, the system strictly throws and surfaces the exact error: `"Maximum leaves taken for the challenge"`.
+- **Idempotency & Reversibility:** Updating notes or re-saving an already marked leave day is idempotent without incrementing the quota counter. Unmarking a leave day (`isLeave = false`) automatically decrements `usedLeaveDays` (bounded by 0).
+- **Cockpit UI Counter:** The study modal displays live leave budget progress: `🌴 Leaves: {usedLeaveDays}/{plannedLeaveDays}`, visually disallowing leave toggles when quota is exhausted.
 
 ---
 
@@ -233,7 +243,7 @@ All features are strictly tagged with their planned deployment phase:
 
 - **Feature ID:** `FEAT-LEAD-05`
 - **Route:** ~`/challenge/:id/manual`~ (Deprecated & Removed)
-- **Status:** Removed in favor of the canonical **Admin Hours Override Grid** (`FEAT-LOG-04` / `AdminHoursOverrideModal`), which directly adjusts second-level integer duration precision (`DailyStudyLogV2`) with audit trail logging, fully enforcing **Law L8** and eliminating legacy `Decimal(6,2)` tables.
+- **Status:** Removed in favor of the canonical **Admin Hours Override Grid** (`FEAT-LOG-04` / `AdminHoursOverrideModal`), which directly adjusts second-level integer duration precision (`DailyStudyLog`) with audit trail logging, fully enforcing **Law L8** and eliminating legacy `Decimal(6,2)` tables.
 
 ### §7.6 Challenge-Specific Participant Statistics & Read-Only Profiles `[P0]`
 
@@ -272,7 +282,7 @@ All features are strictly tagged with their planned deployment phase:
 
 ### §8.3 Direct Punishment PFP Asset Download `[P0]`
 
-- **Action:** Prominent **"Download Punishment PFP"** button. Downloads the challenge PFP asset stored in Supabase Storage (`punishment-pfps`). Scheduled for UI restoration alongside the Punishment Wall.
+- **Action:** Prominent **"Download Forfeit PFP"** button. Live in the Overview tab (`/challenge/:id`) inside the Assigned Forfeit Picture section, allowing scholars and spectators to directly download the forfeit avatar image stored in Supabase Storage (`punishment-pfps`).
 
 ### §8.4 Host Pardon / Excuse Override `[P0]`
 
@@ -295,7 +305,7 @@ All features are strictly tagged with their planned deployment phase:
 
 ### §9.1 1-Click Formatted Markdown Summary Copy `[P0]` (Removed)
 
-- **Status:** Removed. Superseded by the in-app Challenge Summary tab (`/challenge/:id?tab=summary`) and personal Wrapped story dialog. Standings and results are viewed directly in the application.
+- **Status:** Removed from scope and completely purged from codebase in Session 104. Superseded by the in-app Challenge Summary tab (`/challenge/:id?tab=summary`) and personal Wrapped story dialog. Standings and results are viewed directly in the application.
 
 ### §9.2 24/7 `@HoldMeToItBot` Slash Commands `[P1]`
 

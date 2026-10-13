@@ -35,9 +35,9 @@ These features have working backend code but **zero UI** — deleted in commits 
 | Feature                                 | Backend                              | UI Status                                                           |
 | --------------------------------------- | ------------------------------------ | ------------------------------------------------------------------- |
 | Punishment Wall (`FEAT-PUN-02`)         | `punishment.ts` domain logic         | ❌ `punishment-wall.tsx` deleted                                    |
-| Punishment PFP Download (`FEAT-PUN-03`) | PFP upload to Supabase works         | ❌ No download button anywhere                                      |
+| Punishment PFP Download (`FEAT-PUN-03`) | PFP upload to Supabase works         | ✅ Live in Overview tab Forfeit Avatar & Accountability card        |
 | Host Pardon Modal (`FEAT-PUN-04`)       | `adminPardonAction` exists           | ❌ `admin-goals-pardons.tsx` deleted                                |
-| Discord Summary Copy (`FEAT-DISC-01`)   | Superseded by Summary tab & Wrapped  | ❌ Removed from scope                                               |
+| Discord Summary Copy (`FEAT-DISC-01`)   | Superseded by Summary tab & Wrapped  | ✅ Removed from scope & codebase (Session 104)                      |
 | Host Goal/Target Edit (`FEAT-DECL-04`)  | `adminUpdateParticipantTargetAction` | ✅ Wired to `AdminTargetOverrideModal` (Manage, Leaderboard, Stats) |
 
 ---
@@ -100,15 +100,23 @@ This silently swallows all errors. If the DB write fails, the session says `DEV`
 
 ### 8. ✅ Resolved (Session 101) — Manual Leaderboard Uses `Decimal` Hours (D7)
 
-Removed the legacy manual leaderboard (`/challenge/[id]/manual`) and dropped `leaderboard_entries`. All hour adjustments and overrides now use the canonical `DailyStudyLogV2` model via `AdminHoursOverrideModal` in second-level integer duration precision, bringing the codebase into 100% compliance with **Law L8**.
+Removed the legacy manual leaderboard (`/challenge/[id]/manual`) and dropped `leaderboard_entries`. All hour adjustments and overrides now use the canonical `DailyStudyLog` model via `AdminHoursOverrideModal` in second-level integer duration precision, bringing the codebase into 100% compliance with **Law L8**.
 
 ---
 
-### 9. `leaveDays` Collected Then Discarded (D6)
+### 9. ✅ Resolved (Session 105) — `leaveDays` Collected Then Discarded (D6)
 
-The enrollment modal collects a `leaveDays` input from participants, but the value has no database column and is silently thrown away. This creates confusion.
+The enrollment modal previously collected a `leaveDays` input from participants, but the value had no database column and was silently thrown away.
 
-**Fix:** Either persist it and incorporate into the deficit/target math (carefully — Law L3 forbids grace passes), or remove it from the enrollment UI entirely.
+**Resolution (Session 105):**
+
+- Added `plannedLeaveDays` and `usedLeaveDays` columns to `ChallengeParticipant` in migration `20261014020000_unify_study_logs_and_add_leave_budget`.
+- Persisted on challenge enrollment via `enrollInChallengeAction` and `enrollParticipantInChallenge`.
+- Implemented pure domain leave validation (`leave-allowance.ts`) and unit tests (`leave-allowance.test.ts`).
+- Enforced leave quotas transactionally in `upsertDailyStudyLog` and server action `logStudyTimeAction`: when `usedLeaveDays >= plannedLeaveDays`, returns exact error: `"Maximum leaves taken for the challenge"`.
+- Supports idempotent re-saving of existing leave days without quota penalty, and decrements `usedLeaveDays` when unmarking leaves.
+- Displayed real-time leave counter (`🌴 Leaves: {usedLeaveDays}/{plannedLeaveDays}`) and quota feedback in `DailyHoursModal`.
+- Concurrently dropped legacy V1 `DailyStudyLog` table, promoted `DailyStudyLogV2` to canonical `DailyStudyLog`, and removed all V2 model/relation references across the codebase.
 
 ---
 
@@ -321,13 +329,13 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 
 | Category                        | Count  |
 | ------------------------------- | ------ |
-| 🔴 Critical (blocks production) | 4      |
-| 🟠 Medium (functional issues)   | 7      |
+| 🔴 Critical (blocks production) | 2      |
+| 🟠 Medium (functional issues)   | 4      |
 | 🟡 Low (hardening / QoL)        | 9      |
 | 💡 Feature suggestions          | 5      |
-| **Total findings**              | **25** |
+| **Total open findings**         | **20** |
 
-> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Law L6 amended to the Three-Condition Invariant with challenge-linked tasks).
+> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Three-Condition Invariant); Session 101 — #8 (Decimal hours eliminated), #15 (Dual team modeling consolidated); Session 104 — #3 (Discord Summary copy removed); Session 105 — #9 (`leaveDays` budget implemented & D6 resolved).
 
 ### Recommended Fix Order
 
