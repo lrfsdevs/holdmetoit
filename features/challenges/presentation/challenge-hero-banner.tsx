@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EnrollmentModal } from "./enrollment-modal";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 
 interface ChallengeHeroBannerProps {
    challenge: ChallengeScoreboardViewModel;

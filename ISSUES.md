@@ -518,7 +518,7 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 ### Recommended Fix Order
 
 1. **#1** — Lock Results bug (challenge finalization + `resultsLockedAt` column) ✅ done
-2. **#37** — Parallelize `app/page.tsx` home page queries via `Promise.all`
+2. **#37** — Parallelize `app/page.tsx` home page queries via `Promise.all` ✅ done in `96c0081`
 3. **#35** — Fix Clean Architecture layer inversion: move `ChallengeScoreboardViewModel` into domain types
 4. **#34** — Prune `punishmentWall` dead calculation loop and payload from scoreboard serializer
 5. **#36** — Code-split `/challenge/[id]` admin/audit/wrapped tabs using `next/dynamic`

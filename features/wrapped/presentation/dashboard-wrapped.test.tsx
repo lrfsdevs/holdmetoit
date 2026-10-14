@@ -5,7 +5,7 @@ import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
    ScoreboardTeam,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 
 vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
    markWrappedSeenAction: vi.fn().mockResolvedValue({ ok: true }),

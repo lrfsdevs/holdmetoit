@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    buildChallengeWrappedViewModel,
    isChallengeCompleted,

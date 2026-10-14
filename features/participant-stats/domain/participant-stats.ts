@@ -16,7 +16,7 @@ import type {
    ParticipantAccountabilityStats,
    ParticipantTeamStats,
 } from "./participant-stats.types";
-import type { ParticipantPaceStatus } from "@/features/leaderboard/data/leaderboard-data";
+import type { ParticipantPaceStatus } from "@/features/leaderboard/domain/leaderboard.types";
 
 export interface RawStudyLogEntry {
    logDate: Date | string;

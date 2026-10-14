@@ -27,7 +27,7 @@ import {
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
 
 interface ChallengeOverviewTabProps {
