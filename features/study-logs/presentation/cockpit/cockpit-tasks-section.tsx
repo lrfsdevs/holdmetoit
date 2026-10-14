@@ -30,6 +30,23 @@ import {
 } from "@/features/tasks/domain/task-reorder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   DropdownMenu,
+   DropdownMenuTrigger,
+   DropdownMenuContent,
+   DropdownMenuItem,
+   DropdownMenuSeparator,
+   DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import {
+   ContextMenu,
+   ContextMenuTrigger,
+   ContextMenuContent,
+   ContextMenuItem,
+   ContextMenuSeparator,
+   ContextMenuLabel,
+} from "@/components/ui/context-menu";
+import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -139,24 +156,6 @@ export function CockpitTasksSection({
          return () => clearTimeout(timer);
       }
    }, [isCreatingCategory, addModalType]);
-
-   // Context Menu State
-   const [contextMenu, setContextMenu] = useState<{
-      type: "task" | "category";
-      x: number;
-      y: number;
-      task?: {
-         id: string;
-         text: string;
-         completed: boolean;
-         status: TaskStatus;
-         dueDate?: string | null;
-         createdAt?: string;
-         catIdx: number;
-         taskType: "daily" | "weekly";
-      };
-      category?: { id?: string; name: string; taskType: "daily" | "weekly" };
-   } | null>(null);
 
    // Edit Task Modal State
    const [editTaskModal, setEditTaskModal] = useState<{
@@ -895,127 +894,6 @@ export function CockpitTasksSection({
       }
 
       logTaskSync("Task deleted", { taskId });
-   };
-
-   useEffect(() => {
-      if (!contextMenu) return;
-
-      const handleClickOutside = (e: MouseEvent) => {
-         const target = e.target as HTMLElement | null;
-         if (target?.closest("[data-context-menu]")) {
-            return;
-         }
-         setContextMenu(null);
-      };
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-         if (e.key === "Escape") {
-            setContextMenu(null);
-         }
-      };
-
-      window.addEventListener("pointerdown", handleClickOutside);
-      window.addEventListener("keydown", handleKeyDown);
-      return () => {
-         window.removeEventListener("pointerdown", handleClickOutside);
-         window.removeEventListener("keydown", handleKeyDown);
-      };
-   }, [contextMenu]);
-
-   const openCategoryMenuFromButton = (
-      e: React.MouseEvent,
-      cat: CategoryGroup,
-      taskType: "daily" | "weekly"
-   ) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = Math.max(10, Math.min(rect.left, window.innerWidth - 180));
-      const y = Math.max(
-         10,
-         Math.min(rect.bottom + 4, window.innerHeight - 120)
-      );
-      setContextMenu({
-         type: "category",
-         x,
-         y,
-         category: { id: cat.id, name: cat.name, taskType },
-      });
-   };
-
-   const handleCategoryContextMenu = (
-      e: React.MouseEvent,
-      cat: CategoryGroup,
-      taskType: "daily" | "weekly"
-   ) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const x = Math.max(10, Math.min(e.clientX, window.innerWidth - 180));
-      const y = Math.max(10, Math.min(e.clientY, window.innerHeight - 120));
-      setContextMenu({
-         type: "category",
-         x,
-         y,
-         category: { id: cat.id, name: cat.name, taskType },
-      });
-   };
-
-   const openTaskMenuFromButton = (
-      e: React.MouseEvent,
-      task: TaskItem,
-      catIdx: number,
-      taskType: "daily" | "weekly"
-   ) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = Math.max(10, Math.min(rect.left, window.innerWidth - 180));
-      const y = Math.max(
-         10,
-         Math.min(rect.bottom + 4, window.innerHeight - 120)
-      );
-      setContextMenu({
-         type: "task",
-         x,
-         y,
-         task: {
-            id: task.id,
-            text: task.text,
-            completed: task.completed,
-            status: getTaskStatus(task),
-            dueDate: task.dueDate ?? null,
-            createdAt: task.createdAt,
-            catIdx,
-            taskType,
-         },
-      });
-   };
-
-   const handleTaskContextMenu = (
-      e: React.MouseEvent,
-      task: TaskItem,
-      catIdx: number,
-      taskType: "daily" | "weekly"
-   ) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const x = Math.max(10, Math.min(e.clientX, window.innerWidth - 180));
-      const y = Math.max(10, Math.min(e.clientY, window.innerHeight - 120));
-      setContextMenu({
-         type: "task",
-         x,
-         y,
-         task: {
-            id: task.id,
-            text: task.text,
-            completed: task.completed,
-            status: getTaskStatus(task),
-            dueDate: task.dueDate ?? null,
-            createdAt: task.createdAt,
-            catIdx,
-            taskType,
-         },
-      });
    };
 
    const handleSaveEditTask = (
@@ -3359,66 +3237,173 @@ export function CockpitTasksSection({
                                            : "border-[#333333]"
                                  }`}
                               >
-                                 <div
-                                    draggable
-                                    onDragStart={(e) =>
-                                       handleCategoryDragStart(
-                                          e,
-                                          catIdx,
-                                          "daily"
-                                       )
-                                    }
-                                    onDragEnd={handleDragEnd}
-                                    onContextMenu={(e) =>
-                                       handleCategoryContextMenu(
-                                          e,
-                                          cat,
-                                          "daily"
-                                       )
-                                    }
-                                    onClick={() => toggleDailyCollapse(catIdx)}
-                                    className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
-                                 >
-                                    <div
-                                       className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
-                                       title="Drag category to reorder, move to day or across boards"
-                                       aria-label={`Drag category ${cat.name}`}
+                                 <ContextMenu modal={false}>
+                                    <ContextMenuTrigger
+                                       asChild
+                                       disabled={!isLoggedIn}
                                     >
-                                       <GripVertical className="h-4 w-4" />
-                                    </div>
-                                    <span className="truncate flex-1 pr-2">
-                                       {cat.name}
-                                    </span>
-                                    <div
-                                       className="flex items-center gap-1.5 shrink-0"
-                                       onDragStart={(e) => e.stopPropagation()}
-                                       onClick={(e) => e.stopPropagation()}
-                                    >
-                                       {isLoggedIn && (
-                                          <button
-                                             type="button"
-                                             onClick={(e) => {
-                                                e.stopPropagation();
-                                                openCategoryMenuFromButton(
-                                                   e,
-                                                   cat,
+                                       <div
+                                          draggable
+                                          onDragStart={(e) =>
+                                             handleCategoryDragStart(
+                                                e,
+                                                catIdx,
+                                                "daily"
+                                             )
+                                          }
+                                          onDragEnd={handleDragEnd}
+                                          onClick={() =>
+                                             toggleDailyCollapse(catIdx)
+                                          }
+                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
+                                       >
+                                          <div
+                                             className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
+                                             title="Drag category to reorder, move to day or across boards"
+                                             aria-label={`Drag category ${cat.name}`}
+                                          >
+                                             <GripVertical className="h-4 w-4" />
+                                          </div>
+                                          <span className="truncate flex-1 pr-2">
+                                             {cat.name}
+                                          </span>
+                                          <div
+                                             className="flex items-center gap-1.5 shrink-0"
+                                             onDragStart={(e) =>
+                                                e.stopPropagation()
+                                             }
+                                             onClick={(e) =>
+                                                e.stopPropagation()
+                                             }
+                                          >
+                                             {isLoggedIn && (
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] data-[state=open]:text-[#ffffff] data-[state=open]:bg-[#3d3d3d] transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
+                                                      >
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-[170px]"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         cat={cat}
+                                                         catType="daily"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "daily"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
+                                             )}
+                                             {cat.isCollapsed ? (
+                                                <ChevronDown className="h-4 w-4 text-[#868686]" />
+                                             ) : (
+                                                <ChevronUp className="h-4 w-4 text-[#868686]" />
+                                             )}
+                                          </div>
+                                       </div>
+                                    </ContextMenuTrigger>
+                                    {isLoggedIn && (
+                                       <ContextMenuContent className="min-w-[170px]">
+                                          <CategoryMenuItems
+                                             cat={cat}
+                                             catType="daily"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
                                                    "daily"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
                                                 );
                                              }}
-                                             className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] transition-colors"
-                                             title="Category options"
-                                             aria-label={`Options for category ${cat.name}`}
-                                          >
-                                             <MoreVertical className="h-4 w-4" />
-                                          </button>
-                                       )}
-                                       {cat.isCollapsed ? (
-                                          <ChevronDown className="h-4 w-4 text-[#868686]" />
-                                       ) : (
-                                          <ChevronUp className="h-4 w-4 text-[#868686]" />
-                                       )}
-                                    </div>
-                                 </div>
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
+                                    )}
+                                 </ContextMenu>
 
                                  {!cat.isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-[#383838]">
@@ -3438,230 +3423,418 @@ export function CockpitTasksSection({
                                                    task.id;
 
                                              return (
-                                                <div
+                                                <ContextMenu
                                                    key={task.id}
-                                                   data-drag-card="task"
-                                                   onDragOver={(e) =>
-                                                      handleTaskDragOver(
-                                                         e,
-                                                         task.id,
-                                                         catIdx,
-                                                         "daily"
-                                                      )
-                                                   }
-                                                   onDrop={(e) =>
-                                                      handleTaskDrop(
-                                                         e,
-                                                         task.id,
-                                                         catIdx,
-                                                         "daily"
-                                                      )
-                                                   }
-                                                   onContextMenu={(e) =>
-                                                      handleTaskContextMenu(
-                                                         e,
-                                                         task,
-                                                         catIdx,
-                                                         "daily"
-                                                      )
-                                                   }
-                                                   className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
-                                                      isTaskDragging
-                                                         ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
-                                                         : ""
-                                                   } ${
-                                                      isTaskOver &&
-                                                      dragOverInfo?.position ===
-                                                         "above"
-                                                         ? "border-t-2 border-t-[#e08a32]"
-                                                         : isTaskOver &&
-                                                             dragOverInfo?.position ===
-                                                                "below"
-                                                           ? "border-b-2 border-b-[#e08a32]"
-                                                           : ""
-                                                   }`}
+                                                   modal={false}
                                                 >
-                                                   <div
-                                                      draggable
-                                                      onDragStart={(e) =>
-                                                         handleTaskDragStart(
-                                                            e,
-                                                            task.id,
-                                                            catIdx,
-                                                            "daily"
-                                                         )
-                                                      }
-                                                      onDragEnd={handleDragEnd}
-                                                      onClick={(e) =>
-                                                         e.stopPropagation()
-                                                      }
-                                                      className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
-                                                      title="Drag task to reorder or move across categories"
-                                                      aria-label={`Drag task ${task.text}`}
+                                                   <ContextMenuTrigger
+                                                      asChild
+                                                      disabled={!isLoggedIn}
                                                    >
-                                                      <GripVertical className="h-3.5 w-3.5" />
-                                                   </div>
-                                                   {(() => {
-                                                      const status =
-                                                         getTaskStatus(task);
-                                                      return (
-                                                         <>
-                                                            <div
-                                                               role="checkbox"
-                                                               aria-checked={
-                                                                  status ===
-                                                                  "COMPLETED"
-                                                               }
-                                                               onClick={() =>
-                                                                  toggleDailyTask(
-                                                                     catIdx,
-                                                                     task.id
-                                                                  )
-                                                               }
-                                                               className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
-                                                               title={
-                                                                  status ===
-                                                                  "COMPLETED"
-                                                                     ? "Status: Completed. Click to reset to To-Do"
-                                                                     : status ===
-                                                                         "IN_PROGRESS"
-                                                                       ? "Status: In Progress. Click to mark Completed"
-                                                                       : status ===
-                                                                           "CROSSED_OUT"
-                                                                         ? "Status: Crossed Out. Click to mark Completed"
-                                                                         : "Status: To-Do. Click to mark Completed"
-                                                               }
-                                                            >
-                                                               <div
-                                                                  className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
-                                                                     status ===
-                                                                     "COMPLETED"
-                                                                        ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
-                                                                        : status ===
-                                                                            "IN_PROGRESS"
-                                                                          ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
-                                                                          : status ===
-                                                                              "CROSSED_OUT"
-                                                                            ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
-                                                                            : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
-                                                                  }`}
-                                                               >
-                                                                  {status ===
-                                                                     "COMPLETED" && (
-                                                                     <Check className="h-3.5 w-3.5 stroke-[3]" />
-                                                                  )}
-                                                                  {status ===
-                                                                     "IN_PROGRESS" && (
-                                                                     <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                                                                  )}
-                                                                  {status ===
-                                                                     "CROSSED_OUT" && (
-                                                                     <X className="h-3.5 w-3.5 stroke-[2.5]" />
-                                                                  )}
-                                                               </div>
-                                                               <span
-                                                                  className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
-                                                                     status ===
-                                                                     "COMPLETED"
-                                                                        ? "text-[#868686] line-through"
-                                                                        : status ===
-                                                                            "CROSSED_OUT"
-                                                                          ? "text-[#777777] line-through decoration-rose-500/60"
-                                                                          : status ===
-                                                                              "IN_PROGRESS"
-                                                                            ? "text-white font-medium"
-                                                                            : "text-[#ffffff]"
-                                                                  }`}
-                                                               >
-                                                                  {task.text}
-                                                               </span>
-                                                            </div>
-
-                                                            {status ===
-                                                               "COMPLETED" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "daily",
-                                                                        "TODO"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: Completed. Click to reset to To-Do"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                                                               >
-                                                                  Completed
-                                                               </button>
-                                                            )}
-                                                            {status ===
-                                                               "IN_PROGRESS" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "daily",
-                                                                        "COMPLETED"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: In Progress. Click to mark Completed"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
-                                                               >
-                                                                  In Progress
-                                                               </button>
-                                                            )}
-                                                            {status ===
-                                                               "CROSSED_OUT" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "daily",
-                                                                        "TODO"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: Crossed Out. Click to reset to To-Do"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
-                                                               >
-                                                                  Crossed Out
-                                                               </button>
-                                                            )}
-                                                         </>
-                                                      );
-                                                   })()}
-                                                   {isLoggedIn && (
-                                                      <button
-                                                         type="button"
-                                                         onClick={(e) =>
-                                                            openTaskMenuFromButton(
+                                                      <div
+                                                         data-drag-card="task"
+                                                         onDragOver={(e) =>
+                                                            handleTaskDragOver(
                                                                e,
-                                                               task,
+                                                               task.id,
                                                                catIdx,
                                                                "daily"
                                                             )
                                                          }
-                                                         className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
-                                                         title="Task options"
-                                                         aria-label={`Options for task ${task.text}`}
+                                                         onDrop={(e) =>
+                                                            handleTaskDrop(
+                                                               e,
+                                                               task.id,
+                                                               catIdx,
+                                                               "daily"
+                                                            )
+                                                         }
+                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
+                                                            isTaskDragging
+                                                               ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
+                                                               : ""
+                                                         } ${
+                                                            isTaskOver &&
+                                                            dragOverInfo?.position ===
+                                                               "above"
+                                                               ? "border-t-2 border-t-[#e08a32]"
+                                                               : isTaskOver &&
+                                                                   dragOverInfo?.position ===
+                                                                      "below"
+                                                                 ? "border-b-2 border-b-[#e08a32]"
+                                                                 : ""
+                                                         }`}
                                                       >
-                                                         <MoreVertical className="h-3.5 w-3.5" />
-                                                      </button>
+                                                         <div
+                                                            draggable
+                                                            onDragStart={(e) =>
+                                                               handleTaskDragStart(
+                                                                  e,
+                                                                  task.id,
+                                                                  catIdx,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            onDragEnd={
+                                                               handleDragEnd
+                                                            }
+                                                            onClick={(e) =>
+                                                               e.stopPropagation()
+                                                            }
+                                                            className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
+                                                            title="Drag task to reorder or move across categories"
+                                                            aria-label={`Drag task ${task.text}`}
+                                                         >
+                                                            <GripVertical className="h-3.5 w-3.5" />
+                                                         </div>
+                                                         {(() => {
+                                                            const status =
+                                                               getTaskStatus(
+                                                                  task
+                                                               );
+                                                            return (
+                                                               <>
+                                                                  <div
+                                                                     role="checkbox"
+                                                                     aria-checked={
+                                                                        status ===
+                                                                        "COMPLETED"
+                                                                     }
+                                                                     onClick={() =>
+                                                                        toggleDailyTask(
+                                                                           catIdx,
+                                                                           task.id
+                                                                        )
+                                                                     }
+                                                                     className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
+                                                                     title={
+                                                                        status ===
+                                                                        "COMPLETED"
+                                                                           ? "Status: Completed. Click to reset to To-Do"
+                                                                           : status ===
+                                                                               "IN_PROGRESS"
+                                                                             ? "Status: In Progress. Click to mark Completed"
+                                                                             : status ===
+                                                                                 "CROSSED_OUT"
+                                                                               ? "Status: Crossed Out. Click to mark Completed"
+                                                                               : "Status: To-Do. Click to mark Completed"
+                                                                     }
+                                                                  >
+                                                                     <div
+                                                                        className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
+                                                                           status ===
+                                                                           "COMPLETED"
+                                                                              ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
+                                                                              : status ===
+                                                                                  "IN_PROGRESS"
+                                                                                ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
+                                                                                : status ===
+                                                                                    "CROSSED_OUT"
+                                                                                  ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
+                                                                                  : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
+                                                                        }`}
+                                                                     >
+                                                                        {status ===
+                                                                           "COMPLETED" && (
+                                                                           <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                                                        )}
+                                                                        {status ===
+                                                                           "IN_PROGRESS" && (
+                                                                           <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                                                                        )}
+                                                                        {status ===
+                                                                           "CROSSED_OUT" && (
+                                                                           <X className="h-3.5 w-3.5 stroke-[2.5]" />
+                                                                        )}
+                                                                     </div>
+                                                                     <span
+                                                                        className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
+                                                                           status ===
+                                                                           "COMPLETED"
+                                                                              ? "text-[#868686] line-through"
+                                                                              : status ===
+                                                                                  "CROSSED_OUT"
+                                                                                ? "text-[#777777] line-through decoration-rose-500/60"
+                                                                                : status ===
+                                                                                    "IN_PROGRESS"
+                                                                                  ? "text-white font-medium"
+                                                                                  : "text-[#ffffff]"
+                                                                        }`}
+                                                                     >
+                                                                        {
+                                                                           task.text
+                                                                        }
+                                                                     </span>
+                                                                  </div>
+
+                                                                  {status ===
+                                                                     "COMPLETED" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "daily",
+                                                                              "TODO"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: Completed. Click to reset to To-Do"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                                                     >
+                                                                        Completed
+                                                                     </button>
+                                                                  )}
+                                                                  {status ===
+                                                                     "IN_PROGRESS" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "daily",
+                                                                              "COMPLETED"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: In Progress. Click to mark Completed"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                                                                     >
+                                                                        In
+                                                                        Progress
+                                                                     </button>
+                                                                  )}
+                                                                  {status ===
+                                                                     "CROSSED_OUT" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "daily",
+                                                                              "TODO"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: Crossed Out. Click to reset to To-Do"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                                                                     >
+                                                                        Crossed
+                                                                        Out
+                                                                     </button>
+                                                                  )}
+                                                               </>
+                                                            );
+                                                         })()}
+                                                         {isLoggedIn && (
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-[170px]"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="daily"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "daily",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         )}
+                                                      </div>
+                                                   </ContextMenuTrigger>
+                                                   {isLoggedIn && (
+                                                      <ContextMenuContent className="min-w-[170px]">
+                                                         <TaskMenuItems
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="daily"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "daily",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
+                                                                  )
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    )}
-                                                </div>
+                                                </ContextMenu>
                                              );
                                           })
                                        )}
@@ -3768,66 +3941,173 @@ export function CockpitTasksSection({
                                            : "border-[#333333]"
                                  }`}
                               >
-                                 <div
-                                    draggable
-                                    onDragStart={(e) =>
-                                       handleCategoryDragStart(
-                                          e,
-                                          catIdx,
-                                          "weekly"
-                                       )
-                                    }
-                                    onDragEnd={handleDragEnd}
-                                    onContextMenu={(e) =>
-                                       handleCategoryContextMenu(
-                                          e,
-                                          cat,
-                                          "weekly"
-                                       )
-                                    }
-                                    onClick={() => toggleWeeklyCollapse(catIdx)}
-                                    className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
-                                 >
-                                    <div
-                                       className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
-                                       title="Drag category to reorder, move to day or across boards"
-                                       aria-label={`Drag category ${cat.name}`}
+                                 <ContextMenu modal={false}>
+                                    <ContextMenuTrigger
+                                       asChild
+                                       disabled={!isLoggedIn}
                                     >
-                                       <GripVertical className="h-4 w-4" />
-                                    </div>
-                                    <span className="truncate flex-1 pr-2">
-                                       {cat.name}
-                                    </span>
-                                    <div
-                                       className="flex items-center gap-1.5 shrink-0"
-                                       onDragStart={(e) => e.stopPropagation()}
-                                       onClick={(e) => e.stopPropagation()}
-                                    >
-                                       {isLoggedIn && (
-                                          <button
-                                             type="button"
-                                             onClick={(e) => {
-                                                e.stopPropagation();
-                                                openCategoryMenuFromButton(
-                                                   e,
-                                                   cat,
+                                       <div
+                                          draggable
+                                          onDragStart={(e) =>
+                                             handleCategoryDragStart(
+                                                e,
+                                                catIdx,
+                                                "weekly"
+                                             )
+                                          }
+                                          onDragEnd={handleDragEnd}
+                                          onClick={() =>
+                                             toggleWeeklyCollapse(catIdx)
+                                          }
+                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
+                                       >
+                                          <div
+                                             className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
+                                             title="Drag category to reorder, move to day or across boards"
+                                             aria-label={`Drag category ${cat.name}`}
+                                          >
+                                             <GripVertical className="h-4 w-4" />
+                                          </div>
+                                          <span className="truncate flex-1 pr-2">
+                                             {cat.name}
+                                          </span>
+                                          <div
+                                             className="flex items-center gap-1.5 shrink-0"
+                                             onDragStart={(e) =>
+                                                e.stopPropagation()
+                                             }
+                                             onClick={(e) =>
+                                                e.stopPropagation()
+                                             }
+                                          >
+                                             {isLoggedIn && (
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] data-[state=open]:text-[#ffffff] data-[state=open]:bg-[#3d3d3d] transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
+                                                      >
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-[170px]"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         cat={cat}
+                                                         catType="weekly"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "weekly"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
+                                             )}
+                                             {cat.isCollapsed ? (
+                                                <ChevronDown className="h-4 w-4 text-[#868686]" />
+                                             ) : (
+                                                <ChevronUp className="h-4 w-4 text-[#868686]" />
+                                             )}
+                                          </div>
+                                       </div>
+                                    </ContextMenuTrigger>
+                                    {isLoggedIn && (
+                                       <ContextMenuContent className="min-w-[170px]">
+                                          <CategoryMenuItems
+                                             cat={cat}
+                                             catType="weekly"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
                                                    "weekly"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
                                                 );
                                              }}
-                                             className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] transition-colors"
-                                             title="Category options"
-                                             aria-label={`Options for category ${cat.name}`}
-                                          >
-                                             <MoreVertical className="h-4 w-4" />
-                                          </button>
-                                       )}
-                                       {cat.isCollapsed ? (
-                                          <ChevronDown className="h-4 w-4 text-[#868686]" />
-                                       ) : (
-                                          <ChevronUp className="h-4 w-4 text-[#868686]" />
-                                       )}
-                                    </div>
-                                 </div>
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
+                                    )}
+                                 </ContextMenu>
 
                                  {!cat.isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-[#383838]">
@@ -3846,230 +4126,418 @@ export function CockpitTasksSection({
                                                    task.id;
 
                                              return (
-                                                <div
+                                                <ContextMenu
                                                    key={task.id}
-                                                   data-drag-card="task"
-                                                   onDragOver={(e) =>
-                                                      handleTaskDragOver(
-                                                         e,
-                                                         task.id,
-                                                         catIdx,
-                                                         "weekly"
-                                                      )
-                                                   }
-                                                   onDrop={(e) =>
-                                                      handleTaskDrop(
-                                                         e,
-                                                         task.id,
-                                                         catIdx,
-                                                         "weekly"
-                                                      )
-                                                   }
-                                                   onContextMenu={(e) =>
-                                                      handleTaskContextMenu(
-                                                         e,
-                                                         task,
-                                                         catIdx,
-                                                         "weekly"
-                                                      )
-                                                   }
-                                                   className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
-                                                      isTaskDragging
-                                                         ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
-                                                         : ""
-                                                   } ${
-                                                      isTaskOver &&
-                                                      dragOverInfo?.position ===
-                                                         "above"
-                                                         ? "border-t-2 border-t-[#e08a32]"
-                                                         : isTaskOver &&
-                                                             dragOverInfo?.position ===
-                                                                "below"
-                                                           ? "border-b-2 border-b-[#e08a32]"
-                                                           : ""
-                                                   }`}
+                                                   modal={false}
                                                 >
-                                                   <div
-                                                      draggable
-                                                      onDragStart={(e) =>
-                                                         handleTaskDragStart(
-                                                            e,
-                                                            task.id,
-                                                            catIdx,
-                                                            "weekly"
-                                                         )
-                                                      }
-                                                      onDragEnd={handleDragEnd}
-                                                      onClick={(e) =>
-                                                         e.stopPropagation()
-                                                      }
-                                                      className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
-                                                      title="Drag task to reorder or move across categories"
-                                                      aria-label={`Drag task ${task.text}`}
+                                                   <ContextMenuTrigger
+                                                      asChild
+                                                      disabled={!isLoggedIn}
                                                    >
-                                                      <GripVertical className="h-3.5 w-3.5" />
-                                                   </div>
-                                                   {(() => {
-                                                      const status =
-                                                         getTaskStatus(task);
-                                                      return (
-                                                         <>
-                                                            <div
-                                                               role="checkbox"
-                                                               aria-checked={
-                                                                  status ===
-                                                                  "COMPLETED"
-                                                               }
-                                                               onClick={() =>
-                                                                  toggleWeeklyTask(
-                                                                     catIdx,
-                                                                     task.id
-                                                                  )
-                                                               }
-                                                               className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
-                                                               title={
-                                                                  status ===
-                                                                  "COMPLETED"
-                                                                     ? "Status: Completed. Click to reset to To-Do"
-                                                                     : status ===
-                                                                         "IN_PROGRESS"
-                                                                       ? "Status: In Progress. Click to mark Completed"
-                                                                       : status ===
-                                                                           "CROSSED_OUT"
-                                                                         ? "Status: Crossed Out. Click to mark Completed"
-                                                                         : "Status: To-Do. Click to mark Completed"
-                                                               }
-                                                            >
-                                                               <div
-                                                                  className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
-                                                                     status ===
-                                                                     "COMPLETED"
-                                                                        ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
-                                                                        : status ===
-                                                                            "IN_PROGRESS"
-                                                                          ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
-                                                                          : status ===
-                                                                              "CROSSED_OUT"
-                                                                            ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
-                                                                            : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
-                                                                  }`}
-                                                               >
-                                                                  {status ===
-                                                                     "COMPLETED" && (
-                                                                     <Check className="h-3.5 w-3.5 stroke-[3]" />
-                                                                  )}
-                                                                  {status ===
-                                                                     "IN_PROGRESS" && (
-                                                                     <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                                                                  )}
-                                                                  {status ===
-                                                                     "CROSSED_OUT" && (
-                                                                     <X className="h-3.5 w-3.5 stroke-[2.5]" />
-                                                                  )}
-                                                               </div>
-                                                               <span
-                                                                  className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
-                                                                     status ===
-                                                                     "COMPLETED"
-                                                                        ? "text-[#868686] line-through"
-                                                                        : status ===
-                                                                            "CROSSED_OUT"
-                                                                          ? "text-[#777777] line-through decoration-rose-500/60"
-                                                                          : status ===
-                                                                              "IN_PROGRESS"
-                                                                            ? "text-white font-medium"
-                                                                            : "text-[#ffffff]"
-                                                                  }`}
-                                                               >
-                                                                  {task.text}
-                                                               </span>
-                                                            </div>
-
-                                                            {status ===
-                                                               "COMPLETED" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "weekly",
-                                                                        "TODO"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: Completed. Click to reset to To-Do"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                                                               >
-                                                                  Completed
-                                                               </button>
-                                                            )}
-                                                            {status ===
-                                                               "IN_PROGRESS" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "weekly",
-                                                                        "COMPLETED"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: In Progress. Click to mark Completed"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
-                                                               >
-                                                                  In Progress
-                                                               </button>
-                                                            )}
-                                                            {status ===
-                                                               "CROSSED_OUT" && (
-                                                               <button
-                                                                  type="button"
-                                                                  onClick={(
-                                                                     e
-                                                                  ) => {
-                                                                     e.stopPropagation();
-                                                                     setTaskStatus(
-                                                                        catIdx,
-                                                                        task.id,
-                                                                        "weekly",
-                                                                        "TODO"
-                                                                     );
-                                                                  }}
-                                                                  title="Status: Crossed Out. Click to reset to To-Do"
-                                                                  className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
-                                                               >
-                                                                  Crossed Out
-                                                               </button>
-                                                            )}
-                                                         </>
-                                                      );
-                                                   })()}
-                                                   {isLoggedIn && (
-                                                      <button
-                                                         type="button"
-                                                         onClick={(e) =>
-                                                            openTaskMenuFromButton(
+                                                      <div
+                                                         data-drag-card="task"
+                                                         onDragOver={(e) =>
+                                                            handleTaskDragOver(
                                                                e,
-                                                               task,
+                                                               task.id,
                                                                catIdx,
                                                                "weekly"
                                                             )
                                                          }
-                                                         className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
-                                                         title="Task options"
-                                                         aria-label={`Options for task ${task.text}`}
+                                                         onDrop={(e) =>
+                                                            handleTaskDrop(
+                                                               e,
+                                                               task.id,
+                                                               catIdx,
+                                                               "weekly"
+                                                            )
+                                                         }
+                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
+                                                            isTaskDragging
+                                                               ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
+                                                               : ""
+                                                         } ${
+                                                            isTaskOver &&
+                                                            dragOverInfo?.position ===
+                                                               "above"
+                                                               ? "border-t-2 border-t-[#e08a32]"
+                                                               : isTaskOver &&
+                                                                   dragOverInfo?.position ===
+                                                                      "below"
+                                                                 ? "border-b-2 border-b-[#e08a32]"
+                                                                 : ""
+                                                         }`}
                                                       >
-                                                         <MoreVertical className="h-3.5 w-3.5" />
-                                                      </button>
+                                                         <div
+                                                            draggable
+                                                            onDragStart={(e) =>
+                                                               handleTaskDragStart(
+                                                                  e,
+                                                                  task.id,
+                                                                  catIdx,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            onDragEnd={
+                                                               handleDragEnd
+                                                            }
+                                                            onClick={(e) =>
+                                                               e.stopPropagation()
+                                                            }
+                                                            className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
+                                                            title="Drag task to reorder or move across categories"
+                                                            aria-label={`Drag task ${task.text}`}
+                                                         >
+                                                            <GripVertical className="h-3.5 w-3.5" />
+                                                         </div>
+                                                         {(() => {
+                                                            const status =
+                                                               getTaskStatus(
+                                                                  task
+                                                               );
+                                                            return (
+                                                               <>
+                                                                  <div
+                                                                     role="checkbox"
+                                                                     aria-checked={
+                                                                        status ===
+                                                                        "COMPLETED"
+                                                                     }
+                                                                     onClick={() =>
+                                                                        toggleWeeklyTask(
+                                                                           catIdx,
+                                                                           task.id
+                                                                        )
+                                                                     }
+                                                                     className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
+                                                                     title={
+                                                                        status ===
+                                                                        "COMPLETED"
+                                                                           ? "Status: Completed. Click to reset to To-Do"
+                                                                           : status ===
+                                                                               "IN_PROGRESS"
+                                                                             ? "Status: In Progress. Click to mark Completed"
+                                                                             : status ===
+                                                                                 "CROSSED_OUT"
+                                                                               ? "Status: Crossed Out. Click to mark Completed"
+                                                                               : "Status: To-Do. Click to mark Completed"
+                                                                     }
+                                                                  >
+                                                                     <div
+                                                                        className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
+                                                                           status ===
+                                                                           "COMPLETED"
+                                                                              ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
+                                                                              : status ===
+                                                                                  "IN_PROGRESS"
+                                                                                ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
+                                                                                : status ===
+                                                                                    "CROSSED_OUT"
+                                                                                  ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
+                                                                                  : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
+                                                                        }`}
+                                                                     >
+                                                                        {status ===
+                                                                           "COMPLETED" && (
+                                                                           <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                                                        )}
+                                                                        {status ===
+                                                                           "IN_PROGRESS" && (
+                                                                           <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                                                                        )}
+                                                                        {status ===
+                                                                           "CROSSED_OUT" && (
+                                                                           <X className="h-3.5 w-3.5 stroke-[2.5]" />
+                                                                        )}
+                                                                     </div>
+                                                                     <span
+                                                                        className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
+                                                                           status ===
+                                                                           "COMPLETED"
+                                                                              ? "text-[#868686] line-through"
+                                                                              : status ===
+                                                                                  "CROSSED_OUT"
+                                                                                ? "text-[#777777] line-through decoration-rose-500/60"
+                                                                                : status ===
+                                                                                    "IN_PROGRESS"
+                                                                                  ? "text-white font-medium"
+                                                                                  : "text-[#ffffff]"
+                                                                        }`}
+                                                                     >
+                                                                        {
+                                                                           task.text
+                                                                        }
+                                                                     </span>
+                                                                  </div>
+
+                                                                  {status ===
+                                                                     "COMPLETED" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "weekly",
+                                                                              "TODO"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: Completed. Click to reset to To-Do"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                                                     >
+                                                                        Completed
+                                                                     </button>
+                                                                  )}
+                                                                  {status ===
+                                                                     "IN_PROGRESS" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "weekly",
+                                                                              "COMPLETED"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: In Progress. Click to mark Completed"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                                                                     >
+                                                                        In
+                                                                        Progress
+                                                                     </button>
+                                                                  )}
+                                                                  {status ===
+                                                                     "CROSSED_OUT" && (
+                                                                     <button
+                                                                        type="button"
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
+                                                                           e.stopPropagation();
+                                                                           setTaskStatus(
+                                                                              catIdx,
+                                                                              task.id,
+                                                                              "weekly",
+                                                                              "TODO"
+                                                                           );
+                                                                        }}
+                                                                        title="Status: Crossed Out. Click to reset to To-Do"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                                                                     >
+                                                                        Crossed
+                                                                        Out
+                                                                     </button>
+                                                                  )}
+                                                               </>
+                                                            );
+                                                         })()}
+                                                         {isLoggedIn && (
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-[170px]"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="weekly"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "weekly",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         )}
+                                                      </div>
+                                                   </ContextMenuTrigger>
+                                                   {isLoggedIn && (
+                                                      <ContextMenuContent className="min-w-[170px]">
+                                                         <TaskMenuItems
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="weekly"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "weekly",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
+                                                                  )
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    )}
-                                                </div>
+                                                </ContextMenu>
                                              );
                                           })
                                        )}
@@ -4451,495 +4919,6 @@ export function CockpitTasksSection({
                      </div>
                   </form>
                </div>
-            </div>
-         )}
-
-         {/* Floating Context Menu */}
-         {contextMenu && (
-            <div
-               data-context-menu
-               style={{ top: contextMenu.y, left: contextMenu.x }}
-               className="fixed z-50 min-w-[170px] rounded-xl border border-[#383838] bg-[#222222] p-1.5 shadow-2xl animate-in fade-in zoom-in-95"
-            >
-               {contextMenu.type === "task" && contextMenu.task && (
-                  <>
-                     {contextMenu.task.status === "COMPLETED" ? (
-                        <button
-                           type="button"
-                           onClick={() => {
-                              const t = contextMenu.task!;
-                              setContextMenu(null);
-                              setTaskStatus(t.catIdx, t.id, t.taskType, "TODO");
-                           }}
-                           className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#d1d1d1] rounded-lg hover:bg-[#333333] transition-colors text-left"
-                        >
-                           <RotateCcw className="h-3.5 w-3.5 text-[#868686]" />
-                           <span>Reset to To-Do</span>
-                        </button>
-                     ) : (
-                        <button
-                           type="button"
-                           onClick={() => {
-                              const t = contextMenu.task!;
-                              setContextMenu(null);
-                              setTaskStatus(
-                                 t.catIdx,
-                                 t.id,
-                                 t.taskType,
-                                 "COMPLETED"
-                              );
-                           }}
-                           className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-emerald-300 rounded-lg hover:bg-emerald-500/10 transition-colors text-left"
-                        >
-                           <Check className="h-3.5 w-3.5 text-emerald-400" />
-                           <span>Mark as Completed</span>
-                        </button>
-                     )}
-
-                     <div className="my-1 border-t border-[#333333]" />
-                     <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#777777]">
-                        Status
-                     </div>
-                     <button
-                        type="button"
-                        onClick={() => {
-                           const t = contextMenu.task!;
-                           setContextMenu(null);
-                           setTaskStatus(
-                              t.catIdx,
-                              t.id,
-                              t.taskType,
-                              "IN_PROGRESS"
-                           );
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
-                           contextMenu.task.status === "IN_PROGRESS"
-                              ? "text-[#ffffff] bg-[#2d2d2d]"
-                              : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
-                        }`}
-                     >
-                        <div className="flex items-center gap-2">
-                           <span
-                              className={`h-2 w-2 rounded-full ${
-                                 contextMenu.task.status === "IN_PROGRESS"
-                                    ? "bg-amber-400"
-                                    : "bg-[#555555]"
-                              }`}
-                           />
-                           <span>In Progress</span>
-                        </div>
-                        {contextMenu.task.status === "IN_PROGRESS" && (
-                           <Check className="h-3 w-3 text-amber-400" />
-                        )}
-                     </button>
-                     <button
-                        type="button"
-                        onClick={() => {
-                           const t = contextMenu.task!;
-                           setContextMenu(null);
-                           setTaskStatus(
-                              t.catIdx,
-                              t.id,
-                              t.taskType,
-                              "COMPLETED"
-                           );
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
-                           contextMenu.task.status === "COMPLETED"
-                              ? "text-[#ffffff] bg-[#2d2d2d]"
-                              : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
-                        }`}
-                     >
-                        <div className="flex items-center gap-2">
-                           <span
-                              className={`h-2 w-2 rounded-full ${
-                                 contextMenu.task.status === "COMPLETED"
-                                    ? "bg-emerald-400"
-                                    : "bg-[#555555]"
-                              }`}
-                           />
-                           <span>Completed</span>
-                        </div>
-                        {contextMenu.task.status === "COMPLETED" && (
-                           <Check className="h-3 w-3 text-emerald-400" />
-                        )}
-                     </button>
-                     <button
-                        type="button"
-                        onClick={() => {
-                           const t = contextMenu.task!;
-                           setContextMenu(null);
-                           setTaskStatus(
-                              t.catIdx,
-                              t.id,
-                              t.taskType,
-                              "CROSSED_OUT"
-                           );
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
-                           contextMenu.task.status === "CROSSED_OUT"
-                              ? "text-[#ffffff] bg-[#2d2d2d]"
-                              : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
-                        }`}
-                     >
-                        <div className="flex items-center gap-2">
-                           <span
-                              className={`h-2 w-2 rounded-full ${
-                                 contextMenu.task.status === "CROSSED_OUT"
-                                    ? "bg-rose-400"
-                                    : "bg-[#555555]"
-                              }`}
-                           />
-                           <span>Crossed Out</span>
-                        </div>
-                        {contextMenu.task.status === "CROSSED_OUT" && (
-                           <Check className="h-3 w-3 text-rose-400" />
-                        )}
-                     </button>
-
-                     {contextMenu.task.status !== "TODO" && (
-                        <button
-                           type="button"
-                           onClick={() => {
-                              const t = contextMenu.task!;
-                              setContextMenu(null);
-                              setTaskStatus(t.catIdx, t.id, t.taskType, "TODO");
-                           }}
-                           className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1] rounded-lg transition-colors text-left"
-                        >
-                           <RotateCcw className="h-3 w-3 text-[#777777]" />
-                           <span>Reset to To-Do</span>
-                        </button>
-                     )}
-
-                     <div className="my-1 border-t border-[#333333]" />
-
-                     {contextMenu.task.taskType === "daily" &&
-                        (() => {
-                           const taskDateKey = contextMenu.task.dueDate
-                              ? typeof contextMenu.task.dueDate === "string"
-                                 ? contextMenu.task.dueDate.slice(0, 10)
-                                 : new Date(contextMenu.task.dueDate)
-                                      .toISOString()
-                                      .slice(0, 10)
-                              : contextMenu.task.createdAt
-                                ? new Date(contextMenu.task.createdAt)
-                                     .toISOString()
-                                     .slice(0, 10)
-                                : effectiveTodayDate;
-
-                           const sourceOpt = dayOptions.find(
-                              (d) => d.dateKey === taskDateKey
-                           );
-                           const isSourcePast =
-                              sourceOpt?.isPast ??
-                              taskDateKey < effectiveTodayDate;
-
-                           const eligibleDays = dayOptions.filter((opt) => {
-                              if (opt.dateKey === taskDateKey) return false;
-                              const validation = validateMoveTaskChallengeDay(
-                                 taskDateKey,
-                                 opt.dateKey,
-                                 effectiveTodayDate
-                              );
-                              return validation.ok;
-                           });
-
-                           if (eligibleDays.length === 0) return null;
-
-                           const todayOpt = eligibleDays.find(
-                              (d) => d.dateKey === effectiveTodayDate
-                           );
-                           const otherEligible = eligibleDays.filter(
-                              (d) => d.dateKey !== effectiveTodayDate
-                           );
-
-                           return (
-                              <div className="py-0.5">
-                                 <div className="px-3 py-1 text-[10px] font-semibold tracking-wider uppercase text-[#777777] flex items-center justify-between">
-                                    <span>Move to Day</span>
-                                    {isSourcePast && (
-                                       <span className="text-[9px] text-amber-400 font-medium normal-case">
-                                          From past day
-                                       </span>
-                                    )}
-                                 </div>
-                                 {todayOpt && (
-                                    <button
-                                       type="button"
-                                       onClick={() => {
-                                          const t = contextMenu.task!;
-                                          setContextMenu(null);
-                                          moveTaskToDay(
-                                             t.id,
-                                             effectiveTodayDate,
-                                             t.catIdx,
-                                             "daily"
-                                          );
-                                       }}
-                                       className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors text-left"
-                                    >
-                                       <Calendar className="h-3.5 w-3.5 text-emerald-400" />
-                                       <span>Move to Today</span>
-                                    </button>
-                                 )}
-                                 {otherEligible.map((opt) => (
-                                    <button
-                                       key={opt.dateKey}
-                                       type="button"
-                                       onClick={() => {
-                                          const t = contextMenu.task!;
-                                          setContextMenu(null);
-                                          moveTaskToDay(
-                                             t.id,
-                                             opt.dateKey,
-                                             t.catIdx,
-                                             "daily"
-                                          );
-                                       }}
-                                       className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
-                                    >
-                                       <ArrowRight className="h-3 w-3 text-[#777777]" />
-                                       <span>
-                                          Move to {opt.shortLabel} (
-                                          {formatDayDate(opt.dateKey)})
-                                       </span>
-                                    </button>
-                                 ))}
-                                 <div className="my-1 border-t border-[#333333]" />
-                              </div>
-                           );
-                        })()}
-
-                     <button
-                        type="button"
-                        onClick={() => {
-                           const t = contextMenu.task!;
-                           setContextMenu(null);
-                           setEditTaskModal(t);
-                           setEditTaskInputText(t.text);
-                           setEditTaskInputStatus(t.status);
-                           setEditTaskInputDueDate(
-                              t.dueDate || selectedDateKey
-                           );
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
-                     >
-                        <Pencil className="h-3.5 w-3.5 text-[#868686]" />
-                        <span>Edit Task</span>
-                     </button>
-                     {(() => {
-                        const isTaskOnPastDay =
-                           contextMenu.task.taskType === "daily" &&
-                           (() => {
-                              const dateKey = contextMenu.task.dueDate
-                                 ? typeof contextMenu.task.dueDate === "string"
-                                    ? contextMenu.task.dueDate.slice(0, 10)
-                                    : new Date(contextMenu.task.dueDate)
-                                         .toISOString()
-                                         .slice(0, 10)
-                                 : contextMenu.task.createdAt
-                                   ? new Date(contextMenu.task.createdAt)
-                                        .toISOString()
-                                        .slice(0, 10)
-                                   : effectiveTodayDate;
-                              const targetOpt = dayOptions.find(
-                                 (d) => d.dateKey === dateKey
-                              );
-                              return (
-                                 targetOpt?.isPast ??
-                                 dateKey < effectiveTodayDate
-                              );
-                           })();
-
-                        if (isTaskOnPastDay) {
-                           return (
-                              <button
-                                 type="button"
-                                 disabled
-                                 className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#555555] cursor-not-allowed text-left opacity-50"
-                                 title="Tasks on past challenge days cannot be deleted"
-                              >
-                                 <Trash2 className="h-3.5 w-3.5 text-[#555555]" />
-                                 <span>Delete Task (Locked)</span>
-                              </button>
-                           );
-                        }
-
-                        return (
-                           <button
-                              type="button"
-                              onClick={() => {
-                                 const t = contextMenu.task!;
-                                 setContextMenu(null);
-                                 handleDeleteTask(t.catIdx, t.id, t.taskType);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
-                           >
-                              <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                              <span>Delete Task</span>
-                           </button>
-                        );
-                     })()}
-                  </>
-               )}
-
-               {contextMenu.type === "category" && contextMenu.category && (
-                  <>
-                     {(() => {
-                        const isDaily =
-                           contextMenu.category!.taskType === "daily";
-                        const catIdx = isDaily
-                           ? dailyCategories.findIndex((c) =>
-                                contextMenu.category!.id
-                                   ? c.id === contextMenu.category!.id
-                                   : c.name === contextMenu.category!.name
-                             )
-                           : weeklyCategories.findIndex((c) =>
-                                contextMenu.category!.id
-                                   ? c.id === contextMenu.category!.id
-                                   : c.name === contextMenu.category!.name
-                             );
-
-                        if (catIdx === -1) return null;
-
-                        const eligibleDays = dayOptions.filter((opt) => {
-                           if (isDaily) {
-                              if (opt.dateKey === selectedDateKey) return false;
-                              return validateMoveTaskChallengeDay(
-                                 selectedDateKey,
-                                 opt.dateKey,
-                                 effectiveTodayDate
-                              ).ok;
-                           }
-                           return !opt.isPast;
-                        });
-
-                        if (eligibleDays.length === 0) return null;
-
-                        const todayOpt = eligibleDays.find(
-                           (d) => d.dateKey === effectiveTodayDate
-                        );
-                        const otherEligible = eligibleDays.filter(
-                           (d) => d.dateKey !== effectiveTodayDate
-                        );
-
-                        return (
-                           <div className="py-0.5">
-                              <div className="px-3 py-1 text-[10px] font-semibold tracking-wider uppercase text-[#777777] flex items-center justify-between">
-                                 <span>Move Category to Day</span>
-                              </div>
-                              {todayOpt && (
-                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                       const c = contextMenu.category!;
-                                       setContextMenu(null);
-                                       moveCategoryToDayAction(
-                                          catIdx,
-                                          effectiveTodayDate,
-                                          c.taskType
-                                       );
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors text-left"
-                                 >
-                                    <Calendar className="h-3.5 w-3.5 text-emerald-400" />
-                                    <span>Move to Today</span>
-                                 </button>
-                              )}
-                              {otherEligible.map((opt) => (
-                                 <button
-                                    key={opt.dateKey}
-                                    type="button"
-                                    onClick={() => {
-                                       const c = contextMenu.category!;
-                                       setContextMenu(null);
-                                       moveCategoryToDayAction(
-                                          catIdx,
-                                          opt.dateKey,
-                                          c.taskType
-                                       );
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
-                                 >
-                                    <ArrowRight className="h-3 w-3 text-[#777777]" />
-                                    <span>
-                                       Move to {opt.shortLabel} (
-                                       {formatDayDate(opt.dateKey)})
-                                    </span>
-                                 </button>
-                              ))}
-                              <div className="my-1 border-t border-[#333333]" />
-                           </div>
-                        );
-                     })()}
-
-                     <button
-                        type="button"
-                        onClick={() => {
-                           const c = contextMenu.category!;
-                           setContextMenu(null);
-                           setEditCategoryModal(c);
-                           setEditCategoryInputName(c.name);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
-                     >
-                        <Pencil className="h-3.5 w-3.5 text-[#868686]" />
-                        <span>Rename Category</span>
-                     </button>
-                     {(() => {
-                        const targetCat =
-                           contextMenu.category!.taskType === "daily"
-                              ? dailyCategories.find((c) =>
-                                   contextMenu.category!.id
-                                      ? c.id === contextMenu.category!.id
-                                      : c.name === contextMenu.category!.name
-                                )
-                              : [...dailyCategories, ...weeklyCategories].find(
-                                   (c) =>
-                                      contextMenu.category!.id
-                                         ? c.id === contextMenu.category!.id
-                                         : c.name === contextMenu.category!.name
-                                );
-                        const hasPastTasks = targetCat?.tasks.some((t) => {
-                           const dateKey = getTaskDateKey(t);
-                           const opt = dayOptions.find(
-                              (d) => d.dateKey === dateKey
-                           );
-                           return opt?.isPast ?? dateKey < effectiveTodayDate;
-                        });
-
-                        if (hasPastTasks) {
-                           return (
-                              <button
-                                 type="button"
-                                 disabled
-                                 className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#555555] cursor-not-allowed text-left opacity-50"
-                                 title="Categories containing tasks on past challenge days cannot be deleted"
-                              >
-                                 <Trash2 className="h-3.5 w-3.5 text-[#555555]" />
-                                 <span>Delete Category (Locked)</span>
-                              </button>
-                           );
-                        }
-
-                        return (
-                           <button
-                              type="button"
-                              onClick={() => {
-                                 const c = contextMenu.category!;
-                                 setContextMenu(null);
-                                 setDeleteCategoryModal(c);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
-                           >
-                              <Trash2 className="h-3.5 w-3.5 text-red-400" />
-                              <span>Delete Category</span>
-                           </button>
-                        );
-                     })()}
-                  </>
-               )}
             </div>
          )}
 

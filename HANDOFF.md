@@ -4,17 +4,17 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-14 (Session 105 — Participant Leave Budget & Canonical Study Log Unification on `afnan-jr`)  
+> **Last Updated:** 2026-10-15 (Session 106 — Self-Aligning Task and Category Context Menus via shadcn on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-14, Integrated dev & main into `krish` — Leave Budget, Roster State Persistence, Wrapped)                                                                                                                                                                          |
+| Gate                                         | Result (2026-10-15, KAN-18 / GitHub #100 — Radix/shadcn DropdownMenu & ContextMenu self-alignment on `krish`)                                                                                                                                                                      |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                   |
-| `npm run test`                               | ✅ 94 files green (1048/1048 tests passing)                                                                                                                                                                                                                                        |
+| `npm run test`                               | ✅ 95 files green (1053/1053 tests passing)                                                                                                                                                                                                                                        |
 | `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                     |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                         |
@@ -624,4 +624,30 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (93 test files, 1037/1037 tests green).
    - `npm run build` passed (11 routes compiled cleanly).
    - `bash scripts/check-schema-migration.sh origin/main` passed.
+- **NEXT STEP (completed in Session 106):** Fix todo context menu alignment on scroll and resolution change (KAN-18 / GitHub #100).
+
+### Session 106 — 2026-10-15 (Self-Aligning Task & Category Context Menus via Radix/shadcn — KAN-18 / GitHub #100)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Objectives:**
+   - Resolve Jira KAN-18 (GitHub Issue #100): "the todo's context menu does not self align itself with scrolls and resolution change".
+   - Replace the legacy manual fixed-coordinate floating `<div>` implementation with modular `shadcn` components (`@radix-ui/react-dropdown-menu` and `@radix-ui/react-context-menu`) as recommended by collaborators.
+- **Component Primitives Added (`components/ui/`):**
+   - `dropdown-menu.tsx`: Radix UI DropdownMenu wrapped and styled with Obsidian Dark palette tokens (`#222222`, `#383838`, `rounded-xl`, `border-stone-700/60`, elevated shadow, accessible keyboard navigation).
+   - `context-menu.tsx`: Radix UI ContextMenu styled identically to match Obsidian Dark theme with support for Submenus, Checkboxes, Radio items, and keyboard shortcuts.
+- **Modular Presentation (`features/study-logs/presentation/cockpit/`):**
+   - `cockpit-task-menu.tsx`: Pure, reusable menu items component providing `TaskMenuItems` and `CategoryMenuItems`. Designed with generic item primitives (`Item`, `Separator`, `Label`) so the exact same menu items render seamlessly within both `<DropdownMenuContent>` (3-dots button trigger) and `<ContextMenuContent>` (right-click trigger).
+   - Fully supports all task and category operations: status toggles (In Progress / Complete / Reopen), challenge-day move targets (with Past-day move guards via `validateMoveTaskChallengeDay`), editing, and locked past-day deletion safeguards.
+- **Cockpit Tasks Section Refactored (`cockpit-tasks-section.tsx`):**
+   - Removed legacy manual `contextMenu` React state (`{ x, y, type, task, category }`).
+   - Removed manual coordinate calculators and window resize/scroll listeners (`openCategoryMenuFromButton`, `handleCategoryContextMenu`, `openTaskMenuFromButton`, `handleTaskContextMenu`).
+   - Removed the legacy absolute-positioned `<div>` (`style={{ top: contextMenu.y, left: contextMenu.x }}`).
+   - Wrapped category headers and task items in `<ContextMenu modal={false}>` with `<ContextMenuTrigger asChild>`.
+   - Converted 3-dots action buttons to `<DropdownMenu modal={false}>` with `<DropdownMenuTrigger asChild>`.
+   - Radix Popper / Floating UI (`modal={false}`) continuously tracks trigger positions during container and ancestor scrolling and dynamically recalculates positioning during resolution changes and window resizing.
+- **Quality Gates Verified:**
+   - `features/study-logs/presentation/cockpit/cockpit-task-menu.test.tsx`: 5 unit tests verifying task status transitions, challenge-day move options, past-day delete lockdown, and category menu actions.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (95 test files, 1053/1053 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
 - **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
