@@ -94,11 +94,6 @@ describe("ChallengeOverviewTab", () => {
             deficitSeconds: 0,
          },
       ],
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: false,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

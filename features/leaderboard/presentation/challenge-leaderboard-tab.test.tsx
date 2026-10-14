@@ -128,11 +128,6 @@ describe("ChallengeLeaderboardTab", () => {
             deficitSeconds: 100_800,
          },
       ],
-      punishmentWall: {
-         punishmentPfpUrl: "/assets/punishment_pfp.jpg",
-         flaggedMembers: [],
-         isEventCompleted: false,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

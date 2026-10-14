@@ -131,11 +131,6 @@ const challenge: ChallengeScoreboardViewModel = {
       ratioPercentageB: 50,
    },
    standings: [],
-   punishmentWall: {
-      punishmentPfpUrl: "/fallback-avatar.png",
-      flaggedMembers: [],
-      isEventCompleted: false,
-   },
    currentUser: {
       isLoggedIn: false,
       isEnrolled: false,

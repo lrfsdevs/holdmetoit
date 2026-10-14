@@ -77,11 +77,6 @@ const mockScoreboard = {
       ratioPercentageB: 50,
    },
    standings: [],
-   punishmentWall: {
-      punishmentPfpUrl: null,
-      flaggedMembers: [],
-      isEventCompleted: false,
-   },
    currentUser: {
       isLoggedIn: false,
       isEnrolled: false,

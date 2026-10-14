@@ -1,5 +1,4 @@
 import { prisma } from "@/core/db";
-import { calculateRemainingDeficit } from "@/features/leaderboard/domain/deficit";
 import {
    calculateInclusiveDaysRemaining,
    sumLoggedSeconds,
@@ -24,7 +23,6 @@ import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
 import type {
    ChallengeScoreboardViewModel,
-   FlaggedPunishmentMember,
    ParticipantPaceStatus,
    ScoreboardMatchHeader,
    ScoreboardStandingEntry,
@@ -396,67 +394,6 @@ export function buildScoreboardViewModel(
 
    // 5. Punishment Wall data (FEAT-PUN-02, FEAT-PUN-03, FEAT-PUN-01)
    const isEventCompleted = status === "COMPLETED";
-   const defaultPunishmentPfp = "/assets/punishment_pfp.jpg";
-
-   const flaggedMembers: FlaggedPunishmentMember[] = [];
-
-   for (const p of challenge.participants) {
-      const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
-      const hoursDeficitSeconds = calculateRemainingDeficit(
-         p.targetSeconds,
-         totalLoggedSeconds
-      );
-
-      const punishmentRecords = p.punishmentRecords ?? [];
-      const isPardoned =
-         p.status === "EXCUSED" ||
-         punishmentRecords.some((record) => record.isPardoned);
-      const isExplicitlyPunished =
-         p.status === "PUNISHED" ||
-         punishmentRecords.some((record) => !record.isPardoned);
-
-      // Locked results are the source of truth; before lock the wall previews
-      // live deficit catch-up members.
-      const shouldFlag = isResultsLocked
-         ? isPardoned || isExplicitlyPunished
-         : isPardoned || isExplicitlyPunished || hoursDeficitSeconds > 0;
-
-      if (shouldFlag) {
-         const team = p.teamId ? teamLookup.get(p.teamId) : null;
-
-         let statusBadge: "Catch-Up" | "Punished" | "Excused" = "Catch-Up";
-         if (isPardoned) {
-            statusBadge = "Excused";
-         } else if (isExplicitlyPunished || isEventCompleted) {
-            statusBadge = "Punished";
-         }
-
-         flaggedMembers.push({
-            participantId: p.id,
-            userId: p.userId,
-            displayName:
-               p.user.displayName ??
-               p.user.name ??
-               p.user.username ??
-               "Anonymous",
-            username: p.user.username,
-            image: p.user.image,
-            teamName: team?.name ?? "Unassigned",
-            teamIcon: team?.iconEmoji ?? "⏳",
-            hoursDeficitSeconds,
-            hoursDeficitClock: formatSecondsToClock(hoursDeficitSeconds),
-            isPardoned,
-            pardonReason:
-               punishmentRecords.find((record) => record.isPardoned)
-                  ?.pardonReason ?? null,
-            statusBadge,
-         });
-      }
-   }
-
-   // Sort flagged members by deficit descending
-   flaggedMembers.sort((a, b) => b.hoursDeficitSeconds - a.hoursDeficitSeconds);
-
    const currentUserParticipant = currentUserId
       ? challenge.participants.find((p) => p.userId === currentUserId)
       : undefined;
@@ -505,11 +442,6 @@ export function buildScoreboardViewModel(
       teams,
       matchHeader,
       standings,
-      punishmentWall: {
-         punishmentPfpUrl: challenge.punishmentPfpUrl ?? defaultPunishmentPfp,
-         flaggedMembers,
-         isEventCompleted,
-      },
       currentUser: {
          isLoggedIn: Boolean(currentUserId),
          isEnrolled: Boolean(currentUserParticipant),

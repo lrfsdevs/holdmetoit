@@ -96,11 +96,6 @@ function buildChallenge(
          ratioPercentageB: 0,
       },
       standings: [buildStanding()],
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: true,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

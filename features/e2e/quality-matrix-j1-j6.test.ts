@@ -125,9 +125,6 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
          expect(spectatorView.heroImageUrl).toBe(
             "/assets/challenge_hero_battle.jpg"
          );
-         expect(spectatorView.punishmentWall.punishmentPfpUrl).toBe(
-            "/prototype/assets/punishment_pfp.jpg"
-         );
 
          // 2. User clicks 'Login with Discord' and Discord profile is mapped
          const discordProfile = {

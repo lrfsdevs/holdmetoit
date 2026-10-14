@@ -59,27 +59,6 @@ export interface ScoreboardStandingEntry {
    dailyLogs?: Record<string, number>;
 }
 
-export interface FlaggedPunishmentMember {
-   participantId: string;
-   userId: string;
-   displayName: string;
-   username: string | null;
-   image: string | null;
-   teamName: string;
-   teamIcon: string | null;
-   hoursDeficitSeconds: number;
-   hoursDeficitClock: string;
-   isPardoned: boolean;
-   pardonReason: string | null;
-   statusBadge: "Catch-Up" | "Punished" | "Excused";
-}
-
-export interface PunishmentWallData {
-   punishmentPfpUrl: string;
-   flaggedMembers: FlaggedPunishmentMember[];
-   isEventCompleted: boolean;
-}
-
 export interface ChallengeScoreboardViewModel {
    id: string;
    title: string;
@@ -100,7 +79,6 @@ export interface ChallengeScoreboardViewModel {
    teams: ScoreboardTeam[];
    matchHeader: ScoreboardMatchHeader;
    standings: ScoreboardStandingEntry[];
-   punishmentWall: PunishmentWallData;
    currentUser: {
       isLoggedIn: boolean;
       isEnrolled: boolean;
