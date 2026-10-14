@@ -1,8 +1,8 @@
 # ISSUES.md — Project Audit & Known Issues Tracker
 
-> **Audited:** 2026-10-10 · **Branch:** `krish` (commit `a32220b`)  
-> **Method:** Full codebase inspection — config, schema, routes, features, domain, tests, security  
-> **Total Findings:** 32 (5 critical · 10 medium · 12 low · 5 feature suggestions)
+> **Audited:** 2026-10-10 · **Architectural Audit Update:** 2026-10-14 · **Branch:** `afnan-jr`  
+> **Method:** Full codebase inspection — config, schema, routes, features, domain, tests, security & Next.js architecture (dead code, import traps, DRY, complexity)  
+> **Total Findings:** 46 (10 critical · 16 medium · 15 low · 5 feature suggestions)
 
 ---
 
@@ -120,18 +120,18 @@ The enrollment modal previously collected a `leaveDays` input from participants,
 
 ---
 
-### 10. Missing `not-found.tsx` and `error.tsx` Files — Law L9 Gaps
+### 10. ✅ Resolved (Session 99) — Missing `not-found.tsx` and `error.tsx` Files — Law L9 Gaps
 
 | Route                                             | `loading.tsx` | `error.tsx` | `not-found.tsx` |
 | ------------------------------------------------- | ------------- | ----------- | --------------- |
-| `app/` (root)                                     | ✅            | ✅          | ❌ **Missing**  |
-| `app/admin/`                                      | ✅            | ❌          | ❌              |
-| `app/admin/challenges/new/`                       | ❌            | ❌          | ❌              |
-| `app/challenge/[id]/`                             | ✅            | ❌          | ❌              |
-| `app/challenge/[id]/participant/[participantId]/` | ✅            | ✅          | ❌              |
-| `app/challenges/`                                 | ✅            | ❌          | ❌              |
+| `app/` (root)                                     | ✅            | ✅          | ✅              |
+| `app/admin/`                                      | ✅            | ✅          | ✅              |
+| `app/admin/challenges/new/`                       | ✅            | ✅          | ✅              |
+| `app/challenge/[id]/`                             | ✅            | ✅          | ✅              |
+| `app/challenge/[id]/participant/[participantId]/` | ✅            | ✅          | ✅              |
+| `app/challenges/`                                 | ✅            | ✅          | ✅              |
 
-Law L9 requires **Loading, Empty, and Error** states for every view. The root `error.tsx` catches unhandled errors globally, but route-specific `error.tsx` boundaries would prevent full-page crashes and give better UX. `not-found.tsx` files are needed for dynamic `[id]` routes especially.
+**Resolution (Session 99):** Implemented comprehensive localized error and not-found boundaries across all Next.js App Router route segments. Added contextual `error.tsx` with error logging and retry actions, dynamic `not-found.tsx` boundaries for non-existent entities, missing skeletons (`loading.tsx`), and a hardened root `global-error.tsx`. Verified with 14 unit tests in `components/state/route-boundaries.test.tsx`.
 
 ---
 
@@ -301,6 +301,184 @@ Most models use `@default(cuid())` but `Category` and `Task` use `@default(uuid(
 
 ---
 
+## 🏗️ Architectural Audit (2026-10-14) — Dead Code, Layer Inversions, DRY & Complexity
+
+### 33. The 5,302-Line Mega "God Component" (`CockpitTasksSection`) — 🔴 Critical / High
+
+`features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx` contains 5,302 lines of code (237 KB) managing 21 separate `useState` hooks.
+
+**Problems:**
+
+- **Too Many Responsibilities:** Concurrently manages HTML5 drag-and-drop category/task reordering, context menu positioning, 4 inline modals (add task, edit task, edit category, delete category), IndexedDB local mutation queuing (`task-idb.ts`), background sync scheduling (`task-sync.service.ts`), server action dispatching, date calculation, and full task rendering for both Daily and Weekly boards in a single JSX return.
+- **Wrong Architectural Slice:** Located in `features/study-logs/presentation/cockpit/` rather than `features/tasks/presentation/`, violating feature-first vertical slicing (`features/tasks/` has zero presentation components).
+- **Render Performance Thrashing:** Every local keystroke or drag-over state change forces virtual DOM re-evaluation of all 5,300 lines of component tree.
+
+**Fix:** Relocate to `features/tasks/presentation/` and decompose into modular components: `useTaskDragAndDrop()` hook, `useTaskSyncState()` hook, `<DailyTaskBoard />`, `<WeeklyTaskBoard />`, and `<TaskModals />`.
+
+---
+
+### 34. Dead Computation & Serialization of `punishmentWall` — 🔴 Critical / High
+
+`features/leaderboard/data/leaderboard-data.ts` lines 102–136, 535–563, and 612–616.
+
+**Problem:** The `punishment-wall.tsx` UI was deleted in commit `88779bd`. However, `buildScoreboardViewModel` continues to run an $O(N)$ loop over every participant in the challenge to construct `flaggedMembers`, sorts by deficit, and embeds `punishmentWall` inside `ChallengeScoreboardViewModel`.
+Zero UI components render `scoreboard.punishmentWall`. It executes unused CPU loops on every page load and transfers dead serialized JSON payload across the Server-to-Client component boundary on `/challenge/[id]`.
+
+**Fix:** Remove `punishmentWall` from `ChallengeScoreboardViewModel` and eliminate the `flaggedMembers` loop from `buildScoreboardViewModel`.
+
+---
+
+### 35. Clean Architecture Layer Inversion: Domain Modules Importing from Data Repositories — 🔴 Critical / High
+
+`features/wrapped/domain/wrapped.ts` L10–13, `features/participant-stats/domain/participant-stats.ts` L1, and `features/participant-stats/domain/participant-stats.types.ts` L1.
+
+**Problem:** Pure domain files violate **Law L7: Pure Domain Isolation (Inward Dependency Rule)** by importing view model types (`ChallengeScoreboardViewModel`, `ScoreboardStandingEntry`) directly from `features/leaderboard/data/leaderboard-data.ts`.
+`leaderboard-data.ts` imports `@/core/db` (Prisma) and `next/cache`. When pure domain calculation modules depend on data repositories, they invert Clean Architecture inward dependencies and risk dragging Node.js database modules into browser/test execution contexts.
+
+**Fix:** Extract `ScoreboardStandingEntry`, `ChallengeScoreboardViewModel`, and `ScoreboardTeam` into `features/leaderboard/domain/leaderboard.types.ts`. Both repositories and domain modules should import inwards to `domain/`.
+
+---
+
+### 36. Monolithic Client Chunk on `/challenge/[id]` (No Dynamic Code Splitting) — 🔴 Critical / High
+
+`features/challenges/presentation/challenge-view.tsx` L10–16.
+
+**Problem:** `ChallengeView` statically imports all 5 tabs and modals: `ChallengeManageTab` (1,407 lines), `ChallengeLeaderboardTab` (1,391 lines), `EventAuditTab` (576 lines), and `ChallengeWrappedModal` (1,487 lines).
+When an unauthenticated guest spectator visits `/challenge/:id`, the browser downloads, parses, and compiles over 4,000 lines of admin roster management and wrapped story code in the primary client chunk, hurting mobile Core Web Vitals (LCP/INP).
+
+**Fix:** Code-split `ChallengeManageTab`, `EventAuditTab`, and `ChallengeWrappedModal` using Next.js `dynamic()` with skeleton fallbacks so spectators only load the Overview and Leaderboard code.
+
+---
+
+### 37. Sequential Waterfall Data Fetching on Root Homepage (`app/page.tsx`) — 🔴 Critical / High
+
+`app/page.tsx` L40–86.
+
+**Problem:** The home page executes 4 separate, sequential `await` queries during Server Component rendering:
+
+1. `getParticipantCockpit`
+2. `getUserCategorizedTasks`
+3. `findLatestAvailableChallenge`
+4. `findLatestCompletedChallengeForWrapped` + `getChallengeScoreboard`
+
+Each query waits for the preceding database roundtrip to complete, multiplying database latency and delaying Time To First Byte (TTFB) on the primary entry route.
+
+**Fix:** Batch independent queries concurrently using `Promise.all`:
+
+```typescript
+const [cockpit, userTasks, upcomingChallenge, eligibleWrapped] =
+   await Promise.all([
+      userId
+         ? getParticipantCockpit(userId, searchParams?.challenge)
+         : Promise.resolve(null),
+      userId ? getUserCategorizedTasks(userId) : Promise.resolve(null),
+      userId
+         ? findLatestAvailableChallenge().catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
+         : Promise.resolve(null),
+   ]);
+```
+
+---
+
+### 38. Hand-Rolled Non-Accessible Modal Dialogs Duplicated Across 6+ Components — 🟠 Medium
+
+Found in `admin-hours-override-modal.tsx`, `admin-target-override-modal.tsx`, `daily-hours-modal.tsx`, `enrollment-modal.tsx`, `feedback-dialog.tsx`, and `challenge-feedback-dialog.tsx`.
+
+**Problem:** Every dialog reimplements hand-rolled `fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm ...` styling.
+
+- Zero portal rendering: modals placed inside containers with CSS transforms or overflow clip break fixed positioning.
+- Missing accessibility: no `role="dialog"`, `aria-modal="true"`, focus trapping, or body scroll locking.
+- Duplicated feedback alert banners: `<div className="... bg-[#22c55e]/10 ...">` copy-pasted across 4+ dialogs.
+
+**Fix:** Implement a shared accessible Obsidian `<Modal>` component in `components/ui/modal.tsx` wrapping Radix Dialog with portal rendering, focus lock, and escape handling.
+
+---
+
+### 39. Inverted Architectural Coupling: `core/` Depending on Feature Slice — 🟠 Medium
+
+`core/storage/supabase-storage.ts` L3–10 imports from `features/challenges/domain/punishment-pfp.ts`.
+
+**Problem:** Infrastructure code (`core/`) imports business domain logic (`buildChallengeImageObjectPath`, `extractManagedObjectPath`, `isChallengeImagePurpose`, `ChallengeImagePurpose`, `PunishmentPfpExt`) from a specific feature slice (`features/challenges`). Concurrently, `features/challenges/api/challenge-admin.actions.ts` imports `getStorageUrlConfig` from `core/storage`.
+This creates circular cross-layer coupling and prevents `core/storage` from remaining generic infrastructure.
+
+**Fix:** Keep `core/storage/supabase-storage.ts` purely generic (accepting `bucket`, `path`, and buffer), and relocate challenge image URL and path validation into `features/challenges/data/challenge-storage.ts`.
+
+---
+
+### 40. Client Components Importing Directly from Server Data Repositories — 🟠 Medium
+
+Found in `challenge-manage-tab.tsx`, `challenge-overview-tab.tsx`, `challenge-view.tsx`, `challenges-list-view.tsx`, `challenge-leaderboard-tab.tsx`, and `home-cockpit-view.tsx`.
+
+**Problem:** Client Components (`"use client"`) import TypeScript view model types directly from repository files (`data/leaderboard-data.ts`, `data/cockpit-data.ts`, `data/challenge.repository.ts`).
+Because view model types are co-located in server data files containing Prisma queries and `next/cache`, any accidental value import leaks server modules or triggers bundling errors.
+
+**Fix:** Relocate view model contracts into `domain/*.types.ts` so presentation files only import types from safe, pure domain boundaries.
+
+---
+
+### 41. Dynamic `await import()` in Client Event Handlers as a Bundling Band-Aid — 🟠 Medium
+
+`features/study-logs/presentation/admin-hours-override-modal.tsx` L305, L371 and `features/challenges/presentation/admin-target-override-modal.tsx` L150.
+
+**Problem:** Form submission handlers invoke inline `await import("@/features/study-logs/api/admin-override.actions")` and `await import("@/features/challenges/api/challenge-admin.actions")`. Dynamic imports inside event handlers indicate bundler resolution cycles and introduce network failure points during user actions.
+
+**Fix:** Statically import Server Actions at module top level, ensuring Server Action files do not import client presentation code.
+
+---
+
+### 42. Fractured Action Result Contracts Across Slices — 🟠 Medium
+
+Found in `challenge-admin.actions.ts` (`AdminActionResult<T>`), `enroll-participant.actions.ts` (`EnrollActionResult`), `log-study-time.actions.ts` (`ActionResult`), `task.actions.ts` (`TaskActionResult<T>`), and `wrapped.actions.ts` (`WrappedActionResult`).
+
+**Problem:** Server action response shapes are inconsistent: most return `{ ok: true, data } | { ok: false, code, message }`, but `task.actions.ts` returns `{ success: boolean, data, error }`. This forces client components to check `result.ok` in some forms and `result.success` in others, preventing shared toast or error alert handling.
+
+**Fix:** Standardize on a single discriminated union contract in `core/types/action-result.ts` (`ActionResult<T> = { ok: true; data: T } | { ok: false; code: string; message: string }`).
+
+---
+
+### 43. Duplicated Discord Dispatch Services & Typings — 🟠 Medium
+
+`features/feedback/data/discord-feedback.service.ts` L19–37 and `features/wrapped/data/challenge-feedback.service.ts` L12–21.
+
+**Problem:** `DiscordEmbed`, `DiscordEmbedField`, and `DiscordSendResult` are declared identically in both services. Both implement duplicate fetch calls to `https://discord.com/api/v10/channels/:id/messages` with bot token authorization and response parsing.
+
+**Fix:** Consolidate Discord REST dispatch and embed types into `core/discord/discord-client.ts`.
+
+---
+
+### 44. 17 Phantom `revalidatePath("/dashboard")` Calls — 🟡 Low
+
+Found in `challenge-admin.actions.ts` (5 calls), `task.actions.ts` (7 calls), `admin-override.actions.ts` (2 calls), `log-study-time.actions.ts` (1 call), and `enroll-participant.actions.ts` (1 call).
+
+**Problem:** The `/dashboard` route was migrated to `/` (`app/page.tsx`). Calling `revalidatePath("/dashboard")` does nothing, providing a false impression of cache invalidation while failing to revalidate the home page.
+
+**Fix:** Replace all instances of `revalidatePath("/dashboard")` with `revalidatePath("/")` or cache-tag invalidation (`invalidateTags`).
+
+---
+
+### 45. Duplicate Search & Clear Input Pattern — 🟡 Low
+
+Found in `challenges-list-view.tsx` L317–341, `challenge-overview-tab.tsx` L317–341, `challenge-manage-tab.tsx` L885–905, and `event-audit-tab.tsx` L210–230.
+
+**Problem:** An identical 25-line JSX block rendering an Obsidian search input with absolute-positioned magnifying glass and clear button is copy-pasted across 4 tab components.
+
+**Fix:** Extract into reusable `<SearchInput>` component in `components/ui/search-input.tsx`.
+
+---
+
+### 46. Universal Time & Clock Formatting Housed Inside Feature Slice — 🟡 Low
+
+`features/study-logs/domain/duration.ts`.
+
+**Problem:** Duration math (`formatSecondsToClock`, `parseDurationToSeconds`) is imported by `features/challenges`, `features/leaderboard`, `features/participant-stats`, and `features/wrapped`. Housing a core domain utility in `features/study-logs` creates cross-feature coupling across all slices.
+
+**Fix:** Promote `duration.ts` to `core/domain/duration.ts` or `core/time/duration.ts`.
+
+---
+
 ## 💡 Feature / QoL Improvement Suggestions
 
 ### 28. Challenge Status Badge Everywhere
@@ -329,28 +507,30 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 
 | Category                        | Count  |
 | ------------------------------- | ------ |
-| 🔴 Critical (blocks production) | 2      |
-| 🟠 Medium (functional issues)   | 4      |
-| 🟡 Low (hardening / QoL)        | 9      |
+| 🔴 Critical (blocks production) | 7      |
+| 🟠 Medium (functional issues)   | 10     |
+| 🟡 Low (hardening / QoL)        | 11     |
 | 💡 Feature suggestions          | 5      |
-| **Total open findings**         | **20** |
+| **Total open findings**         | **33** |
 
-> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Three-Condition Invariant); Session 101 — #8 (Decimal hours eliminated), #15 (Dual team modeling consolidated); Session 104 — #3 (Discord Summary copy removed); Session 105 — #9 (`leaveDays` budget implemented & D6 resolved).
+> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Three-Condition Invariant); Session 99 — #10 (Route boundaries coverage); Session 101 — #8 (Decimal hours eliminated), #15 (Dual team modeling consolidated); Session 104 — #3 (Discord Summary copy removed); Session 105 — #9 (`leaveDays` budget implemented & D6 resolved).
 
 ### Recommended Fix Order
 
-1. **#1** — Lock Results bug (challenge finalization + `resultsLockedAt` column)
-2. **#4** — Schema drift (generate catch-up migration files)
-3. ~~**#5** — `npm audit fix` for high-severity CVEs~~ ✅ done (Session 81)
-4. **#12** — Add missing Prisma foreign key indexes
-5. **#3** — Restore deleted P0 UIs (Punishment Wall, PFP download, Pardon)
-6. **#6** — Remove hardcoded seed challenge ID
-7. **#7** — Fix fire-and-forget DB write in auth callback
-8. **#10** — Add missing `error.tsx` / `not-found.tsx` route files
-9. **#13** — Fix Tailwind content purge paths
-10.   **#15** — Consolidate dual team-membership modeling
-11.   **#23** — Add missing TSConfig flags (`forceConsistentCasingInFileNames`)
-12.   Everything else in priority order
+1. **#1** — Lock Results bug (challenge finalization + `resultsLockedAt` column) ✅ done
+2. **#37** — Parallelize `app/page.tsx` home page queries via `Promise.all`
+3. **#35** — Fix Clean Architecture layer inversion: move `ChallengeScoreboardViewModel` into domain types
+4. **#34** — Prune `punishmentWall` dead calculation loop and payload from scoreboard serializer
+5. **#36** — Code-split `/challenge/[id]` admin/audit/wrapped tabs using `next/dynamic`
+6. **#12** — Add missing Prisma foreign key indexes
+7. **#33** — Decompose 5,302-line `CockpitTasksSection` and relocate to `features/tasks/presentation/`
+8. **#4** — Schema drift (generate catch-up migration files)
+9. **#3** — Restore deleted P0 UIs (Punishment Wall, Pardon Modal)
+10.   **#6** — Remove hardcoded seed challenge ID fallback
+11.   **#38** — Implement shared accessible Obsidian `<Modal>` primitive in `components/ui/`
+12.   **#44** — Clean up 17 phantom `revalidatePath("/dashboard")` calls
+13.   **#23** — Add missing TSConfig flags (`forceConsistentCasingInFileNames`)
+14.   Everything else in priority order
 
 ---
 
