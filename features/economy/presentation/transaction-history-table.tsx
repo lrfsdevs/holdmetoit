@@ -58,35 +58,35 @@ export function TransactionHistoryTable({
       switch (type) {
          case "STUDY_REWARD":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 px-2 py-0.5 text-[11px] font-medium text-[#22c55e]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-credit/15 border border-economy-credit/30 px-2 py-0.5 text-[11px] font-medium text-economy-credit">
                   <ArrowUpRight className="h-3 w-3" />
                   Study Reward
                </span>
             );
          case "CHALLENGE_REWARD":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#f59e0b]/15 border border-[#f59e0b]/30 px-2 py-0.5 text-[11px] font-medium text-[#f59e0b]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-gold/15 border border-economy-gold/30 px-2 py-0.5 text-[11px] font-medium text-economy-gold">
                   <ArrowUpRight className="h-3 w-3" />
                   Challenge Bonus
                </span>
             );
          case "WAGER_SETTLEMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#a855f7]/15 border border-[#a855f7]/30 px-2 py-0.5 text-[11px] font-medium text-[#a855f7]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-adjustment/15 border border-economy-adjustment/30 px-2 py-0.5 text-[11px] font-medium text-economy-adjustment">
                   <Coins className="h-3 w-3" />
                   Wager Settlement
                </span>
             );
          case "WAGER_RESERVATION":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#f59e0b]/15 border border-[#f59e0b]/30 px-2 py-0.5 text-[11px] font-medium text-[#f59e0b]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reserved/15 border border-economy-reserved/30 px-2 py-0.5 text-[11px] font-medium text-economy-reserved">
                   <Lock className="h-3 w-3" />
                   Wager Reservation
                </span>
             );
          case "TRADE_RESERVATION":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#f59e0b]/15 border border-[#f59e0b]/30 px-2 py-0.5 text-[11px] font-medium text-[#f59e0b]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reserved/15 border border-economy-reserved/30 px-2 py-0.5 text-[11px] font-medium text-economy-reserved">
                   <Lock className="h-3 w-3" />
                   Reservation
                </span>
@@ -94,37 +94,36 @@ export function TransactionHistoryTable({
          case "WAGER_REFUND":
          case "TRADE_REFUND":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#3b82f6]/15 border border-[#3b82f6]/30 px-2 py-0.5 text-[11px] font-medium text-[#3b82f6]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-refund/15 border border-economy-refund/30 px-2 py-0.5 text-[11px] font-medium text-economy-refund">
                   <RotateCcw className="h-3 w-3" />
                   Refund
                </span>
             );
          case "ADMIN_ADJUSTMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#a855f7]/15 border border-[#a855f7]/30 px-2 py-0.5 text-[11px] font-medium text-[#a855f7]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-adjustment/15 border border-economy-adjustment/30 px-2 py-0.5 text-[11px] font-medium text-economy-adjustment">
                   <ShieldAlert className="h-3 w-3" />
                   Admin Adjustment
                </span>
             );
          case "REVERSAL":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#ec4899]/15 border border-[#ec4899]/30 px-2 py-0.5 text-[11px] font-medium text-[#ec4899]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reversal/15 border border-economy-reversal/30 px-2 py-0.5 text-[11px] font-medium text-economy-reversal">
                   <RotateCcw className="h-3 w-3" />
                   Reversal
                </span>
             );
          case "GACHA_PURCHASE":
-         case "WAGER_SETTLEMENT":
          case "TRADE_SETTLEMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-[#f43f5e]/15 border border-[#f43f5e]/30 px-2 py-0.5 text-[11px] font-medium text-[#f43f5e]">
+               <span className="inline-flex items-center gap-1 rounded-full bg-economy-debit/15 border border-economy-debit/30 px-2 py-0.5 text-[11px] font-medium text-economy-debit">
                   <ArrowDownLeft className="h-3 w-3" />
                   Debit
                </span>
             );
          default:
             return (
-               <span className="inline-flex items-center rounded-full bg-[#292929] px-2 py-0.5 text-[11px] font-medium text-[#d1d1d1]">
+               <span className="inline-flex items-center rounded-full bg-obsidian-nested px-2 py-0.5 text-[11px] font-medium text-obsidian-textMuted">
                   {type}
                </span>
             );
@@ -134,33 +133,35 @@ export function TransactionHistoryTable({
    function renderAmountDelta(tx: TransactionItem) {
       if (tx.totalDelta > 0) {
          return (
-            <span className="font-semibold text-[#22c55e] tabular-nums">
+            <span className="font-semibold text-economy-credit tabular-nums">
                +{tx.totalDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.totalDelta < 0) {
          return (
-            <span className="font-semibold text-[#f43f5e] tabular-nums">
+            <span className="font-semibold text-economy-debit tabular-nums">
                {tx.totalDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.reservedDelta > 0) {
          return (
-            <span className="font-semibold text-[#f59e0b] tabular-nums">
+            <span className="font-semibold text-economy-gold tabular-nums">
                Locked {tx.reservedDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.reservedDelta < 0) {
          return (
-            <span className="font-semibold text-[#3b82f6] tabular-nums">
+            <span className="font-semibold text-economy-refund tabular-nums">
                Unlocked {Math.abs(tx.reservedDelta).toLocaleString()} coins
             </span>
          );
       }
-      return <span className="text-[#868686] tabular-nums">0 coins</span>;
+      return (
+         <span className="text-obsidian-textDim tabular-nums">0 coins</span>
+      );
    }
 
    function formatDate(dateInput: string | Date) {
@@ -176,21 +177,21 @@ export function TransactionHistoryTable({
    }
 
    return (
-      <div className="rounded-2xl border border-[#292929] bg-[#141414] p-4 sm:p-6 shadow-xl mt-6">
+      <div className="rounded-2xl border border-obsidian-border bg-obsidian-card p-4 sm:p-6 shadow-xl mt-6">
          {/* Table Header & Filter Tabs */}
-         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#242424] pb-4">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-borderSubtle pb-4">
             <div>
-               <h3 className="text-base font-semibold text-[#f4f3f6]">
+               <h3 className="text-base font-semibold text-obsidian-text">
                   Append-Only Currency Ledger
                </h3>
-               <p className="text-xs text-[#868686]">
+               <p className="text-xs text-obsidian-textDim">
                   Immutable audit log of all coin rewards, debits, and
                   reservations
                </p>
             </div>
 
             {onFilterChange && (
-               <div className="flex flex-wrap gap-1.5 bg-[#0d0d0d] p-1 rounded-xl border border-[#242424]">
+               <div className="flex flex-wrap gap-1.5 bg-obsidian-bg p-1 rounded-xl border border-obsidian-borderSubtle">
                   {filterOptions.map((opt) => (
                      <button
                         key={opt.id}
@@ -198,8 +199,8 @@ export function TransactionHistoryTable({
                         onClick={() => onFilterChange(opt.id)}
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors ${
                            activeFilter === opt.id
-                              ? "bg-[#292929] text-[#f4f3f6] shadow"
-                              : "text-[#868686] hover:text-[#d1d1d1]"
+                              ? "bg-obsidian-nested text-obsidian-text shadow"
+                              : "text-obsidian-textDim hover:text-obsidian-textMuted"
                         }`}
                      >
                         {opt.label}
@@ -212,13 +213,13 @@ export function TransactionHistoryTable({
          {/* Zero-State (Empty State) */}
          {transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#292929] bg-[#1c1c1c] text-[#868686] mb-3">
+               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-obsidian-border bg-obsidian-elevated text-obsidian-textDim mb-3">
                   <Coins className="h-6 w-6" />
                </div>
-               <h4 className="text-sm font-semibold text-[#f4f3f6]">
+               <h4 className="text-sm font-semibold text-obsidian-text">
                   No Transactions Yet
                </h4>
-               <p className="text-xs text-[#868686] max-w-sm mt-1">
+               <p className="text-xs text-obsidian-textDim max-w-sm mt-1">
                   Log study time during any active challenge to earn coins at
                   100 coins per hour. Every credit will be recorded here
                   automatically.
@@ -230,7 +231,7 @@ export function TransactionHistoryTable({
                <div className="hidden sm:block overflow-x-auto mt-4">
                   <table className="w-full text-left text-xs">
                      <thead>
-                        <tr className="border-b border-[#242424] text-[#868686]">
+                        <tr className="border-b border-obsidian-borderSubtle text-obsidian-textDim">
                            <th className="pb-3 font-medium">Type</th>
                            <th className="pb-3 font-medium">Description</th>
                            <th className="pb-3 font-medium">Date & Time</th>
@@ -239,26 +240,26 @@ export function TransactionHistoryTable({
                            </th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-[#1f1f1f]">
+                     <tbody className="divide-y divide-obsidian-subtle">
                         {transactions.map((tx) => (
                            <tr
                               key={tx.id}
-                              className="hover:bg-[#1a1a1a] transition-colors"
+                              className="hover:bg-obsidian-cardHover transition-colors"
                            >
                               <td className="py-3.5 pr-3">
                                  {renderTypeBadge(tx.type)}
                               </td>
                               <td className="py-3.5 pr-3">
-                                 <p className="font-medium text-[#f4f3f6]">
+                                 <p className="font-medium text-obsidian-text">
                                     {tx.description}
                                  </p>
                                  {tx.sourceType && (
-                                    <span className="text-[10px] text-[#868686]">
+                                    <span className="text-[10px] text-obsidian-textDim">
                                        Source: {tx.sourceType}
                                     </span>
                                  )}
                               </td>
-                              <td className="py-3.5 pr-3 text-[#868686]">
+                              <td className="py-3.5 pr-3 text-obsidian-textDim">
                                  {formatDate(tx.createdAt)}
                               </td>
                               <td className="py-3.5 text-right font-mono">
@@ -275,7 +276,7 @@ export function TransactionHistoryTable({
                   {transactions.map((tx) => (
                      <div
                         key={tx.id}
-                        className="rounded-xl border border-[#242424] bg-[#181818] p-3 flex flex-col gap-2"
+                        className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-subtle p-3 flex flex-col gap-2"
                      >
                         <div className="flex items-center justify-between">
                            {renderTypeBadge(tx.type)}
@@ -283,10 +284,10 @@ export function TransactionHistoryTable({
                               {renderAmountDelta(tx)}
                            </span>
                         </div>
-                        <p className="text-xs text-[#f4f3f6] font-medium">
+                        <p className="text-xs text-obsidian-text font-medium">
                            {tx.description}
                         </p>
-                        <div className="flex items-center justify-between text-[10px] text-[#868686] border-t border-[#222222] pt-2">
+                        <div className="flex items-center justify-between text-[10px] text-obsidian-textDim border-t border-obsidian-borderSubtle pt-2">
                            <span>
                               {tx.sourceType ? `Source: ${tx.sourceType}` : ""}
                            </span>
@@ -298,7 +299,7 @@ export function TransactionHistoryTable({
 
                {/* Pagination Controls */}
                {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-[#242424] pt-4 mt-4 text-xs text-[#868686]">
+                  <div className="flex items-center justify-between border-t border-obsidian-borderSubtle pt-4 mt-4 text-xs text-obsidian-textDim">
                      <span>
                         Showing {transactions.length} of {pagination.totalCount}{" "}
                         entries
@@ -310,11 +311,11 @@ export function TransactionHistoryTable({
                            size="sm"
                            disabled={pagination.page <= 1}
                            onClick={() => onPageChange(pagination.page - 1)}
-                           className="h-7 w-7 p-0 rounded-lg border-[#292929] bg-[#181818]"
+                           className="h-7 w-7 p-0 rounded-lg border-obsidian-border bg-obsidian-subtle"
                         >
                            <ChevronLeft className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="px-2 font-medium text-[#d1d1d1]">
+                        <span className="px-2 font-medium text-obsidian-textMuted">
                            {pagination.page} / {pagination.totalPages}
                         </span>
                         <Button
@@ -323,7 +324,7 @@ export function TransactionHistoryTable({
                            size="sm"
                            disabled={pagination.page >= pagination.totalPages}
                            onClick={() => onPageChange(pagination.page + 1)}
-                           className="h-7 w-7 p-0 rounded-lg border-[#292929] bg-[#181818]"
+                           className="h-7 w-7 p-0 rounded-lg border-obsidian-border bg-obsidian-subtle"
                         >
                            <ChevronRight className="h-3.5 w-3.5" />
                         </Button>

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    placeWagerAction,
@@ -100,10 +102,10 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
    };
 
    return (
-      <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] via-zinc-950/70 to-zinc-950 p-5 shadow-lg backdrop-blur-md">
+      <div className="rounded-xl border border-economy-gold/20 bg-gradient-to-br from-economy-gold/[0.04] via-obsidian-card to-obsidian-bg p-5 shadow-lg backdrop-blur-md">
          {/* Reward Header */}
          {hasReward && (
-            <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200">
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-economy-gold/30 bg-economy-gold/10 px-4 py-2.5 text-xs text-economy-goldLight">
                <div className="flex items-center gap-2">
                   <span className="text-base">🏆</span>
                   <span>
@@ -113,7 +115,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                   </span>
                </div>
                {challenge.isRewardSettled && (
-                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                  <span className="rounded bg-economy-credit/20 px-2 py-0.5 text-[10px] font-semibold text-economy-credit">
                      Settled
                   </span>
                )}
@@ -123,18 +125,18 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
          {/* Betting Section */}
          {isBettingEnabled && (
             <div>
-               <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+               <div className="flex items-center justify-between pb-3 border-b border-obsidian-borderSubtle">
                   <div className="flex items-center gap-2">
-                     <CoinsIcon className="h-5 w-5 text-amber-400" />
-                     <h3 className="text-sm font-semibold text-zinc-100">
+                     <CoinsIcon className="h-5 w-5 text-economy-gold" />
+                     <h3 className="text-sm font-semibold text-obsidian-text">
                         Virtual Coin Wagers
                      </h3>
                   </div>
                   <span
                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
                         isUpcoming
-                           ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                           : "bg-zinc-800 text-zinc-400"
+                           ? "bg-economy-gold/20 text-economy-goldLight border border-economy-gold/30"
+                           : "bg-obsidian-elevated text-obsidian-textDim"
                      }`}
                   >
                      {isUpcoming ? "Betting Open" : "Betting Locked (Kickoff)"}
@@ -145,7 +147,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                   <form onSubmit={handlePlaceBet} className="mt-4 space-y-4">
                      {/* Team Picker */}
                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">
+                        <label className="block text-xs font-medium text-obsidian-textMuted mb-2">
                            Back a Team to Win
                         </label>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -158,8 +160,8 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     onClick={() => setSelectedTeamId(team.id)}
                                     className={`flex items-center gap-2 rounded-lg border p-2.5 text-left text-xs transition-all ${
                                        isSelected
-                                          ? "border-amber-400 bg-amber-500/15 text-zinc-100 shadow-sm"
-                                          : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                                          ? "border-economy-gold bg-economy-gold/15 text-obsidian-text shadow-sm"
+                                          : "border-obsidian-border bg-obsidian-elevated/60 text-obsidian-textDim hover:border-obsidian-borderHighlight hover:text-obsidian-textMuted"
                                     }`}
                                  >
                                     <span className="text-sm">
@@ -178,18 +180,18 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
 
                      {/* Stake Input */}
                      <div>
-                        <div className="flex justify-between text-xs font-medium text-zinc-300 mb-1.5">
+                        <div className="flex justify-between text-xs font-medium text-obsidian-textMuted mb-1.5">
                            <span>Stake (Coins)</span>
-                           <span className="text-zinc-400">
+                           <span className="text-obsidian-textDim">
                               Potential Payout:{" "}
-                              <strong className="text-amber-300">
+                              <strong className="text-economy-goldLight">
                                  {stake * 2} Coins
                               </strong>{" "}
                               (1:1 Odds)
                            </span>
                         </div>
                         <div className="flex items-center gap-2">
-                           <input
+                           <Input
                               type="number"
                               min={MIN_WAGER_STAKE}
                               max={MAX_WAGER_STAKE}
@@ -200,7 +202,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     Math.max(0, parseInt(e.target.value) || 0)
                                  )
                               }
-                              className="w-32 rounded-lg border border-zinc-800 bg-zinc-900/90 px-3 py-1.5 text-sm text-zinc-100 focus:border-amber-500 focus:outline-none"
+                              className="w-32 h-9 rounded-lg border-obsidian-border bg-obsidian-elevated px-3 py-1.5 text-sm text-obsidian-text focus:border-economy-gold"
                            />
                            <div className="flex flex-wrap gap-1">
                               {[10, 50, 100, 250, 500].map((preset) => (
@@ -210,8 +212,8 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     onClick={() => setStake(preset)}
                                     className={`rounded px-2 py-1 text-[11px] font-medium transition ${
                                        stake === preset
-                                          ? "bg-amber-500 text-zinc-950"
-                                          : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700"
+                                          ? "bg-economy-gold text-obsidian-bg font-semibold"
+                                          : "bg-obsidian-elevated text-obsidian-textDim hover:bg-obsidian-nested"
                                     }`}
                                  >
                                     {preset}
@@ -225,30 +227,32 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                         <div
                            className={`rounded-lg p-2.5 text-xs ${
                               message.type === "success"
-                                 ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
-                                 : "bg-rose-500/10 border border-rose-500/30 text-rose-300"
+                                 ? "bg-economy-credit/10 border border-economy-credit/30 text-economy-credit"
+                                 : "bg-destructive/10 border border-destructive/30 text-destructive"
                            }`}
                         >
                            {message.text}
                         </div>
                      )}
 
-                     <button
+                     <Button
                         type="submit"
+                        variant="gold"
+                        size="default"
                         disabled={
                            isLoading || !challenge.currentUser?.isLoggedIn
                         }
-                        className="w-full rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:from-amber-400 hover:to-amber-500 disabled:opacity-50"
+                        className="w-full text-xs font-semibold"
                      >
                         {isLoading
                            ? "Reserving Coins..."
                            : !challenge.currentUser?.isLoggedIn
                              ? "Log in to Place Wager"
                              : `Place ${stake} Coin Wager`}
-                     </button>
+                     </Button>
                   </form>
                ) : (
-                  <p className="mt-3 text-xs text-zinc-400">
+                  <p className="mt-3 text-xs text-obsidian-textDim">
                      Betting is closed for this tournament. Wagers were locked
                      when the challenge started.
                   </p>
@@ -256,23 +260,23 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
 
                {/* Existing user bets */}
                {userWagers.length > 0 && (
-                  <div className="mt-5 border-t border-zinc-800/80 pt-4">
-                     <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2.5">
+                  <div className="mt-5 border-t border-obsidian-borderSubtle pt-4">
+                     <h4 className="text-xs font-semibold uppercase tracking-wider text-obsidian-textDim mb-2.5">
                         Your Tournament Wagers ({userWagers.length})
                      </h4>
                      <div className="space-y-2">
                         {userWagers.map((w) => (
                            <div
                               key={w.id}
-                              className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5 text-xs"
+                              className="flex items-center justify-between rounded-lg border border-obsidian-border bg-obsidian-elevated/50 p-2.5 text-xs"
                            >
                               <div>
-                                 <span className="font-semibold text-zinc-200">
+                                 <span className="font-semibold text-obsidian-text">
                                     {w.team?.name ||
                                        w.targetTeam?.name ||
                                        "Team"}
                                  </span>
-                                 <p className="text-[11px] text-zinc-400">
+                                 <p className="text-[11px] text-obsidian-textDim">
                                     Stake: {w.stake} coins → Payout:{" "}
                                     {w.payout ??
                                        w.potentialPayout ??
@@ -283,12 +287,12 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                               <span
                                  className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
                                     w.status === "ACCEPTED"
-                                       ? "bg-amber-500/20 text-amber-300"
+                                       ? "bg-economy-gold/20 text-economy-goldLight"
                                        : w.status === "WON"
-                                         ? "bg-emerald-500/20 text-emerald-300"
+                                         ? "bg-economy-credit/20 text-economy-credit"
                                          : w.status === "LOST"
-                                           ? "bg-rose-500/20 text-rose-300"
-                                           : "bg-blue-500/20 text-blue-300"
+                                           ? "bg-destructive/20 text-destructive"
+                                           : "bg-economy-refund/20 text-economy-refund"
                                  }`}
                               >
                                  {w.status === "ACCEPTED"

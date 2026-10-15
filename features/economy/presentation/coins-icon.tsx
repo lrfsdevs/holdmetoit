@@ -23,17 +23,17 @@ export function CoinsIcon({
             cx="8"
             cy="8"
             r="6"
-            fill="#f59e0b"
+            fill="hsl(var(--economy-gold))"
             fillOpacity="0.15"
-            stroke="#f59e0b"
+            stroke="hsl(var(--economy-gold))"
          />
          <path
             d="M18.09 10.37A6 6 0 1 1 10.34 18"
-            stroke="#fbbf24"
+            stroke="hsl(var(--economy-gold-light))"
             strokeDasharray="2 2"
          />
-         <path d="M7 6h2v4H7z" fill="#f59e0b" stroke="none" />
-         <path d="M7 7.5h2" stroke="#0d0d0d" strokeWidth="1.5" />
+         <path d="M7 6h2v4H7z" fill="hsl(var(--economy-gold))" stroke="none" />
+         <path d="M7 7.5h2" stroke="hsl(var(--background))" strokeWidth="1.5" />
       </svg>
    );
 }

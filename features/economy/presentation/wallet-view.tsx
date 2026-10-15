@@ -103,11 +103,11 @@ export function WalletView({
    if (loading && !summary) {
       return (
          <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
-            <Loader2 className="h-8 w-8 animate-spin text-[#f59e0b] mb-3" />
-            <h3 className="text-sm font-semibold text-[#f4f3f6]">
+            <Loader2 className="h-8 w-8 animate-spin text-economy-gold mb-3" />
+            <h3 className="text-sm font-semibold text-obsidian-text">
                Loading Virtual Wallet...
             </h3>
-            <p className="text-xs text-[#868686] mt-1">
+            <p className="text-xs text-obsidian-textDim mt-1">
                Retrieving balances and transaction ledger.
             </p>
          </div>
@@ -116,20 +116,20 @@ export function WalletView({
 
    if (error && !summary) {
       return (
-         <div className="rounded-2xl border border-[#ef4444]/30 bg-[#141414] p-6 text-center max-w-md mx-auto my-12">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ef4444]/10 text-[#ff5757] mx-auto mb-3">
+         <div className="rounded-2xl border border-destructive/30 bg-obsidian-card p-6 text-center max-w-md mx-auto my-12">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive mx-auto mb-3">
                <AlertCircle className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-[#f4f3f6]">
+            <h3 className="text-sm font-semibold text-obsidian-text">
                Unable to Load Wallet
             </h3>
-            <p className="text-xs text-[#868686] mt-1">{error}</p>
+            <p className="text-xs text-obsidian-textDim mt-1">{error}</p>
             <Button
                type="button"
                variant="outline"
                size="sm"
                onClick={() => void loadData(1, activeFilter)}
-               className="mt-4 gap-1.5 text-xs rounded-xl border-[#333333] bg-[#1c1c1c] text-[#d1d1d1]"
+               className="mt-4 gap-1.5 text-xs rounded-xl border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-obsidian-text"
             >
                <RefreshCw className="h-3.5 w-3.5" />
                Retry

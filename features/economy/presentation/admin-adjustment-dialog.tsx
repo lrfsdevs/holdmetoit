@@ -78,25 +78,25 @@ export function AdminAdjustmentDialog({
 
    return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-         <div className="relative w-full max-w-md rounded-2xl border border-[#292929] bg-[#141414] text-[#f4f3f6] p-6 shadow-2xl">
+         <div className="relative w-full max-w-md rounded-2xl border border-obsidian-border bg-obsidian-card text-obsidian-text p-6 shadow-2xl">
             <button
                type="button"
                onClick={onClose}
                disabled={isPending}
-               className="absolute top-4 right-4 text-[#868686] hover:text-[#f4f3f6] transition-colors"
+               className="absolute top-4 right-4 text-obsidian-textDim hover:text-obsidian-text transition-colors"
             >
                <X className="h-4 w-4" />
             </button>
 
             <div className="flex items-center gap-2.5 mb-4">
-               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e08a32]/30 bg-[#e08a32]/10 text-[#e08a32]">
+               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-economy-admin/30 bg-economy-admin/10 text-economy-admin">
                   <ShieldAlert className="h-5 w-5" />
                </div>
                <div>
-                  <h3 className="text-base font-semibold text-[#f4f3f6]">
+                  <h3 className="text-base font-semibold text-obsidian-text">
                      Administrative Balance Adjustment
                   </h3>
-                  <p className="text-xs text-[#868686]">
+                  <p className="text-xs text-obsidian-textDim">
                      Manually credit or debit coins for moderation or glitch
                      corrections.
                   </p>
@@ -105,13 +105,13 @@ export function AdminAdjustmentDialog({
 
             <form onSubmit={handleSubmit} className="space-y-4">
                {error && (
-                  <div className="rounded-xl border border-[#ef4444]/30 bg-[#ef4444]/10 p-3 text-xs text-[#ff5757]">
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                      {error}
                   </div>
                )}
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#d1d1d1]">
+                  <label className="text-xs font-medium text-obsidian-textMuted">
                      Target User ID
                   </label>
                   <Input
@@ -119,12 +119,12 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setTargetUserId(e.target.value)}
                      placeholder="e.g. usr_cl..."
                      disabled={isPending}
-                     className="bg-[#1c1c1c] border-[#292929] text-xs h-9 text-[#f4f3f6]"
+                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text"
                   />
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#d1d1d1]">
+                  <label className="text-xs font-medium text-obsidian-textMuted">
                      Amount (Positive to credit, Negative to debit)
                   </label>
                   <Input
@@ -134,15 +134,15 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setAmount(e.target.value)}
                      placeholder="e.g. 50 or -25"
                      disabled={isPending}
-                     className="bg-[#1c1c1c] border-[#292929] text-xs h-9 text-[#f4f3f6] font-mono"
+                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text font-mono"
                   />
-                  <p className="text-[11px] text-[#868686]">
+                  <p className="text-[11px] text-obsidian-textDim">
                      Example: +50 adds 50 coins; -50 deducts 50 coins.
                   </p>
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#d1d1d1]">
+                  <label className="text-xs font-medium text-obsidian-textMuted">
                      Audit Reason
                   </label>
                   <Input
@@ -150,26 +150,27 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setReason(e.target.value)}
                      placeholder="e.g. Compensation for crashed YPT sync"
                      disabled={isPending}
-                     className="bg-[#1c1c1c] border-[#292929] text-xs h-9 text-[#f4f3f6]"
+                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text"
                   />
                </div>
 
-               <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#242424]">
+               <div className="flex items-center justify-end gap-2 pt-2 border-t border-obsidian-borderSubtle">
                   <Button
                      type="button"
                      variant="ghost"
                      size="sm"
                      onClick={onClose}
                      disabled={isPending}
-                     className="text-xs text-[#868686] hover:text-[#f4f3f6]"
+                     className="text-xs text-obsidian-textDim hover:text-obsidian-text"
                   >
                      Cancel
                   </Button>
                   <Button
                      type="submit"
+                     variant="admin"
                      size="sm"
                      disabled={isPending}
-                     className="bg-[#e08a32] hover:bg-[#c97420] text-black font-semibold text-xs h-9 px-4 rounded-xl"
+                     className="text-xs h-9 px-4 rounded-xl"
                   >
                      {isPending ? (
                         <>

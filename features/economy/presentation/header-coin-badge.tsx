@@ -20,7 +20,7 @@ export function HeaderCoinBadge({
          href="/wallet"
          title={`Virtual Wallet: ${coins.toLocaleString()} available coins`}
          data-testid="header-coin-badge"
-         className={`flex items-center gap-1.5 rounded-full border border-[#f59e0b]/40 bg-[#f59e0b]/10 hover:bg-[#f59e0b]/20 px-2.5 py-1 text-xs font-semibold text-[#f59e0b] transition-colors shrink-0 group ${className}`}
+         className={`flex items-center gap-1.5 rounded-full border border-economy-gold/40 bg-economy-gold/10 hover:bg-economy-gold/20 px-2.5 py-1 text-xs font-semibold text-economy-gold transition-colors shrink-0 group ${className}`}
       >
          <CoinsIcon className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
          <span className="tabular-nums">{coins.toLocaleString()}</span>

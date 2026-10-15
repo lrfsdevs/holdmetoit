@@ -56,7 +56,9 @@ vi.mock("@/core/db", () => ({
       },
       dailyStudyLog: {
          findUnique: vi.fn(),
+         findFirst: vi.fn(),
          upsert: vi.fn(),
+         update: vi.fn(),
       },
       task: {
          findMany: vi.fn(),
@@ -325,8 +327,15 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
             isOverride: false,
             participant: { challengeId: "chal_1" },
          } as never);
+         vi.mocked(prisma.dailyStudyLog.findFirst).mockResolvedValue({
+            id: "log_1",
+            participantId: "part_1",
+            durationSeconds: 0,
+            isOverride: false,
+            participant: { challengeId: "chal_1" },
+         } as never);
 
-         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({
+         vi.mocked(prisma.dailyStudyLog.update).mockResolvedValue({
             id: "log_1",
             participantId: "part_1",
             durationSeconds: 13500, // 03:45:00

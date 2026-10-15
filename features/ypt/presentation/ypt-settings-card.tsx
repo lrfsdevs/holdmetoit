@@ -107,16 +107,16 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
    };
 
    return (
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5 shadow-lg backdrop-blur-md">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-zinc-800">
+      <div className="rounded-2xl border border-obsidian-border bg-obsidian-card p-5 shadow-lg backdrop-blur-md">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-obsidian-borderSubtle">
             <div>
-               <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 font-bold text-xs">
+               <h3 className="text-sm font-semibold text-obsidian-text flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-economy-gold/10 text-economy-gold font-bold text-xs">
                      Y
                   </span>
                   Yeolpumta (YPT) Study Integration
                </h3>
-               <p className="text-xs text-zinc-400 mt-1">
+               <p className="text-xs text-obsidian-textDim mt-1">
                   Connect your Yeolpumta ID for companion bot synchronization
                   and automated coin rewards.
                </p>
@@ -126,7 +126,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                variant="outline"
                size="sm"
                onClick={() => setIsManualImportOpen(!isManualImportOpen)}
-               className="text-xs border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-zinc-100"
+               className="text-xs border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-obsidian-text"
             >
                <Upload className="h-3.5 w-3.5 mr-1.5" />
                Manual Sync
@@ -144,14 +144,15 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                   placeholder="Enter YPT Username / ID (e.g. StudyMaster)"
                   value={yptId}
                   onChange={(e) => setYptId(e.target.value)}
-                  className="rounded-xl border-zinc-800 bg-zinc-900 text-xs text-zinc-100 placeholder:text-zinc-500"
+                  className="rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-obsidian-text placeholder:text-obsidian-textDim"
                />
             </div>
             <Button
                type="submit"
+               variant="gold"
                size="sm"
                disabled={isLinking || !yptId.trim()}
-               className="w-full sm:w-auto rounded-xl bg-amber-500 text-zinc-950 font-semibold hover:bg-amber-400 text-xs gap-1.5 shrink-0"
+               className="w-full sm:w-auto rounded-xl text-xs gap-1.5 shrink-0"
             >
                {isLinking ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -166,8 +167,8 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
             <div
                className={`mt-3 flex items-center gap-2 rounded-lg p-2.5 text-xs ${
                   linkMessage.type === "success"
-                     ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-                     : "bg-rose-500/10 border border-rose-500/20 text-rose-300"
+                     ? "bg-economy-credit/10 border border-economy-credit/20 text-economy-credit"
+                     : "bg-destructive/10 border border-destructive/20 text-destructive"
                }`}
             >
                {linkMessage.type === "success" ? (
@@ -181,25 +182,25 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
          {/* Manual Import Section */}
          {isManualImportOpen && (
-            <div className="mt-4 pt-4 border-t border-zinc-800/80">
-               <h4 className="text-xs font-semibold text-zinc-300 mb-2">
+            <div className="mt-4 pt-4 border-t border-obsidian-borderSubtle">
+               <h4 className="text-xs font-semibold text-obsidian-textMuted mb-2">
                   Manual Activity Session Import
                </h4>
                <form onSubmit={handleManualImport} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                      <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">
+                        <label className="text-[11px] text-obsidian-textDim block mb-1">
                            Date
                         </label>
                         <Input
                            type="date"
                            value={manualDate}
                            onChange={(e) => setManualDate(e.target.value)}
-                           className="rounded-lg border-zinc-800 bg-zinc-900 text-xs text-zinc-200"
+                           className="rounded-lg border-obsidian-border bg-obsidian-elevated text-xs text-obsidian-text"
                         />
                      </div>
                      <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">
+                        <label className="text-[11px] text-obsidian-textDim block mb-1">
                            Study Duration
                         </label>
                         <div className="flex items-center gap-1">
@@ -211,9 +212,11 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                               onChange={(e) =>
                                  setManualHours(parseInt(e.target.value) || 0)
                               }
-                              className="rounded-lg border-zinc-800 bg-zinc-900 text-xs text-zinc-200 w-16"
+                              className="rounded-lg border-obsidian-border bg-obsidian-elevated text-xs text-obsidian-text w-16"
                            />
-                           <span className="text-xs text-zinc-500">h</span>
+                           <span className="text-xs text-obsidian-textDim">
+                              h
+                           </span>
                            <Input
                               type="number"
                               min={0}
@@ -222,13 +225,15 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                               onChange={(e) =>
                                  setManualMinutes(parseInt(e.target.value) || 0)
                               }
-                              className="rounded-lg border-zinc-800 bg-zinc-900 text-xs text-zinc-200 w-16"
+                              className="rounded-lg border-obsidian-border bg-obsidian-elevated text-xs text-obsidian-text w-16"
                            />
-                           <span className="text-xs text-zinc-500">m</span>
+                           <span className="text-xs text-obsidian-textDim">
+                              m
+                           </span>
                         </div>
                      </div>
                      <div>
-                        <label className="text-[11px] text-zinc-400 block mb-1">
+                        <label className="text-[11px] text-obsidian-textDim block mb-1">
                            Subject (Optional)
                         </label>
                         <Input
@@ -236,7 +241,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                            placeholder="e.g. Physics"
                            value={manualSubject}
                            onChange={(e) => setManualSubject(e.target.value)}
-                           className="rounded-lg border-zinc-800 bg-zinc-900 text-xs text-zinc-200"
+                           className="rounded-lg border-obsidian-border bg-obsidian-elevated text-xs text-obsidian-text"
                         />
                      </div>
                   </div>
@@ -245,8 +250,8 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                      <div
                         className={`flex items-center gap-2 rounded-lg p-2.5 text-xs ${
                            importMessage.type === "success"
-                              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-                              : "bg-rose-500/10 border border-rose-500/20 text-rose-300"
+                              ? "bg-economy-credit/10 border border-economy-credit/20 text-economy-credit"
+                              : "bg-destructive/10 border border-destructive/20 text-destructive"
                         }`}
                      >
                         {importMessage.type === "success" ? (
@@ -261,12 +266,13 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                   <div className="flex justify-end gap-2">
                      <Button
                         type="submit"
+                        variant="gold"
                         size="sm"
                         disabled={
                            isImporting ||
                            (manualHours === 0 && manualMinutes === 0)
                         }
-                        className="rounded-xl bg-amber-500 text-zinc-950 font-semibold hover:bg-amber-400 text-xs"
+                        className="rounded-xl text-xs font-semibold"
                      >
                         {isImporting ? "Importing..." : "Import & Reward"}
                      </Button>

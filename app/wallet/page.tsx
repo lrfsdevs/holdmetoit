@@ -40,7 +40,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
 
    if (!session?.user?.id) {
       return (
-         <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6]">
+         <div className="min-h-screen bg-obsidian-bg text-obsidian-text">
             <AppHeader
                user={null}
                isActualAdmin={false}
@@ -48,13 +48,13 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
                subtitle="Economy"
             />
             <main className="mx-auto max-w-lg px-4 py-20 text-center">
-               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f59e0b]/30 bg-[#f59e0b]/10 text-[#f59e0b] mx-auto mb-4">
+               <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-economy-gold/30 bg-economy-gold/10 text-economy-gold mx-auto mb-4">
                   <CoinsIcon className="h-7 w-7" />
                </div>
-               <h1 className="text-xl font-bold font-display text-[#f4f3f6]">
+               <h1 className="text-xl font-bold font-display text-obsidian-text">
                   Sign In to Access Your Wallet
                </h1>
-               <p className="text-xs text-[#868686] mt-2 mb-6 max-w-sm mx-auto">
+               <p className="text-xs text-obsidian-textDim mt-2 mb-6 max-w-sm mx-auto">
                   Sign in with Discord to view your available coin balance,
                   track proportional study rewards, and review your ledger
                   transactions.
@@ -73,7 +73,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
    ]);
 
    return (
-      <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6]">
+      <div className="min-h-screen bg-obsidian-bg text-obsidian-text">
          <AppHeader
             user={session.user}
             isActualAdmin={isActualAdmin}
@@ -82,10 +82,10 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
          />
          <main className="mx-auto max-w-5xl px-3 sm:px-6 py-6 sm:py-8">
             <div className="mb-6">
-               <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[#f4f3f6]">
+               <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-obsidian-text">
                   Economy & Wallet
                </h1>
-               <p className="text-xs text-[#868686] mt-1">
+               <p className="text-xs text-obsidian-textDim mt-1">
                   Earn virtual coins proportionally for every eligible study
                   second. Spend, reserve, and track all currency activity.
                </p>

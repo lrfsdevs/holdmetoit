@@ -65,6 +65,13 @@ export const logEvents = {
    economyAdminAdjusted: "economy.admin_adjusted",
    economyReconciliationDiscrepancy: "economy.reconciliation_discrepancy",
 
+   pokemonSpeciesUpserted: "pokemon.species_upserted",
+   pokemonGranted: "pokemon.granted",
+   pokemonQueryFailed: "pokemon.query_failed",
+   pokemonAcquisitionFailed: "pokemon.acquisition_failed",
+   pokemonAcquired: "pokemon.acquired",
+   pokemonBannerUpdated: "pokemon.banner_updated",
+
    appError: "app.error",
 } as const;
 

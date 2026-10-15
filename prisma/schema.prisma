@@ -52,6 +52,11 @@ model User {
   ledgerTransactions          LedgerTransaction[]
   studyRewardRecords          StudyRewardRecord[]
   wagers                      Wager[]
+  pokemonCollection           UserPokemon[]
+  createdBanners              PokemonBanner[]       @relation("BannerCreator")
+  updatedBanners              PokemonBanner[]       @relation("BannerUpdater")
+  bannerPityStates            UserBannerPity[]
+  pokemonAcquisitions         PokemonAcquisition[]
 }
 
 model Account {
@@ -629,5 +634,184 @@ model Wager {
   @@index([teamId])
 }
 
+// ---------------------------------------------------------------------------
+// Pokémon Catalogue & Collection (Phase 3)
+// ---------------------------------------------------------------------------
 
+enum PokemonRarity {
+  NORMAL
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHICAL
+}
 
+enum PokemonAcquisitionSource {
+  SEED
+  ADMIN_GRANT
+  STUDY_MILESTONE
+  CHALLENGE_REWARD
+  GACHA
+  EVENT
+  TRADE
+}
+
+model PokemonSpecies {
+  id             String        @id @default(cuid())
+  pokedexNumber  Int           @unique
+  name           String        @db.VarChar(128)
+  slug           String        @unique @db.VarChar(128)
+  rarity         PokemonRarity @default(NORMAL)
+  primaryType    String        @db.VarChar(32)
+  secondaryType  String?       @db.VarChar(32)
+  description    String        @db.Text
+  classification String?       @db.VarChar(128)
+  imageUrl       String?       @db.VarChar(512)
+  spriteUrl      String?       @db.VarChar(512)
+  spriteGifUrl   String?       @db.VarChar(512)
+  baseHp         Int           @default(0)
+  baseAttack     Int           @default(0)
+  baseDefense    Int           @default(0)
+  generation     Int           @default(1)
+  isLegendary    Boolean       @default(false)
+  isMythical     Boolean       @default(false)
+  isBaby         Boolean       @default(false)
+  isAvailable    Boolean       @default(true)
+  sourceId       String?       @db.VarChar(64)
+  referenceUrl   String?       @db.VarChar(512)
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  instances      UserPokemon[]
+  featuredBanners PokemonBanner[]       @relation("FeaturedBannerSpecies")
+  acquisitions    PokemonAcquisition[]
+
+  @@index([pokedexNumber])
+  @@index([rarity])
+  @@index([primaryType])
+  @@index([generation])
+  @@index([isLegendary])
+  @@index([isMythical])
+  @@index([isAvailable])
+  @@index([name])
+}
+
+model UserPokemon {
+  id                String                   @id @default(cuid())
+  userId            String
+  speciesId         String
+  obtainedAt        DateTime                 @default(now())
+  source            PokemonAcquisitionSource @default(SEED)
+  sourceReferenceId String?                  @db.VarChar(128)
+  idempotencyKey    String?                  @unique @db.VarChar(255)
+  nickname          String?                  @db.VarChar(64)
+  isFavorite        Boolean                  @default(false)
+  metadata          Json?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species           PokemonSpecies           @relation(fields: [speciesId], references: [id], onDelete: Restrict)
+  acquisitions      PokemonAcquisition[]
+
+  @@index([userId, isFavorite])
+  @@index([userId, speciesId])
+  @@index([speciesId])
+  @@index([obtainedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Pokémon Acquisition & Banners (Phase 4)
+// ---------------------------------------------------------------------------
+
+enum PokemonBannerStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+  DISABLED
+}
+
+model PokemonBanner {
+  id                String              @id @default(cuid())
+  name              String              @db.VarChar(128)
+  slug              String              @unique @db.VarChar(128)
+  description       String              @db.Text
+  bannerType        String              @default("STANDARD") @db.VarChar(64)
+  status            PokemonBannerStatus @default(DRAFT)
+  startAt           DateTime
+  endAt             DateTime?
+  pullCost          Int
+  allowedQuantities Int[]               @default([1])
+  version           Int                 @default(1)
+  featuredSpeciesId String?
+  rarityRates       Json
+  poolFilter        Json?
+  pityConfig        Json?
+  duplicatePolicy   String              @default("ADD_COPY") @db.VarChar(64)
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  featuredSpecies   PokemonSpecies?     @relation("FeaturedBannerSpecies", fields: [featuredSpeciesId], references: [id], onDelete: SetNull)
+  createdBy         User?               @relation("BannerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy         User?               @relation("BannerUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  acquisitions      PokemonAcquisition[]
+  userPityStates    UserBannerPity[]
+
+  @@index([status, startAt, endAt])
+  @@index([slug])
+  @@index([featuredSpeciesId])
+}
+
+model UserBannerPity {
+  id                 String        @id @default(cuid())
+  userId             String
+  bannerId           String
+  pityCount          Int           @default(0)
+  guaranteedFeatured Boolean       @default(false)
+  lastPullAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  banner             PokemonBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bannerId])
+  @@index([userId])
+  @@index([bannerId])
+}
+
+model PokemonAcquisition {
+  id                  String         @id @default(cuid())
+  userId              String
+  bannerId            String
+  bannerVersion       Int
+  speciesId           String
+  userPokemonId       String?
+  rarity              PokemonRarity
+  isFeatured          Boolean        @default(false)
+  isDuplicate         Boolean        @default(false)
+  duplicateOutcome    String?        @db.VarChar(128)
+  costPaid            Int
+  ledgerTransactionId String?
+  idempotencyKey      String         @unique @db.VarChar(255)
+  pityCountBefore     Int            @default(0)
+  pityCountAfter      Int            @default(0)
+  pityTriggered       Boolean        @default(false)
+  metadata            Json?
+  createdAt           DateTime       @default(now())
+
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  banner              PokemonBanner  @relation(fields: [bannerId], references: [id], onDelete: Restrict)
+  species             PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Restrict)
+  userPokemon         UserPokemon?   @relation(fields: [userPokemonId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([bannerId, createdAt(sort: Desc)])
+  @@index([speciesId])
+  @@index([ledgerTransactionId])
+}

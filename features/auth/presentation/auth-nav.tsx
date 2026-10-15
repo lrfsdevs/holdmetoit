@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogOut, Shield } from "lucide-react";
+import { BookOpen, Eye, EyeOff, LogOut, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
@@ -309,8 +309,17 @@ export function AppHeader({
                   data-testid="wallet-nav-link"
                   className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
                >
-                  <CoinsIcon className="h-3.5 w-3.5 text-[#f59e0b]" />
+                  <CoinsIcon className="h-3.5 w-3.5 text-economy-gold" />
                   <span>Wallet</span>
+               </Link>
+
+               <Link
+                  href="/pokemon"
+                  data-testid="pokemon-nav-link"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+               >
+                  <BookOpen className="h-3.5 w-3.5 text-rose-400" />
+                  <span>Pokédex</span>
                </Link>
 
                {isDevRole(user?.role) && (
