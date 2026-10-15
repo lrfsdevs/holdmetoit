@@ -5,6 +5,7 @@ import { getChallengeParticipantStats } from "@/features/participant-stats/data/
 import { auth } from "@/core/auth";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { PARTICIPANT_PREVIEW_COOKIE } from "@/features/auth/domain/preview-mode";
 
 vi.mock("next/navigation", () => ({
    notFound: vi.fn(() => {
@@ -128,6 +129,30 @@ describe("ParticipantStatsPage", () => {
       expect(html).toContain("Bob Scholar");
       expect(html).toContain("Winter Battle");
       expect(html).toContain("10:00:00");
+   });
+
+   it("forwards participant preview state to the stats repository", async () => {
+      vi.mocked(auth).mockResolvedValue({
+         user: { id: "admin_1", role: "ADMIN" },
+      } as any);
+      vi.mocked(cookies).mockResolvedValue({
+         get: vi.fn((name: string) =>
+            name === PARTICIPANT_PREVIEW_COOKIE ? { value: "true" } : undefined
+         ),
+      } as any);
+      vi.mocked(getChallengeParticipantStats).mockResolvedValue(
+         mockStats as any
+      );
+
+      await ParticipantStatsPage({
+         params: { id: "chal_1", participantId: "part_1" },
+      });
+
+      expect(getChallengeParticipantStats).toHaveBeenCalledWith(
+         "chal_1",
+         "part_1",
+         expect.objectContaining({ isAdmin: false, isPreviewActive: true })
+      );
    });
 
    it("triggers notFound when participant record is not found", async () => {

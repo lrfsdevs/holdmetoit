@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Shield, Sparkles, Trophy, UserCheck } from "lucide-react";
 
 import { auth } from "@/core/auth";
 import { hasAdminPrivileges } from "@/features/auth/domain/auth-roles";
+import {
+   getEffectiveAdminState,
+   PARTICIPANT_PREVIEW_COOKIE,
+} from "@/features/auth/domain/preview-mode";
 import { AppHeader } from "@/features/auth/presentation/auth-nav";
 
 /** Provides admin authorization and shared layout chrome for admin routes. */
@@ -13,6 +18,8 @@ export default async function AdminLayout({
    children: React.ReactNode;
 }) {
    const session = await auth();
+   const cookieStore = await cookies();
+   const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
    const isDevBypass =
       process.env.NODE_ENV === "development" || !process.env.AUTH_DISCORD_ID;
 
@@ -25,6 +32,15 @@ export default async function AdminLayout({
       !hasAdminPrivileges(session.user.role) &&
       !isDevBypass
    ) {
+      redirect("/");
+   }
+
+   const { isPreviewActive } = getEffectiveAdminState({
+      userRole: session?.user?.role,
+      previewCookie,
+   });
+
+   if (isPreviewActive) {
       redirect("/");
    }
 

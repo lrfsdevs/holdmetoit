@@ -7,6 +7,12 @@ internal (engineering, tooling, and infrastructure) and are shown to admins only
 
 ## 2026-10-15
 
+### Participant preview hides all admin controls
+
+Fixed "Preview as Participant" so admins/devs no longer see admin-side surfaces while previewing: the
+participant-stats host override, the home-page DevBoard link, and the DevBoard nav link now respect the
+preview state, and `/admin` + `/devboard` redirect to `/` while preview is active.
+
 ### Challenge Wrapped kill switch
 
 Placed the Challenge Wrapped experience behind the `challenge_wrapped_v1` feature flag: the dashboard

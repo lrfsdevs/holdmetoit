@@ -220,9 +220,11 @@ This should be an env variable (`NEXT_PUBLIC_LOGROCKET_APP_ID`) and listed in `.
 
 ---
 
-### 19. Missing Test for `preview-mode.ts` Domain Logic
+### 19. ✅ Resolved (Session 109) — Missing Test for `preview-mode.ts` Domain Logic
 
 `features/auth/domain/preview-mode.ts` contains `getEffectiveAdminState()` — core business logic that determines admin/participant view rendering across the entire app. No test file exists. Every other domain file has tests.
+
+**Resolved (Session 109):** added `features/auth/domain/preview-mode.test.ts` covering `isParticipantPreviewEnabled` and every `getEffectiveAdminState` branch (participant, admin, DEV + cookie, `?as=participant`, non-admin + cookie, null role).
 
 ---
 
@@ -476,6 +478,90 @@ Found in `challenges-list-view.tsx` L317–341, `challenge-overview-tab.tsx` L31
 **Problem:** Duration math (`formatSecondsToClock`, `parseDurationToSeconds`) is imported by `features/challenges`, `features/leaderboard`, `features/participant-stats`, and `features/wrapped`. Housing a core domain utility in `features/study-logs` creates cross-feature coupling across all slices.
 
 **Fix:** Promote `duration.ts` to `core/domain/duration.ts` or `core/time/duration.ts`.
+
+---
+
+## 🐛 Report — Participant Preview Mode Leaks Admin / Host Controls (2026-10-15)
+
+> **Branch:** `afnan-jr` · **Scope:** Global Participant Preview (`holdmetoit_preview_as_participant`)
+
+### 47. ✅ Resolved (Session 109) — Preview Mode Truth Source Is Bypassed by Host & Raw-Role Checks
+
+**Symptom:** With "Preview as Participant" active, an ADMIN/DEV user still sees admin-side controls on some pages.
+
+**Root cause:** `getEffectiveAdminState()` (`features/auth/domain/preview-mode.ts:20`) correctly returns `isAdmin = false` during preview, but two paths re-derive admin/host status from the **raw session** and never consult the preview state.
+
+**Resolution (Session 109):**
+
+- **Finding A:** `GetChallengeParticipantStatsOptions` gained `isPreviewActive`; `isEffectiveAdmin` is now `isAdmin || (isHost && !isPreviewActive)` (`participant-stats.repository.ts`). The participant page forwards `isPreviewActive` from `getEffectiveAdminState`, so a previewing host no longer sees **Admin Controls** / **Edit Target** / the target-override modal.
+- **Finding B:** `app/page.tsx` now passes `user={effectiveUser}` (role downgraded to `PARTICIPANT`) to `AppHeader` instead of the raw `session.user`.
+- **Finding C:** the DevBoard nav link in `auth-nav.tsx` is gated with `&& !(isPreviewActive ?? false)`.
+- **Finding D:** `app/admin/layout.tsx` and `app/devboard/layout.tsx` read the preview cookie and `redirect("/")` while preview is active.
+- **Tests:** new `features/auth/domain/preview-mode.test.ts` (also closes #19); preview regression cases added to the participant-stats repository, participant page, header, and home page suites. Verified via `typecheck`, 1,102 green tests, and `build`.
+
+#### Finding A — Host override re-grants admin inside the participant-stats repository (highest impact)
+
+`features/participant-stats/data/participant-stats.repository.ts:170-173`
+
+```ts
+const isHost = Boolean(
+   currentUserId && participant.challenge.hostId === currentUserId
+);
+const isEffectiveAdmin = isAdmin || isHost; // ← ignoring preview
+```
+
+During preview the caller passes `isAdmin: false`, but the previewed user's real `currentUserId` still equals `challenge.hostId`, so `isHost` is `true` and `viewer.isAdmin` becomes `true`. This surfaces:
+
+- `participant-profile-header.tsx:173-182` — literal **"Admin Controls"** link to `?tab=manage`
+- `participant-summary-cards.tsx:89` — **"Edit Target"** action
+- `participant-stats-view.tsx:55` — `AdminTargetOverrideModal`
+
+The existing test `participant-stats.repository.test.ts:154` locks in this behavior ("sets viewer.isAdmin when viewer is admin or host") but has no preview case.
+
+#### Finding B — Home page header receives the raw session user, not the effective user
+
+`app/page.tsx:99` passes `user={session?.user}` while `effectiveUser` (role downgraded to `PARTICIPANT`) is computed at L87-89 and only given to `HomeCockpitView`.
+
+`AppHeader` renders the DevBoard link from the passed role:
+
+```tsx
+// features/auth/presentation/auth-nav.tsx:306
+{
+   isDevRole(user?.role) && <Link href="/devboard">DevBoard</Link>;
+}
+```
+
+Because the home page passes the raw `DEV` role, the **DevBoard nav link stays visible in preview**. The `/challenge/[id]`, `/challenges`, and `/changelog` layouts pass `effectiveUser`, so only `/` leaks this link.
+
+#### Finding C — DevBoard link ignores preview state (defense-in-depth)
+
+`auth-nav.tsx:306` only checks `isDevRole(user?.role)`. Its sibling DEV badge check at L213 is preview-aware (`isDevRole(user.role) && !effectiveIsPreviewActive`), so the DevBoard link is the one header element that trusts raw role. Any caller passing a raw role re-introduces the leak (see Finding B).
+
+#### Finding D — Admin / DevBoard layouts force `isPreviewActive={false}`
+
+`app/admin/layout.tsx:31-32` and `app/devboard/layout.tsx:34-35` hard-code `isPreviewActive={false}` and never read the preview cookie. While previewing, direct navigation to `/admin` or `/devboard` still renders the full console with no "Exit Preview" affordance. This contradicts HANDOFF.md §46 ("all pages render exactly as regular participants see them") — confirm whether admin routes are intentionally exempt.
+
+### Reproduction
+
+1. Sign in as an ADMIN/DEV that is also the host of a challenge.
+2. Click **Preview as Participant** in the header.
+3. Visit `/` → DevBoard nav link is still shown (Finding B).
+4. Open a participant profile from the leaderboard → **Admin Controls** / **Edit Target** visible (Finding A).
+5. Visit `/admin` or `/devboard` directly → full console renders (Finding D).
+
+**Expected:** No Manage/Audit tabs, no host override controls, no DevBoard link, no admin console affordances.
+
+### Impact
+
+Preview is a trust/safety feature: hosts/devs use it to verify the participant experience and to sanity-check what members see. Controls leaking through make the preview unreliable and can expose admin surfaces to a shared screen.
+
+### Recommended Fixes
+
+1. **Finding A:** Pass an explicit preview flag into `getChallengeParticipantStats` (or compute `isAdmin` upstream) and make the host override respect it, e.g. `isEffectiveAdmin = isAdmin || (isHost && !isPreviewActive)`. Update `participant-stats.repository.test.ts` with a preview→non-admin case.
+2. **Finding B:** In `app/page.tsx:99`, pass `user={effectiveUser}`.
+3. **Finding C:** In `auth-nav.tsx`, gate the DevBoard link with `&& !effectiveIsPreviewActive` so it can never trust a raw role.
+4. **Finding D:** Decide the contract — either read `getEffectiveAdminState` in the admin/devboard layouts and redirect when preview is active, or document the exemption.
+5. **Guardrail:** Add `features/auth/domain/preview-mode.test.ts` (already flagged as missing in #19) covering host + preview combinations, so this class of leak is caught by CI.
 
 ---
 
