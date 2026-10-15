@@ -51,6 +51,7 @@ export interface AdminTargetOverrideModalProps {
 
 const COMMON_PRESET_HOURS = [15, 20, 25, 30, 35, 40, 50, 60];
 
+/** Renders the administrator target-hours override modal. */
 export function AdminTargetOverrideModal({
    isOpen,
    onClose,

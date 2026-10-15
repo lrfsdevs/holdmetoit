@@ -87,6 +87,7 @@ function forwardToLogRocket(event: LogEventName, options: LogOptions): void {
       });
 }
 
+/** Emits a structured diagnostic event and forwards eligible client events. */
 export function logEvent(
    level: LogLevel,
    event: LogEventName,
@@ -124,18 +125,22 @@ export function logEvent(
    }
 }
 
+/** Emits a debug-level diagnostic event. */
 export function logDebug(event: LogEventName, options?: LogOptions): void {
    logEvent("debug", event, options);
 }
 
+/** Emits an info-level diagnostic event. */
 export function logInfo(event: LogEventName, options?: LogOptions): void {
    logEvent("info", event, options);
 }
 
+/** Emits a warning-level diagnostic event. */
 export function logWarn(event: LogEventName, options?: LogOptions): void {
    logEvent("warn", event, options);
 }
 
+/** Emits an error-level diagnostic event. */
 export function logError(event: LogEventName, options?: LogOptions): void {
    logEvent("error", event, options);
 }
@@ -147,6 +152,7 @@ export type ScopedLogger = {
    error: (event: LogEventName, options?: Omit<LogOptions, "scope">) => void;
 };
 
+/** Creates a scoped logger that attaches the supplied scope to every event. */
 export function createLogger(scope: string): ScopedLogger {
    return {
       debug: (event, options) =>

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import { ChallengeView } from "./challenge-view";
 
 vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
@@ -100,6 +100,20 @@ vi.mock("@/features/audit/presentation/event-audit-tab", () => ({
       ),
 }));
 
+vi.mock("@/features/wrapped/presentation/challenge-summary-tab", () => ({
+   ChallengeSummaryTab: () =>
+      createElement(
+         "div",
+         { "data-testid": "summary-tab-content" },
+         "Summary Content"
+      ),
+}));
+
+vi.mock("@/features/wrapped/presentation/challenge-wrapped-modal", () => ({
+   ChallengeWrappedModal: () =>
+      createElement("div", { "data-testid": "wrapped-modal" }, "Wrapped Modal"),
+}));
+
 const mockChallenge: ChallengeScoreboardViewModel = {
    id: "chal-1",
    title: "October Study Sprint",
@@ -128,11 +142,6 @@ const mockChallenge: ChallengeScoreboardViewModel = {
       ratioPercentageB: 50,
    },
    standings: [],
-   punishmentWall: {
-      punishmentPfpUrl: "https://example.com/pfp.png",
-      flaggedMembers: [],
-      isEventCompleted: false,
-   },
    currentUser: {
       isLoggedIn: true,
       isEnrolled: true,
@@ -436,6 +445,53 @@ describe("ChallengeView", () => {
          expect(effectCallback).toBeDefined();
          effectCallback!();
          expect(setActiveTabMock).toHaveBeenCalledWith("leaderboard");
+      });
+   });
+
+   describe("Challenge Wrapped flag gating", () => {
+      const lockedChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         resultsLockedAt: "2026-10-08T00:00:00.000Z",
+      };
+
+      it("shows the Summary tab and story popup when the flag is on and results are locked", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: lockedChallenge,
+               isAdmin: false,
+               isWrappedEnabled: true,
+            })
+         );
+
+         expect(html).toContain(">Summary<");
+         expect(html).toContain("Wrapped Modal");
+      });
+
+      it("hides the Summary tab and story popup when the flag is off", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: lockedChallenge,
+               isAdmin: false,
+               isWrappedEnabled: false,
+            })
+         );
+
+         expect(html).not.toContain(">Summary<");
+         expect(html).not.toContain("Wrapped Modal");
+      });
+
+      it("clamps a deep-linked summary tab to overview when the flag is off", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: lockedChallenge,
+               initialTab: "summary",
+               isAdmin: false,
+               isWrappedEnabled: false,
+            })
+         );
+
+         expect(html).toContain("Overview Content");
+         expect(html).not.toContain("Summary Content");
       });
    });
 });

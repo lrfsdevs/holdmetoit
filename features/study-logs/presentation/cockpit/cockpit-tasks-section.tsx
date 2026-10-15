@@ -90,6 +90,7 @@ export interface TaskItem {
    createdAt?: string;
 }
 
+/** Derives the presentation status for a task item. */
 export function getTaskStatus(task: TaskItem): TaskStatus {
    if (task.status) return task.status;
    return task.completed ? "COMPLETED" : "TODO";
@@ -118,6 +119,7 @@ export interface CockpitTasksSectionProps {
    isAdmin?: boolean;
 }
 
+/** Renders the participant's categorized task board and task actions. */
 export function CockpitTasksSection({
    isLoggedIn,
    userId,

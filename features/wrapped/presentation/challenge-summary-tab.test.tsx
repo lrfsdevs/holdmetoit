@@ -5,7 +5,7 @@ import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
    ScoreboardTeam,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 
 const LOCKED_AT = "2026-10-12T00:00:00.000Z";
 
@@ -96,11 +96,6 @@ function buildChallenge(
          ratioPercentageB: 0,
       },
       standings: [buildStanding()],
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: true,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

@@ -13,6 +13,8 @@ import {
 } from "@/features/challenges/data/challenge.repository";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ interface HomePageProps {
    };
 }
 
+/** Loads the participant cockpit and related dashboard content. */
 export default async function HomePage({ searchParams }: HomePageProps) {
    const session = await auth();
    const cookieStore = await cookies();
@@ -37,49 +40,44 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          searchParamAs: searchParams?.as,
       });
 
-   let cockpit = null;
-   if (session?.user?.id) {
-      cockpit = await getParticipantCockpit(
-         session.user.id,
-         searchParams?.challenge
-      );
-   }
+   const userId = session?.user?.id;
+   const [
+      cockpit,
+      fetchedUserTasks,
+      fetchedUpcomingChallenge,
+      eligibleWrapped,
+      isWrappedEnabled,
+   ] = await Promise.all([
+      userId
+         ? getParticipantCockpit(userId, searchParams?.challenge)
+         : Promise.resolve(null),
+      userId
+         ? getUserCategorizedTasks(userId).catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? findLatestAvailableChallenge().catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY)
+         : Promise.resolve(false),
+   ]);
 
-   let userTasks = null;
-   if (session?.user?.id) {
-      try {
-         userTasks =
-            cockpit?.userTasks ??
-            (await getUserCategorizedTasks(session.user.id));
-      } catch {
-         userTasks = null;
-      }
-   }
-
-   let upcomingChallenge = null;
-   if (
-      session?.user?.id &&
-      (!cockpit || cockpit.challengeStatus === "UPCOMING")
-   ) {
-      try {
-         upcomingChallenge = await findLatestAvailableChallenge();
-      } catch {
-         upcomingChallenge = null;
-      }
-   }
+   const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
+   const upcomingChallenge =
+      userId && (!cockpit || cockpit.challengeStatus === "UPCOMING")
+         ? fetchedUpcomingChallenge
+         : null;
 
    let wrappedChallenge = null;
-   if (session?.user?.id) {
+   if (eligibleWrapped && userId && isWrappedEnabled) {
       try {
-         const eligibleChallenge = await findLatestCompletedChallengeForWrapped(
-            session.user.id
+         wrappedChallenge = await getChallengeScoreboard(
+            eligibleWrapped.id,
+            userId
          );
-         if (eligibleChallenge) {
-            wrappedChallenge = await getChallengeScoreboard(
-               eligibleChallenge.id,
-               session.user.id
-            );
-         }
       } catch {
          wrappedChallenge = null;
       }

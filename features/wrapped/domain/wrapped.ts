@@ -10,7 +10,7 @@ import {
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 
 /**
  * Pure wrapped domain (Law L7): window/due math and the story view model

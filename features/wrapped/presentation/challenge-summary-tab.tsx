@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "@/components/state/empty-state";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
 import { Trophy } from "lucide-react";
 import { buildChallengeWrappedViewModel } from "../domain/wrapped";

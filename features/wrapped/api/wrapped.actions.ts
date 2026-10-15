@@ -21,6 +21,7 @@ import {
    saveChallengeFeedback,
    updateChallengeFeedbackDiscordMessageId,
 } from "@/features/wrapped/data/challenge-feedback.repository";
+import { isWrappedFeatureEnabled } from "@/features/wrapped/api/wrapped-flag";
 
 const logger = createLogger("wrapped");
 
@@ -46,6 +47,13 @@ async function markSeen(
    mode: "manual" | "auto"
 ): Promise<WrappedActionResult> {
    try {
+      if (!(await isWrappedFeatureEnabled())) {
+         logger.warn(logEvents.wrappedSeen, {
+            context: { challengeId, mode, reason: "feature_flag_disabled" },
+         });
+         return { ok: true };
+      }
+
       const user = await requireSessionUser();
       const participant = await requireOwnedParticipant(user.id, challengeId);
 
@@ -131,6 +139,14 @@ export async function submitChallengeFeedbackAction(
    rawInput: unknown
 ): Promise<ChallengeFeedbackActionResult> {
    try {
+      if (!(await isWrappedFeatureEnabled())) {
+         return {
+            ok: false,
+            code: "FEATURE_DISABLED",
+            message: "Challenge feedback is temporarily unavailable.",
+         };
+      }
+
       const parsed = submitChallengeFeedbackSchema.safeParse(rawInput);
       if (!parsed.success) {
          return {

@@ -57,6 +57,7 @@ const logStudyTimeSchema = z
 export type ActionResult =
    { ok: true } | { ok: false; code: string; message: string };
 
+/** Validates and persists a participant's daily study log, then invalidates views. */
 export async function logStudyTimeAction(
    input: z.infer<typeof logStudyTimeSchema>
 ): Promise<ActionResult> {

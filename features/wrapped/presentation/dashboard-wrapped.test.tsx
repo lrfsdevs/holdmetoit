@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DashboardWrapped } from "./dashboard-wrapped";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
    ScoreboardTeam,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 
 vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
    markWrappedSeenAction: vi.fn().mockResolvedValue({ ok: true }),
@@ -14,6 +14,15 @@ vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
 
 const NOW = new Date("2026-10-13T00:00:00.000Z");
 const LOCKED_AT = "2026-10-12T00:00:00.000Z";
+
+beforeEach(() => {
+   vi.useFakeTimers();
+   vi.setSystemTime(NOW);
+});
+
+afterEach(() => {
+   vi.useRealTimers();
+});
 
 function buildTeam(overrides: Partial<ScoreboardTeam> = {}): ScoreboardTeam {
    return {
@@ -102,11 +111,6 @@ function buildChallenge(
          ratioPercentageB: 0,
       },
       standings: [buildStanding()],
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: true,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

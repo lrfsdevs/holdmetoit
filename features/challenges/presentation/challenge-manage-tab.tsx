@@ -14,7 +14,6 @@ import {
    Lock,
    Play,
    Plus,
-   RefreshCw,
    Search,
    Trash2,
    User as UserIcon,
@@ -30,7 +29,7 @@ import { DataPagination } from "@/components/ui/data-pagination";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 import {
    deleteChallengeAction,
    kickoffChallengeAction,
@@ -77,6 +76,7 @@ interface TeamFormItem {
    mascotUrl?: string;
 }
 
+/** Renders administrator controls for roster, lifecycle, and challenge settings. */
 export function ChallengeManageTab({
    challenge,
    initialRosterSearch = "",

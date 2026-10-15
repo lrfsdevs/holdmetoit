@@ -10,6 +10,7 @@ interface ProfilePageProps {
    };
 }
 
+/** Resolves the current user's profile route to an enrolled participant page. */
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
    const session = await auth();
 

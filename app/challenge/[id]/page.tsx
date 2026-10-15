@@ -15,6 +15,8 @@ import {
 } from "@/features/challenges/domain/challenge-tabs";
 import { resolveLeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
 import { logError, logEvents } from "@/core/observability/logger";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 interface ChallengePageProps {
    params: {
@@ -30,6 +32,7 @@ interface ChallengePageProps {
    };
 }
 
+/** Loads a challenge scoreboard and resolves its initial tab and view mode. */
 export default async function ChallengePage({
    params,
    searchParams,
@@ -43,6 +46,8 @@ export default async function ChallengePage({
       previewCookie,
       searchParamAs: searchParams?.as,
    });
+
+   const isWrappedEnabled = await isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);
 
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
@@ -65,10 +70,13 @@ export default async function ChallengePage({
       notFound();
    }
 
+   const isSummaryVisible =
+      Boolean(challenge.resultsLockedAt) && isWrappedEnabled;
+
    const initialTab: ChallengeTab = resolveAllowedChallengeTab(
       searchParams?.tab,
       isAdmin,
-      { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
+      { isSummaryVisible }
    );
    const initialLeaderboardViewMode = resolveLeaderboardViewMode(
       searchParams?.view
@@ -89,6 +97,7 @@ export default async function ChallengePage({
          initialRosterSearch={initialRosterSearch}
          initialRosterTeamFilter={initialRosterTeamFilter}
          initialRosterPage={initialRosterPage}
+         isWrappedEnabled={isWrappedEnabled}
       />
    );
 }

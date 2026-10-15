@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    type ChallengeTab,
    DEFAULT_CHALLENGE_TAB,
@@ -25,8 +25,11 @@ interface ChallengeViewProps {
    initialRosterSearch?: string;
    initialRosterTeamFilter?: string;
    initialRosterPage?: number;
+   /** Server-evaluated `challenge_wrapped_v1`. Gates the Summary tab and the wrapped story popup. */
+   isWrappedEnabled?: boolean;
 }
 
+/** Renders the challenge shell and coordinates its active tab. */
 export function ChallengeView({
    challenge,
    initialTab = DEFAULT_CHALLENGE_TAB,
@@ -35,16 +38,20 @@ export function ChallengeView({
    initialRosterSearch = "",
    initialRosterTeamFilter = "ALL",
    initialRosterPage = 1,
+   isWrappedEnabled = true,
 }: ChallengeViewProps) {
+   const isSummaryVisible =
+      isWrappedEnabled && Boolean(challenge.resultsLockedAt);
+
    const [activeTab, setActiveTab] = useState<ChallengeTab>(() =>
-      resolveAllowedChallengeTab(initialTab, isAdmin)
+      resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
    );
 
-   const isSummaryVisible = Boolean(challenge.resultsLockedAt);
-
    useEffect(() => {
-      setActiveTab(resolveAllowedChallengeTab(initialTab, isAdmin));
-   }, [initialTab, isAdmin]);
+      setActiveTab(
+         resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
+      );
+   }, [initialTab, isAdmin, isSummaryVisible]);
 
    const handleTabChange = (tab: ChallengeTab) => {
       const allowedTab = resolveAllowedChallengeTab(tab, isAdmin, {

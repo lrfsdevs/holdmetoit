@@ -12,6 +12,7 @@ interface ChallengeErrorProps {
    reset: () => void;
 }
 
+/** Renders recovery actions when a challenge scoreboard fails to load. */
 export default function ChallengeError({ error, reset }: ChallengeErrorProps) {
    useEffect(() => {
       logError(logEvents.appError, {

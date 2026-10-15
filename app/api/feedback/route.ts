@@ -11,6 +11,7 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("feedback");
 
+/** Persists feedback and attempts fail-soft Discord delivery. */
 export async function POST(req: NextRequest) {
    try {
       const json = await req.json();

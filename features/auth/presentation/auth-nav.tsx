@@ -303,6 +303,16 @@ export function AppHeader({
                   Challenges
                </Link>
 
+               {isDevRole(user?.role) && (
+                  <Link
+                     href="/devboard"
+                     data-testid="devboard-nav-link"
+                     className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
+                  >
+                     DevBoard
+                  </Link>
+               )}
+
                {subtitle && (
                   <span className="hidden sm:inline-block text-xs text-[#868686] border-l border-[#292929] pl-2 sm:pl-3">
                      {subtitle}

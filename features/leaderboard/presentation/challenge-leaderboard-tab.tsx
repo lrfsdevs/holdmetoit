@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "../data/leaderboard-data";
+} from "../domain/leaderboard.types";
 import {
    AdminHoursOverrideModal,
    type AdminHoursOverrideParticipant,
@@ -78,6 +78,7 @@ interface ChallengeLeaderboardTabProps {
    initialViewMode?: LeaderboardViewMode;
 }
 
+/** Renders challenge standings, team totals, and leaderboard view modes. */
 export function ChallengeLeaderboardTab({
    challenge,
    isAdmin = false,

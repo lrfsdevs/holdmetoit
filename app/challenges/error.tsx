@@ -12,6 +12,7 @@ interface ChallengesErrorProps {
    reset: () => void;
 }
 
+/** Renders recovery actions when the challenges directory fails to load. */
 export default function ChallengesError({
    error,
    reset,
