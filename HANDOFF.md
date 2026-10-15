@@ -4,17 +4,17 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-15 (Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)  
+> **Last Updated:** 2026-10-16 (Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-15, Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)                                                                                                                                                                                                                                                                                                                               |
+| Gate                                         | Result (2026-10-16, Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)                                                                                                                                                                                                                                                                                                                |
 | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 101 files green (1089/1089 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
+| `npm run test`                               | ✅ 104 files green (1110/1110 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
 | `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
@@ -237,8 +237,35 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (93 test files, 1037/1037 tests green).
    - `npm run build` passed (11 routes compiled cleanly).
    - `bash scripts/check-schema-migration.sh origin/main` passed.
+- **NEXT STEP (completed in Session 106):** Fix todo context menu alignment on scroll and resolution change (KAN-18 / GitHub #100).
 
-### Session 106 — 2026-10-14 (DevBoard & Lightweight Self-Hosted Feature Flags System)
+### Session 106 — 2026-10-15 (Self-Aligning Task & Category Context Menus via Radix/shadcn — KAN-18 / GitHub #100)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Objectives:**
+   - Resolve Jira KAN-18 (GitHub Issue #100): "the todo's context menu does not self align itself with scrolls and resolution change".
+   - Replace the legacy manual fixed-coordinate floating `<div>` implementation with modular `shadcn` components (`@radix-ui/react-dropdown-menu` and `@radix-ui/react-context-menu`) as recommended by collaborators.
+- **Component Primitives Added (`components/ui/`):**
+   - `dropdown-menu.tsx`: Radix UI DropdownMenu wrapped and styled with Obsidian Dark palette tokens (`#222222`, `#383838`, `rounded-xl`, `border-stone-700/60`, elevated shadow, accessible keyboard navigation).
+   - `context-menu.tsx`: Radix UI ContextMenu styled identically to match Obsidian Dark theme with support for Submenus, Checkboxes, Radio items, and keyboard shortcuts.
+- **Modular Presentation (`features/study-logs/presentation/cockpit/`):**
+   - `cockpit-task-menu.tsx`: Pure, reusable menu items component providing `TaskMenuItems` and `CategoryMenuItems`. Designed with generic item primitives (`Item`, `Separator`, `Label`) so the exact same menu items render seamlessly within both `<DropdownMenuContent>` (3-dots button trigger) and `<ContextMenuContent>` (right-click trigger).
+   - Fully supports all task and category operations: status toggles (In Progress / Complete / Reopen), challenge-day move targets (with Past-day move guards via `validateMoveTaskChallengeDay`), editing, and locked past-day deletion safeguards.
+- **Cockpit Tasks Section Refactored (`cockpit-tasks-section.tsx`):**
+   - Removed legacy manual `contextMenu` React state (`{ x, y, type, task, category }`).
+   - Removed manual coordinate calculators and window resize/scroll listeners (`openCategoryMenuFromButton`, `handleCategoryContextMenu`, `openTaskMenuFromButton`, `handleTaskContextMenu`).
+   - Removed the legacy absolute-positioned `<div>` (`style={{ top: contextMenu.y, left: contextMenu.x }}`).
+   - Wrapped category headers and task items in `<ContextMenu modal={false}>` with `<ContextMenuTrigger asChild>`.
+   - Converted 3-dots action buttons to `<DropdownMenu modal={false}>` with `<DropdownMenuTrigger asChild>`.
+   - Radix Popper / Floating UI (`modal={false}`) continuously tracks trigger positions during container and ancestor scrolling and dynamically recalculates positioning during resolution changes and window resizing.
+- **Quality Gates Verified:**
+   - `features/study-logs/presentation/cockpit/cockpit-task-menu.test.tsx`: 5 unit tests verifying task status transitions, challenge-day move options, past-day delete lockdown, and category menu actions.
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (95 test files, 1053/1053 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
+- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 107 — 2026-10-14 (DevBoard & Lightweight Self-Hosted Feature Flags System)
 
 - **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations & Broadcaster Agent.
 - **Scope & Objectives:**
@@ -300,7 +327,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (12 routes compiled cleanly, `/devboard` size 10.9 kB).
 - **NEXT STEP (completed in Session 108):** Gate the Challenge Wrapped experience behind the `challenge_wrapped_v1` feature flag.
 
-### Session 107 — 2026-10-15 (Leaderboard Domain Type Boundary)
+### Session 108 — 2026-10-15 (Leaderboard Domain Type Boundary)
 
 - **Scope:** Resolved issue #35 by moving scoreboard view-model contracts out of the Prisma/Next cache repository.
 - **Architecture:** Added `features/leaderboard/domain/leaderboard.types.ts` for `ChallengeScoreboardViewModel` and its related scoreboard contracts. Updated the leaderboard data repository, domain modules, presentation components, and tests to import types inward from the domain layer.
@@ -308,7 +335,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` passed; focused leaderboard/wrapped/participant-stats tests passed (20 files, 204 tests); `npm run test` passed (100 files, 1076 tests); `npm run build` passed (12 routes).
 - **NEXT STEP:** Restore remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
 
-### Session 108 — 2026-10-15 (Challenge Wrapped Gated Behind `challenge_wrapped_v1` Feature Flag)
+### Session 109 — 2026-10-15 (Challenge Wrapped Gated Behind `challenge_wrapped_v1` Feature Flag)
 
 - **Scope:** Put the entire Challenge Wrapped experience behind the self-hosted feature-flag engine so it can be dark-launched or killed from `/devboard` without a deploy.
 - **Single Source of Truth:** New `features/wrapped/api/wrapped-flag.ts` exports `WRAPPED_FEATURE_FLAG_KEY = "challenge_wrapped_v1"` and the server-only `isWrappedFeatureEnabled()` helper (delegates to `isFeatureEnabled`, fails closed).
@@ -325,3 +352,23 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (101 test files, 1089/1089 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP:** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+
+### Session 110 — 2026-10-16 (PR #111 Context Menu Alignment, Touch/Keyboard Selection & Design Token Fixes)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Problem Analysis (KAN-18 / GitHub #100 / PR #111):**
+   - Collaborator `@HyperAfnan` reported that PR #111 was giving issues and held off merging.
+   - **Root Cause 1 (Mid-Air Orphaned Context Menus):** With `<ContextMenu modal={false}>`, Radix UI positions the menu at a virtual point `(clientX, clientY)`. Without external scroll or window resize dismissal listeners, scrolling the page or resizing the window left the context menu floating in mid-air at the old screen coordinates, detached from the task/category.
+   - **Root Cause 2 (Touchscreen & Keyboard Selection Failure):** All items in `cockpit-task-menu.tsx` only had `onClick`. Radix `ContextMenuItem` and `DropdownMenuItem` unmount on `pointerup`, canceling synthetic `click` events on mobile browsers. For keyboard users (Enter/Space), Radix fires `onSelect`, not `onClick`.
+   - **Root Cause 3 (Design Token Regression):** `components/ui/dropdown-menu.tsx` was reverted to generic shadcn tokens (`bg-popover`, `text-popover-foreground`, `focus:bg-accent`, etc.) instead of the ratified Obsidian Dark tokens.
+- **Implementation & Resolution:**
+   - **`components/ui/context-menu.tsx`:** Added captured passive `scroll` and `resize` event listeners in `ContextMenuContent`. When any external container or the window scrolls, or when the window resizes, the menu cleanly self-dismisses via an Escape keydown dispatch. Added `collisionPadding={8}` to prevent edge clipping.
+   - **`components/ui/dropdown-menu.tsx`:** Fully harmonized with Obsidian Dark design tokens (`bg-[#222222]`, `border-[#383838]`, `rounded-xl`, `p-1.5`, `text-[#f4f3f6]`, `focus:bg-[#333333] focus:text-[#ffffff]`, `collisionPadding={8}`).
+   - **`features/study-logs/presentation/cockpit/cockpit-task-menu.tsx`:** Added both `onSelect` and `onClick` handlers across all items in `TaskMenuItems` and `CategoryMenuItems`, ensuring reliable execution on mouse, touchscreen, and keyboard interactions.
+   - **Data & Test Restorations:** Re-exported required scoreboard types in `features/leaderboard/data/leaderboard-data.ts`; updated mock parameters in `app/challenge/[id]/page.test.tsx` and `challenge-manage-tab.test.tsx`.
+   - **Test Coverage:** Added `components/ui/context-menu.test.tsx` (2 tests) and added selection callback verification tests to `cockpit-task-menu.test.tsx` (7 tests).
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (104 test files, 1110/1110 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP:** Push `krish` branch to remote for collaborator review and merge PR #111.

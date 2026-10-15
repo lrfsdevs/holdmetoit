@@ -30,11 +30,17 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
    ChallengeView: ({
       initialTab,
       isAdmin,
+      initialRosterSearch,
+      initialRosterTeamFilter,
+      initialRosterPage,
       isWrappedEnabled,
    }: {
       initialTab: string;
       isAdmin: boolean;
-      isWrappedEnabled: boolean;
+      initialRosterSearch?: string;
+      initialRosterTeamFilter?: string;
+      initialRosterPage?: number;
+      isWrappedEnabled?: boolean;
    }) =>
       createElement(
          "div",
@@ -42,6 +48,9 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
             "data-testid": "challenge-view",
             "data-initial-tab": initialTab,
             "data-is-admin": String(isAdmin),
+            "data-roster-search": initialRosterSearch,
+            "data-roster-team": initialRosterTeamFilter,
+            "data-roster-page": String(initialRosterPage),
             "data-is-wrapped-enabled": String(isWrappedEnabled),
          },
          `ChallengeView: tab=${initialTab}, admin=${isAdmin}`
@@ -168,6 +177,23 @@ describe("ChallengePage (Server Component)", () => {
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-initial-tab="overview"');
+   });
+
+   it("passes search, team, and page from searchParams to ChallengeView", async () => {
+      const pageJsx = await ChallengePage({
+         params: { id: "chal-1" },
+         searchParams: {
+            tab: "manage",
+            search: "morgan",
+            team: "team-2",
+            page: "3",
+         },
+      });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-roster-search="morgan"');
+      expect(html).toContain('data-roster-team="team-2"');
+      expect(html).toContain('data-roster-page="3"');
    });
 
    it("triggers notFound when challenge is not found", async () => {
