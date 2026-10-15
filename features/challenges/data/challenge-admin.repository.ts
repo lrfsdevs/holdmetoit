@@ -15,6 +15,7 @@ import {
    type ChallengeCreationInput,
 } from "@/features/challenges/domain/challenge-lifecycle";
 import { computeEventDetailsDiff } from "@/features/challenges/domain/event-audit-diff";
+import { buildTeamTombstoneName } from "@/features/challenges/domain/team-deletion";
 import { sumLoggedSeconds } from "@/features/leaderboard/domain/catch-up-presentation";
 import { aggregateTeamScores } from "@/features/leaderboard/domain/leaderboard";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
@@ -25,8 +26,8 @@ export async function listAllChallengesForAdmin() {
 }
 
 export async function findAdminChallengeDetails(challengeId: string) {
-   return prisma.challenge.findUnique({
-      where: { id: challengeId },
+   return prisma.challenge.findFirst({
+      where: { id: challengeId, isDeleted: false },
       include: {
          host: {
             select: {
@@ -37,6 +38,7 @@ export async function findAdminChallengeDetails(challengeId: string) {
             },
          },
          teams: {
+            where: { isDeleted: false },
             orderBy: { sortOrder: "asc" },
             include: {
                _count: {
@@ -56,7 +58,7 @@ export async function findAdminChallengeDetails(challengeId: string) {
                   },
                },
                team: true,
-               dailyStudyLogsV2: {
+               dailyStudyLogs: {
                   orderBy: { logDate: "asc" },
                   include: {
                      overrideBy: {
@@ -183,7 +185,7 @@ export async function lockChallengeResults(
          teams: { select: { id: true } },
          participants: {
             include: {
-               dailyStudyLogsV2: true,
+               dailyStudyLogs: true,
                punishmentRecords: true,
             },
          },
@@ -241,7 +243,7 @@ export async function lockChallengeResults(
          challenge.teams,
          challenge.participants.map((participant) => ({
             teamId: participant.teamId ?? "no-assigned",
-            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
          }))
       ).filter((aggregate) =>
          challenge.teams.some((team) => team.id === aggregate.teamId)
@@ -267,7 +269,7 @@ export async function lockChallengeResults(
 
          const outcome = evaluateLockOutcome({
             targetSeconds: participant.targetSeconds,
-            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogsV2 ?? []),
+            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
             weeklyTasks: weeklyTasksByUser.get(participant.userId) ?? [],
             isInWinningTeam,
          });
@@ -612,15 +614,29 @@ export async function updateAdminChallenge(
          }
       }
 
-      // Delete removed teams that have no participants
+      // Soft-delete removed teams that have no participants
       if (keptTeamIds.length > 0) {
-         await tx.team.deleteMany({
-            where: {
-               challengeId,
-               id: { notIn: keptTeamIds },
-               participants: { none: {} },
-            },
-         });
+         const teamsToSoftDelete =
+            (await tx.team.findMany({
+               where: {
+                  challengeId,
+                  id: { notIn: keptTeamIds },
+                  isDeleted: false,
+                  participants: { none: {} },
+               },
+            })) || [];
+
+         const now = new Date();
+         for (const t of teamsToSoftDelete) {
+            await tx.team.update({
+               where: { id: t.id },
+               data: {
+                  isDeleted: true,
+                  deletionTime: now,
+                  name: buildTeamTombstoneName(t.name, t.id),
+               },
+            });
+         }
       }
 
       const diff = computeEventDetailsDiff(
@@ -874,26 +890,12 @@ export async function removeChallengeParticipant(params: {
       "Participant";
 
    return prisma.$transaction(async (tx) => {
-      await tx.dailyStudyLogV2.deleteMany({
+      await tx.dailyStudyLog.deleteMany({
          where: { participantId: params.participantId },
       });
 
       await tx.punishmentRecord.deleteMany({
          where: { participantId: params.participantId },
-      });
-
-      await tx.leaderboardEntry.deleteMany({
-         where: {
-            challengeId: participant.challengeId,
-            userId: participant.userId,
-         },
-      });
-
-      await tx.teamMember.deleteMany({
-         where: {
-            userId: participant.userId,
-            team: { challengeId: participant.challengeId },
-         },
       });
 
       await recordAuditEvent({
@@ -936,46 +938,28 @@ export async function deleteAdminChallenge(
       throw new Error("Challenge not found.");
    }
 
+   const now = new Date();
+
    return prisma.$transaction(async (tx) => {
-      // 1. Delete daily study logs for all participants in this challenge
-      await tx.dailyStudyLogV2.deleteMany({
-         where: {
-            participant: {
-               challengeId,
-            },
+      // 1. Soft-delete active teams for this challenge
+      await tx.team.updateMany({
+         where: { challengeId, isDeleted: false },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
          },
       });
 
-      // 2. Delete punishment records
-      await tx.punishmentRecord.deleteMany({
-         where: { challengeId },
-      });
-
-      // 4. Delete leaderboard entries
-      await tx.leaderboardEntry.deleteMany({
-         where: { challengeId },
-      });
-
-      // 5. Delete challenge participants
-      await tx.challengeParticipant.deleteMany({
-         where: { challengeId },
-      });
-
-      // 6. Delete team members
-      await tx.teamMember.deleteMany({
-         where: {
-            team: {
-               challengeId,
-            },
+      // 2. Soft-delete challenge-linked tasks
+      await tx.task.updateMany({
+         where: { challengeId, isDeleted: false },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
          },
       });
 
-      // 7. Delete teams
-      await tx.team.deleteMany({
-         where: { challengeId },
-      });
-
-      // 8. Record audit log for permanent challenge deletion
+      // 3. Record audit log for soft challenge deletion
       await recordAuditEvent({
          actorId: actor.id,
          actorUsername: actor.username,
@@ -987,14 +971,22 @@ export async function deleteAdminChallenge(
          previousValue: {
             title: challenge.title,
             status: calculateChallengeStatus(challenge),
+            isDeleted: false,
          },
-         newValue: null,
-         auditReason: `Host permanently deleted challenge "${challenge.title}"`,
+         newValue: {
+            isDeleted: true,
+            deletionTime: now,
+         },
+         auditReason: `Host deleted challenge "${challenge.title}"`,
       });
 
-      // 9. Delete the challenge
-      const deleted = await tx.challenge.delete({
+      // 4. Soft-delete the challenge
+      const deleted = await tx.challenge.update({
          where: { id: challengeId },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
+         },
       });
 
       return deleted;

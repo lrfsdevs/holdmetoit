@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    type ChallengeTab,
    DEFAULT_CHALLENGE_TAB,
@@ -24,6 +24,7 @@ interface ChallengeViewProps {
    initialLeaderboardViewMode?: LeaderboardViewMode;
 }
 
+/** Renders the challenge shell and coordinates its active tab. */
 export function ChallengeView({
    challenge,
    initialTab = DEFAULT_CHALLENGE_TAB,

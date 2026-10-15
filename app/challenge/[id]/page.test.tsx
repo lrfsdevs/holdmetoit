@@ -4,7 +4,14 @@ import ChallengePage from "./page";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { auth } from "@/core/auth";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 import { createElement } from "react";
+
+vi.mock("next/navigation", () => ({
+   notFound: vi.fn(() => {
+      throw new Error("NEXT_NOT_FOUND");
+   }),
+}));
 
 vi.mock("@/features/leaderboard/data/leaderboard-data", () => ({
    getChallengeScoreboard: vi.fn(),
@@ -70,11 +77,6 @@ const mockScoreboard = {
       ratioPercentageB: 50,
    },
    standings: [],
-   punishmentWall: {
-      punishmentPfpUrl: null,
-      flaggedMembers: [],
-      isEventCompleted: false,
-   },
    currentUser: {
       isLoggedIn: false,
       isEnrolled: false,
@@ -159,16 +161,16 @@ describe("ChallengePage (Server Component)", () => {
       expect(html).toContain('data-initial-tab="overview"');
    });
 
-   it("renders EmptyState when challenge is not found", async () => {
+   it("triggers notFound when challenge is not found", async () => {
       vi.mocked(getChallengeScoreboard).mockResolvedValue(null);
 
-      const pageJsx = await ChallengePage({
-         params: { id: "chal-missing" },
-      });
-      const html = renderToStaticMarkup(pageJsx);
+      await expect(
+         ChallengePage({
+            params: { id: "chal-missing" },
+         })
+      ).rejects.toThrow("NEXT_NOT_FOUND");
 
-      expect(html).toContain("Challenge not found");
-      expect(html).toContain("Return to Study Lounge");
+      expect(notFound).toHaveBeenCalled();
    });
 
    it("renders ErrorState when fetching scoreboard fails", async () => {

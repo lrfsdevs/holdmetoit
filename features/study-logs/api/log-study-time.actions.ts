@@ -24,6 +24,10 @@ import {
    calculateChallengeTotalDays,
    validateStudyLogChallengeDay,
 } from "@/features/study-logs/domain/challenge-day";
+import {
+   MAX_LEAVES_ERROR,
+   MaximumLeavesExceededError,
+} from "@/features/study-logs/domain/leave-allowance";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
@@ -53,6 +57,7 @@ const logStudyTimeSchema = z
 export type ActionResult =
    { ok: true } | { ok: false; code: string; message: string };
 
+/** Validates and persists a participant's daily study log, then invalidates views. */
 export async function logStudyTimeAction(
    input: z.infer<typeof logStudyTimeSchema>
 ): Promise<ActionResult> {
@@ -187,6 +192,24 @@ export async function logStudyTimeAction(
             error,
          });
          return { ok: false, code: "NOT_ENROLLED", message: error.message };
+      }
+
+      if (
+         error instanceof MaximumLeavesExceededError ||
+         (error instanceof Error && error.message === MAX_LEAVES_ERROR)
+      ) {
+         logger.warn(logEvents.studyLogAdded, {
+            context: {
+               code: "MAX_LEAVES_REACHED",
+               challengeId: input?.challengeId,
+            },
+            error,
+         });
+         return {
+            ok: false,
+            code: "MAX_LEAVES_REACHED",
+            message: MAX_LEAVES_ERROR,
+         };
       }
 
       logger.error(logEvents.studyLogAdded, {

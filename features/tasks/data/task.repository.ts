@@ -102,10 +102,10 @@ async function getUserCategorizedTasksFromDatabase(
    userId: string
 ): Promise<UserCategorizedTasks> {
    const categories = await prisma.category.findMany({
-      where: { userId, deletedAt: null },
+      where: { userId, isDeleted: false },
       include: {
          tasks: {
-            where: { deletedAt: null },
+            where: { isDeleted: false },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
          },
       },
@@ -118,6 +118,8 @@ async function getUserCategorizedTasksFromDatabase(
       name: c.name,
       taskType: c.taskType,
       sortOrder: c.sortOrder,
+      isDeleted: c.isDeleted,
+      deletionTime: c.deletionTime,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
    }));
@@ -146,6 +148,8 @@ async function getUserCategorizedTasksFromDatabase(
                dueDate: t.dueDate
                   ? formatUtcDateKey(t.dueDate)
                   : formatUtcDateKey(t.createdAt),
+               isDeleted: t.isDeleted,
+               deletionTime: t.deletionTime,
                createdAt: t.createdAt,
                updatedAt: t.updatedAt,
                completedAt: t.completedAt,
@@ -157,6 +161,8 @@ async function getUserCategorizedTasksFromDatabase(
             taskType: "DAILY" as const,
             sortOrder: c.sortOrder,
             isCollapsed: false,
+            isDeleted: c.isDeleted,
+            deletionTime: c.deletionTime,
             tasks: dailyTasks,
          };
       });
@@ -179,6 +185,8 @@ async function getUserCategorizedTasksFromDatabase(
                   (t.status as TaskStatus) ??
                   (t.isComplete ? "COMPLETED" : "TODO"),
                dueDate: t.dueDate ? formatUtcDateKey(t.dueDate) : null,
+               isDeleted: t.isDeleted,
+               deletionTime: t.deletionTime,
                createdAt: t.createdAt,
                updatedAt: t.updatedAt,
                completedAt: t.completedAt,
@@ -190,6 +198,8 @@ async function getUserCategorizedTasksFromDatabase(
             taskType: "WEEKLY" as const,
             sortOrder: c.sortOrder,
             isCollapsed: false,
+            isDeleted: c.isDeleted,
+            deletionTime: c.deletionTime,
             tasks: weeklyTasks,
          };
       });
@@ -326,7 +336,7 @@ export async function toggleTask(params: {
       where: {
          id: params.taskId,
          userId: params.userId,
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -363,7 +373,7 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       where: {
          id: params.taskId,
          userId: params.userId,
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -373,7 +383,10 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
 
    return prisma.task.update({
       where: { id: params.taskId },
-      data: { deletedAt: new Date() },
+      data: {
+         isDeleted: true,
+         deletionTime: new Date(),
+      },
    });
 }
 
@@ -389,7 +402,7 @@ export async function createCategory(params: {
          userId: params.userId,
          taskType,
          name: { equals: trimmedName, mode: "insensitive" },
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -418,7 +431,7 @@ export async function updateTask(params: {
       where: {
          id: params.taskId,
          userId: params.userId,
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -469,7 +482,7 @@ export async function updateCategory(params: {
       where: {
          id: params.categoryId,
          userId: params.userId,
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -497,7 +510,7 @@ export async function updateCategory(params: {
          taskType: existing.taskType,
          name: { equals: trimmedName, mode: "insensitive" },
          id: { not: params.categoryId },
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -521,7 +534,7 @@ export async function deleteCategory(params: {
       where: {
          id: params.categoryId,
          userId: params.userId,
-         deletedAt: null,
+         isDeleted: false,
       },
    });
 
@@ -536,15 +549,19 @@ export async function deleteCategory(params: {
          where: {
             categoryId: params.categoryId,
             userId: params.userId,
-            deletedAt: null,
+            isDeleted: false,
          },
-         data: { deletedAt: now },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
+         },
       });
 
       return tx.category.update({
          where: { id: params.categoryId },
          data: {
-            deletedAt: now,
+            isDeleted: true,
+            deletionTime: now,
             name: buildCategoryTombstoneName(existing.name, existing.id),
          },
       });

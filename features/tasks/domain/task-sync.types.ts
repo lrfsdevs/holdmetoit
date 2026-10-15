@@ -26,6 +26,8 @@ export interface LocalTaskRecord {
    createdAt: string;
    updatedAt: string;
    completedAt: string | null;
+   isDeleted?: boolean;
+   deletionTime?: string | null;
    syncState: SyncState;
 }
 
@@ -37,6 +39,8 @@ export interface LocalCategoryRecord {
    sortOrder?: number;
    createdAt: string;
    updatedAt: string;
+   isDeleted?: boolean;
+   deletionTime?: string | null;
    syncState: SyncState;
 }
 

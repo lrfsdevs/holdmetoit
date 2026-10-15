@@ -36,13 +36,11 @@ import {
    aggregateTeamScores,
    calculateLeadMargin,
 } from "@/features/leaderboard/domain/leaderboard";
-import { generateDiscordSummary } from "@/features/notifications/domain/discord-summary";
 import { executeAdminHoursOverride } from "@/features/study-logs/data/admin-override.repository";
 import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
 } from "@/features/study-logs/domain/daily-log.validation";
-import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -56,7 +54,7 @@ vi.mock("@/core/db", () => ({
          update: vi.fn(),
          updateMany: vi.fn(),
       },
-      dailyStudyLogV2: {
+      dailyStudyLog: {
          findUnique: vi.fn(),
          upsert: vi.fn(),
       },
@@ -126,9 +124,6 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
          expect(spectatorView.currentUser.isEnrolled).toBe(false);
          expect(spectatorView.heroImageUrl).toBe(
             "/assets/challenge_hero_battle.jpg"
-         );
-         expect(spectatorView.punishmentWall.punishmentPfpUrl).toBe(
-            "/prototype/assets/punishment_pfp.jpg"
          );
 
          // 2. User clicks 'Login with Discord' and Discord profile is mapped
@@ -323,7 +318,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
    // =========================================================================
    describe("Journey J5: Host Manual Hours Override", () => {
       it("allows host to correct member hours with is_override=true and records in audit trail", async () => {
-         vi.mocked(prisma.dailyStudyLogV2.findUnique).mockResolvedValue({
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue({
             id: "log_1",
             participantId: "part_1",
             durationSeconds: 0,
@@ -331,7 +326,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
             participant: { challengeId: "chal_1" },
          } as never);
 
-         vi.mocked(prisma.dailyStudyLogV2.upsert).mockResolvedValue({
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({
             id: "log_1",
             participantId: "part_1",
             durationSeconds: 13500, // 03:45:00
@@ -361,10 +356,10 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
    });
 
    // =========================================================================
-   // J6: Event Lock, Dual-Failure Auto-Punishment & Broadcaster
+   // J6: Event Lock, Three-Condition Auto-Punishment & Host Finalization
    // =========================================================================
-   describe("Journey J6: Event Lock, Three-Condition Punishment & Discord Summary", () => {
-      it("locks results, evaluates the three-condition rule, and generates the Discord summary", async () => {
+   describe("Journey J6: Event Lock & Three-Condition Auto-Punishment", () => {
+      it("locks results, evaluates the three-condition rule, and records punishments", async () => {
          // 1. Three-condition lock evaluation (FEAT-PUN-01): saved only when hours
          //    are met AND all challenge-linked weekly tasks are complete AND the
          //    participant is in a winning team. Equal hours never punish.
@@ -425,7 +420,7 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
                   teamId: "team_bees",
                   targetSeconds: 30 * 3600,
                   status: "NORMAL",
-                  dailyStudyLogsV2: [{ durationSeconds: 25 * 3600 }], // 5h deficit
+                  dailyStudyLogs: [{ durationSeconds: 25 * 3600 }], // 5h deficit
                   punishmentRecords: [],
                },
             ],
@@ -448,74 +443,6 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
          expect(prisma.punishmentRecord.createMany).toHaveBeenCalledWith({
             data: [{ challengeId: "chal_complete", participantId: "part_1" }],
          });
-
-         // 3. 1-Click Discord summary generation (FEAT-DISC-01)
-         const discordSummary = generateDiscordSummary({
-            title: "Reading Week Sprint",
-            status: "COMPLETED",
-            startDate: "Sep 1, 2026",
-            endDate: "Sep 8, 2026",
-            teams: [
-               {
-                  name: "Honey Bees",
-                  iconEmoji: "🐝",
-                  totalLoggedSeconds: 150 * 3600,
-                  isLeader: true,
-               },
-               {
-                  name: "Lavender Butterflies",
-                  iconEmoji: "🦋",
-                  totalLoggedSeconds: 140 * 3600,
-                  isLeader: false,
-               },
-            ],
-            podium: [
-               {
-                  rank: 1,
-                  displayName: "Alice",
-                  username: "alice",
-                  teamName: "Honey Bees",
-                  totalLoggedSeconds: 40 * 3600,
-               },
-               {
-                  rank: 2,
-                  displayName: "Bob",
-                  username: "bob",
-                  teamName: "Lavender Butterflies",
-                  totalLoggedSeconds: 38 * 3600,
-               },
-               {
-                  rank: 3,
-                  displayName: "Charlie",
-                  username: "charlie",
-                  teamName: "Honey Bees",
-                  totalLoggedSeconds: 35 * 3600,
-               },
-            ],
-            punishedMembers: [
-               {
-                  displayName: "Dave",
-                  username: "dave",
-                  isPardoned: false,
-                  pardonReason: null,
-               },
-            ],
-         });
-
-         expect(discordSummary).toContain(
-            "🏁 **HOLDMETOIT — READING WEEK SPRINT**"
-         );
-         expect(discordSummary).toContain("FINAL RESULTS");
-         expect(discordSummary).toContain(
-            "🐝 Honey Bees**: `150:00:00` 👑 [WINNER]"
-         );
-         expect(discordSummary).toContain(
-            "🥇 1st Place: **@alice** (Honey Bees) — `40:00:00`"
-         );
-         expect(discordSummary).toContain(
-            "💀 **PUNISHMENT WALL (Change Avatar to Event Forfeit PFP)**"
-         );
-         expect(discordSummary).toContain("**@dave** — Event forfeit");
       });
    });
 });

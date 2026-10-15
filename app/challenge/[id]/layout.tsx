@@ -6,6 +6,7 @@ import {
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
 
+/** Provides shared authenticated and preview-aware layout for a challenge. */
 export default async function ChallengeLayout({
    children,
    params,

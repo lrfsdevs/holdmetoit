@@ -1,3 +1,4 @@
+/** Renders the participant statistics loading skeleton. */
 export default function ParticipantStatsLoading() {
    return (
       <div

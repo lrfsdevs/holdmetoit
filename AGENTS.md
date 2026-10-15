@@ -11,12 +11,12 @@
 
 HoldMeToIt is developed collaboratively by autonomous agents and human developers organized into four specialized functional roles:
 
-| Role / Agent ID                          | Scope / Focus                                                                                                                                                             | Primary Layer Responsibilities                                                                                          |
-| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- |
-| **Data & Identity Agent**                | Database schema, Prisma migrations, Auth.js Discord OAuth, User/Challenge/Team/Task repositories, session hydration                                                       | `prisma/`, `core/db/`, `core/auth/`, `features/auth/`, `features/challenges/data/`                                      |
-| **Scoring & Engine Agent**               | Domain business math, `HH:MM:SS` duration converters, cumulative team aggregations, dynamic catch-up deficit engine, dual-failure punishment validator, Vitest test suite | `features/leaderboard/domain/`, `features/study-logs/domain/`, `features/accountability/domain/`, domain unit tests     |
-| **Participant UI Agent**                 | Student cockpit views, `HH:MM:SS` duration self-logging input, interactive weekly goal checklist, progress meters, mobile viewport responsiveness (360px+)                | `features/study-logs/presentation/`, `features/declarations/presentation/`, `app/(dashboard)/`, Tailwind components     |
-| **Admin Operations & Broadcaster Agent** | Host wizard, team balancer & roster editor, admin inline hours override grid, challenge lock/freeze controls, 1-click Discord summary generator, Punishment PFP hub       | `features/challenges/presentation/`, `features/notifications/`, `features/accountability/presentation/`, `app/(admin)/` |
+| Role / Agent ID                          | Scope / Focus                                                                                                                                                             | Primary Layer Responsibilities                                                                                      |
+| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------ |
+| **Data & Identity Agent**                | Database schema, Prisma migrations, Auth.js Discord OAuth, User/Challenge/Team/Task repositories, session hydration                                                       | `prisma/`, `core/db/`, `core/auth/`, `features/auth/`, `features/challenges/data/`                                  |
+| **Scoring & Engine Agent**               | Domain business math, `HH:MM:SS` duration converters, cumulative team aggregations, dynamic catch-up deficit engine, dual-failure punishment validator, Vitest test suite | `features/leaderboard/domain/`, `features/study-logs/domain/`, `features/accountability/domain/`, domain unit tests |
+| **Participant UI Agent**                 | Student cockpit views, `HH:MM:SS` duration self-logging input, interactive weekly goal checklist, progress meters, mobile viewport responsiveness (360px+)                | `features/study-logs/presentation/`, `features/declarations/presentation/`, `app/(dashboard)/`, Tailwind components |
+| **Admin Operations & Broadcaster Agent** | Host wizard, team balancer & roster editor, admin inline hours override grid, challenge lock/freeze controls, Punishment PFP hub                                          | `features/challenges/presentation/`, `features/accountability/presentation/`, `app/(admin)/`                        |
 
 ### 1.1 Equality & Collaboration Posture
 
@@ -55,7 +55,8 @@ A vertical slice or work unit is only complete when:
 2. **Tested:** Unit tests for domain logic and math pass with 100% green exit (`npm run test`).
 3. **Designed States Handled (Law L9):** Loading skeleton, Empty state, and Error fallback screens are fully implemented.
 4. **Mobile Verified:** Layout renders cleanly without horizontal overflow or clipped buttons on a 360px viewport.
-5. **Documented & Pruned (Rule §9.3):** Session changes, status transitions, and the exact next step are recorded in `HANDOFF.md`, and any obsolete/superseded content is actively pruned.
+5. **Feature Documented (Rule §9.4):** Comprehensive architecture and developer usage documentation written in `docs/<feature>/README.md`.
+6. **Handoff Documented & Pruned (Rule §9.3):** Session changes, status transitions, and the exact next step are recorded in `HANDOFF.md`, and any obsolete/superseded content is actively pruned.
 
 ---
 
@@ -250,7 +251,6 @@ journey
       Admin Locks Final Results: 5: Admin
       Three-Condition Flags Punishments: 5: System
       Punishment PFP Download Enabled: 5: System
-      1-Click Discord Summary Copied: 5: Admin
 ```
 
 ### J1: Discord OAuth Login & Profile Provisioning
@@ -288,11 +288,11 @@ journey
 - **Database Assertion:** `DailyStudyLog` updated with `durationSeconds = 13500`, `isOverride = true`, `overrideById = adminUserId`; leaderboard re-aggregates.
 - **Laws Gated:** Law L5 (Admin Override Absolute).
 
-### J6: Event Lock, Three-Condition Auto-Punishment & Discord Summary
+### J6: Event Lock, Three-Condition Auto-Punishment & Result Finalization
 
 - **Trigger:** Challenge duration reaches end time; Host clicks "Lock Final Results".
-- **Action:** System evaluates all enrolled members on the three conditions (challenge-linked weekly tasks, target hours, winning team — ties never punish). Host clicks "Copy Discord Summary".
-- **Database Assertion:** Challenge transitions to `COMPLETED`; `PunishmentRecord` rows created for punished members (row presence = punished; pardons preserved). The wrapped becomes available (Summary tab + popup). Clipboard receives formatted markdown embed.
+- **Action:** System evaluates all enrolled members on the three conditions (challenge-linked weekly tasks, target hours, winning team — ties never punish). Challenge status becomes `COMPLETED`.
+- **Database Assertion:** Challenge transitions to `COMPLETED`; `PunishmentRecord` rows created for punished members (row presence = punished; pardons preserved). The wrapped becomes available (Summary tab + popup).
 - **Laws Gated:** Law L2 (Spreadsheet Exorcism), Law L6 (Three-Condition Accountability Invariant).
 
 ---
@@ -330,3 +330,15 @@ Once active codebase implementation begins and `HANDOFF.md` is instantiated at r
    - **Lean Session Logs:** Session logs must remain concise. Retain only the last 3–5 active engineering sessions; older entries must be summarized or purged.
    - **No Conflicting Instructions:** Outdated architectural notes, superseded API signatures, or stale checklist items must be scrubbed immediately to ensure incoming agents are never misled.
 - **Quality Gate Invariant:** Leaving obsolete or conflicting instructions in `HANDOFF.md` constitutes a quality gate failure.
+
+### 9.4 Feature Documentation Mandate (`docs/<feature>/README.md`)
+
+- **Mandate:** For every new feature implementation or major architectural slice, the contributing agent or engineer MUST author or update comprehensive technical and operator documentation in `docs/<feature>/README.md` (e.g., `docs/feature-flags/README.md`, `docs/study-logs/README.md`).
+- **Required Content Structure:**
+   1. **Executive Summary & Scope:** What the feature achieves, key user journeys supported, and architectural guardrails (anti-overengineering rules).
+   2. **Domain State Machine & Decisions:** Detailed decision flowcharts, matrix of rollout/evaluation states, and core business invariants (Law L7: Pure Domain Isolation).
+   3. **Database Persistence Models:** Relational models, fields, foreign keys, and indexes added or updated in Prisma.
+   4. **Developer & Operator Usage Guide:** Concrete TypeScript/React code snippets demonstrating how to consume the feature across Server Components (RSC), Client Components, Server Actions, and Route Handlers.
+   5. **Security & Authorization Rules:** Explicit RBAC validation rules (`isDevRole`, `hasAdminPrivileges`), authenticated actor integrity, and data access boundary rules.
+   6. **Feature Lifecycle & Decommissioning:** Release lifecycle stages (Dormant Deploy $\rightarrow$ Targeted Beta $\rightarrow$ Global GA $\rightarrow$ Decommission & Prune).
+- **Quality Gate Invariant:** A feature slice is incomplete and fails the Definition of Done (DoD §2.2) if its corresponding `docs/<feature>/README.md` is omitted.

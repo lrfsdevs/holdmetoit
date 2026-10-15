@@ -14,7 +14,6 @@ import {
    Lock,
    Play,
    Plus,
-   RefreshCw,
    Search,
    Trash2,
    User as UserIcon,
@@ -30,7 +29,7 @@ import { DataPagination } from "@/components/ui/data-pagination";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 import {
    deleteChallengeAction,
    kickoffChallengeAction,
@@ -74,6 +73,7 @@ interface TeamFormItem {
    mascotUrl?: string;
 }
 
+/** Renders administrator controls for roster, lifecycle, and challenge settings. */
 export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
    const router = useRouter();
    const [isPending, startTransition] = useTransition();
@@ -273,13 +273,15 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
    }, [challenge.id, challenge.eventBannerUrl, challenge.punishmentPfpUrl]);
 
    const [teams, setTeams] = useState<TeamFormItem[]>(() =>
-      challenge.teams.map((t) => ({
-         id: t.id,
-         name: t.name,
-         color: t.color || "#FFB066",
-         iconEmoji: t.iconEmoji || "🐝",
-         mascotUrl: t.mascotUrl || "",
-      }))
+      challenge.teams
+         .filter((t: any) => !t.isDeleted)
+         .map((t) => ({
+            id: t.id,
+            name: t.name,
+            color: t.color || "#FFB066",
+            iconEmoji: t.iconEmoji || "🐝",
+            mascotUrl: t.mascotUrl || "",
+         }))
    );
 
    const handleReset = () => {
@@ -302,13 +304,15 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
       setPunishmentPfpUrl(savedImages.punishmentPfpUrl);
       setImageInputVersion((version) => version + 1);
       setTeams(
-         challenge.teams.map((t) => ({
-            id: t.id,
-            name: t.name,
-            color: t.color || "#FFB066",
-            iconEmoji: t.iconEmoji || "🐝",
-            mascotUrl: t.mascotUrl || "",
-         }))
+         challenge.teams
+            .filter((t: any) => !t.isDeleted)
+            .map((t) => ({
+               id: t.id,
+               name: t.name,
+               color: t.color || "#FFB066",
+               iconEmoji: t.iconEmoji || "🐝",
+               mascotUrl: t.mascotUrl || "",
+            }))
       );
       const map: Record<string, string> = {};
       for (const s of challenge.standings) {

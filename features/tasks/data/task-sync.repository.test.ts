@@ -68,7 +68,8 @@ describe("processBatchSync (task-sync.repository)", () => {
          sortOrder: 0,
          createdAt: new Date(),
          updatedAt: new Date(),
-         deletedAt: null,
+         isDeleted: false,
+         deletionTime: null,
       });
 
       vi.mocked(prisma.category.findFirst).mockResolvedValue(null); // No collision in WEEKLY
@@ -93,7 +94,7 @@ describe("processBatchSync (task-sync.repository)", () => {
 
       // Verify updateMany was called WITHOUT name: "Category 1"
       expect(prisma.category.updateMany).toHaveBeenCalledWith({
-         where: { id: catId, userId, deletedAt: null },
+         where: { id: catId, userId, isDeleted: false },
          data: {
             sortOrder: 1,
             taskType: "WEEKLY",
@@ -119,7 +120,8 @@ describe("processBatchSync (task-sync.repository)", () => {
          sortOrder: 0,
          createdAt: new Date(),
          updatedAt: new Date(),
-         deletedAt: null,
+         isDeleted: false,
+         deletionTime: null,
       });
 
       // Collision exists in target column
@@ -131,7 +133,8 @@ describe("processBatchSync (task-sync.repository)", () => {
          sortOrder: 0,
          createdAt: new Date(),
          updatedAt: new Date(),
-         deletedAt: null,
+         isDeleted: false,
+         deletionTime: null,
       });
 
       const res = await processBatchSync(userId, [
@@ -154,7 +157,7 @@ describe("processBatchSync (task-sync.repository)", () => {
 
       // Verify name was disambiguated to avoid unique constraint failure
       expect(prisma.category.updateMany).toHaveBeenCalledWith({
-         where: { id: catId, userId, deletedAt: null },
+         where: { id: catId, userId, isDeleted: false },
          data: {
             name: "Math (Moved)",
             taskType: "WEEKLY",
@@ -201,8 +204,11 @@ describe("processBatchSync (task-sync.repository)", () => {
       expect(res.success).toBe(true);
       expect(res.processedMutationIds).toContain("mut-del-1");
       expect(prisma.task.updateMany).toHaveBeenCalledWith({
-         where: { id: "task-del-1", userId, deletedAt: null },
-         data: { deletedAt: expect.any(Date) },
+         where: { id: "task-del-1", userId, isDeleted: false },
+         data: {
+            isDeleted: true,
+            deletionTime: expect.any(Date),
+         },
       });
       expect(prisma.task.deleteMany).not.toHaveBeenCalled();
    });

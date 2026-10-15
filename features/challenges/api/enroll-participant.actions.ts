@@ -24,6 +24,7 @@ const enrollParticipantSchema = z.object({
 export type EnrollActionResult =
    { ok: true } | { ok: false; code: string; message: string };
 
+/** Authenticates and enrolls a participant with a validated target and leave budget. */
 export async function enrollInChallengeAction(
    input: z.infer<typeof enrollParticipantSchema>
 ): Promise<EnrollActionResult> {
@@ -64,6 +65,7 @@ export async function enrollInChallengeAction(
          challengeId: parsed.data.challengeId,
          teamId: resolvedTeamId,
          targetSeconds,
+         plannedLeaveDays: parsed.data.leaveDays ?? 0,
       });
 
       invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);

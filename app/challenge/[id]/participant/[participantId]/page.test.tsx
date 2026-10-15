@@ -4,6 +4,13 @@ import ParticipantStatsPage, { generateMetadata } from "./page";
 import { getChallengeParticipantStats } from "@/features/participant-stats/data/participant-stats.repository";
 import { auth } from "@/core/auth";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+
+vi.mock("next/navigation", () => ({
+   notFound: vi.fn(() => {
+      throw new Error("NEXT_NOT_FOUND");
+   }),
+}));
 
 vi.mock(
    "@/features/participant-stats/data/participant-stats.repository",
@@ -123,16 +130,16 @@ describe("ParticipantStatsPage", () => {
       expect(html).toContain("10:00:00");
    });
 
-   it("renders empty state when participant record is not found", async () => {
+   it("triggers notFound when participant record is not found", async () => {
       vi.mocked(getChallengeParticipantStats).mockResolvedValue(null);
 
-      const pageElement = await ParticipantStatsPage({
-         params: { id: "chal_1", participantId: "part_nonexistent" },
-      });
+      await expect(
+         ParticipantStatsPage({
+            params: { id: "chal_1", participantId: "part_nonexistent" },
+         })
+      ).rejects.toThrow("NEXT_NOT_FOUND");
 
-      const html = renderToStaticMarkup(pageElement);
-      expect(html).toContain("Participant record not found");
-      expect(html).toContain("/challenge/chal_1?tab=leaderboard");
+      expect(notFound).toHaveBeenCalled();
    });
 
    it("generates metadata with participant and challenge title", async () => {

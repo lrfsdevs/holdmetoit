@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import { EmptyState } from "@/components/state/empty-state";
 import { ErrorState } from "@/components/state/error-state";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/core/auth";
@@ -25,6 +25,7 @@ interface ParticipantStatsPageProps {
    };
 }
 
+/** Builds participant profile metadata for search and social previews. */
 export async function generateMetadata({
    params,
 }: ParticipantStatsPageProps): Promise<Metadata> {
@@ -57,6 +58,7 @@ export async function generateMetadata({
    };
 }
 
+/** Loads challenge-scoped participant statistics with recovery handling. */
 export default async function ParticipantStatsPage({
    params,
    searchParams,
@@ -116,17 +118,7 @@ export default async function ParticipantStatsPage({
    }
 
    if (!stats) {
-      return (
-         <EmptyState
-            title="Participant record not found"
-            description="We couldn't locate this participant in the specified challenge. The participant may not be enrolled or might belong to a different challenge."
-            action={
-               <Button asChild variant="secondary" className="min-h-[44px]">
-                  <Link href={returnLeaderboardUrl}>Return to Leaderboard</Link>
-               </Button>
-            }
-         />
-      );
+      notFound();
    }
 
    return <ParticipantStatsView stats={stats} viewParam={searchParams?.view} />;

@@ -6,6 +6,7 @@ import {
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
 
+/** Provides shared navigation and preview-aware layout for the directory. */
 export default async function ChallengesLayout({
    children,
 }: {

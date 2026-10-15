@@ -1,4 +1,4 @@
-import type { ParticipantPaceStatus } from "@/features/leaderboard/data/leaderboard-data";
+import type { ParticipantPaceStatus } from "@/features/leaderboard/domain/leaderboard.types";
 
 export interface ParticipantProfileHeader {
    participantId: string;

@@ -13,7 +13,7 @@ import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
    ScoreboardTeam,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 
 const DAY_MS = 86_400_000;
 const LOCKED_AT = "2026-10-12T00:00:00.000Z";
@@ -102,11 +102,6 @@ function buildChallenge(
          ratioPercentageB: 0,
       },
       standings: [buildStanding()],
-      punishmentWall: {
-         punishmentPfpUrl: "/assets/punishment_pfp.jpg",
-         flaggedMembers: [],
-         isEventCompleted: true,
-      },
       currentUser: {
          isLoggedIn: false,
          isEnrolled: false,

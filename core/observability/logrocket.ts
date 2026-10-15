@@ -34,6 +34,7 @@ export type LogRocketEventProps = Record<
    | undefined
 >;
 
+/** Initializes the browser-only LogRocket client once when analytics is enabled. */
 export function initLogRocket(): void {
    if (typeof window === "undefined" || initialized) {
       return;
@@ -50,11 +51,17 @@ export function initLogRocket(): void {
    initialized = true;
 }
 
+/** Associates the current authenticated user and optional traits with LogRocket. */
 export function identifyLogRocketUser(
    userId: string,
    traits?: LogRocketUserTraits
 ): void {
-   if (typeof window === "undefined" || !userId) {
+   if (
+      typeof window === "undefined" ||
+      !isLogRocketEnabled() ||
+      !initialized ||
+      !userId
+   ) {
       return;
    }
 
@@ -66,11 +73,12 @@ export function identifyLogRocketUser(
    LogRocket.identify(userId, payload);
 }
 
+/** Sends a non-fatal analytics event when the browser client is initialized. */
 export function trackLogRocketEvent(
    eventName: string,
    properties?: LogRocketEventProps
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
@@ -86,6 +94,7 @@ export function trackLogRocketEvent(
    }
 }
 
+/** Captures an exception without allowing analytics failures to affect the app. */
 export function captureLogRocketException(
    error: unknown,
    context?: {
@@ -93,7 +102,7 @@ export function captureLogRocketException(
       extra?: Record<string, string | number | boolean>;
    }
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
@@ -105,11 +114,12 @@ export function captureLogRocketException(
    }
 }
 
+/** Captures a diagnostic message without allowing analytics failures to escape. */
 export function captureLogRocketMessage(
    message: string,
    extra?: Record<string, string | number | boolean>
 ): void {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" || !isLogRocketEnabled() || !initialized) {
       return;
    }
 
@@ -120,6 +130,7 @@ export function captureLogRocketMessage(
    }
 }
 
+/** Resolves the current LogRocket session URL when one is available. */
 export function getLogRocketSessionURL(): Promise<string | null> {
    if (typeof window === "undefined" || !initialized) {
       return Promise.resolve(null);

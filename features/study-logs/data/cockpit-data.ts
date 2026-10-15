@@ -63,6 +63,8 @@ export interface CockpitViewModel {
    yesterdayLoggedSeconds: number;
    yesterdayIsLeave?: boolean;
    isYesterdayMissed: boolean;
+   plannedLeaveDays: number;
+   usedLeaveDays: number;
    teamRank: number | null;
    remainingDailyAllowanceSeconds: number;
    challengeStartDate?: string;
@@ -109,7 +111,7 @@ export async function getParticipantCockpit(
    const todayDate = challengeDayBuckets.current.dateKey;
    const yesterdayDate = challengeDayBuckets.previous?.dateKey;
 
-   const participantLogs = participant.dailyStudyLogsV2 ?? [];
+   const participantLogs = participant.dailyStudyLogs ?? [];
 
    const totalLoggedSeconds = sumLoggedSeconds(participantLogs);
    const todayLog = participantLogs.find(
@@ -214,6 +216,8 @@ export async function getParticipantCockpit(
       yesterdayLoggedSeconds,
       yesterdayIsLeave: Boolean(yesterdayLog?.isLeave),
       isYesterdayMissed,
+      plannedLeaveDays: participant.plannedLeaveDays ?? 0,
+      usedLeaveDays: participant.usedLeaveDays ?? 0,
       teamRank,
       remainingDailyAllowanceSeconds,
       challengeStartDate: formatUtcDateKey(participant.challenge.startAt),

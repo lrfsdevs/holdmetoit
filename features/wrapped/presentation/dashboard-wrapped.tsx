@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    buildChallengeWrappedViewModel,
    isChallengeCompleted,
@@ -29,7 +29,7 @@ export function DashboardWrapped({ challenge }: DashboardWrappedProps) {
    const isEnrolled = challenge.currentUser.isEnrolled;
 
    const wrapped = useMemo(() => {
-      if (!isCompleted || isExpired || !isEnrolled) {
+      if (challenge.isDeleted || !isCompleted || isExpired || !isEnrolled) {
          return null;
       }
       return buildChallengeWrappedViewModel(
@@ -38,7 +38,13 @@ export function DashboardWrapped({ challenge }: DashboardWrappedProps) {
       );
    }, [challenge, isCompleted, isExpired, isEnrolled]);
 
-   if (!wrapped || !isCompleted || isExpired || !isEnrolled) {
+   if (
+      challenge.isDeleted ||
+      !wrapped ||
+      !isCompleted ||
+      isExpired ||
+      !isEnrolled
+   ) {
       return null;
    }
 
