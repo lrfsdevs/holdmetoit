@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+/** Renders the DevBoard recovery boundary and retry action. */
 export default function DevBoardError({
    error,
    reset,

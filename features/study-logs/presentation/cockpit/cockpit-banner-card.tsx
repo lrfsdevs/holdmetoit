@@ -28,6 +28,7 @@ export interface CockpitBannerCardProps {
    onOpenEnrollModal: () => void;
 }
 
+/** Renders the contextual participant cockpit banner. */
 export function CockpitBannerCard({
    cockpit,
    upcomingChallenge,

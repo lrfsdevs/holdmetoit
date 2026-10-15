@@ -25,6 +25,7 @@ interface TesterSelectorDialogProps {
    onRemoveTester: (flagId: string, userId: string) => Promise<void>;
 }
 
+/** Renders the dialog for selecting a Discord tester assignment. */
 export function TesterSelectorDialog({
    isOpen,
    onClose,

@@ -10,6 +10,7 @@ interface GlobalErrorProps {
    reset: () => void;
 }
 
+/** Renders the last-resort application shell when the root layout fails. */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
    useEffect(() => {
       initLogRocket();

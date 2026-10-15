@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+/** Renders the shared Radix-backed checkbox control with project styling. */
 const Checkbox = React.forwardRef<
    React.ElementRef<typeof CheckboxPrimitive.Root>,
    React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>

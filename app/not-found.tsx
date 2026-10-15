@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/** Renders the root not-found state with navigation back to the lounge. */
 export default function RootNotFound() {
    return (
       <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-lg flex-col items-center justify-center p-4">

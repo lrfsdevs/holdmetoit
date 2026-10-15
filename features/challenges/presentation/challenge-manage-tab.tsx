@@ -73,6 +73,7 @@ interface TeamFormItem {
    mascotUrl?: string;
 }
 
+/** Renders administrator controls for roster, lifecycle, and challenge settings. */
 export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
    const router = useRouter();
    const [isPending, startTransition] = useTransition();

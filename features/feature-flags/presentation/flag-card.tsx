@@ -27,6 +27,7 @@ interface FlagCardProps {
    onDelete: (flagId: string) => Promise<void>;
 }
 
+/** Renders a feature flag summary with mutation controls. */
 export function FlagCard({
    flag,
    onToggleMaster,

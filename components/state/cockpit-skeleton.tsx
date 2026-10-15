@@ -1,3 +1,4 @@
+/** Renders the loading skeleton for the participant cockpit. */
 export function CockpitSkeleton() {
    return (
       <div

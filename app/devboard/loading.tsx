@@ -1,3 +1,4 @@
+/** Renders the DevBoard loading skeleton. */
 export default function DevBoardLoading() {
    return (
       <div className="space-y-8 animate-pulse">

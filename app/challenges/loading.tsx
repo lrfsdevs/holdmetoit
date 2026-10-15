@@ -1,3 +1,4 @@
+/** Renders the challenges directory loading skeleton. */
 export default function ChallengesLoading() {
    return (
       <div className="space-y-8 max-w-6xl mx-auto animate-pulse">

@@ -4,6 +4,7 @@ import type { FeatureFlagEntity } from "@/features/feature-flags/domain/feature-
 
 export const dynamic = "force-dynamic";
 
+/** Loads active feature flags for the developer control board. */
 export default async function DevBoardPage() {
    const flags = await listFeatureFlags();
 

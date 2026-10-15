@@ -15,6 +15,7 @@ interface FlagAuditDrawerProps {
    flag: FeatureFlagEntity | null;
 }
 
+/** Renders the audit history drawer for a selected feature flag. */
 export function FlagAuditDrawer({
    isOpen,
    onClose,

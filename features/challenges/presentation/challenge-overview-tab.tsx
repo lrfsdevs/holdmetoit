@@ -35,6 +35,7 @@ interface ChallengeOverviewTabProps {
    isAdmin?: boolean;
 }
 
+/** Renders challenge overview details and participant actions. */
 export function ChallengeOverviewTab({
    challenge,
    isAdmin = false,

@@ -11,6 +11,7 @@ import {
 } from "@/features/auth/domain/preview-mode";
 import { AppHeader } from "@/features/auth/presentation/auth-nav";
 
+/** Provides admin authorization and shared layout chrome for admin routes. */
 export default async function AdminLayout({
    children,
 }: {

@@ -78,6 +78,7 @@ interface ChallengeLeaderboardTabProps {
    initialViewMode?: LeaderboardViewMode;
 }
 
+/** Renders challenge standings, team totals, and leaderboard view modes. */
 export function ChallengeLeaderboardTab({
    challenge,
    isAdmin = false,

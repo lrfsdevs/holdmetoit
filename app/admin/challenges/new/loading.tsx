@@ -1,3 +1,4 @@
+/** Renders the loading skeleton for the challenge creator wizard. */
 export default function NewChallengeLoading() {
    return (
       <div className="space-y-6 max-w-4xl mx-auto animate-pulse">

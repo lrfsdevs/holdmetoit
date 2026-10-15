@@ -29,6 +29,7 @@ interface ChallengePageProps {
    };
 }
 
+/** Loads a challenge scoreboard and resolves its initial tab and view mode. */
 export default async function ChallengePage({
    params,
    searchParams,

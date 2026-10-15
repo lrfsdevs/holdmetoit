@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/** Renders the not-found state for an unavailable participant record. */
 export default function ParticipantNotFound() {
    return (
       <main className="mx-auto flex min-h-[calc(100vh-140px)] max-w-lg flex-col items-center justify-center p-4">

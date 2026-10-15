@@ -10,6 +10,7 @@ export interface CockpitProgressCardProps {
    effectiveTargetSeconds: number;
 }
 
+/** Renders participant progress, deficit, and catch-up pacing metrics. */
 export function CockpitProgressCard({
    cockpit,
    effectiveTotalLoggedClock,

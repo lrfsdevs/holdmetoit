@@ -23,6 +23,7 @@ interface FlagEditorModalProps {
    editingFlag?: FeatureFlagEntity | null;
 }
 
+/** Renders the create/edit form for a feature flag. */
 export function FlagEditorModal({
    isOpen,
    onClose,

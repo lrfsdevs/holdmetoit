@@ -12,6 +12,7 @@ interface AdminErrorProps {
    reset: () => void;
 }
 
+/** Renders the admin-route recovery boundary and retry action. */
 export default function AdminError({ error, reset }: AdminErrorProps) {
    useEffect(() => {
       logError(logEvents.appError, {
