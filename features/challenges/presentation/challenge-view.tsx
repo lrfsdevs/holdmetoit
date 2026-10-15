@@ -22,6 +22,8 @@ interface ChallengeViewProps {
    initialTab?: ChallengeTab | string;
    isAdmin?: boolean;
    initialLeaderboardViewMode?: LeaderboardViewMode;
+   /** Server-evaluated `challenge_wrapped_v1`. Gates the Summary tab and the wrapped story popup. */
+   isWrappedEnabled?: boolean;
 }
 
 export function ChallengeView({
@@ -29,16 +31,20 @@ export function ChallengeView({
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
    initialLeaderboardViewMode = "individual",
+   isWrappedEnabled = true,
 }: ChallengeViewProps) {
+   const isSummaryVisible =
+      isWrappedEnabled && Boolean(challenge.resultsLockedAt);
+
    const [activeTab, setActiveTab] = useState<ChallengeTab>(() =>
-      resolveAllowedChallengeTab(initialTab, isAdmin)
+      resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
    );
 
-   const isSummaryVisible = Boolean(challenge.resultsLockedAt);
-
    useEffect(() => {
-      setActiveTab(resolveAllowedChallengeTab(initialTab, isAdmin));
-   }, [initialTab, isAdmin]);
+      setActiveTab(
+         resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
+      );
+   }, [initialTab, isAdmin, isSummaryVisible]);
 
    const handleTabChange = (tab: ChallengeTab) => {
       const allowedTab = resolveAllowedChallengeTab(tab, isAdmin, {

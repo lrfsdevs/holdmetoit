@@ -15,6 +15,8 @@ import {
 } from "@/features/challenges/domain/challenge-tabs";
 import { resolveLeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
 import { logError, logEvents } from "@/core/observability/logger";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 interface ChallengePageProps {
    params: {
@@ -41,6 +43,8 @@ export default async function ChallengePage({
       searchParamAs: searchParams?.as,
    });
 
+   const isWrappedEnabled = await isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);
+
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
       challenge = await getChallengeScoreboard(params.id, session?.user?.id);
@@ -62,10 +66,13 @@ export default async function ChallengePage({
       notFound();
    }
 
+   const isSummaryVisible =
+      Boolean(challenge.resultsLockedAt) && isWrappedEnabled;
+
    const initialTab: ChallengeTab = resolveAllowedChallengeTab(
       searchParams?.tab,
       isAdmin,
-      { isSummaryVisible: Boolean(challenge.resultsLockedAt) }
+      { isSummaryVisible }
    );
    const initialLeaderboardViewMode = resolveLeaderboardViewMode(
       searchParams?.view
@@ -77,6 +84,7 @@ export default async function ChallengePage({
          initialTab={initialTab}
          isAdmin={isAdmin}
          initialLeaderboardViewMode={initialLeaderboardViewMode}
+         isWrappedEnabled={isWrappedEnabled}
       />
    );
 }

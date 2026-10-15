@@ -5,6 +5,15 @@ Notable changes to HoldMeToIt, newest first — grouped by date, no version numb
 Entries tagged `[user]` are user-facing and shown to everyone. Untagged entries are
 internal (engineering, tooling, and infrastructure) and are shown to admins only.
 
+## 2026-10-15
+
+### Challenge Wrapped kill switch
+
+Placed the Challenge Wrapped experience behind the `challenge_wrapped_v1` feature flag: the dashboard
+story popup + Shy Card, the post-lock **Summary** tab, the challenge story popup and feedback dialog, and
+the wrapped Server Actions all resolve the flag server-side and fail closed, so the feature can be
+dark-launched or killed from `/devboard` without a deploy.
+
 ## 2026-10-12
 
 ### Challenge Summary design token harmonization [user]

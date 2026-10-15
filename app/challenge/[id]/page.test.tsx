@@ -6,6 +6,7 @@ import { auth } from "@/core/auth";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createElement } from "react";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 vi.mock("next/navigation", () => ({
    notFound: vi.fn(() => {
@@ -29,9 +30,11 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
    ChallengeView: ({
       initialTab,
       isAdmin,
+      isWrappedEnabled,
    }: {
       initialTab: string;
       isAdmin: boolean;
+      isWrappedEnabled: boolean;
    }) =>
       createElement(
          "div",
@@ -39,6 +42,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
             "data-testid": "challenge-view",
             "data-initial-tab": initialTab,
             "data-is-admin": String(isAdmin),
+            "data-is-wrapped-enabled": String(isWrappedEnabled),
          },
          `ChallengeView: tab=${initialTab}, admin=${isAdmin}`
       ),
@@ -47,6 +51,10 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
 vi.mock("next/link", () => ({
    default: ({ href, children, ...rest }: any) =>
       createElement("a", { href, ...rest }, children),
+}));
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn(),
 }));
 
 const mockScoreboard = {
@@ -87,6 +95,7 @@ const mockScoreboard = {
 describe("ChallengePage (Server Component)", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
       vi.mocked(cookies).mockResolvedValue({
          get: vi.fn().mockReturnValue(undefined),
       } as any);
@@ -184,5 +193,39 @@ describe("ChallengePage (Server Component)", () => {
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain("Could not load scoreboard");
+   });
+
+   it("keeps ?tab=summary when the wrapped flag is on and results are locked", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         resultsLockedAt: "2026-10-08T00:00:00.000Z",
+      } as any);
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+
+      const pageJsx = await ChallengePage({
+         params: { id: "chal-1" },
+         searchParams: { tab: "summary" },
+      });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-initial-tab="summary"');
+      expect(html).toContain('data-is-wrapped-enabled="true"');
+   });
+
+   it("clamps ?tab=summary to overview when the wrapped flag is off", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         resultsLockedAt: "2026-10-08T00:00:00.000Z",
+      } as any);
+      vi.mocked(isFeatureEnabled).mockResolvedValue(false);
+
+      const pageJsx = await ChallengePage({
+         params: { id: "chal-1" },
+         searchParams: { tab: "summary" },
+      });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-initial-tab="overview"');
+      expect(html).toContain('data-is-wrapped-enabled="false"');
    });
 });
