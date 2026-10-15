@@ -123,7 +123,7 @@ export async function updateFeatureFlagTx(
 ) {
    return prisma.$transaction(async (tx) => {
       const existing = await tx.featureFlag.findUniqueOrThrow({
-         where: { id: flagId },
+         where: { id: flagId, isDeleted: false },
       });
 
       const updated = await tx.featureFlag.update({
@@ -164,7 +164,7 @@ export async function toggleMasterSwitchTx(
 ) {
    return prisma.$transaction(async (tx) => {
       const existing = await tx.featureFlag.findUniqueOrThrow({
-         where: { id: flagId },
+         where: { id: flagId, isDeleted: false },
       });
 
       const updated = await tx.featureFlag.update({
@@ -196,7 +196,7 @@ export async function setRolloutModeTx(
 ) {
    return prisma.$transaction(async (tx) => {
       const existing = await tx.featureFlag.findUniqueOrThrow({
-         where: { id: flagId },
+         where: { id: flagId, isDeleted: false },
       });
 
       const updated = await tx.featureFlag.update({
@@ -227,6 +227,10 @@ export async function assignTesterTx(
    actorId: string
 ) {
    return prisma.$transaction(async (tx) => {
+      await tx.featureFlag.findUniqueOrThrow({
+         where: { id: flagId, isDeleted: false },
+      });
+
       const target = await tx.featureFlagTarget.upsert({
          where: {
             flagId_userId: { flagId, userId: targetUserId },

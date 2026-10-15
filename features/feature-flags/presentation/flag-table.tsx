@@ -122,7 +122,7 @@ export function FlagTable({
                      const authorName =
                         flag.creator?.displayName ||
                         flag.creator?.username ||
-                        "Afnan";
+                        "Unknown";
 
                      return (
                         <tr

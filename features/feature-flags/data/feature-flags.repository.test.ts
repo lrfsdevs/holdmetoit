@@ -9,6 +9,7 @@ import {
    setRolloutModeTx,
    softDeleteFeatureFlagTx,
    toggleMasterSwitchTx,
+   updateFeatureFlagTx,
 } from "./feature-flags.repository";
 
 vi.mock("@/core/db", () => {
@@ -105,6 +106,33 @@ describe("feature-flags.repository", () => {
       });
    });
 
+   it("updates only active feature flags", async () => {
+      vi.mocked(prisma.featureFlag.findUniqueOrThrow).mockResolvedValueOnce({
+         id: "flag_1",
+         name: "Old Name",
+         description: "Old description",
+      } as never);
+      vi.mocked(prisma.featureFlag.update).mockResolvedValueOnce({
+         id: "flag_1",
+         name: "New Name",
+         description: "New description",
+      } as never);
+
+      await updateFeatureFlagTx(
+         "flag_1",
+         {
+            flagId: "flag_1",
+            name: "New Name",
+            description: "New description",
+         },
+         "dev_user_1"
+      );
+
+      expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
+         where: { id: "flag_1", isDeleted: false },
+      });
+   });
+
    it("toggles the master switch and writes audit log", async () => {
       vi.mocked(prisma.featureFlag.findUniqueOrThrow).mockResolvedValueOnce({
          id: "flag_1",
@@ -118,6 +146,9 @@ describe("feature-flags.repository", () => {
 
       const result = await toggleMasterSwitchTx("flag_1", true, "dev_user_1");
       expect(result.isEnabled).toBe(true);
+      expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
+         where: { id: "flag_1", isDeleted: false },
+      });
       expect(prisma.featureFlagAuditLog.create).toHaveBeenCalledWith({
          data: {
             flagId: "flag_1",
@@ -142,6 +173,9 @@ describe("feature-flags.repository", () => {
 
       const result = await setRolloutModeTx("flag_1", "TARGETED", "dev_user_1");
       expect(result.rolloutMode).toBe("TARGETED");
+      expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
+         where: { id: "flag_1", isDeleted: false },
+      });
       expect(prisma.featureFlagAuditLog.create).toHaveBeenCalledWith({
          data: {
             flagId: "flag_1",
@@ -162,6 +196,9 @@ describe("feature-flags.repository", () => {
       } as never);
 
       await assignTesterTx("flag_1", "tester_1", "dev_user_1");
+      expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
+         where: { id: "flag_1", isDeleted: false },
+      });
       expect(prisma.featureFlagAuditLog.create).toHaveBeenCalledWith({
          data: {
             flagId: "flag_1",
