@@ -55,7 +55,8 @@ A vertical slice or work unit is only complete when:
 2. **Tested:** Unit tests for domain logic and math pass with 100% green exit (`npm run test`).
 3. **Designed States Handled (Law L9):** Loading skeleton, Empty state, and Error fallback screens are fully implemented.
 4. **Mobile Verified:** Layout renders cleanly without horizontal overflow or clipped buttons on a 360px viewport.
-5. **Documented & Pruned (Rule §9.3):** Session changes, status transitions, and the exact next step are recorded in `HANDOFF.md`, and any obsolete/superseded content is actively pruned.
+5. **Feature Documented (Rule §9.4):** Comprehensive architecture and developer usage documentation written in `docs/<feature>/README.md`.
+6. **Handoff Documented & Pruned (Rule §9.3):** Session changes, status transitions, and the exact next step are recorded in `HANDOFF.md`, and any obsolete/superseded content is actively pruned.
 
 ---
 
@@ -329,3 +330,15 @@ Once active codebase implementation begins and `HANDOFF.md` is instantiated at r
    - **Lean Session Logs:** Session logs must remain concise. Retain only the last 3–5 active engineering sessions; older entries must be summarized or purged.
    - **No Conflicting Instructions:** Outdated architectural notes, superseded API signatures, or stale checklist items must be scrubbed immediately to ensure incoming agents are never misled.
 - **Quality Gate Invariant:** Leaving obsolete or conflicting instructions in `HANDOFF.md` constitutes a quality gate failure.
+
+### 9.4 Feature Documentation Mandate (`docs/<feature>/README.md`)
+
+- **Mandate:** For every new feature implementation or major architectural slice, the contributing agent or engineer MUST author or update comprehensive technical and operator documentation in `docs/<feature>/README.md` (e.g., `docs/feature-flags/README.md`, `docs/study-logs/README.md`).
+- **Required Content Structure:**
+   1. **Executive Summary & Scope:** What the feature achieves, key user journeys supported, and architectural guardrails (anti-overengineering rules).
+   2. **Domain State Machine & Decisions:** Detailed decision flowcharts, matrix of rollout/evaluation states, and core business invariants (Law L7: Pure Domain Isolation).
+   3. **Database Persistence Models:** Relational models, fields, foreign keys, and indexes added or updated in Prisma.
+   4. **Developer & Operator Usage Guide:** Concrete TypeScript/React code snippets demonstrating how to consume the feature across Server Components (RSC), Client Components, Server Actions, and Route Handlers.
+   5. **Security & Authorization Rules:** Explicit RBAC validation rules (`isDevRole`, `hasAdminPrivileges`), authenticated actor integrity, and data access boundary rules.
+   6. **Feature Lifecycle & Decommissioning:** Release lifecycle stages (Dormant Deploy $\rightarrow$ Targeted Beta $\rightarrow$ Global GA $\rightarrow$ Decommission & Prune).
+- **Quality Gate Invariant:** A feature slice is incomplete and fails the Definition of Done (DoD §2.2) if its corresponding `docs/<feature>/README.md` is omitted.

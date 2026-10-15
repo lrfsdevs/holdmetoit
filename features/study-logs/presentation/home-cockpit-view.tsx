@@ -13,7 +13,7 @@ import {
 } from "./cockpit";
 import type { CockpitViewModel } from "@/features/study-logs/data/cockpit-data";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import { DashboardWrapped } from "@/features/wrapped/presentation/dashboard-wrapped";
 
 export interface HomeCockpitViewProps {
@@ -51,7 +51,6 @@ export function HomeCockpitView({
    displayName = "Unauthenticated",
    challengeId = "seed-honey-bees-vs-lavender-butterflies",
    todayLoggedSeconds = 0,
-   todayLoggedClock = "00:00:00",
    user,
    cockpit,
    upcomingChallenge,

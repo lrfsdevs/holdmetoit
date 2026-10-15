@@ -35,19 +35,14 @@ flowchart LR
 
 ### 0.3 P0 Features Blocking Gate 1
 
-| Blocker                                                                                  | Feature IDs                                   |
-| :--------------------------------------------------------------------------------------- | :-------------------------------------------- |
-| No UI for host override or pardon                                                        | `FEAT-LOG-04`, `FEAT-PUN-04`                  |
-| No Punishment Wall or PFP download                                                       | `FEAT-PUN-02`, `FEAT-PUN-03`                  |
-| Lock fails after natural expiry, so punishments are never evaluated                      | `FEAT-CHAL-05`, `FEAT-PUN-01`                 |
-| Audit trail not persisted (in-memory)                                                    | `FEAT-AUDIT-01`                               |
-| Goals decoupled from challenges, so Law L6 runs on hours only (product decision pending) | `FEAT-DECL-02`, `FEAT-DECL-04`, `FEAT-PUN-01` |
-| Duo self-naming not implemented                                                          | `FEAT-CHAL-06`                                |
-| Migration drift (`feedbacks`, `sort_order` not in migrations)                            | Deployment readiness                          |
+| Blocker               | Feature IDs   |
+| :-------------------- | :------------ |
+| No UI for host pardon | `FEAT-PUN-04` |
+| No Punishment Wall    | `FEAT-PUN-02` |
 
 ### 0.4 Recommended Re-Plan
 
-1. **P0 Hardening (~4–5 days):** fix finalization and the persisted audit log first, then rebuild the 5 missing admin/public UIs, decide on goals/L6, and repair the migrations.
+1. **P0 Hardening (~4–5 days):** rebuild the 2 missing admin/public UIs, then complete audit persistence validation and repair the migrations.
 2. **Gate 1:** deploy to Vercel and run one live pilot challenge with a shadow sheet.
 3. **P1 (2 weeks):** YPT ingestion (`FEAT-LOG-03`) → automated expiry plus punishment evaluation (`FEAT-CHAL-03`) → bot (`FEAT-DISC-02/03`).
 
@@ -160,7 +155,7 @@ Eradicate manual host labor. Deliver a robust, reliable web application capable 
 - `PunishmentRecord` (punished flag, deficit seconds, incomplete goals count, pardon fields)
 - `Category` + `Task` (**user-scoped** Daily/Weekly to-dos with `sortOrder`; replaced `WeeklyGoal` on 2026-10-04 and aren't linked to challenges)
 - `Feedback` (bug/enhancement reports with Discord delivery status)
-- ⚠️ **Missing vs spec:** `AuditLog` (the audit trail is in-memory only)
+- `AuditLog` (PostgreSQL persistence is implemented with an in-memory fallback; full persistence validation remains)
 
 ### 3.4 Phase 0 Milestone Gate (Promotion to P1)
 

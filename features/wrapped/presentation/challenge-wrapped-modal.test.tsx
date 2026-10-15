@@ -4,7 +4,7 @@ import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
    ScoreboardTeam,
-} from "@/features/leaderboard/data/leaderboard-data";
+} from "@/features/leaderboard/domain/leaderboard.types";
 import { ChallengeWrappedModal } from "./challenge-wrapped-modal";
 
 vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
@@ -125,11 +125,6 @@ function buildChallenge(
          ratioPercentageB: 0,
       },
       standings,
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: true,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

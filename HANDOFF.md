@@ -4,18 +4,18 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-14 (Session 105 — Participant Leave Budget & Canonical Study Log Unification on `afnan-jr`)  
+> **Last Updated:** 2026-10-15 (Session 107 — Leaderboard Domain Type Boundary on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-14, Session 105 — Leave Budget & Canonical Study Log Unification on `afnan-jr`)                                                                                                                                                                                    |
+| Gate                                         | Result (2026-10-14, Session 106 — DevBoard & Feature Flags Engine on `afnan-jr`)                                                                                                                                                                                                   |
 | :------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                   |
-| `npm run test`                               | ✅ 93 files green (1037/1037 tests passing)                                                                                                                                                                                                                                        |
-| `npm run build`                              | ✅ 11 routes compiled (production build clean)                                                                                                                                                                                                                                     |
+| `npm run test`                               | ✅ 98 files green (1069/1069 tests passing)                                                                                                                                                                                                                                        |
+| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                               |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                         |
 | Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                     |
@@ -32,6 +32,7 @@
 | `/admin`                                      | Server redirect to `/challenges`                                                                                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                          | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                      | Authenticated                          |
+| `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                             | `DEV` only                             |
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                   | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                | Authenticated                          |
 
@@ -105,7 +106,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | D4  |    ✅    | **RESOLVED (2026-10-11, Session 83):** Law L6 amended to the Three-Condition Invariant — challenge-linked weekly tasks (`Task.challengeId` + soft delete) + target hours + winning team; ties never punish. `lockChallengeResults` evaluates all three conditions and records only punished members                                                                   | —                                                                                                                                                                                        |
 | D5  |  🟠 Med  | Schema drift: the `feedbacks` table and the `sort_order` columns on `categories`/`tasks` were applied with `db push` and have **no migration files**. `prisma migrate deploy` on a fresh DB would produce an incomplete schema. **Partially resolved (Session 79):** `isLeave` migration (`20261010120000`) applied; CI now blocks schema changes without a migration | Generate catch-up migrations (`prisma migrate diff`) and `migrate resolve` them on existing DBs                                                                                          |
 | D6  |    ✅    | **RESOLVED (2026-10-14, Session 105):** Challenge Participant Leave Budget feature implemented: `plannedLeaveDays` collected on enrollment, `usedLeaveDays` tracked transactionally on `ChallengeParticipant` upon daily study logs with `isLeave: true`. Quota enforced (`Maximum leaves taken for the challenge`).                                                  | —                                                                                                                                                                                        |
-| D7  |    ✅    | **RESOLVED (2026-10-14, Session 101):** Manual leaderboard and Decimal sessionHours removed; all tracking handled via DailyStudyLogV2 in integer seconds                                                                                                                                                                                                              | —                                                                                                                                                                                        |
+| D7  |    ✅    | **RESOLVED (2026-10-14, Session 101):** Manual leaderboard and Decimal sessionHours removed; all tracking handled via DailyStudyLog in integer seconds                                                                                                                                                                                                                | —                                                                                                                                                                                        |
 | D8  |  🟡 Low  | Stale `revalidatePath("/dashboard")` calls; `DISCORD_DEV_IDS` alias; `DEFAULT_FEEDBACK_CHANNEL_ID` hardcoded                                                                                                                                                                                                                                                          | Clean up                                                                                                                                                                                 |
 | D9  |  🟡 Low  | "E2E J1–J6" suite (`features/e2e/quality-matrix-j1-j6.test.ts`) mocks Prisma; there's no real browser E2E                                                                                                                                                                                                                                                             | Add Playwright journeys once the D3 UIs are back                                                                                                                                         |
 | D10 |  🟡 Low  | Duplicate lockfiles (`bun.lock` + `package-lock.json`); `npm audit` reports 20 vulns (3 critical)                                                                                                                                                                                                                                                                     | Pick one package manager; run `npm audit` triage                                                                                                                                         |
@@ -604,4 +605,73 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (93 test files, 1037/1037 tests green).
    - `npm run build` passed (11 routes compiled cleanly).
    - `bash scripts/check-schema-migration.sh origin/main` passed.
-- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 106 — 2026-10-14 (DevBoard & Lightweight Self-Hosted Feature Flags System)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:**
+   1. Implement a lightweight, zero-overhead, self-hosted feature flag system with Supabase Postgres storage (via Prisma 6.x). No external services, no Redis, no Supabase Realtime.
+   2. Build **DevBoard** (`/devboard`), an exclusive developer console accessible strictly by users with the `DEV` role (`isDevRole(session.user.role)`).
+   3. Maintain strict boundary: **zero features flagged yet**. Only the flag engine, persistence models, atomic transactions, evaluator, and DevBoard interface are built.
+- **Database Migration & Schema (`prisma/`):**
+   - Added `enum RolloutMode { DISABLED, TARGETED, GLOBAL }` to `prisma/schema.prisma`.
+   - Added models `FeatureFlag`, `FeatureFlagTarget`, `FeatureFlagAuditLog`, and inverse relations on `User`.
+   - Created migration `prisma/migrations/20261015000000_create_feature_flags/migration.sql`.
+   - Executed migration on PostgreSQL via `prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261015000000_create_feature_flags/migration.sql`.
+   - Generated Prisma client (`npm run db:generate`).
+- **Pure Domain & Validation (`features/feature-flags/domain/`):**
+   - Created `feature-flags.types.ts`: `RolloutModeType`, `FeatureFlagEntity`, `FeatureFlagTargetEntity`, `FeatureFlagAuditLogEntry`, `FlagEvaluationContext`.
+   - Created `evaluator.ts`: pure domain evaluation function adhering to Law L7 (zero external dependencies). Master switch overrides all modes; soft-deleted flags return safe fallback; targeted mode evaluates against user ID; global mode returns true.
+   - Created `feature-flags.schema.ts`: Zod 4 schemas for `createFeatureFlagSchema`, `updateFeatureFlagSchema`, `toggleMasterSwitchSchema`, `setRolloutModeSchema`, `manageTesterSchema`.
+   - Added unit test suites `evaluator.test.ts` (7 tests) and `feature-flags.schema.test.ts` (9 tests), 100% green.
+- **Data Layer & Atomic Transactions (`features/feature-flags/data/`):**
+   - Created `feature-flags.repository.ts`:
+      - `listFeatureFlags`, `getFlagWithTargetsByKey`, `getAllActiveFlagsWithTargets`.
+      - Atomic mutations via `prisma.$transaction`: `createFeatureFlagTx`, `updateFeatureFlagTx`, `toggleMasterSwitchTx`, `setRolloutModeTx`, `assignTesterTx`, `removeTesterTx`, `softDeleteFeatureFlagTx`. Each mutation records an immutable audit log entry in the same transaction.
+      - `searchAssignableDiscordUsers`: search Discord users by display name, username, or Snowflake.
+   - Added repository unit test suite `feature-flags.repository.test.ts` (7 tests, 100% green).
+- **API Layer & Evaluator Helper (`features/feature-flags/api/`):**
+   - Created `require-dev.ts` in `features/auth/api/` enforcing strict `DEV` role check.
+   - Created `server.ts`: public server-side helper with React `cache()` memoization (`isFeatureEnabled`, `getFeatureFlags`) preventing duplicate N+1 database queries.
+   - Created `feature-flags.actions.ts`: Server Actions (`createFeatureFlagAction`, `updateFeatureFlagAction`, `toggleMasterSwitchAction`, `setRolloutModeAction`, `assignTesterAction`, `removeTesterAction`, `deleteFeatureFlagAction`, `getFlagAuditTrailAction`, `searchDiscordUsersAction`) strictly guarded with `requireDevUser()`.
+   - Added action unit test suite `feature-flags.actions.test.ts` (7 tests, 100% green).
+- **Presentation & Routes (`app/devboard/` & `features/feature-flags/presentation/`):**
+   - Created `app/devboard/layout.tsx` (strictly redirects non-DEV users to `/`).
+   - Created `app/devboard/page.tsx` (server-renders DevBoard with initial flags).
+   - Created `app/devboard/loading.tsx` (skeleton loader per Law L9).
+   - Created `app/devboard/error.tsx` (error recovery boundary per Law L9).
+   - Created UI components adhering to Emil Kowalski design engineering principles (`emil-design-eng`, `make-interfaces-feel-better`):
+      - `devboard-header.tsx`: title banner, `[⚡ DEVBOARD]` badge, tabular monospace metric counters, search and filter bar, create flag CTA.
+      - `flag-card.tsx`: concentric border radii, master switch toggle, segmented rollout pill selector, Discord avatar chips (`outline outline-1 outline-white/10`), audit, edit, and delete triggers.
+      - `flag-editor-modal.tsx`: accessible dialog for creating/editing flags (key immutable on edit).
+      - `tester-selector-dialog.tsx`: live search & 1-click assign/remove of Discord testers.
+      - `flag-audit-drawer.tsx`: chronological audit history with diff visualizer.
+      - `devboard-view.tsx`: master interactive client orchestrator with optimistic state updates.
+   - Added `[⚡ DEVBOARD]` header navigation link in `features/auth/presentation/auth-nav.tsx` for `DEV` users.
+   - Added presentation test suite `devboard-view.test.tsx` (2 tests, 100% green).
+- **Documentation (`docs/feature-flags/` & `docs/feature-flag/`):**
+   - Created comprehensive documentation in `docs/feature-flags/README.md` and mirrored to `docs/feature-flag/README.md` per Rule §9.4.
+- **DevBoard Tabular Data Grid & Status Refinements (Session 106):**
+   - Redesigned `features/feature-flags/presentation/devboard-header.tsx`:
+      - Top filter cluster: `All [count]`, `🟢 Active Global [count]`, `◆ Targeted Beta [count]`, and `✖ Killed/Dormant [count]`. Removed `Draft` tab and divider.
+      - Primary CTA: solid white `+ New Flag` button with active scale feedback.
+      - Sub-bar: `Filter flags...` search input and `Sort: Updated ⌵` dropdown (removed `Show draft only` checkbox).
+   - Created pure domain helper `features/feature-flags/domain/relative-time.ts` with Vitest unit tests (`relative-time.test.ts`).
+   - Created `features/feature-flags/presentation/flag-table.tsx`:
+      - Clean dark table container with selection checkboxes (`[ ]`).
+      - Columns: `KEY & DESCRIPTION` (monospace key + 1-click copy + description), `ENVIRONMENT STATUS` (normal clean text without colored pill borders: `Global`, `Targeted`, `Off`), `ROLLOUT` (segmented control `[ Disabled | Targeted | Global ]`), `TARGETING` (`👥 X testers` trigger button), `LAST MODIFIED` (`Updated 2h ago • by Afnan`), and `•••` action menu.
+   - Updated `features/feature-flags/presentation/devboard-view.tsx` orchestrating table selection, sorting, status filtering, and modal triggers.
+   - Updated presentation tests `devboard-view.test.tsx` verifying column headers, text statuses, and filters.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (99 test files, 1075/1075 tests green).
+   - `npm run build` passed (12 routes compiled cleanly, `/devboard` size 10.9 kB).
+- **NEXT STEP:** Await user direction on feature flagging candidates or proceed to restore remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
+
+### Session 107 — 2026-10-15 (Leaderboard Domain Type Boundary)
+
+- **Scope:** Resolved issue #35 by moving scoreboard view-model contracts out of the Prisma/Next cache repository.
+- **Architecture:** Added `features/leaderboard/domain/leaderboard.types.ts` for `ChallengeScoreboardViewModel` and its related scoreboard contracts. Updated the leaderboard data repository, domain modules, presentation components, and tests to import types inward from the domain layer.
+- **Boundary Check:** No `features/**/domain/**` file imports types from `features/leaderboard/data/leaderboard-data.ts`. Repository payload types remain in the data layer. No scoreboard calculations or adjacent issue #34 behavior changed.
+- **Quality Gates:** `npm run typecheck` passed; focused leaderboard/wrapped/participant-stats tests passed (20 files, 204 tests); `npm run test` passed (100 files, 1076 tests); `npm run build` passed (12 routes).
+- **NEXT STEP:** Restore remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).

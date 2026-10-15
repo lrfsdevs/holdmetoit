@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChallengeOverviewTab } from "./challenge-overview-tab";
-import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/data/leaderboard-data";
+import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
@@ -94,11 +94,6 @@ describe("ChallengeOverviewTab", () => {
             deficitSeconds: 0,
          },
       ],
-      punishmentWall: {
-         punishmentPfpUrl: "",
-         flaggedMembers: [],
-         isEventCompleted: false,
-      },
       currentUser: {
          isLoggedIn: true,
          isEnrolled: true,

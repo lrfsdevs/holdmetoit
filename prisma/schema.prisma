@@ -44,6 +44,10 @@ model User {
   feedbacks          Feedback[]
   challengeFeedbacks ChallengeFeedback[]
   auditLogsWritten   AuditLog[] @relation("AuditLogsWritten")
+  createdFeatureFlags         FeatureFlag[]         @relation("FeatureFlagCreator")
+  featureFlagTargets          FeatureFlagTarget[]   @relation("FeatureFlagTargetUser")
+  assignedFeatureFlagTargets  FeatureFlagTarget[]   @relation("FeatureFlagTargetAssigner")
+  featureFlagAuditLogs        FeatureFlagAuditLog[] @relation("FeatureFlagAuditActor")
 }
 
 model Account {
@@ -411,5 +415,66 @@ enum DiscordDeliveryStatus {
   PENDING
   SENT
   FAILED
+}
+
+// ---------------------------------------------------------------------------
+// DevBoard Feature Flags (Self-Hosted Release Controls)
+// ---------------------------------------------------------------------------
+
+enum RolloutMode {
+  DISABLED
+  TARGETED
+  GLOBAL
+}
+
+model FeatureFlag {
+  id          String       @id @default(cuid())
+  key         String       @unique
+  name        String       @db.VarChar(128)
+  description String?      @db.Text
+  isEnabled   Boolean      @default(false)
+  rolloutMode RolloutMode  @default(DISABLED)
+  createdBy   String
+  isDeleted   Boolean      @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  creator     User         @relation("FeatureFlagCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  targets     FeatureFlagTarget[]
+  auditLogs   FeatureFlagAuditLog[]
+
+  @@index([key])
+  @@index([isDeleted, isEnabled])
+}
+
+model FeatureFlagTarget {
+  flagId      String
+  userId      String
+  createdBy   String
+  createdAt   DateTime     @default(now())
+
+  flag        FeatureFlag  @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  user        User         @relation("FeatureFlagTargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy  User         @relation("FeatureFlagTargetAssigner", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@id([flagId, userId])
+  @@index([userId])
+}
+
+model FeatureFlagAuditLog {
+  id          String       @id @default(cuid())
+  flagId      String
+  actorId     String?
+  action      String       @db.VarChar(64) // CREATED, UPDATED, TOGGLED_MASTER, ROLLOUT_CHANGED, TARGET_ADDED, TARGET_REMOVED, SOFT_DELETED
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime     @default(now())
+
+  flag        FeatureFlag  @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  actor       User?        @relation("FeatureFlagAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([flagId, createdAt(sort: Desc)])
+  @@index([actorId])
 }
 
