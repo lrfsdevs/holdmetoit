@@ -327,7 +327,9 @@ export function AdminHoursOverrideModal({
                   type: "success",
                   message: `Successfully updated hours for ${selectedDayOption.shortLabel} (${selectedDayOption.dateKey}).`,
                });
-               router.refresh();
+               startTransition(() => {
+                  router.refresh();
+               });
                onSuccess?.();
                setTimeout(() => {
                   onClose();
@@ -385,7 +387,9 @@ export function AdminHoursOverrideModal({
                   type: "success",
                   message: `Successfully reset overall study hours to 00:00:00 for ${participant.displayName}.`,
                });
-               router.refresh();
+               startTransition(() => {
+                  router.refresh();
+               });
                onSuccess?.();
                setTimeout(() => {
                   onClose();

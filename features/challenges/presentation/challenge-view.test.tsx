@@ -74,10 +74,19 @@ vi.mock(
 );
 
 vi.mock("./challenge-manage-tab", () => ({
-   ChallengeManageTab: () =>
+   ChallengeManageTab: ({
+      initialRosterSearch,
+      initialRosterTeamFilter,
+      initialRosterPage,
+   }: any) =>
       createElement(
          "div",
-         { "data-testid": "manage-tab-content" },
+         {
+            "data-testid": "manage-tab-content",
+            "data-search": initialRosterSearch,
+            "data-team": initialRosterTeamFilter,
+            "data-page": String(initialRosterPage),
+         },
          "Manage Content"
       ),
 }));
@@ -263,6 +272,22 @@ describe("ChallengeView", () => {
          );
          expect(html).toContain("Overview Content");
       });
+
+      it("passes initialRosterSearch, initialRosterTeamFilter, and initialRosterPage to ChallengeManageTab", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: mockChallenge,
+               initialTab: "manage",
+               isAdmin: true,
+               initialRosterSearch: "sufi",
+               initialRosterTeamFilter: "team-a",
+               initialRosterPage: 2,
+            })
+         );
+         expect(html).toContain('data-search="sufi"');
+         expect(html).toContain('data-team="team-a"');
+         expect(html).toContain('data-page="2"');
+      });
    });
 
    describe("Interactive URL Synchronization via replaceState", () => {
@@ -341,6 +366,45 @@ describe("ChallengeView", () => {
             null,
             "",
             "/challenge/chal-1?as=participant&filter=all"
+         );
+      });
+
+      it("clears search, team, and page parameters when navigating away from manage tab", () => {
+         globalThis.window.location.href =
+            "https://holdmetoit.com/challenge/chal-1?tab=manage&search=morgan&team=team-1&page=2";
+         globalThis.window.location.search =
+            "?tab=manage&search=morgan&team=team-1&page=2";
+
+         const element = ChallengeView({
+            challenge: mockChallenge,
+            initialTab: "manage",
+            isAdmin: true,
+         });
+
+         const tabContainer = (element.props.children as ReactNode[])[1] as {
+            props: {
+               children: {
+                  props: {
+                     children: Array<{
+                        props: { children: ReactNode; onClick: () => void };
+                     }>;
+                  };
+               };
+            };
+         };
+         const buttons = tabContainer.props.children.props.children;
+         const overviewBtn = buttons.find(
+            (b) => b.props.children === "Overview"
+         );
+         expect(overviewBtn).toBeDefined();
+
+         overviewBtn!.props.onClick();
+
+         expect(setActiveTabMock).toHaveBeenCalledWith("overview");
+         expect(replaceStateMock).toHaveBeenCalledWith(
+            null,
+            "",
+            "/challenge/chal-1"
          );
       });
 

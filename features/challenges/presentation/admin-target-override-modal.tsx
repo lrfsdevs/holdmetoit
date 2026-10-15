@@ -179,7 +179,9 @@ export function AdminTargetOverrideModal({
                message: `Successfully updated weekly target to ${formatSecondsToClock(previewSeconds)}.`,
             });
 
-            router.refresh();
+            startTransition(() => {
+               router.refresh();
+            });
             onSuccess?.(previewSeconds);
 
             setTimeout(() => {
