@@ -106,6 +106,7 @@ export function TaskMenuItems({
       <>
          {status === "COMPLETED" ? (
             <Item
+               onSelect={() => onSetStatus("TODO")}
                onClick={() => onSetStatus("TODO")}
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#d1d1d1] rounded-lg hover:bg-[#333333] transition-colors text-left"
             >
@@ -114,6 +115,7 @@ export function TaskMenuItems({
             </Item>
          ) : (
             <Item
+               onSelect={() => onSetStatus("COMPLETED")}
                onClick={() => onSetStatus("COMPLETED")}
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-emerald-300 rounded-lg hover:bg-emerald-500/10 transition-colors text-left"
             >
@@ -126,6 +128,7 @@ export function TaskMenuItems({
          <Label>Status</Label>
 
          <Item
+            onSelect={() => onSetStatus("IN_PROGRESS")}
             onClick={() => onSetStatus("IN_PROGRESS")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "IN_PROGRESS"
@@ -147,6 +150,7 @@ export function TaskMenuItems({
          </Item>
 
          <Item
+            onSelect={() => onSetStatus("COMPLETED")}
             onClick={() => onSetStatus("COMPLETED")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "COMPLETED"
@@ -168,6 +172,7 @@ export function TaskMenuItems({
          </Item>
 
          <Item
+            onSelect={() => onSetStatus("CROSSED_OUT")}
             onClick={() => onSetStatus("CROSSED_OUT")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "CROSSED_OUT"
@@ -190,6 +195,7 @@ export function TaskMenuItems({
 
          {status !== "TODO" && (
             <Item
+               onSelect={() => onSetStatus("TODO")}
                onClick={() => onSetStatus("TODO")}
                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1] rounded-lg transition-colors text-left"
             >
@@ -211,6 +217,7 @@ export function TaskMenuItems({
                </div>
                {moveDaysConfig.todayOpt && (
                   <Item
+                     onSelect={() => onMoveToDay(effectiveTodayDate)}
                      onClick={() => onMoveToDay(effectiveTodayDate)}
                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors text-left"
                   >
@@ -221,6 +228,7 @@ export function TaskMenuItems({
                {moveDaysConfig.otherEligible.map((opt) => (
                   <Item
                      key={opt.dateKey}
+                     onSelect={() => onMoveToDay(opt.dateKey)}
                      onClick={() => onMoveToDay(opt.dateKey)}
                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
                   >
@@ -236,6 +244,7 @@ export function TaskMenuItems({
          <Separator />
 
          <Item
+            onSelect={onEditTask}
             onClick={onEditTask}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
          >
@@ -254,6 +263,7 @@ export function TaskMenuItems({
             </Item>
          ) : (
             <Item
+               onSelect={onDeleteTask}
                onClick={onDeleteTask}
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
             >
@@ -353,6 +363,7 @@ export function CategoryMenuItems({
                <Label>Move Category to Day</Label>
                {todayOpt && (
                   <Item
+                     onSelect={() => onMoveCategoryToDay(effectiveTodayDate)}
                      onClick={() => onMoveCategoryToDay(effectiveTodayDate)}
                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors text-left"
                   >
@@ -363,6 +374,7 @@ export function CategoryMenuItems({
                {otherEligible.map((opt) => (
                   <Item
                      key={opt.dateKey}
+                     onSelect={() => onMoveCategoryToDay(opt.dateKey)}
                      onClick={() => onMoveCategoryToDay(opt.dateKey)}
                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
                   >
@@ -377,6 +389,7 @@ export function CategoryMenuItems({
          )}
 
          <Item
+            onSelect={onRenameCategory}
             onClick={onRenameCategory}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
          >
@@ -395,6 +408,7 @@ export function CategoryMenuItems({
             </Item>
          ) : (
             <Item
+               onSelect={onDeleteCategory}
                onClick={onDeleteCategory}
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
             >

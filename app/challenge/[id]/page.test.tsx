@@ -33,13 +33,14 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
       initialRosterSearch,
       initialRosterTeamFilter,
       initialRosterPage,
+      isWrappedEnabled,
    }: {
       initialTab: string;
       isAdmin: boolean;
       initialRosterSearch?: string;
       initialRosterTeamFilter?: string;
       initialRosterPage?: number;
-     isWrappedEnabled: boolean;  
+      isWrappedEnabled?: boolean;
    }) =>
       createElement(
          "div",

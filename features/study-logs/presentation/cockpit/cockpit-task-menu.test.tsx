@@ -213,4 +213,126 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
 
       expect(html).toContain("Delete Category (Locked)");
    });
+
+   it("invokes callbacks via onSelect and onClick in TaskMenuItems", () => {
+      const capturedProps: any[] = [];
+      const RecordingItem = ({
+         children,
+         onSelect,
+         onClick,
+         ...props
+      }: any) => {
+         capturedProps.push({ children, onSelect, onClick });
+         return createElement("button", { onClick, ...props }, children);
+      };
+
+      const onSetStatus = vi.fn();
+      const onMoveToDay = vi.fn();
+      const onEditTask = vi.fn();
+      const onDeleteTask = vi.fn();
+
+      renderToStaticMarkup(
+         createElement(TaskMenuItems, {
+            task: mockTask,
+            catIdx: 0,
+            taskType: "daily",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: mockDayOptions,
+            selectedDateKey: "2026-10-02",
+            onSetStatus,
+            onMoveToDay,
+            onEditTask,
+            onDeleteTask,
+            Item: RecordingItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      // Verify each interactive item provides both onSelect and onClick
+      const completeItem = capturedProps.find((p) =>
+         String(renderToStaticMarkup(p.children)).includes("Mark as Completed")
+      );
+      expect(completeItem).toBeDefined();
+      expect(typeof completeItem.onSelect).toBe("function");
+      expect(typeof completeItem.onClick).toBe("function");
+
+      completeItem.onSelect();
+      expect(onSetStatus).toHaveBeenCalledWith("COMPLETED");
+
+      const editItem = capturedProps.find((p) =>
+         String(renderToStaticMarkup(p.children)).includes("Edit Task")
+      );
+      expect(editItem).toBeDefined();
+      expect(typeof editItem.onSelect).toBe("function");
+      expect(typeof editItem.onClick).toBe("function");
+
+      editItem.onSelect();
+      expect(onEditTask).toHaveBeenCalled();
+
+      const deleteItem = capturedProps.find((p) =>
+         String(renderToStaticMarkup(p.children)).includes("Delete Task")
+      );
+      expect(deleteItem).toBeDefined();
+      expect(typeof deleteItem.onSelect).toBe("function");
+      expect(typeof deleteItem.onClick).toBe("function");
+
+      deleteItem.onClick();
+      expect(onDeleteTask).toHaveBeenCalled();
+   });
+
+   it("invokes callbacks via onSelect and onClick in CategoryMenuItems", () => {
+      const capturedProps: any[] = [];
+      const RecordingItem = ({
+         children,
+         onSelect,
+         onClick,
+         ...props
+      }: any) => {
+         capturedProps.push({ children, onSelect, onClick });
+         return createElement("button", { onClick, ...props }, children);
+      };
+
+      const onMoveCategoryToDay = vi.fn();
+      const onRenameCategory = vi.fn();
+      const onDeleteCategory = vi.fn();
+
+      renderToStaticMarkup(
+         createElement(CategoryMenuItems, {
+            cat: mockCategory,
+            catType: "daily",
+            dailyCategories: [mockCategory],
+            weeklyCategories: [],
+            selectedDateKey: "2026-10-02",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: mockDayOptions,
+            onMoveCategoryToDay,
+            onRenameCategory,
+            onDeleteCategory,
+            Item: RecordingItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      const renameItem = capturedProps.find((p) =>
+         String(renderToStaticMarkup(p.children)).includes("Rename Category")
+      );
+      expect(renameItem).toBeDefined();
+      expect(typeof renameItem.onSelect).toBe("function");
+      expect(typeof renameItem.onClick).toBe("function");
+
+      renameItem.onSelect();
+      expect(onRenameCategory).toHaveBeenCalled();
+
+      const deleteItem = capturedProps.find((p) =>
+         String(renderToStaticMarkup(p.children)).includes("Delete Category")
+      );
+      expect(deleteItem).toBeDefined();
+      expect(typeof deleteItem.onSelect).toBe("function");
+      expect(typeof deleteItem.onClick).toBe("function");
+
+      deleteItem.onClick();
+      expect(onDeleteCategory).toHaveBeenCalled();
+   });
 });

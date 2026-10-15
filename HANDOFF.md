@@ -4,17 +4,17 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-15 (Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)  
+> **Last Updated:** 2026-10-16 (Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-15, Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)                                                                                                                                                                                                                                                                                                                               |
+| Gate                                         | Result (2026-10-16, Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)                                                                                                                                                                                                                                                                                                                |
 | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 101 files green (1089/1089 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
+| `npm run test`                               | ✅ 104 files green (1110/1110 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
 | `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
@@ -352,3 +352,23 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (101 test files, 1089/1089 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP:** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+
+### Session 110 — 2026-10-16 (PR #111 Context Menu Alignment, Touch/Keyboard Selection & Design Token Fixes)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Problem Analysis (KAN-18 / GitHub #100 / PR #111):**
+   - Collaborator `@HyperAfnan` reported that PR #111 was giving issues and held off merging.
+   - **Root Cause 1 (Mid-Air Orphaned Context Menus):** With `<ContextMenu modal={false}>`, Radix UI positions the menu at a virtual point `(clientX, clientY)`. Without external scroll or window resize dismissal listeners, scrolling the page or resizing the window left the context menu floating in mid-air at the old screen coordinates, detached from the task/category.
+   - **Root Cause 2 (Touchscreen & Keyboard Selection Failure):** All items in `cockpit-task-menu.tsx` only had `onClick`. Radix `ContextMenuItem` and `DropdownMenuItem` unmount on `pointerup`, canceling synthetic `click` events on mobile browsers. For keyboard users (Enter/Space), Radix fires `onSelect`, not `onClick`.
+   - **Root Cause 3 (Design Token Regression):** `components/ui/dropdown-menu.tsx` was reverted to generic shadcn tokens (`bg-popover`, `text-popover-foreground`, `focus:bg-accent`, etc.) instead of the ratified Obsidian Dark tokens.
+- **Implementation & Resolution:**
+   - **`components/ui/context-menu.tsx`:** Added captured passive `scroll` and `resize` event listeners in `ContextMenuContent`. When any external container or the window scrolls, or when the window resizes, the menu cleanly self-dismisses via an Escape keydown dispatch. Added `collisionPadding={8}` to prevent edge clipping.
+   - **`components/ui/dropdown-menu.tsx`:** Fully harmonized with Obsidian Dark design tokens (`bg-[#222222]`, `border-[#383838]`, `rounded-xl`, `p-1.5`, `text-[#f4f3f6]`, `focus:bg-[#333333] focus:text-[#ffffff]`, `collisionPadding={8}`).
+   - **`features/study-logs/presentation/cockpit/cockpit-task-menu.tsx`:** Added both `onSelect` and `onClick` handlers across all items in `TaskMenuItems` and `CategoryMenuItems`, ensuring reliable execution on mouse, touchscreen, and keyboard interactions.
+   - **Data & Test Restorations:** Re-exported required scoreboard types in `features/leaderboard/data/leaderboard-data.ts`; updated mock parameters in `app/challenge/[id]/page.test.tsx` and `challenge-manage-tab.test.tsx`.
+   - **Test Coverage:** Added `components/ui/context-menu.test.tsx` (2 tests) and added selection callback verification tests to `cockpit-task-menu.test.tsx` (7 tests).
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (104 test files, 1110/1110 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP:** Push `krish` branch to remote for collaborator review and merge PR #111.

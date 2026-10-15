@@ -193,11 +193,6 @@ const mockChallenge: ChallengeScoreboardViewModel = {
       ratioPercentageB: 49,
    },
    standings: mockStandings,
-   punishmentWall: {
-      punishmentPfpUrl: "https://example.com/pfp.png",
-      flaggedMembers: [],
-      isEventCompleted: false,
-   },
    currentUser: {
       isLoggedIn: true,
       isEnrolled: true,

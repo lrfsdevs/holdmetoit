@@ -57,19 +57,86 @@ ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 const ContextMenuContent = React.forwardRef<
    React.ElementRef<typeof ContextMenuPrimitive.Content>,
    React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({ className, ...props }, ref) => (
-   <ContextMenuPrimitive.Portal>
-      <ContextMenuPrimitive.Content
-         ref={ref}
-         className={cn(
-            "z-50 min-w-[170px] overflow-y-auto overflow-x-hidden rounded-xl border border-[#383838] bg-[#222222] p-1.5 text-[#f4f3f6] shadow-2xl",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
-            className
-         )}
-         {...props}
-      />
-   </ContextMenuPrimitive.Portal>
-));
+>(({ className, ...props }, ref) => {
+   const innerRef = React.useRef<HTMLDivElement | null>(null);
+
+   React.useEffect(() => {
+      const handleScroll = (event: Event) => {
+         const node = innerRef.current;
+         if (node && event.target && node.contains(event.target as Node)) {
+            return;
+         }
+         // Dismiss context menu on external container or window scroll
+         innerRef.current?.dispatchEvent(
+            new KeyboardEvent("keydown", {
+               key: "Escape",
+               bubbles: true,
+               cancelable: true,
+            })
+         );
+         document.dispatchEvent(
+            new KeyboardEvent("keydown", {
+               key: "Escape",
+               bubbles: true,
+               cancelable: true,
+            })
+         );
+      };
+
+      const handleResize = () => {
+         // Dismiss context menu on window resize or resolution change
+         innerRef.current?.dispatchEvent(
+            new KeyboardEvent("keydown", {
+               key: "Escape",
+               bubbles: true,
+               cancelable: true,
+            })
+         );
+         document.dispatchEvent(
+            new KeyboardEvent("keydown", {
+               key: "Escape",
+               bubbles: true,
+               cancelable: true,
+            })
+         );
+      };
+
+      window.addEventListener("scroll", handleScroll, {
+         capture: true,
+         passive: true,
+      });
+      window.addEventListener("resize", handleResize, { passive: true });
+
+      return () => {
+         window.removeEventListener("scroll", handleScroll, { capture: true });
+         window.removeEventListener("resize", handleResize);
+      };
+   }, []);
+
+   return (
+      <ContextMenuPrimitive.Portal>
+         <ContextMenuPrimitive.Content
+            ref={(node) => {
+               innerRef.current = node;
+               if (typeof ref === "function") {
+                  ref(node);
+               } else if (ref) {
+                  (
+                     ref as React.MutableRefObject<HTMLDivElement | null>
+                  ).current = node;
+               }
+            }}
+            collisionPadding={8}
+            className={cn(
+               "z-50 min-w-[170px] overflow-y-auto overflow-x-hidden rounded-xl border border-[#383838] bg-[#222222] p-1.5 text-[#f4f3f6] shadow-2xl",
+               "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
+               className
+            )}
+            {...props}
+         />
+      </ContextMenuPrimitive.Portal>
+   );
+});
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName;
 
 const ContextMenuItem = React.forwardRef<
