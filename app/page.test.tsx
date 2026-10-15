@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
    findLatestCompletedChallengeForWrapped: vi.fn(),
    getChallengeScoreboard: vi.fn(),
    homeCockpitView: vi.fn(),
+   isFeatureEnabled: vi.fn(),
 }));
 
 vi.mock("@/core/auth", () => ({ auth: mocks.auth }));
@@ -47,6 +48,9 @@ vi.mock("@/features/challenges/data/challenge.repository", () => ({
 vi.mock("@/features/leaderboard/data/leaderboard-data", () => ({
    getChallengeScoreboard: mocks.getChallengeScoreboard,
 }));
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: mocks.isFeatureEnabled,
+}));
 
 import HomePage from "./page";
 
@@ -61,6 +65,7 @@ function deferred<T>() {
 describe("HomePage data loading", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      mocks.isFeatureEnabled.mockResolvedValue(true);
       mocks.auth.mockResolvedValue({
          user: { id: "user-1", role: "PARTICIPANT" },
       });
@@ -105,5 +110,48 @@ describe("HomePage data loading", () => {
       await page;
       expect(mocks.getChallengeScoreboard).not.toHaveBeenCalled();
       expect(renderToStaticMarkup(await page)).toContain("home");
+   });
+
+   it("skips the wrapped scoreboard fetch when the wrapped flag is off", async () => {
+      mocks.isFeatureEnabled.mockResolvedValue(false);
+      mocks.getParticipantCockpit.mockResolvedValue(null);
+      mocks.getUserCategorizedTasks.mockResolvedValue(null);
+      mocks.findLatestAvailableChallenge.mockResolvedValue(null);
+      mocks.findLatestCompletedChallengeForWrapped.mockResolvedValue({
+         id: "chal-wrapped",
+      });
+
+      renderToStaticMarkup(await HomePage({}));
+
+      expect(mocks.isFeatureEnabled).toHaveBeenCalledWith(
+         "challenge_wrapped_v1"
+      );
+      expect(mocks.getChallengeScoreboard).not.toHaveBeenCalled();
+      const viewProps = mocks.homeCockpitView.mock.calls[0]?.[0] as {
+         wrappedChallenge: unknown;
+      };
+      expect(viewProps.wrappedChallenge).toBeNull();
+   });
+
+   it("fetches and injects the wrapped challenge when the flag is on", async () => {
+      mocks.isFeatureEnabled.mockResolvedValue(true);
+      mocks.getParticipantCockpit.mockResolvedValue(null);
+      mocks.getUserCategorizedTasks.mockResolvedValue(null);
+      mocks.findLatestAvailableChallenge.mockResolvedValue(null);
+      mocks.findLatestCompletedChallengeForWrapped.mockResolvedValue({
+         id: "chal-wrapped",
+      });
+      mocks.getChallengeScoreboard.mockResolvedValue({ id: "chal-wrapped" });
+
+      renderToStaticMarkup(await HomePage({}));
+
+      expect(mocks.getChallengeScoreboard).toHaveBeenCalledWith(
+         "chal-wrapped",
+         "user-1"
+      );
+      const viewProps = mocks.homeCockpitView.mock.calls[0]?.[0] as {
+         wrappedChallenge: unknown;
+      };
+      expect(viewProps.wrappedChallenge).toEqual({ id: "chal-wrapped" });
    });
 });
