@@ -9,6 +9,7 @@ import {
 import * as sessionModule from "@/features/auth/api/require-session";
 import * as participantModule from "@/features/auth/api/require-participant";
 import * as feedbackServiceModule from "@/features/wrapped/data/challenge-feedback.service";
+import * as wrappedFlagModule from "@/features/wrapped/api/wrapped-flag";
 
 vi.mock("next/cache", () => ({
    revalidatePath: vi.fn(),
@@ -48,6 +49,11 @@ vi.mock("@/features/wrapped/data/challenge-feedback.service", () => ({
    sendChallengeFeedbackToDiscord: vi.fn(),
 }));
 
+vi.mock("@/features/wrapped/api/wrapped-flag", () => ({
+   WRAPPED_FEATURE_FLAG_KEY: "challenge_wrapped_v1",
+   isWrappedFeatureEnabled: vi.fn(),
+}));
+
 const DAY_MS = 86_400_000;
 const PARTICIPANT = {
    id: "part_1",
@@ -62,6 +68,9 @@ const PARTICIPANT = {
 describe("wrapped.actions", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(wrappedFlagModule.isWrappedFeatureEnabled).mockResolvedValue(
+         true
+      );
       vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
          id: "user_1",
          name: "Afnan",
@@ -190,6 +199,52 @@ describe("wrapped.actions", () => {
       soloPunishment: "Yes, keep the punishment" as const,
       soloIdeas: "More challenges please",
    };
+
+   describe("challenge_wrapped_v1 kill switch", () => {
+      it("no-ops seen-marking without touching auth or the database when disabled", async () => {
+         vi.mocked(wrappedFlagModule.isWrappedFeatureEnabled).mockResolvedValue(
+            false
+         );
+
+         const result = await markWrappedSeenAction("chal_1");
+
+         expect(result).toEqual({ ok: true });
+         expect(sessionModule.requireSessionUser).not.toHaveBeenCalled();
+         expect(
+            participantModule.requireOwnedParticipant
+         ).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects feedback submission when disabled", async () => {
+         vi.mocked(wrappedFlagModule.isWrappedFeatureEnabled).mockResolvedValue(
+            false
+         );
+
+         const result = await submitChallengeFeedbackAction(validFeedbackInput);
+
+         expect(result.ok).toBe(false);
+         if (!result.ok) {
+            expect(result.code).toBe("FEATURE_DISABLED");
+         }
+         expect(prisma.challengeFeedback.upsert).not.toHaveBeenCalled();
+         expect(
+            feedbackServiceModule.sendChallengeFeedbackToDiscord
+         ).not.toHaveBeenCalled();
+      });
+
+      it("no-ops the expired auto-seen check when disabled", async () => {
+         vi.mocked(wrappedFlagModule.isWrappedFeatureEnabled).mockResolvedValue(
+            false
+         );
+
+         const result = await markWrappedSeenIfExpiredAction("chal_1");
+
+         expect(result).toEqual({ ok: true });
+         expect(prisma.challenge.findUnique).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.update).not.toHaveBeenCalled();
+      });
+   });
 
    describe("submitChallengeFeedbackAction", () => {
       it("validates input and rejects invalid ratings", async () => {

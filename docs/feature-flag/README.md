@@ -258,6 +258,21 @@ To keep the application free of technical debt, every flag follows a 5-step life
    - Delete the flag in the Admin Console (soft deletion keeps historical audit records).
    - Remove the unused key constant.
 
+### 6.1 Flag Registry
+
+Live keys wired into production code, with the surfaces each one gates:
+
+| Key                    | Gated Surfaces                                                                                                                                                                                                  | Default               | Owner                             |
+| :--------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :-------------------------------- |
+| `challenge_wrapped_v1` | Home dashboard wrapped popup + Shy Card; challenge **Summary** tab; challenge wrapped story popup + feedback dialog; wrapped seen-marking & feedback Server Actions (`features/wrapped/api/wrapped.actions.ts`) | `false` (fail-closed) | Participant UI / Scoring & Engine |
+
+**`challenge_wrapped_v1` operator notes**
+
+- Source of truth: `WRAPPED_FEATURE_FLAG_KEY` in `features/wrapped/api/wrapped-flag.ts`; evaluated server-side only via `isWrappedFeatureEnabled()`.
+- Enable from `/devboard`: `isEnabled = true` + `rolloutMode = GLOBAL` for everyone, or `TARGETED` with assigned Discord testers for a beta.
+- While off, `?tab=summary` clamps to Overview and the wrapped Server Actions no-op / return `FEATURE_DISABLED`, so the feature stays unreachable even from stale clients.
+- Decommission: once wrapped is permanent, remove the `isWrappedFeatureEnabled()` checks and delete the flag row (soft deletion keeps the audit trail).
+
 ---
 
 ## 7. Security & Operator Boundaries

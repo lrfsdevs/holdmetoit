@@ -13,6 +13,8 @@ import {
 } from "@/features/challenges/data/challenge.repository";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       fetchedUserTasks,
       fetchedUpcomingChallenge,
       eligibleWrapped,
+      isWrappedEnabled,
    ] = await Promise.all([
       userId
          ? getParticipantCockpit(userId, searchParams?.challenge)
@@ -57,6 +60,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       userId
          ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
          : Promise.resolve(null),
+      userId
+         ? isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY)
+         : Promise.resolve(false),
    ]);
 
    const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
@@ -66,7 +72,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          : null;
 
    let wrappedChallenge = null;
-   if (eligibleWrapped && userId) {
+   if (eligibleWrapped && userId && isWrappedEnabled) {
       try {
          wrappedChallenge = await getChallengeScoreboard(
             eligibleWrapped.id,
