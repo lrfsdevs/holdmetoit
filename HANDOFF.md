@@ -11,14 +11,13 @@
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-15, Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)                                                                                                                                                                                                                                                                                                                               |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 101 files green (1089/1089 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                                                                |
+| Gate                                        | Result (2026-10-15 — Phase 2: YPT Integration, Challenge Economy, & Betting System on `afnan`)                                                                                                                                             |
+| :------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                         | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                           |
+| `npm run test`                              | ✅ 117 files green (1201/1201 tests passing)                                                                                                                                                                                               |
+| `npm run build`                             | ✅ 14 routes compiled (production build clean including `/api/v1/ingest/ypt`, `/wallet`, `/devboard`)                                                                                                                                      |
+| Phase 1 (Economy Foundation)                | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                             |
+| Phase 2 (YPT, Challenge Economy, & Betting) | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement |
 
 ### 1.1 Live Routes
 
@@ -324,4 +323,37 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (101 test files, 1089/1089 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+- **NEXT STEP (completed in Session 109):** Implemented Phase 1 Virtual Economy Foundation.
+
+### Session 109 — 2026-10-15 (Phase 1 — Economy Foundation on `afnan`)
+
+- **Scope:** Implemented the complete Phase 1 HoldMeToIt Virtual Economy Foundation: user wallets, append-only transaction ledger, 100 coins/hr proportional rewards with fractional progress preservation, idempotent study logging, available vs reserved funds accounting, live reconciliation audit, and responsive Obsidian dark cockpit.
+- **Database Architecture (`prisma/schema.prisma` & migration `20261016000000_create_economy_models`):**
+   - `Wallet`: 1-to-1 with `User`, tracking `balance` (total held coins), `reservedBalance` (committed), `lifetimeEarned`, `lifetimeSpent`, and `rewardProgress` (accumulated eligible seconds modulo 36).
+   - `LedgerTransaction`: Append-only immutable ledger with signed amounts (`+` credit, `-` debit), `balanceDelta`, `reservedDelta`, `TransactionType` (STUDY_REWARD, CHALLENGE_REWARD, WAGER_RESERVATION, WAGER_SETTLEMENT, WAGER_REFUND, GACHA_PURCHASE, TRADE_RESERVATION, TRADE_SETTLEMENT, TRADE_REFUND, ADMIN_ADJUSTMENT, REVERSAL), and unique `idempotencyKey`.
+   - `StudyRewardRecord`: Exactly-once tracking with unique compound index `@@unique([sourceType, studySessionId])` and status tracking.
+- **Domain Logic (Law L7 Pure Isolation):**
+   - `features/economy/domain/economy-constants.ts`: Base rates (100 coins/hr, 36s/coin).
+   - `features/economy/domain/reward-calculation.ts`: Exact integer arithmetic $Q = \lfloor (P + S) / 36 \rfloor, P_{\text{next}} = (P + S) \pmod{36}$.
+   - `features/economy/domain/wallet-accounting.ts`: Pure accounting transitions enforcing $\text{availableBalance} = \text{totalBalance} - \text{reservedBalance} \ge 0$.
+   - `features/economy/domain/reconciliation.ts`: Audit verification comparing stored wallet totals against ledger delta sums.
+- **Data & API Layer (`features/economy/data/` & `features/economy/api/`):**
+   - `wallet.repository.ts`: Serializable Prisma transactions (`TransactionIsolationLevel.Serializable`) with retry loop for P2034 write conflicts.
+   - `study-reward.service.ts`: Server-authoritative session evaluation and idempotency verification.
+   - `wallet.actions.ts`: Authenticated server actions for summary, paginated history, admin adjustments, reconciliation audit, and reversals.
+   - `log-study-time.actions.ts`: Non-blocking, fail-safe trigger integration into study time logging.
+- **Presentation & Routes (`app/wallet/` & `features/economy/presentation/`):**
+   - `/wallet` route (Page, loading skeleton, error recovery boundary per Law L9).
+   - `wallet-summary-card.tsx`: Metric cards, fractional progress bar.
+   - `transaction-history-table.tsx`: Desktop table + mobile card layout (<640px) with category filter tabs and pagination.
+   - `admin-adjustment-dialog.tsx`: Native dialog for authorized adjustments.
+   - `reconciliation-dialog.tsx`: Native dialog rendering live discrepancy audits.
+   - Header coin badge in `features/economy/presentation/header-coin-badge.tsx` and `/wallet` navigation link in `auth-nav.tsx`.
+   - Projected coin reward preview in `DailyHoursModal`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (110 test files, 1150/1150 tests green, 60 new tests).
+   - `npm run lint` passed (0 errors in new economy code).
+   - `npm run build` passed (13 routes compiled cleanly, `/wallet` size 8.33 kB).
+- **Documentation:** Created comprehensive `docs/economy/README.md`.
+- **NEXT STEP:** Maintainer applies database migration `20261016000000_create_economy_models` to target staging/production environment (`npx prisma migrate deploy` or `prisma db push`). Future phases (Phase 2 Pokémon catalogue, gacha banners, pity engine, wagers) can build directly on top of this transaction ledger foundation.

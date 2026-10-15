@@ -180,6 +180,8 @@ export interface ChallengeCreationInput {
    endAt: Date | string;
    eventBannerUrl?: string | null;
    punishmentPfpUrl?: string | null;
+   rewardCoins?: number | null;
+   isBettingEnabled?: boolean;
    teams: Array<{
       name: string;
       color?: string | null;

@@ -48,6 +48,10 @@ model User {
   featureFlagTargets          FeatureFlagTarget[]   @relation("FeatureFlagTargetUser")
   assignedFeatureFlagTargets  FeatureFlagTarget[]   @relation("FeatureFlagTargetAssigner")
   featureFlagAuditLogs        FeatureFlagAuditLog[] @relation("FeatureFlagAuditActor")
+  wallet                      Wallet?
+  ledgerTransactions          LedgerTransaction[]
+  studyRewardRecords          StudyRewardRecord[]
+  wagers                      Wager[]
 }
 
 model Account {
@@ -120,6 +124,12 @@ model Challenge {
   auditLogs        AuditLog[]
   challengeFeedbacks ChallengeFeedback[]
 
+  rewardCoins      Int             @default(0)
+  isRewardSettled  Boolean         @default(false)
+  rewardSettledAt  DateTime?
+  isBettingEnabled Boolean         @default(true)
+  wagers           Wager[]
+
   @@index([hostId])
   @@index([isDeleted, startAt])
 }
@@ -140,6 +150,7 @@ model Team {
 
   challenge    Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   participants ChallengeParticipant[]
+  wagers       Wager[]
 
   @@unique([challengeId, name])
   @@index([challengeId, isDeleted])
@@ -190,6 +201,10 @@ model DailyStudyLog {
   overrideById   String?
   overrideReason String?
 
+  source             String   @default("MANUAL") @db.VarChar(32)
+  externalActivityId String?  @db.VarChar(128)
+  yptSubject         String?  @db.VarChar(128)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -199,6 +214,7 @@ model DailyStudyLog {
   @@unique([participantId, logDate])
   @@index([participantId])
   @@index([logDate])
+  @@index([participantId, externalActivityId])
 }
 
 // ---------------------------------------------------------------------------
@@ -477,4 +493,141 @@ model FeatureFlagAuditLog {
   @@index([flagId, createdAt(sort: Desc)])
   @@index([actorId])
 }
+
+// ---------------------------------------------------------------------------
+// Virtual Economy (Phase 1: Wallet, Ledger, and Study Rewards)
+// ---------------------------------------------------------------------------
+
+enum TransactionType {
+  STUDY_REWARD
+  CHALLENGE_REWARD
+  WAGER_RESERVATION
+  WAGER_SETTLEMENT
+  WAGER_REFUND
+  GACHA_PURCHASE
+  TRADE_RESERVATION
+  TRADE_SETTLEMENT
+  TRADE_REFUND
+  ADMIN_ADJUSTMENT
+  REVERSAL
+}
+
+enum RewardProcessingStatus {
+  PROCESSED
+  FAILED
+  REVOKED
+}
+
+model Wallet {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  totalBalance          Int                 @default(0)
+  reservedBalance       Int                 @default(0)
+  rewardProgressSeconds Int                 @default(0)
+  lifetimeEarned        Int                 @default(0)
+  lifetimeSpent         Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          LedgerTransaction[]
+  studyRewards          StudyRewardRecord[]
+  wagers                Wager[]
+
+  @@index([userId])
+}
+
+model LedgerTransaction {
+  id                   String             @id @default(cuid())
+  walletId             String
+  userId               String
+  type                 TransactionType
+  amount               Int
+  totalDelta           Int
+  reservedDelta        Int                @default(0)
+  sourceType           String?            @db.VarChar(64)
+  sourceId             String?            @db.VarChar(128)
+  idempotencyKey       String             @unique @db.VarChar(255)
+  description          String             @db.VarChar(512)
+  metadata             Json?
+  relatedTransactionId String?
+  createdAt            DateTime           @default(now())
+
+  wallet               Wallet             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedTransaction   LedgerTransaction? @relation("TransactionReversal", fields: [relatedTransactionId], references: [id], onDelete: SetNull)
+  reversals            LedgerTransaction[] @relation("TransactionReversal")
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([sourceType, sourceId])
+}
+
+model StudyRewardRecord {
+  id                         String                 @id @default(cuid())
+  userId                     String
+  walletId                   String
+  studySessionId             String                 @db.VarChar(128)
+  sourceType                 String                 @default("DAILY_STUDY_LOG") @db.VarChar(64)
+  eligibleSeconds            Int                    @default(0)
+  coinsCredited              Int                    @default(0)
+  fractionalSecondsConsumed  Int                    @default(0)
+  fractionalSecondsRemaining Int                    @default(0)
+  status                     RewardProcessingStatus @default(PROCESSED)
+  idempotencyKey             String                 @unique @db.VarChar(255)
+  ledgerTransactionId        String?
+  metadata                   Json?
+  createdAt                  DateTime               @default(now())
+  processedAt                DateTime               @default(now())
+
+  wallet                     Wallet                 @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, studySessionId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([walletId])
+}
+
+// ---------------------------------------------------------------------------
+// Betting & Wagers (Phase 2)
+// ---------------------------------------------------------------------------
+
+enum WagerStatus {
+  PENDING
+  ACCEPTED
+  WON
+  LOST
+  REFUNDED
+  CANCELLED
+}
+
+model Wager {
+  id                  String      @id @default(cuid())
+  challengeId         String
+  userId              String
+  walletId            String
+  teamId              String
+  stake               Int
+  status              WagerStatus @default(ACCEPTED)
+  payout              Int         @default(0)
+  settledAt           DateTime?
+  ledgerReservationId String?
+  ledgerSettlementId  String?
+  idempotencyKey      String      @unique @db.VarChar(255)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  challenge           Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet              Wallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  team                Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, status])
+  @@index([userId, status])
+  @@index([walletId])
+  @@index([teamId])
+}
+
+
 

@@ -41,6 +41,9 @@ export interface UpsertDailyStudyLogParams {
    durationSeconds: number;
    isLeave?: boolean;
    challengeId?: string;
+   source?: string;
+   externalActivityId?: string;
+   yptSubject?: string;
    actor?: {
       id: string;
       username: string;
@@ -105,6 +108,11 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
                durationSeconds: params.durationSeconds,
                isLeave,
                status: "Offline",
+               ...(params.source ? { source: params.source } : {}),
+               ...(params.externalActivityId
+                  ? { externalActivityId: params.externalActivityId }
+                  : {}),
+               ...(params.yptSubject ? { yptSubject: params.yptSubject } : {}),
             },
             update: {
                durationSeconds: params.durationSeconds,
@@ -112,6 +120,11 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
                isOverride: false,
                overrideById: null,
                overrideReason: null,
+               ...(params.source ? { source: params.source } : {}),
+               ...(params.externalActivityId
+                  ? { externalActivityId: params.externalActivityId }
+                  : {}),
+               ...(params.yptSubject ? { yptSubject: params.yptSubject } : {}),
             },
          });
 

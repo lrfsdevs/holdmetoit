@@ -11,6 +11,16 @@ vi.mock("next/navigation", () => ({
    }),
 }));
 
+vi.mock("@/features/wagers/api/wager.actions", () => ({
+   placeWagerAction: vi.fn(),
+   getUserChallengeWagersAction: vi
+      .fn()
+      .mockResolvedValue({ ok: true, wagers: [] }),
+   getChallengeWagersAction: vi
+      .fn()
+      .mockResolvedValue({ ok: true, wagers: [] }),
+}));
+
 vi.mock("next/image", () => ({
    default: ({
       src,

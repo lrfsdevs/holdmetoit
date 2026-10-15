@@ -41,6 +41,9 @@ export interface RawChallengePayload {
    endAt: Date;
    eventBannerUrl: string | null;
    punishmentPfpUrl: string | null;
+   rewardCoins?: number;
+   isRewardSettled?: boolean;
+   isBettingEnabled?: boolean;
    teams: Array<{
       id: string;
       name: string;
@@ -435,6 +438,9 @@ export function buildScoreboardViewModel(
          : null,
       startAt: challenge.startAt.toISOString(),
       endAt: challenge.endAt.toISOString(),
+      rewardCoins: challenge.rewardCoins ?? 0,
+      isRewardSettled: challenge.isRewardSettled ?? false,
+      isBettingEnabled: challenge.isBettingEnabled ?? false,
       daysRemaining,
       totalDays,
       currentDayNumber: elapsedDays,

@@ -19,6 +19,11 @@ import { buildTeamTombstoneName } from "@/features/challenges/domain/team-deleti
 import { sumLoggedSeconds } from "@/features/leaderboard/domain/catch-up-presentation";
 import { aggregateTeamScores } from "@/features/leaderboard/domain/leaderboard";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
+import { getOrCreateWallet } from "@/features/economy/data/wallet.repository";
+import {
+   settleChallengeWagers,
+   refundAllChallengeWagers,
+} from "@/features/wagers/data/wager.repository";
 import { listAllChallenges } from "./challenge.repository";
 
 export async function listAllChallengesForAdmin() {
@@ -93,6 +98,11 @@ export async function createAdminChallenge(
             endAt: new Date(input.endAt),
             eventBannerUrl: input.eventBannerUrl?.trim() || null,
             punishmentPfpUrl: input.punishmentPfpUrl?.trim() || null,
+            rewardCoins:
+               input.rewardCoins != null && input.rewardCoins >= 0
+                  ? input.rewardCoins
+                  : 0,
+            isBettingEnabled: Boolean(input.isBettingEnabled),
             hostId: actor.id,
             teams: {
                create: input.teams.map((team, idx) => ({
@@ -309,6 +319,61 @@ export async function lockChallengeResults(
          });
       }
 
+      // 3. Challenge economic rewards settlement (Stage 3)
+      if (
+         Boolean(challenge.rewardCoins) &&
+         challenge.rewardCoins > 0 &&
+         !challenge.isRewardSettled &&
+         Boolean((tx as any)?.wallet)
+      ) {
+         const savedParticipants = challenge.participants.filter((p) =>
+            savedParticipantIds.includes(p.id)
+         );
+
+         for (const participant of savedParticipants) {
+            const wallet = await getOrCreateWallet(participant.userId, tx);
+            await tx.wallet.update({
+               where: { id: wallet.id },
+               data: {
+                  totalBalance: wallet.totalBalance + challenge.rewardCoins,
+                  lifetimeEarned: wallet.lifetimeEarned + challenge.rewardCoins,
+               },
+            });
+
+            await tx.ledgerTransaction.create({
+               data: {
+                  walletId: wallet.id,
+                  userId: participant.userId,
+                  type: "CHALLENGE_REWARD",
+                  amount: challenge.rewardCoins,
+                  totalDelta: challenge.rewardCoins,
+                  reservedDelta: 0,
+                  sourceType: "CHALLENGE",
+                  sourceId: challengeId,
+                  idempotencyKey: `challenge-reward:${challengeId}:${participant.userId}`,
+                  description: `Challenge victory bonus: +${challenge.rewardCoins} coins (${challenge.title})`,
+                  metadata: {
+                     challengeId,
+                     challengeTitle: challenge.title,
+                     rewardCoins: challenge.rewardCoins,
+                     participantId: participant.id,
+                  },
+               },
+            });
+         }
+
+         await tx.challenge.update({
+            where: { id: challengeId },
+            data: {
+               isRewardSettled: true,
+               rewardSettledAt: now,
+            },
+         });
+      }
+
+      // 4. Wager settlement (Stage 4)
+      await settleChallengeWagers(challengeId, winningTeamIds, tx);
+
       await recordAuditEvent({
          actorId: actor.id,
          actorUsername: actor.username,
@@ -415,6 +480,13 @@ export async function unlockChallengeResults(
             data: { isWrappedSeen: false, isFeedbackFilled: false },
          });
       }
+
+      // Refund any accepted wagers if challenge is unlocked
+      await refundAllChallengeWagers(
+         challengeId,
+         tx,
+         "Challenge results unlocked by admin"
+      );
 
       await recordAuditEvent({
          actorId: actor.id,
@@ -541,6 +613,8 @@ export interface UpdateAdminChallengeInput {
    endAt: string;
    eventBannerUrl: string | null;
    punishmentPfpUrl: string | null;
+   rewardCoins?: number;
+   isBettingEnabled?: boolean;
    teams: Array<{
       id?: string;
       name: string;
@@ -567,8 +641,11 @@ export async function updateAdminChallenge(
    const maxMembers =
       challenge.format === "SOLOS" ? 1 : challenge.format === "DUOS" ? 2 : null;
 
+   const now = new Date();
+   const isStarted = challenge.startAt.getTime() <= now.getTime();
+
    return prisma.$transaction(async (tx) => {
-      // 1. Update challenge basic details
+      // 1. Update challenge basic details (economic terms can only be modified before kickoff)
       const updatedChallenge = await tx.challenge.update({
          where: { id: challengeId },
          data: {
@@ -577,6 +654,12 @@ export async function updateAdminChallenge(
             endAt: new Date(input.endAt),
             eventBannerUrl: input.eventBannerUrl,
             punishmentPfpUrl: input.punishmentPfpUrl,
+            ...(!isStarted && input.rewardCoins !== undefined
+               ? { rewardCoins: Math.max(0, input.rewardCoins) }
+               : {}),
+            ...(!isStarted && input.isBettingEnabled !== undefined
+               ? { isBettingEnabled: input.isBettingEnabled }
+               : {}),
          },
       });
 

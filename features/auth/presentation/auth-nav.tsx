@@ -13,6 +13,7 @@ import {
    logoutAction,
 } from "@/features/auth/api/auth.actions";
 import { toggleParticipantPreviewAction } from "@/features/auth/api/preview-mode.actions";
+import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 import {
    hasAdminPrivileges,
    isDevRole,
@@ -301,6 +302,15 @@ export function AppHeader({
                   className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
                >
                   Challenges
+               </Link>
+
+               <Link
+                  href="/wallet"
+                  data-testid="wallet-nav-link"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+               >
+                  <CoinsIcon className="h-3.5 w-3.5 text-[#f59e0b]" />
+                  <span>Wallet</span>
                </Link>
 
                {isDevRole(user?.role) && (

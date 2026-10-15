@@ -55,6 +55,15 @@ export const logEvents = {
    auditTrailReadFailed: "audit.trail_read_failed",
    auditPersistFailed: "audit.persist_failed",
    auditQueryFailed: "audit.query_failed",
+   economyRewardCredited: "economy.reward_credited",
+   economyRewardSkipped: "economy.reward_skipped",
+   economyDebitApplied: "economy.debit_applied",
+   economyReservationApplied: "economy.reservation_applied",
+   economyReleaseApplied: "economy.release_applied",
+   economySettlementApplied: "economy.settlement_applied",
+   economyReversalApplied: "economy.reversal_applied",
+   economyAdminAdjusted: "economy.admin_adjusted",
+   economyReconciliationDiscrepancy: "economy.reconciliation_discrepancy",
 
    appError: "app.error",
 } as const;

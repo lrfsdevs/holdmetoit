@@ -58,6 +58,8 @@ const createChallengeSchema = z.object({
    endAt: z.string().min(1),
    eventBannerUrl: z.string().trim().min(1, BANNER_REQUIRED_MESSAGE),
    punishmentPfpUrl: z.string().trim().min(1, PFP_REQUIRED_MESSAGE),
+   rewardCoins: z.number().int().min(0).max(10000).optional(),
+   isBettingEnabled: z.boolean().optional(),
    teams: z
       .array(
          z.object({
@@ -381,6 +383,8 @@ const updateChallengeSchema = z.object({
    // Updates preserve exact legacy strings; only changed values need folder validation.
    eventBannerUrl: z.string().nullable(),
    punishmentPfpUrl: z.string().nullable(),
+   rewardCoins: z.number().int().min(0).max(10000).optional(),
+   isBettingEnabled: z.boolean().optional(),
    teams: z
       .array(
          z.object({
@@ -469,6 +473,8 @@ export async function updateChallengeAction(
             endAt: parsed.data.endAt,
             eventBannerUrl: parsed.data.eventBannerUrl,
             punishmentPfpUrl: parsed.data.punishmentPfpUrl,
+            rewardCoins: parsed.data.rewardCoins,
+            isBettingEnabled: parsed.data.isBettingEnabled,
             teams: parsed.data.teams,
          },
          {

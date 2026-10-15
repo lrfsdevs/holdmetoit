@@ -29,6 +29,7 @@ import type {
    ScoreboardStandingEntry,
 } from "@/features/leaderboard/domain/leaderboard.types";
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
+import { ChallengeBettingCard } from "./challenge-betting-card";
 
 interface ChallengeOverviewTabProps {
    challenge: ChallengeScoreboardViewModel;
@@ -232,6 +233,9 @@ export function ChallengeOverviewTab({
                   </p>
                </div>
             </div>
+
+            {/* Tournament Economy & Betting Card (Phase 2) */}
+            <ChallengeBettingCard challenge={challenge} />
 
             {/* 2. Forfeit Avatar & Punishment Disclosure Card (FEAT-PUN-02 / FEAT-PUN-03) */}
             <div className="rounded-3xl border border-[#262626] bg-[#141414] p-6 sm:p-7 shadow-lg space-y-4">
