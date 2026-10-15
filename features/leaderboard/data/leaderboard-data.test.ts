@@ -87,9 +87,6 @@ describe("buildScoreboardViewModel", () => {
       expect(result.heroImageUrl).toBe(url);
       expect(result.eventBannerUrl).toBe(url);
       expect(result.punishmentPfpUrl).toBe(mockChallenge.punishmentPfpUrl);
-      expect(result.punishmentWall.punishmentPfpUrl).toBe(
-         mockChallenge.punishmentPfpUrl
-      );
       expect(result.currentUser.isLoggedIn).toBe(false);
    });
 
@@ -104,9 +101,6 @@ describe("buildScoreboardViewModel", () => {
 
          expect(result.punishmentPfpUrl).toBe(url);
          expect(result.heroImageUrl).toBe(mockChallenge.eventBannerUrl);
-         expect(result.punishmentWall.punishmentPfpUrl).toBe(
-            url ?? "/assets/punishment_pfp.jpg"
-         );
       }
    );
 
@@ -154,9 +148,7 @@ describe("buildScoreboardViewModel", () => {
 
       expect(updated.heroImageUrl).toBe(replacementUrl);
       expect(updated.heroImageUrl).not.toBe(first.heroImageUrl);
-      expect(updated.punishmentWall.punishmentPfpUrl).toBe(
-         first.punishmentWall.punishmentPfpUrl
-      );
+      expect(updated.punishmentPfpUrl).toBe(first.punishmentPfpUrl);
    });
 
    it("does not change the hero when only the punishment PFP changes", () => {
@@ -171,9 +163,6 @@ describe("buildScoreboardViewModel", () => {
 
       expect(result.heroImageUrl).toBe(mockChallenge.eventBannerUrl);
       expect(result.punishmentPfpUrl).toBe(
-         "https://example.com/replacement-pfp.png"
-      );
-      expect(result.punishmentWall.punishmentPfpUrl).toBe(
          "https://example.com/replacement-pfp.png"
       );
    });
@@ -226,24 +215,6 @@ describe("buildScoreboardViewModel", () => {
       expect(result.standings[1].rank).toBe(2);
    });
 
-   it("flags members with live hours deficits in the punishment wall", () => {
-      const result = buildScoreboardViewModel(
-         mockChallenge,
-         "user-1",
-         fixedNow
-      );
-
-      // SlothBrain has 7200s < 126000s (live deficit preview before lock)
-      expect(result.punishmentWall.flaggedMembers).toHaveLength(2);
-      // AuraStudier also hasn't met 35h yet (has 35100s) during ACTIVE sprint
-      const sloth = result.punishmentWall.flaggedMembers.find(
-         (m) => m.displayName === "SlothBrain"
-      );
-      expect(sloth).toBeDefined();
-      expect(sloth?.hoursDeficitSeconds).toBe(118_800);
-      expect(sloth?.statusBadge).toBe("Catch-Up");
-   });
-
    it("marks completed challenge punishments from live deficits when results are unlocked", () => {
       const completedChallenge: RawChallengePayload = {
          ...mockChallenge,
@@ -273,15 +244,6 @@ describe("buildScoreboardViewModel", () => {
 
       expect(result.standings[1].paceStatus).toBe("punished");
       expect(result.standings[1].paceLabel).toBe("Punished");
-
-      // Only SlothBrain should be flagged on the punishment wall for a COMPLETED event
-      expect(result.punishmentWall.flaggedMembers).toHaveLength(1);
-      expect(result.punishmentWall.flaggedMembers[0].displayName).toBe(
-         "SlothBrain"
-      );
-      expect(result.punishmentWall.flaggedMembers[0].statusBadge).toBe(
-         "Punished"
-      );
    });
 
    it("treats locked punishment records as the source of truth over live deficits", () => {
@@ -316,14 +278,6 @@ describe("buildScoreboardViewModel", () => {
          (s) => s.participantId === "part-2"
       );
       expect(punished?.paceStatus).toBe("punished");
-
-      expect(result.punishmentWall.flaggedMembers).toHaveLength(1);
-      expect(result.punishmentWall.flaggedMembers[0].participantId).toBe(
-         "part-2"
-      );
-      expect(result.punishmentWall.flaggedMembers[0].statusBadge).toBe(
-         "Punished"
-      );
    });
 
    it("handles empty participants gracefully", () => {
@@ -339,7 +293,6 @@ describe("buildScoreboardViewModel", () => {
       );
 
       expect(result.standings).toEqual([]);
-      expect(result.punishmentWall.flaggedMembers).toEqual([]);
       expect(result.matchHeader.leadMarginSeconds).toBe(0);
       expect(result.matchHeader.ratioPercentageA).toBe(0);
       expect(result.matchHeader.ratioPercentageB).toBe(0);

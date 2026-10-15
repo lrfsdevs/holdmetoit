@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
-} from "../data/leaderboard-data";
+} from "../domain/leaderboard.types";
 import {
    AdminHoursOverrideModal,
    type AdminHoursOverrideParticipant,

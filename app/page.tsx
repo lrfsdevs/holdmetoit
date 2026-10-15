@@ -37,49 +37,40 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          searchParamAs: searchParams?.as,
       });
 
-   let cockpit = null;
-   if (session?.user?.id) {
-      cockpit = await getParticipantCockpit(
-         session.user.id,
-         searchParams?.challenge
-      );
-   }
+   const userId = session?.user?.id;
+   const [
+      cockpit,
+      fetchedUserTasks,
+      fetchedUpcomingChallenge,
+      eligibleWrapped,
+   ] = await Promise.all([
+      userId
+         ? getParticipantCockpit(userId, searchParams?.challenge)
+         : Promise.resolve(null),
+      userId
+         ? getUserCategorizedTasks(userId).catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? findLatestAvailableChallenge().catch(() => null)
+         : Promise.resolve(null),
+      userId
+         ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
+         : Promise.resolve(null),
+   ]);
 
-   let userTasks = null;
-   if (session?.user?.id) {
-      try {
-         userTasks =
-            cockpit?.userTasks ??
-            (await getUserCategorizedTasks(session.user.id));
-      } catch {
-         userTasks = null;
-      }
-   }
-
-   let upcomingChallenge = null;
-   if (
-      session?.user?.id &&
-      (!cockpit || cockpit.challengeStatus === "UPCOMING")
-   ) {
-      try {
-         upcomingChallenge = await findLatestAvailableChallenge();
-      } catch {
-         upcomingChallenge = null;
-      }
-   }
+   const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
+   const upcomingChallenge =
+      userId && (!cockpit || cockpit.challengeStatus === "UPCOMING")
+         ? fetchedUpcomingChallenge
+         : null;
 
    let wrappedChallenge = null;
-   if (session?.user?.id) {
+   if (eligibleWrapped && userId) {
       try {
-         const eligibleChallenge = await findLatestCompletedChallengeForWrapped(
-            session.user.id
+         wrappedChallenge = await getChallengeScoreboard(
+            eligibleWrapped.id,
+            userId
          );
-         if (eligibleChallenge) {
-            wrappedChallenge = await getChallengeScoreboard(
-               eligibleChallenge.id,
-               session.user.id
-            );
-         }
       } catch {
          wrappedChallenge = null;
       }
