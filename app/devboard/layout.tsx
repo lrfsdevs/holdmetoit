@@ -9,6 +9,7 @@ export const metadata = {
       "Runtime feature flags, release toggles, and developer controls.",
 };
 
+/** Enforces DEV access and provides shared DevBoard layout chrome. */
 export default async function DevBoardLayout({
    children,
 }: {

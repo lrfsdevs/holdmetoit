@@ -142,6 +142,7 @@ function ChallengeHeroActions({ challenge }: ChallengeHeroBannerProps) {
    );
 }
 
+/** Renders the challenge hero banner with image and fallback presentation. */
 export function ChallengeHeroBanner({ challenge }: ChallengeHeroBannerProps) {
    const { matchHeader, teams } = challenge;
    const teamA = matchHeader.teamA ?? teams[0];

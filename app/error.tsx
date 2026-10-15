@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/state/error-state";
 import { Button } from "@/components/ui/button";
 import { logError, logEvents } from "@/core/observability/logger";
 
+/** Renders the root application recovery boundary. */
 export default function AppError({
    error,
    reset,

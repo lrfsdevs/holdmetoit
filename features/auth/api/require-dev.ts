@@ -16,6 +16,7 @@ export interface DevSessionUser {
    role: "DEV";
 }
 
+/** Resolves the authenticated DEV user or throws when the caller lacks DEV access. */
 export async function requireDevUser(): Promise<DevSessionUser> {
    const session = await auth();
 

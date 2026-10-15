@@ -24,6 +24,7 @@ interface ChallengeViewProps {
    initialLeaderboardViewMode?: LeaderboardViewMode;
 }
 
+/** Renders the challenge shell and coordinates its active tab. */
 export function ChallengeView({
    challenge,
    initialTab = DEFAULT_CHALLENGE_TAB,

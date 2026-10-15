@@ -25,6 +25,7 @@ interface ParticipantStatsPageProps {
    };
 }
 
+/** Builds participant profile metadata for search and social previews. */
 export async function generateMetadata({
    params,
 }: ParticipantStatsPageProps): Promise<Metadata> {
@@ -57,6 +58,7 @@ export async function generateMetadata({
    };
 }
 
+/** Loads challenge-scoped participant statistics with recovery handling. */
 export default async function ParticipantStatsPage({
    params,
    searchParams,

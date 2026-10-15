@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/state/error-state";
 import { Button } from "@/components/ui/button";
 import { logError, logEvents } from "@/core/observability/logger";
 
+/** Renders recovery actions when participant statistics fail to load. */
 export default function ParticipantStatsError({
    error,
    reset,

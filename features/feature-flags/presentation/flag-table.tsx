@@ -38,6 +38,7 @@ interface FlagTableProps {
    onDelete: (flagId: string) => Promise<void>;
 }
 
+/** Renders the searchable and filterable feature-flag table. */
 export function FlagTable({
    flags,
    selectedFlagIds,

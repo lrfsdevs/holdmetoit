@@ -16,6 +16,7 @@ export interface ChallengesListViewProps {
 
 const PAGE_SIZE = 9;
 
+/** Renders the public challenge directory with filtering and pagination. */
 export function ChallengesListView({
    challenges,
    canManageChallenges = false,

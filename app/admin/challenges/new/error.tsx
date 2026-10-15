@@ -12,6 +12,7 @@ interface NewChallengeErrorProps {
    reset: () => void;
 }
 
+/** Renders recovery actions when the challenge creator route fails to load. */
 export default function NewChallengeError({
    error,
    reset,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+/** Renders the not-found state for an unavailable challenge. */
 export default function ChallengeNotFound() {
    return (
       <main className="mx-auto flex min-h-[calc(100vh-140px)] max-w-lg flex-col items-center justify-center p-4">

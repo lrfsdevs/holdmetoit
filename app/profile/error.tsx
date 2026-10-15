@@ -12,6 +12,7 @@ interface ProfileErrorProps {
    reset: () => void;
 }
 
+/** Renders recovery actions when profile resolution fails. */
 export default function ProfileError({ error, reset }: ProfileErrorProps) {
    useEffect(() => {
       logError(logEvents.appError, {

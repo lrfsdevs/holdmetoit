@@ -30,6 +30,7 @@ const SORT_LABELS: Record<SortOption, string> = {
    TESTERS_DESC: "Sort: Testers",
 };
 
+/** Renders the DevBoard heading and developer-facing controls. */
 export function DevBoardHeader({
    totalCount,
    globalCount,

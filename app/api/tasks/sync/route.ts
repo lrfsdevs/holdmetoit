@@ -10,6 +10,7 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("tasks.sync");
 
+/** Authenticates and processes a queued offline task-sync batch. */
 export async function POST(request: Request) {
    try {
       const user = await requireSessionUser();

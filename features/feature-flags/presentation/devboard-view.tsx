@@ -30,6 +30,7 @@ interface DevBoardViewProps {
    initialFlags: FeatureFlagEntity[];
 }
 
+/** Renders the feature-flag administration surface from server-provided flags. */
 export function DevBoardView({ initialFlags }: DevBoardViewProps) {
    const [flags, setFlags] = useState<FeatureFlagEntity[]>(initialFlags);
    const [searchQuery, setSearchQuery] = useState("");

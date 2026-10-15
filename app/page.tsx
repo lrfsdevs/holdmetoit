@@ -25,6 +25,7 @@ interface HomePageProps {
    };
 }
 
+/** Loads the participant cockpit and related dashboard content. */
 export default async function HomePage({ searchParams }: HomePageProps) {
    const session = await auth();
    const cookieStore = await cookies();

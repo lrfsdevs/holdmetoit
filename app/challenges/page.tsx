@@ -9,6 +9,7 @@ import { ChallengesListView } from "@/features/challenges/presentation/challenge
 
 export const dynamic = "force-dynamic";
 
+/** Loads the public challenges directory and admin visibility state. */
 export default async function ChallengesDirectoryPage() {
    const session = await auth();
    const cookieStore = await cookies();

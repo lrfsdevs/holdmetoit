@@ -45,6 +45,7 @@ export interface DailyHoursModalProps {
    usedLeaveDays?: number;
 }
 
+/** Renders the daily study-hours and leave logging modal. */
 export function DailyHoursModal({
    challengeId,
    isOpen,
