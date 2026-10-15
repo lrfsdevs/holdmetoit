@@ -88,6 +88,23 @@ describe("dailyStudyLog repository", () => {
          });
       });
 
+      it("runs leave quota updates at serializable isolation", async () => {
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
+
+         await upsertDailyStudyLog({
+            participantId: "part_1",
+            logDate: "2026-09-06",
+            durationSeconds: 0,
+            isLeave: true,
+         });
+
+         expect(prisma.$transaction).toHaveBeenCalledWith(
+            expect.any(Function),
+            { isolationLevel: "Serializable" }
+         );
+      });
+
       it("resets override flags on self-logging update", async () => {
          vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
             id: "part_2",
