@@ -4,17 +4,17 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-15 (Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)  
+> **Last Updated:** 2026-10-15 (Session 109 — Participant Preview Admin/Host Leak Fix on `afnan-jr`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-15, Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)                                                                                                                                                                                                                                                                                                                               |
+| Gate                                         | Result (2026-10-15, Session 109 — Participant Preview Admin/Host Leak Fix on `afnan-jr`)                                                                                                                                                                                                                                                                                                                      |
 | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 101 files green (1089/1089 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
+| `npm run test`                               | ✅ 102 files green (1102/1102 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
 | `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
@@ -171,7 +171,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP (completed in Session 89):** Challenge Feedback Backend Bridge & Discord Channel 1558594247895289877.
 
-### Sessions 89–103 (Summarized; includes late 82/83 addenda)
+### Sessions 89–104 (Summarized; includes late 82/83 addenda)
 
 - **Session 89** (2026-10-12): 8-Question Challenge Feedback Survey Dialog & Discord Channel 1558594247895289877
 - **Session 90** (2026-10-12): Feedback Dialog Obsidian Tokens Harmonization, Badge Removal & Unified Single-Section Flow
@@ -188,24 +188,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Session 101** (2026-10-14): Manual Leaderboard Feature Removal & 100% Law L8 Compliance
 - **Session 102** (2026-10-14): Database Table Names Standardized to PascalCase
 - **Session 103** (2026-10-14): Database Column Names Standardized to camelCase
-
-### Session 104 — 2026-10-14 (Removal of Discord Summary Feature)
-
-- **Agent Role:** Admin Operations & Broadcaster Agent, Scoring & Engine Agent.
-- **Scope & Objectives:** Fully remove the Discord Summary feature (`FEAT-DISC-01`), eliminating dead domain code, test suites, and documentation references.
-- **Code & Test Removals:**
-   - Deleted `features/notifications/domain/discord-summary.ts` and `features/notifications/domain/discord-summary.test.ts`.
-   - Removed empty directory `features/notifications/`.
-   - Updated E2E Quality Matrix test `features/e2e/quality-matrix-j1-j6.test.ts`: removed `generateDiscordSummary` import and Step 3 assertion from Journey J6. J6 now focuses cleanly on Event Lock and Three-Condition Auto-Punishment evaluation.
-- **Documentation Alignments:**
-   - Updated `AGENTS.md`: removed `features/notifications/` and Discord summary copy step from J6 Mermaid diagram and specification.
-   - Updated `FEATURES.md`: marked `FEAT-DISC-01` as removed (superseded by Challenge Summary tab and personal Wrapped dialog).
-   - Updated `README.md`, `ROADMAP.md`, `ISSUES.md`: removed Discord summary generator references and resolved Defect D3 Discord summary debt.
-- **Quality Gates Verified:**
-   - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (92 test files, 1024/1024 tests green).
-   - `npm run build` passed (11 routes compiled cleanly).
-- **NEXT STEP (completed in Session 105):** Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1.
+- **Session 104** (2026-10-14): Removal of Discord Summary Feature (`FEAT-DISC-01`) and its dead domain code, tests, and docs references
 
 ### Session 105 — 2026-10-14 (Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1)
 
@@ -325,3 +308,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (101 test files, 1089/1089 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP:** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+
+### Session 109 — 2026-10-15 (Participant Preview Mode Admin/Host Leak Fix)
+
+- **Scope:** Resolved `ISSUES.md` #47 — "Preview as Participant" still rendered admin-side controls because three paths re-derived admin/host status from the raw session instead of the preview-aware `getEffectiveAdminState()`.
+- **Finding A (host re-grant):** `GetChallengeParticipantStatsOptions` gained `isPreviewActive`; `participant-stats.repository.ts` now computes `isEffectiveAdmin = isAdmin || (isHost && !isPreviewActive)`. `app/challenge/[id]/participant/[participantId]/page.tsx` forwards `isPreviewActive` from `getEffectiveAdminState`, so a previewing host no longer sees **Admin Controls** / **Edit Target** / the target-override modal.
+- **Finding B (raw session in header):** `app/page.tsx` now passes `user={effectiveUser}` (role downgraded to `PARTICIPANT`) to `AppHeader` instead of the raw `session.user`.
+- **Finding C (DevBoard link):** `auth-nav.tsx` gates the DevBoard nav link with `&& !(isPreviewActive ?? false)`, matching the preview-aware DEV badge.
+- **Finding D (admin routes):** `app/admin/layout.tsx` and `app/devboard/layout.tsx` read the preview cookie and `redirect("/")` while preview is active.
+- **Tests:** New `features/auth/domain/preview-mode.test.ts` (8 tests; also closes `ISSUES.md` #19) plus preview regression cases in `participant-stats.repository.test.ts`, `app/challenge/[id]/participant/[participantId]/page.test.tsx`, `auth-nav.test.tsx`, and `app/page.test.tsx`.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (102 test files, 1102/1102 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP (unchanged from Session 108):** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).

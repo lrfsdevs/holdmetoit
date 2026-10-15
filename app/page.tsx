@@ -96,7 +96,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
    return (
       <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6]">
          <AppHeader
-            user={session?.user}
+            user={effectiveUser}
             isActualAdmin={isActualAdmin}
             isPreviewActive={isPreviewActive}
             profileUrl={profileUrl}

@@ -65,7 +65,7 @@ export default async function ParticipantStatsPage({
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
 
-   const { isAdmin } = getEffectiveAdminState({
+   const { isAdmin, isPreviewActive } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
       searchParamAs: searchParams?.as,
@@ -80,6 +80,7 @@ export default async function ParticipantStatsPage({
          {
             currentUserId: session?.user?.id,
             isAdmin,
+            isPreviewActive,
          }
       );
    } catch (error) {

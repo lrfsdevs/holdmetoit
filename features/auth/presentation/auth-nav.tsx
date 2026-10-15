@@ -303,7 +303,7 @@ export function AppHeader({
                   Challenges
                </Link>
 
-               {isDevRole(user?.role) && (
+               {isDevRole(user?.role) && !(isPreviewActive ?? false) && (
                   <Link
                      href="/devboard"
                      data-testid="devboard-nav-link"
