@@ -180,6 +180,23 @@ describe("getChallengeParticipantStats repository", () => {
       expect(roleAdminResult?.viewer.isAdmin).toBe(true);
    });
 
+   it("does not grant host admin while participant preview is active", async () => {
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+         mockParticipant as any
+      );
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+
+      const result = await getChallengeParticipantStats("chal_1", "part_1", {
+         currentUserId: "admin_user", // matches challenge.hostId
+         isAdmin: false,
+         isPreviewActive: true,
+      });
+
+      expect(result?.viewer.isAdmin).toBe(false);
+   });
+
    it("omits teamStats on SOLOS challenge", async () => {
       vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
          ...mockParticipant,

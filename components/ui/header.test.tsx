@@ -144,4 +144,28 @@ describe("AppHeader", () => {
       expect(html).toContain("Challenges");
       expect(html).toContain('href="/challenges"');
    });
+
+   it("renders the DevBoard link for a DEV role outside preview", async () => {
+      const { AppHeader } = await import("./header");
+      const html = renderToStaticMarkup(
+         createElement(AppHeader, {
+            user: { id: "u_3", displayName: "DevArchitect", role: "DEV" },
+         })
+      );
+      expect(html).toContain('data-testid="devboard-nav-link"');
+      expect(html).toContain('href="/devboard"');
+   });
+
+   it("hides the DevBoard link when preview is active even for a DEV role", async () => {
+      const { AppHeader } = await import("./header");
+      const html = renderToStaticMarkup(
+         createElement(AppHeader, {
+            user: { id: "u_3", displayName: "DevArchitect", role: "DEV" },
+            isActualAdmin: true,
+            isPreviewActive: true,
+         })
+      );
+      expect(html).not.toContain("/devboard");
+      expect(html).toContain('data-testid="exit-preview-button"');
+   });
 });

@@ -338,7 +338,9 @@ export function AdminHoursOverrideModal({
                   type: "success",
                   message: `Successfully updated hours for ${selectedDayOption.shortLabel} (${selectedDayOption.dateKey}).`,
                });
-               router.refresh();
+               startTransition(() => {
+                  router.refresh();
+               });
                onSuccess?.();
                setTimeout(() => {
                   onClose();
@@ -362,6 +364,66 @@ export function AdminHoursOverrideModal({
                type: "error",
                message:
                   "An unexpected error occurred while saving the correction.",
+            });
+         }
+      });
+   };
+
+   const handleResetOverall = (e: React.FormEvent) => {
+      e.preventDefault();
+      setFeedback(null);
+
+      const effectiveReason =
+         reason.trim().length >= 3
+            ? reason.trim()
+            : "Reset overall study hours to 00:00:00 by moderator";
+
+      startTransition(async () => {
+         try {
+            const { adminResetParticipantOverallHoursAction } =
+               await import("@/features/study-logs/api/admin-override.actions");
+            const result = await adminResetParticipantOverallHoursAction({
+               challengeId,
+               participantId: participant.participantId,
+               reason: effectiveReason,
+            });
+
+            if (result.ok) {
+               trackLogRocketEvent("AdminOverallHoursResetExecuted", {
+                  challengeId,
+                  participantId: participant.participantId,
+                  reason: effectiveReason,
+               });
+               setFeedback({
+                  type: "success",
+                  message: `Successfully reset overall study hours to 00:00:00 for ${participant.displayName}.`,
+               });
+               startTransition(() => {
+                  router.refresh();
+               });
+               onSuccess?.();
+               setTimeout(() => {
+                  onClose();
+               }, 600);
+            } else {
+               setFeedback({
+                  type: "error",
+                  message:
+                     result.message || "Failed to reset overall study hours.",
+               });
+            }
+         } catch (error) {
+            captureLogRocketException(error, {
+               tags: { action: "admin-reset-overall-hours" },
+               extra: {
+                  challengeId,
+                  participantId: participant.participantId,
+               },
+            });
+            setFeedback({
+               type: "error",
+               message:
+                  "An unexpected error occurred while resetting overall hours.",
             });
          }
       });

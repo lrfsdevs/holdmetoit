@@ -63,6 +63,9 @@ import { canLockChallenge } from "@/features/challenges/domain/challenge-lifecyc
 
 interface ChallengeManageTabProps {
    challenge: ChallengeScoreboardViewModel;
+   initialRosterSearch?: string;
+   initialRosterTeamFilter?: string;
+   initialRosterPage?: number;
 }
 
 interface TeamFormItem {
@@ -74,7 +77,12 @@ interface TeamFormItem {
 }
 
 /** Renders administrator controls for roster, lifecycle, and challenge settings. */
-export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
+export function ChallengeManageTab({
+   challenge,
+   initialRosterSearch = "",
+   initialRosterTeamFilter = "ALL",
+   initialRosterPage = 1,
+}: ChallengeManageTabProps) {
    const router = useRouter();
    const [isPending, startTransition] = useTransition();
    const [isDeleting, setIsDeleting] = useState(false);
@@ -113,10 +121,90 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
    };
 
    // Participant Roster & Hours Management Pagination State
-   const [rosterSearch, setRosterSearch] = useState("");
-   const [rosterTeamFilter, setRosterTeamFilter] = useState("ALL");
-   const [rosterPage, setRosterPage] = useState(1);
+   const [rosterSearch, setRosterSearch] = useState(() => {
+      if (typeof window !== "undefined") {
+         const params = new URLSearchParams(window.location.search);
+         const searchParam = params.get("search");
+         if (searchParam !== null) return searchParam;
+      }
+      return initialRosterSearch;
+   });
+   const [rosterTeamFilter, setRosterTeamFilter] = useState(() => {
+      if (typeof window !== "undefined") {
+         const params = new URLSearchParams(window.location.search);
+         const teamParam = params.get("team");
+         if (teamParam !== null) return teamParam;
+      }
+      return initialRosterTeamFilter;
+   });
+   const [rosterPage, setRosterPage] = useState(() => {
+      if (typeof window !== "undefined") {
+         const params = new URLSearchParams(window.location.search);
+         const pageParam = parseInt(params.get("page") ?? "", 10);
+         if (!isNaN(pageParam) && pageParam >= 1) return pageParam;
+      }
+      return initialRosterPage;
+   });
    const rosterPageSize = 8;
+
+   const updateUrlParams = (updates: {
+      search?: string;
+      team?: string;
+      page?: number;
+   }) => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+
+      if ("search" in updates) {
+         const q = updates.search?.trim();
+         if (q) {
+            url.searchParams.set("search", q);
+         } else {
+            url.searchParams.delete("search");
+         }
+      }
+
+      if ("team" in updates) {
+         const t = updates.team;
+         if (t && t !== "ALL") {
+            url.searchParams.set("team", t);
+         } else {
+            url.searchParams.delete("team");
+         }
+      }
+
+      if ("page" in updates) {
+         const p = updates.page;
+         if (p && p > 1) {
+            url.searchParams.set("page", String(p));
+         } else {
+            url.searchParams.delete("page");
+         }
+      }
+
+      window.history.replaceState(
+         null,
+         "",
+         `${url.pathname}${url.search}${url.hash}`
+      );
+   };
+
+   useEffect(() => {
+      const syncFromUrl = () => {
+         if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            setRosterSearch(params.get("search") ?? "");
+            setRosterTeamFilter(params.get("team") ?? "ALL");
+            const parsedPage = parseInt(params.get("page") ?? "1", 10);
+            setRosterPage(
+               !isNaN(parsedPage) && parsedPage >= 1 ? parsedPage : 1
+            );
+         }
+      };
+
+      window.addEventListener("popstate", syncFromUrl);
+      return () => window.removeEventListener("popstate", syncFromUrl);
+   }, []);
 
    const [participantTeamMap, setParticipantTeamMap] = useState<
       Record<string, string>
@@ -127,6 +215,21 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
       });
       return map;
    });
+
+   useEffect(() => {
+      setParticipantTeamMap((prev) => {
+         const map: Record<string, string> = { ...prev };
+         challenge.standings.forEach((p) => {
+            if (
+               !(p.participantId in map) ||
+               map[p.participantId] === "no-assigned"
+            ) {
+               map[p.participantId] = p.teamId || "no-assigned";
+            }
+         });
+         return map;
+      });
+   }, [challenge.standings]);
 
    const [removedParticipantIds, setRemovedParticipantIds] = useState<
       Set<string>
@@ -176,6 +279,7 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
       setRosterSearch("");
       setRosterTeamFilter("ALL");
       setRosterPage(1);
+      updateUrlParams({ search: "", team: "ALL", page: 1 });
    };
 
    const totalRosterPages = Math.ceil(filteredRoster.length / rosterPageSize);
@@ -890,8 +994,10 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                            placeholder="Search roster by name, @handle, team..."
                            value={rosterSearch}
                            onChange={(e) => {
-                              setRosterSearch(e.target.value);
+                              const val = e.target.value;
+                              setRosterSearch(val);
                               setRosterPage(1);
+                              updateUrlParams({ search: val, page: 1 });
                            }}
                            className="h-8 pl-8 pr-7 bg-[#242424] border-[#383838] text-[#ffffff] placeholder-[#868686] text-xs rounded-xl"
                         />
@@ -901,6 +1007,7 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                               onClick={() => {
                                  setRosterSearch("");
                                  setRosterPage(1);
+                                 updateUrlParams({ search: "", page: 1 });
                               }}
                               className="absolute right-2 top-1/2 -translate-y-1/2 text-[#868686] hover:text-white p-0.5"
                            >
@@ -914,8 +1021,10 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                         <select
                            value={rosterTeamFilter}
                            onChange={(e) => {
-                              setRosterTeamFilter(e.target.value);
+                              const val = e.target.value;
+                              setRosterTeamFilter(val);
                               setRosterPage(1);
+                              updateUrlParams({ team: val, page: 1 });
                            }}
                            className="h-8 w-full rounded-xl border border-[#383838] bg-[#242424] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                         >
@@ -1190,7 +1299,10 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
                         totalPages={totalRosterPages}
                         totalItems={filteredRoster.length}
                         pageSize={rosterPageSize}
-                        onPageChange={setRosterPage}
+                        onPageChange={(page) => {
+                           setRosterPage(page);
+                           updateUrlParams({ page });
+                        }}
                         itemLabel="scholars"
                      />
                   </div>
@@ -1398,7 +1510,9 @@ export function ChallengeManageTab({ challenge }: ChallengeManageTabProps) {
             challengeId={challenge.id}
             participant={targetOverrideParticipant}
             onSuccess={() => {
-               router.refresh();
+               startTransition(() => {
+                  router.refresh();
+               });
             }}
          />
       </div>

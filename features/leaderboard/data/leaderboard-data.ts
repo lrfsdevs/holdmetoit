@@ -28,6 +28,13 @@ import type {
    ScoreboardStandingEntry,
    ScoreboardTeam,
 } from "@/features/leaderboard/domain/leaderboard.types";
+export type {
+   ChallengeScoreboardViewModel,
+   ParticipantPaceStatus,
+   ScoreboardMatchHeader,
+   ScoreboardStandingEntry,
+   ScoreboardTeam,
+};
 
 export interface RawChallengePayload {
    id: string;

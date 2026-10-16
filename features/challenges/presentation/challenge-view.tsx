@@ -22,6 +22,9 @@ interface ChallengeViewProps {
    initialTab?: ChallengeTab | string;
    isAdmin?: boolean;
    initialLeaderboardViewMode?: LeaderboardViewMode;
+   initialRosterSearch?: string;
+   initialRosterTeamFilter?: string;
+   initialRosterPage?: number;
    /** Server-evaluated `challenge_wrapped_v1`. Gates the Summary tab and the wrapped story popup. */
    isWrappedEnabled?: boolean;
 }
@@ -32,6 +35,9 @@ export function ChallengeView({
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
    initialLeaderboardViewMode = "individual",
+   initialRosterSearch = "",
+   initialRosterTeamFilter = "ALL",
+   initialRosterPage = 1,
    isWrappedEnabled = true,
 }: ChallengeViewProps) {
    const isSummaryVisible =
@@ -62,6 +68,11 @@ export function ChallengeView({
          }
          if (allowedTab !== "leaderboard") {
             url.searchParams.delete("view");
+         }
+         if (allowedTab !== "manage") {
+            url.searchParams.delete("search");
+            url.searchParams.delete("team");
+            url.searchParams.delete("page");
          }
          window.history.replaceState(
             null,
@@ -160,7 +171,12 @@ export function ChallengeView({
          )}
 
          {activeTab === "manage" && isAdmin && (
-            <ChallengeManageTab challenge={challenge} />
+            <ChallengeManageTab
+               challenge={challenge}
+               initialRosterSearch={initialRosterSearch}
+               initialRosterTeamFilter={initialRosterTeamFilter}
+               initialRosterPage={initialRosterPage}
+            />
          )}
 
          {activeTab === "audit" && isAdmin && (
