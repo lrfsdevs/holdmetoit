@@ -42,6 +42,7 @@ const mockChallenges: ChallengeCatalogItem[] = [
    {
       id: "chal-active-1",
       title: "October Team Battle",
+      description: null,
       format: "TEAM_VS_TEAM",
       challengeColor: null,
       status: "ACTIVE",
@@ -69,6 +70,7 @@ const mockChallenges: ChallengeCatalogItem[] = [
    {
       id: "chal-upcoming-2",
       title: "November Solo Grind",
+      description: null,
       format: "SOLOS",
       challengeColor: null,
       status: "UPCOMING",
@@ -177,6 +179,7 @@ describe("ChallengesListView", () => {
       const manyChallenges = Array.from({ length: 12 }, (_, i) => ({
          id: `chal-${i + 1}`,
          title: `Challenge ${i + 1}`,
+         description: null,
          format: "TEAM_VS_TEAM" as const,
          challengeColor: null,
          status: "ACTIVE" as const,
@@ -243,6 +246,7 @@ describe("ChallengesListView", () => {
          {
             id: "chal-deleted-1",
             title: "Secret Deleted Challenge",
+            description: null,
             format: "SOLOS",
             challengeColor: null,
             status: "ACTIVE",

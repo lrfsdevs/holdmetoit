@@ -53,6 +53,7 @@ function isImageUrlAllowed(
 
 const createChallengeSchema = z.object({
    title: z.string().min(3).max(80),
+   description: z.string().max(5000).optional().nullable(),
    format: z.enum(["TEAM_VS_TEAM", "DUOS", "SOLOS"]),
    startAt: z.string().min(1),
    endAt: z.string().min(1),
@@ -376,6 +377,7 @@ export async function adminEnrollParticipantAction(
 const updateChallengeSchema = z.object({
    challengeId: z.string().min(1),
    title: z.string().min(3).max(80),
+   description: z.string().max(5000).optional().nullable(),
    startAt: z.string().min(1),
    endAt: z.string().min(1),
    // Updates preserve exact legacy strings; only changed values need folder validation.
@@ -465,6 +467,7 @@ export async function updateChallengeAction(
          parsed.data.challengeId,
          {
             title: parsed.data.title,
+            description: parsed.data.description,
             startAt: parsed.data.startAt,
             endAt: parsed.data.endAt,
             eventBannerUrl: parsed.data.eventBannerUrl,

@@ -342,6 +342,7 @@ export function ChallengeManageTab({
 
    // Form states
    const [title, setTitle] = useState(challenge.title);
+   const [description, setDescription] = useState(challenge.description ?? "");
    const [startAt, setStartAt] = useState(() =>
       formatDateToUtcInputString(challenge.startAt)
    );
@@ -374,7 +375,13 @@ export function ChallengeManageTab({
       });
       setEventBannerUrl(challenge.eventBannerUrl);
       setPunishmentPfpUrl(challenge.punishmentPfpUrl);
-   }, [challenge.id, challenge.eventBannerUrl, challenge.punishmentPfpUrl]);
+      setDescription(challenge.description ?? "");
+   }, [
+      challenge.id,
+      challenge.eventBannerUrl,
+      challenge.punishmentPfpUrl,
+      challenge.description,
+   ]);
 
    const [teams, setTeams] = useState<TeamFormItem[]>(() =>
       challenge.teams
@@ -391,6 +398,7 @@ export function ChallengeManageTab({
    const handleReset = () => {
       if (isBusy) return;
       setTitle(challenge.title);
+      setDescription(challenge.description ?? "");
       setStartAt(formatDateToUtcInputString(challenge.startAt));
       setEndAt(formatDateToUtcInputString(challenge.endAt));
       const persistedUrls = new Set([
@@ -513,6 +521,7 @@ export function ChallengeManageTab({
             const res = await updateChallengeAction({
                challengeId: challenge.id,
                title: title.trim(),
+               description: description.trim(),
                startAt: parseUtcInputStringToIso(startAt),
                endAt: parseUtcInputStringToIso(endAt),
                eventBannerUrl,
@@ -805,6 +814,19 @@ export function ChallengeManageTab({
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g. Midterm Reading Week Sprint"
                         className="h-12 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-4 text-sm"
+                     />
+                  </div>
+
+                  <div className="space-y-1.5">
+                     <label className="text-xs font-semibold text-[#a3a3a3]">
+                        Challenge Description
+                     </label>
+                     <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Explain the challenge rules and accountability system..."
+                        rows={4}
+                        className="w-full rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white p-3 text-xs leading-relaxed focus:outline-none"
                      />
                   </div>
 

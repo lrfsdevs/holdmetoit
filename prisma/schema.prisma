@@ -96,6 +96,7 @@ model VerificationToken {
 model Challenge {
   id               String          @id @default(cuid())
   title            String
+  description      String?         @db.Text
   format           ChallengeFormat
   startAt          DateTime
   endAt            DateTime

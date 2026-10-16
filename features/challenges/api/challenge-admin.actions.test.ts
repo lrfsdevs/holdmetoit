@@ -366,6 +366,21 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(storage.deleteManagedChallengeImage).not.toHaveBeenCalled();
       });
 
+      it("creates challenge with optional description", async () => {
+         const inputWithDesc = {
+            ...input,
+            description: "Custom challenge description",
+         };
+         await expect(createChallengeAction(inputWithDesc)).resolves.toEqual({
+            ok: true,
+            data: { challengeId: "c_1" },
+         });
+         expect(challengeAdminRepo.createAdminChallenge).toHaveBeenCalledWith(
+            inputWithDesc,
+            ADMIN
+         );
+      });
+
       it.each(["eventBannerUrl", "punishmentPfpUrl"] as const)(
          "requires %s even when the other image exists",
          async (field) => {
@@ -492,6 +507,22 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(
             vi.mocked(storage.deleteManagedChallengeImage).mock.calls
          ).toEqual([[OLD_BANNER], [OLD_PFP]]);
+      });
+
+      it("updates challenge description and passes to repository", async () => {
+         const inputWithDesc = {
+            ...UPDATE_INPUT,
+            description: "Updated challenge rules and description",
+         };
+         await expect(updateChallengeAction(inputWithDesc)).resolves.toEqual({
+            ok: true,
+         });
+         const { challengeId, ...data } = inputWithDesc;
+         expect(challengeAdminRepo.updateAdminChallenge).toHaveBeenCalledWith(
+            challengeId,
+            data,
+            ADMIN
+         );
       });
 
       it.each([
