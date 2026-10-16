@@ -11,6 +11,8 @@ import type { ParticipantStatsViewModel } from "../domain/participant-stats.type
 export interface GetChallengeParticipantStatsOptions {
    currentUserId?: string;
    isAdmin?: boolean;
+   /** True when the viewer is an admin/dev in global participant-preview mode. */
+   isPreviewActive?: boolean;
 }
 
 export async function getChallengeParticipantStats(
@@ -18,7 +20,7 @@ export async function getChallengeParticipantStats(
    participantId: string,
    options: GetChallengeParticipantStatsOptions = {}
 ): Promise<ParticipantStatsViewModel | null> {
-   const { currentUserId, isAdmin = false } = options;
+   const { currentUserId, isAdmin = false, isPreviewActive = false } = options;
 
    // 1. Fetch participant record with relations, strictly scoped to challengeId
    const participant = await prisma.challengeParticipant.findUnique({
@@ -170,7 +172,7 @@ export async function getChallengeParticipantStats(
    const isHost = Boolean(
       currentUserId && participant.challenge.hostId === currentUserId
    );
-   const isEffectiveAdmin = isAdmin || isHost;
+   const isEffectiveAdmin = isAdmin || (isHost && !isPreviewActive);
    const isOwner = Boolean(
       currentUserId && currentUserId === participant.userId
    );
