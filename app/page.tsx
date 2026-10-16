@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { auth } from "@/core/auth";
-import { AppHeader } from "@/features/auth/presentation/auth-nav";
 import {
    getEffectiveAdminState,
    PARTICIPANT_PREVIEW_COOKIE,
@@ -33,12 +32,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
 
-   const { isActualAdmin, isPreviewActive, isAdmin, effectiveRole } =
-      getEffectiveAdminState({
-         userRole: session?.user?.role,
-         previewCookie,
-         searchParamAs: searchParams?.as,
-      });
+   const { isAdmin, effectiveRole } = getEffectiveAdminState({
+      userRole: session?.user?.role,
+      previewCookie,
+      searchParamAs: searchParams?.as,
+   });
 
    const userId = session?.user?.id;
    const [
@@ -95,13 +93,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          : "/profile";
 
    return (
-      <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6]">
-         <AppHeader
-            user={session?.user}
-            isActualAdmin={isActualAdmin}
-            isPreviewActive={isPreviewActive}
-            profileUrl={profileUrl}
-         />
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0d0d0d] text-[#f4f3f6]">
          <main className="w-full">
             <HomeCockpitView
                displayName={displayName}

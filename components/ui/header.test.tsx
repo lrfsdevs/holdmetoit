@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { UserNav } from "./auth-nav";
+import { UserNav } from "./header";
 
 vi.mock("@/features/auth/api/auth.actions", () => ({
    loginWithDiscordAction: vi.fn(),
@@ -16,7 +16,9 @@ vi.mock("@/features/auth/api/preview-mode.actions", () => ({
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
       refresh: vi.fn(),
+      replace: vi.fn(),
    }),
+   useSearchParams: () => new URLSearchParams(),
 }));
 
 describe("UserNav", () => {
@@ -134,7 +136,7 @@ describe("UserNav", () => {
 
 describe("AppHeader", () => {
    it("renders brand logo and Challenges directory link", async () => {
-      const { AppHeader } = await import("./auth-nav");
+      const { AppHeader } = await import("./header");
       const html = renderToStaticMarkup(
          createElement(AppHeader, { user: null })
       );

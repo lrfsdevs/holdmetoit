@@ -19,7 +19,7 @@ import {
    ShieldAlert,
    Check,
 } from "lucide-react";
-import { SignInWithDiscordButton } from "@/features/auth/presentation/auth-nav";
+import { SignInWithDiscordButton } from "@/components/ui/header";
 
 interface BannerCardProps {
    banner: BannerViewModel;

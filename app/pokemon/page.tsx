@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { auth } from "@/core/auth";
 import { prisma } from "@/core/db";
-import { AppHeader } from "@/features/auth/presentation/auth-nav";
 import {
    getEffectiveAdminState,
    PARTICIPANT_PREVIEW_COOKIE,
@@ -35,7 +34,7 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
 
-   const { isActualAdmin, isPreviewActive, isAdmin } = getEffectiveAdminState({
+   const { isAdmin } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
       searchParamAs: searchParams?.as,
@@ -76,13 +75,7 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
       : 0;
 
    return (
-      <div className="min-h-screen bg-obsidian-bg text-obsidian-text">
-         <AppHeader
-            user={session?.user ?? null}
-            isActualAdmin={isActualAdmin}
-            isPreviewActive={isPreviewActive}
-            subtitle="Pokédex"
-         />
+      <div className="min-h-[calc(100vh-4rem)] bg-obsidian-bg text-obsidian-text">
          <main className="mx-auto max-w-6xl px-3 sm:px-6 py-6 sm:py-8">
             <PokemonView
                initialSpecies={catalogueResult.species}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Eye, EyeOff, LogOut, Shield, Trophy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DiscordIcon } from "@/components/icons/discord-icon";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    loginWithDiscordAction,
@@ -19,21 +20,6 @@ import {
    isDevRole,
 } from "@/features/auth/domain/auth-roles";
 import { PARTICIPANT_PREVIEW_COOKIE } from "@/features/auth/domain/preview-mode";
-
-export function DiscordIcon({ className = "h-4 w-4" }: { className?: string }) {
-   return (
-      <svg
-         role="img"
-         viewBox="0 0 24 24"
-         fill="currentColor"
-         className={className}
-         xmlns="http://www.w3.org/2000/svg"
-         aria-hidden="true"
-      >
-         <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-      </svg>
-   );
-}
 
 export function SignInWithDiscordButton({
    redirectTo = "/",
@@ -110,81 +96,6 @@ export interface UserNavProps {
    profileUrl?: string;
 }
 
-export function ParticipantPreviewButton({
-   isPreviewActive,
-   className = "",
-}: {
-   isPreviewActive: boolean;
-   className?: string;
-}) {
-   const router = useRouter();
-   const [isPending, startTransition] = useTransition();
-
-   const handleToggle = () => {
-      startTransition(async () => {
-         const nextState = !isPreviewActive;
-         // Optimistically update document.cookie
-         if (typeof document !== "undefined") {
-            if (nextState) {
-               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=true; path=/; max-age=86400; SameSite=Lax`;
-            } else {
-               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-            }
-
-            // Clean up URL query param if present
-            if (window.location.search.includes("as=participant")) {
-               const url = new URL(window.location.href);
-               url.searchParams.delete("as");
-               window.history.replaceState(
-                  {},
-                  "",
-                  url.pathname + (url.search ? url.search : "")
-               );
-            }
-         }
-
-         await toggleParticipantPreviewAction(nextState);
-         router.refresh();
-      });
-   };
-
-   if (isPreviewActive) {
-      return (
-         <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={handleToggle}
-            disabled={isPending}
-            data-testid="exit-preview-button"
-            className={`rounded-full bg-[#e08a32]/15 hover:bg-[#e08a32]/25 text-[#e08a32] hover:text-[#f5a742] border-[#e08a32]/40 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto ${className}`}
-            title="Exit Participant Preview and return to Developer / Moderator view"
-         >
-            <EyeOff className="h-3 w-3 shrink-0" />
-            <span className="sm:hidden">Exit</span>
-            <span className="hidden sm:inline">Exit Preview</span>
-         </Button>
-      );
-   }
-
-   return (
-      <Button
-         type="button"
-         size="sm"
-         variant="outline"
-         onClick={handleToggle}
-         disabled={isPending}
-         data-testid="enter-preview-button"
-         className={`rounded-full bg-[#1c1c1c] hover:bg-[#292929] text-[#b3b3b3] hover:text-[#f4f3f6] border-[#333333] px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto ${className}`}
-         title="Preview website globally as a regular participant (hides admin controls)"
-      >
-         <Eye className="h-3 w-3 shrink-0" />
-         <span className="sm:hidden">Preview</span>
-         <span className="hidden sm:inline">Preview as Participant</span>
-      </Button>
-   );
-}
-
 export function UserNav({
    user,
    redirectTo,
@@ -192,6 +103,9 @@ export function UserNav({
    isPreviewActive,
    profileUrl,
 }: UserNavProps) {
+   const router = useRouter();
+   const [isPending, startTransition] = useTransition();
+
    if (!user) {
       return (
          <SignInWithDiscordButton
@@ -214,13 +128,76 @@ export function UserNav({
    const isDev = isDevRole(user.role) && !effectiveIsPreviewActive;
    const activeProfileUrl = profileUrl ?? "/profile";
 
+   const handleToggle = () => {
+      startTransition(async () => {
+         const nextState = !effectiveIsPreviewActive;
+
+         if (typeof document !== "undefined") {
+            if (nextState) {
+               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=true; path=/; max-age=86400; SameSite=Lax`;
+            } else {
+               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+            }
+         }
+
+         await toggleParticipantPreviewAction(nextState);
+
+         if (
+            typeof window !== "undefined" &&
+            window.location.search.includes("as=participant")
+         ) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("as");
+            router.replace(url.pathname + (url.search ? url.search : ""));
+            return;
+         }
+
+         router.refresh();
+      });
+   };
+
    return (
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
          {/* Global Participant Preview Toggle Button for Admins/Devs */}
          {effectiveIsActualAdmin && (
-            <ParticipantPreviewButton
-               isPreviewActive={effectiveIsPreviewActive}
-            />
+            <Button
+               type="button"
+               size="sm"
+               variant="outline"
+               onClick={handleToggle}
+               disabled={isPending}
+               data-testid={
+                  effectiveIsPreviewActive
+                     ? "exit-preview-button"
+                     : "enter-preview-button"
+               }
+               className={
+                  effectiveIsPreviewActive
+                     ? "rounded-full bg-[#e08a32]/15 hover:bg-[#e08a32]/25 text-[#e08a32] hover:text-[#f5a742] border-[#e08a32]/40 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto"
+                     : "rounded-full bg-[#1c1c1c] hover:bg-[#292929] text-[#b3b3b3] hover:text-[#f4f3f6] border-[#333333] px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto"
+               }
+               title={
+                  effectiveIsPreviewActive
+                     ? "Exit Participant Preview and return to Developer / Moderator view"
+                     : "Preview website globally as a regular participant (hides admin controls)"
+               }
+            >
+               {effectiveIsPreviewActive ? (
+                  <>
+                     <EyeOff className="h-3 w-3 shrink-0" />
+                     <span className="sm:hidden">Exit</span>
+                     <span className="hidden sm:inline">Exit Preview</span>
+                  </>
+               ) : (
+                  <>
+                     <Eye className="h-3 w-3 shrink-0" />
+                     <span className="sm:hidden">Preview</span>
+                     <span className="hidden sm:inline">
+                        Preview as Participant
+                     </span>
+                  </>
+               )}
+            </Button>
          )}
 
          {/* User Capsule */}
@@ -268,19 +245,23 @@ export function UserNav({
 
 export function AppHeader({
    user,
-   redirectTo,
-   subtitle,
    isActualAdmin,
    isPreviewActive,
-   profileUrl,
 }: {
    user?: UserNavProps["user"];
-   redirectTo?: string;
-   subtitle?: string;
    isActualAdmin?: boolean;
    isPreviewActive?: boolean;
-   profileUrl?: string;
 }) {
+   const searchParams = useSearchParams();
+
+   const resolvedIsActualAdmin =
+      isActualAdmin ?? hasAdminPrivileges(user?.role);
+   const urlPreview =
+      resolvedIsActualAdmin && searchParams.get("as") === "participant";
+   const previewActive = (isPreviewActive ?? false) || urlPreview;
+   const effectiveUser =
+      previewActive && user ? { ...user, role: "PARTICIPANT" } : user;
+
    return (
       <header className="sticky top-0 z-40 h-16 border-b border-[#1f1f1f] bg-[#0d0d0d]/95 backdrop-blur-md">
          <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-2 min-w-0 px-3 sm:px-6">
@@ -331,7 +312,7 @@ export function AppHeader({
                   <span>Pokédex</span>
                </Link>
 
-               {isDevRole(user?.role) && (
+               {isDevRole(effectiveUser?.role) && (
                   <Link
                      href="/devboard"
                      data-testid="devboard-nav-link"
@@ -341,30 +322,22 @@ export function AppHeader({
                   </Link>
                )}
 
-               {(isActualAdmin || hasAdminPrivileges(user?.role)) &&
-                  !isPreviewActive && (
-                     <Link
-                        href="/admin"
-                        data-testid="admin-nav-link"
-                        className="text-xs sm:text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors border-l border-[#292929] pl-2 sm:pl-3"
-                     >
-                        Admin
-                     </Link>
-                  )}
-
-               {subtitle && (
-                  <span className="hidden sm:inline-block text-xs text-[#868686] border-l border-[#292929] pl-2 sm:pl-3">
-                     {subtitle}
-                  </span>
+               {resolvedIsActualAdmin && !previewActive && (
+                  <Link
+                     href="/admin"
+                     data-testid="admin-nav-link"
+                     className="text-xs sm:text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors border-l border-[#292929] pl-2 sm:pl-3"
+                  >
+                     Admin
+                  </Link>
                )}
             </div>
 
             <UserNav
-               user={user}
-               redirectTo={redirectTo}
-               isActualAdmin={isActualAdmin}
-               isPreviewActive={isPreviewActive}
-               profileUrl={profileUrl}
+               user={effectiveUser}
+               redirectTo="/"
+               isActualAdmin={resolvedIsActualAdmin}
+               isPreviewActive={previewActive}
             />
          </div>
       </header>

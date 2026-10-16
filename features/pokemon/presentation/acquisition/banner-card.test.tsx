@@ -15,7 +15,7 @@ vi.mock("../../api/acquisition.actions", () => ({
    pullPokemonAction: vi.fn(),
 }));
 
-vi.mock("@/features/auth/presentation/auth-nav", () => ({
+vi.mock("@/components/ui/header", () => ({
    SignInWithDiscordButton: () =>
       createElement("button", null, "Sign In with Discord to Summon"),
 }));

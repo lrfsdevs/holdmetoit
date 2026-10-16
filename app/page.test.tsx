@@ -25,9 +25,6 @@ vi.mock("@/features/auth/domain/preview-mode", () => ({
       effectiveRole: "PARTICIPANT",
    })),
 }));
-vi.mock("@/features/auth/presentation/auth-nav", () => ({
-   AppHeader: () => createElement("header", null, "header"),
-}));
 vi.mock("@/features/study-logs/presentation/home-cockpit-view", () => ({
    HomeCockpitView: (props: unknown) => {
       mocks.homeCockpitView(props);

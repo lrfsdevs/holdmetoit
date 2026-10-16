@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { auth } from "@/core/auth";
-import { AppHeader } from "@/features/auth/presentation/auth-nav";
 import {
    getEffectiveAdminState,
    PARTICIPANT_PREVIEW_COOKIE,
@@ -11,7 +10,7 @@ import { getWalletSummary } from "@/features/economy/data/wallet.repository";
 import { findTransactionsByUserId } from "@/features/economy/data/ledger.repository";
 import { getUserYptId } from "@/features/ypt/data/ypt.repository";
 import { getUserTrophyBalance } from "@/features/trophies/data/trophy.repository";
-import { SignInWithDiscordButton } from "@/features/auth/presentation/auth-nav";
+import { SignInWithDiscordButton } from "@/components/ui/header";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +32,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
 
-   const { isActualAdmin, isPreviewActive, isAdmin } = getEffectiveAdminState({
+   const { isAdmin } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
       searchParamAs: searchParams?.as,
@@ -41,13 +40,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
 
    if (!session?.user?.id) {
       return (
-         <div className="min-h-screen bg-obsidian-bg text-obsidian-text">
-            <AppHeader
-               user={null}
-               isActualAdmin={false}
-               isPreviewActive={false}
-               subtitle="Economy"
-            />
+         <div className="min-h-[calc(100vh-4rem)] bg-obsidian-bg text-obsidian-text">
             <main className="mx-auto max-w-lg px-4 py-20 text-center">
                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-economy-gold/30 bg-economy-gold/10 text-economy-gold mx-auto mb-4">
                   <CoinsIcon className="h-7 w-7" />
@@ -75,13 +68,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
    ]);
 
    return (
-      <div className="min-h-screen bg-obsidian-bg text-obsidian-text">
-         <AppHeader
-            user={session.user}
-            isActualAdmin={isActualAdmin}
-            isPreviewActive={isPreviewActive}
-            subtitle="Virtual Economy"
-         />
+      <div className="min-h-[calc(100vh-4rem)] bg-obsidian-bg text-obsidian-text">
          <main className="mx-auto max-w-5xl px-3 sm:px-6 py-6 sm:py-8">
             <div className="mb-6">
                <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-obsidian-text">

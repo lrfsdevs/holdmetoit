@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 116 — ypt-js Integration & Automated Study Sync on `afnan`)
+> **Last Updated:** 2026-10-16 (Session 118 — Header Extraction to Shared UI + Root-Layout Mount on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -90,7 +90,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | Capability                                            | Location                                                            | Notes                                                                                                                                                                                                              |
 | :---------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                |
-| Global Participant Preview Mode                       | `features/auth/presentation/auth-nav.tsx`, `preview-mode.ts`        | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
+| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
 | Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                                 |
 | LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                        |
 | Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                 |
@@ -286,7 +286,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `tester-selector-dialog.tsx`: live search & 1-click assign/remove of Discord testers.
       - `flag-audit-drawer.tsx`: chronological audit history with diff visualizer.
       - `devboard-view.tsx`: master interactive client orchestrator with optimistic state updates.
-   - Added `[⚡ DEVBOARD]` header navigation link in `features/auth/presentation/auth-nav.tsx` for `DEV` users.
+   - Added `[⚡ DEVBOARD]` header navigation link in `components/ui/header.tsx` for `DEV` users.
    - Added presentation test suite `devboard-view.test.tsx` (2 tests, 100% green).
 - **Documentation (`docs/feature-flags/` & `docs/feature-flag/`):**
    - Created comprehensive documentation in `docs/feature-flags/README.md` and mirrored to `docs/feature-flag/README.md` per Rule §9.4.
@@ -356,7 +356,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `transaction-history-table.tsx`: Desktop table + mobile card layout (<640px) with category filter tabs and pagination.
    - `admin-adjustment-dialog.tsx`: Native dialog for authorized adjustments.
    - `reconciliation-dialog.tsx`: Native dialog rendering live discrepancy audits.
-   - Header coin badge in `features/economy/presentation/header-coin-badge.tsx` and `/wallet` navigation link in `auth-nav.tsx`.
+   - Header coin badge in `features/economy/presentation/header-coin-badge.tsx` and `/wallet` navigation link in `header.tsx`.
    - Projected coin reward preview in `DailyHoursModal`.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
@@ -446,7 +446,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ### Session 112 — 2026-10-16 (Frontend Design System Audit & Token Refactoring of Economy & Pokédex on `afnan`)
 
-- **Scope:** Frontend design system audit and token refactor strictly confined to the recently created Economy, Wallet, Betting, YPT, and Pokédex feature slices (`app/wallet/`, `app/pokemon/`, `features/economy/presentation/`, `features/pokemon/presentation/`, `features/ypt/presentation/ypt-settings-card.tsx`, `features/challenges/presentation/challenge-betting-card.tsx`, and `features/auth/presentation/auth-nav.tsx`).
+- **Scope:** Frontend design system audit and token refactor strictly confined to the recently created Economy, Wallet, Betting, YPT, and Pokédex feature slices (`app/wallet/`, `app/pokemon/`, `features/economy/presentation/`, `features/pokemon/presentation/`, `features/ypt/presentation/ypt-settings-card.tsx`, `features/challenges/presentation/challenge-betting-card.tsx`, and `components/ui/header.tsx`).
 - **Phase 1: Centralized Theme Tokens & CSS Custom Properties (`app/globals.css` & `tailwind.config.ts`):**
    - Extended `:root` in `app/globals.css` with semantic CSS variables:
       - `--economy-gold`, `--economy-gold-light`, `--economy-gold-dark` (amber/gold virtual currency)
@@ -481,7 +481,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `pokemon-detail-modal.tsx`: Replaced modal gradient, borders, stat bar tracks, dimension cards, variant chips, and external link styling with `pokedex-*` tokens; zero hardcoded hex colors remaining.
    - `pokemon-view.tsx`: Standardized empty state with `pokedex-*` tokens.
    - `app/pokemon/page.tsx`: Standardized page container with `bg-obsidian-bg text-obsidian-text`.
-   - `auth-nav.tsx`: Converted wallet coin icon to `text-economy-gold`.
+   - `header.tsx`: Converted wallet coin icon to `text-economy-gold`.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
    - `npm run lint` passed (0 errors).

@@ -1,8 +1,15 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Inter, Outfit } from "next/font/google";
 
+import { AppHeader } from "@/components/ui/header";
 import { auth } from "@/core/auth";
 import { LogRocketProvider } from "@/core/observability/logrocket-provider";
+import {
+   getEffectiveAdminState,
+   PARTICIPANT_PREVIEW_COOKIE,
+} from "@/features/auth/domain/preview-mode";
 import { FeedbackTriggerButton } from "@/features/feedback/presentation/feedback-trigger-button";
 
 import "./globals.css";
@@ -31,6 +38,18 @@ export default async function RootLayout({
    children: React.ReactNode;
 }>) {
    const session = await auth();
+   const cookieStore = await cookies();
+   const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
+
+   const { isActualAdmin, isPreviewActive, effectiveRole } =
+      getEffectiveAdminState({
+         userRole: session?.user?.role,
+         previewCookie,
+      });
+
+   const effectiveUser = session?.user
+      ? { ...session.user, role: effectiveRole ?? session.user.role }
+      : session?.user;
 
    return (
       <html
@@ -39,6 +58,17 @@ export default async function RootLayout({
       >
          <body className="min-h-screen overflow-x-clip bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased selection:bg-[#292929] selection:text-[#ffffff]">
             <LogRocketProvider user={session?.user ?? null} />
+            <Suspense
+               fallback={
+                  <div className="h-16 border-b border-[#1f1f1f] bg-[#0d0d0d]" />
+               }
+            >
+               <AppHeader
+                  user={effectiveUser}
+                  isActualAdmin={isActualAdmin}
+                  isPreviewActive={isPreviewActive}
+               />
+            </Suspense>
             {children}
             <FeedbackTriggerButton />
          </body>
