@@ -90,7 +90,7 @@ export function ParticipantDailyHistory({
                            <div>
                               <span className="text-[#868686]">Total: </span>
                               <span className="font-semibold font-sans font-sans-tabular text-[#d1d1d1]">
-                                 {day.cumulativeClock}
+                                 {day.isFuture ? "—" : day.cumulativeClock}
                               </span>
                            </div>
                         </div>
@@ -195,7 +195,7 @@ export function ParticipantDailyHistory({
                                  </div>
                               </td>
                               <td className="py-3 px-3 font-sans font-sans-tabular text-[#d1d1d1]">
-                                 {day.cumulativeClock}
+                                 {day.isFuture ? "—" : day.cumulativeClock}
                               </td>
                               <td className="py-3 px-3 text-right">
                                  {day.isOverride ? (

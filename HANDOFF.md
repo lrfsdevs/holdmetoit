@@ -349,6 +349,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (102 test files, 1102/1102 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP (unchanged from Session 108):** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+
 ### Session 111 — 2026-10-16 (PR #111 Context Menu Alignment, Touch/Keyboard Selection & Design Token Fixes)
 
 - **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
@@ -368,3 +369,26 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (104 test files, 1110/1110 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP:** Push `krish` branch to remote for collaborator review and merge PR #111.
+
+### Session 112 — 2026-10-16 (Fix: Daily Study History Cumulative Hours on Upcoming Days — GitHub #118)
+
+- **Agent Role:** Scoring & Engine Agent, Participant UI Agent.
+- **Scope & Problem Analysis (GitHub #118):**
+   - Collaborator `@HyperAfnan` reported that the Daily Study History table continues to display running cumulative study totals (e.g. `53:57:45`) for challenge days marked with the status `Upcoming`.
+   - **Root Cause:** In `features/participant-stats/domain/participant-stats.ts` (`calculateParticipantDailyTimeline`), the loop iterated over all challenge `dayOptions` without checking whether a day was in the future (`isFuture: true`). Even though future days had zero study logs, `cumulativeSeconds` retained the cumulative sum achieved up to the present day and assigned it to every upcoming day row, which was subsequently displayed unconditionally in `ParticipantDailyHistory` (desktop table & mobile cards) and `ParticipantProgressChart` tooltips.
+- **Implementation & Resolution:**
+   - **`features/participant-stats/domain/participant-stats.ts`:**
+      - Updated `calculateParticipantDailyTimeline` so that `cumulativeSeconds` only increments when `!day.isFuture`.
+      - For future days (`day.isFuture === true`), `cumulativeSeconds` defaults to `0`, and both `cumulativeClock` and `cumulativeHuman` are set to `"—"`.
+   - **`features/participant-stats/presentation/participant-daily-history.tsx`:**
+      - Added defensive checks in both the mobile cards view and the desktop table view: `day.isFuture ? "—" : day.cumulativeClock`.
+   - **`features/participant-stats/presentation/participant-progress-chart.tsx`:**
+      - Updated hover tooltip to display `"Upcoming Day"` instead of misleading cumulative times when hovering future chart bars.
+   - **Test Coverage:**
+      - Added unit test in `features/participant-stats/domain/participant-stats.test.ts` verifying that future days (`isFuture: true`) set `cumulativeSeconds = 0`, `cumulativeClock = "—"`, and `cumulativeHuman = "—"`.
+      - Added view test in `features/participant-stats/presentation/participant-stats-view.test.tsx` verifying that upcoming days render em-dash (`—`) in the rendered markup.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (105 test files, 1125/1125 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP:** Push branch updates and close GitHub issue #118.

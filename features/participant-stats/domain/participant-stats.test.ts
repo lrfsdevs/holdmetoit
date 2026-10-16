@@ -104,6 +104,41 @@ describe("calculateParticipantDailyTimeline", () => {
       expect(timeline[0].durationSeconds).toBe(0);
       expect(timeline[1].isLeave).toBe(false);
    });
+
+   it("does not accumulate or display cumulative hours for upcoming/future days", () => {
+      const logs = [
+         {
+            logDate: "2026-10-01T00:00:00.000Z",
+            durationSeconds: 7200,
+            isOverride: false,
+         },
+      ];
+
+      const timeline = calculateParticipantDailyTimeline(
+         startAt,
+         totalDays,
+         logs,
+         now
+      );
+
+      // Days 1..3: past/today
+      expect(timeline[0].cumulativeClock).toBe("02:00:00");
+      expect(timeline[1].cumulativeClock).toBe("02:00:00");
+      expect(timeline[2].cumulativeClock).toBe("02:00:00");
+
+      // Days 4..7: upcoming/future days must show "—" and not carry forward cumulative hours
+      expect(timeline[3].dayNumber).toBe(4);
+      expect(timeline[3].isFuture).toBe(true);
+      expect(timeline[3].cumulativeSeconds).toBe(0);
+      expect(timeline[3].cumulativeClock).toBe("—");
+      expect(timeline[3].cumulativeHuman).toBe("—");
+
+      expect(timeline[6].dayNumber).toBe(7);
+      expect(timeline[6].isFuture).toBe(true);
+      expect(timeline[6].cumulativeSeconds).toBe(0);
+      expect(timeline[6].cumulativeClock).toBe("—");
+      expect(timeline[6].cumulativeHuman).toBe("—");
+   });
 });
 
 describe("calculateParticipantSummaryStats", () => {
