@@ -213,6 +213,41 @@ describe("ParticipantStatsView", () => {
       expect(html).toContain("Host Override"); // Day 3 override badge
    });
 
+   it("renders em-dash for cumulative duration on upcoming days in daily history", () => {
+      const statsWithUpcoming: ParticipantStatsViewModel = {
+         ...mockStats,
+         dailyHistory: [
+            ...mockStats.dailyHistory,
+            {
+               dayNumber: 4,
+               dateKey: "2026-10-04",
+               dateFormatted: "Oct 4, 2026",
+               weekday: "Sun",
+               label: "Day 4 (Sun)",
+               durationSeconds: 0,
+               durationClock: "00:00:00",
+               durationHuman: "0s",
+               cumulativeSeconds: 0,
+               cumulativeClock: "—",
+               cumulativeHuman: "—",
+               isToday: false,
+               isYesterday: false,
+               isFuture: true,
+               isPast: false,
+               isOverride: false,
+               isLeave: false,
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         <ParticipantStatsView stats={statsWithUpcoming} />
+      );
+
+      expect(html).toContain("Upcoming");
+      expect(html).toContain("—");
+   });
+
    it("renders team stats when present", () => {
       const html = renderToStaticMarkup(
          <ParticipantStatsView stats={mockStats} />

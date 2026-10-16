@@ -39,6 +39,7 @@ export type {
 export interface RawChallengePayload {
    id: string;
    title: string;
+   description?: string | null;
    format: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
    status?: "UPCOMING" | "ACTIVE" | "COMPLETED";
    isDeleted?: boolean;
@@ -435,6 +436,7 @@ export function buildScoreboardViewModel(
    return {
       id: challenge.id,
       title: challenge.title,
+      description: challenge.description ?? null,
       heroImageUrl: challenge.eventBannerUrl?.trim() || null,
       eventBannerUrl: challenge.eventBannerUrl,
       punishmentPfpUrl: challenge.punishmentPfpUrl,

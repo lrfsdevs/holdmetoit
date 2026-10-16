@@ -128,6 +128,40 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             })
          );
       });
+
+      it("creates challenge with custom description", async () => {
+         const mockCreated = {
+            id: "c_desc",
+            title: "Custom Desc Battle",
+            description: "Custom study battle description",
+            teams: [{ id: "t_1" }],
+         };
+         vi.mocked(prisma.challenge.create).mockResolvedValue(
+            mockCreated as never
+         );
+
+         const result = await createAdminChallenge(
+            {
+               title: "Custom Desc Battle",
+               description: "  Custom study battle description  ",
+               format: "SOLOS",
+               startAt: new Date("2026-09-01T08:00:00Z"),
+               endAt: new Date("2026-09-08T08:00:00Z"),
+               teams: [{ name: "Solos" }],
+            },
+            { id: "admin_1", username: "HostAdmin" }
+         );
+
+         expect(result).toEqual(mockCreated);
+         expect(prisma.challenge.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               data: expect.objectContaining({
+                  title: "Custom Desc Battle",
+                  description: "Custom study battle description",
+               }),
+            })
+         );
+      });
    });
 
    describe("optional challenge creation images", () => {
@@ -797,6 +831,56 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
          expect(prisma.team.update).toHaveBeenCalled();
          expect(prisma.team.create).toHaveBeenCalled();
+      });
+
+      it("updates challenge description and records audit diff", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            id: "c_1",
+            title: "Battle",
+            description: "Old description",
+            format: "SOLOS",
+            startAt: new Date("2026-09-01"),
+            endAt: new Date("2026-09-08"),
+            teams: [],
+         } as never);
+
+         const mockUpdated = {
+            id: "c_1",
+            title: "Battle",
+            description: "New updated description",
+            startAt: new Date("2026-09-01"),
+            endAt: new Date("2026-09-08"),
+         };
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockUpdated as never
+         );
+
+         const result = await updateAdminChallenge(
+            "c_1",
+            {
+               title: "Battle",
+               description: "  New updated description  ",
+               startAt: "2026-09-01T00:00:00.000Z",
+               endAt: "2026-09-08T00:00:00.000Z",
+               eventBannerUrl: null,
+               punishmentPfpUrl: null,
+               teams: [],
+            },
+            { id: "admin_1", username: "HostAdmin" }
+         );
+
+         expect(result).toEqual(mockUpdated);
+         expect(prisma.challenge.update).toHaveBeenCalledWith({
+            where: { id: "c_1" },
+            data: {
+               title: "Battle",
+               description: "New updated description",
+               startAt: new Date("2026-09-01T00:00:00.000Z"),
+               endAt: new Date("2026-09-08T00:00:00.000Z"),
+               eventBannerUrl: null,
+               punishmentPfpUrl: null,
+            },
+         });
       });
    });
 

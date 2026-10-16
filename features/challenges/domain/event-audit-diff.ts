@@ -44,12 +44,8 @@ export interface EventDetailsDiff {
 }
 
 function normalizeDateStr(d: Date | string): string {
-   try {
-      const dateObj = typeof d === "string" ? new Date(d) : d;
-      return isNaN(dateObj.getTime()) ? "" : dateObj.toISOString();
-   } catch {
-      return "";
-   }
+   const dateObj = typeof d === "string" ? new Date(d) : d;
+   return !dateObj || isNaN(dateObj.getTime()) ? "" : dateObj.toISOString();
 }
 
 export function computeEventDetailsDiff(
