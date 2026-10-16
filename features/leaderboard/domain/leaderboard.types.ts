@@ -62,6 +62,7 @@ export interface ScoreboardStandingEntry {
 export interface ChallengeScoreboardViewModel {
    id: string;
    title: string;
+   description?: string | null;
    heroImageUrl: string | null;
    eventBannerUrl: string | null;
    punishmentPfpUrl: string | null;

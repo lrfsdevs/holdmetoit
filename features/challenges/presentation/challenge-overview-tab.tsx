@@ -119,44 +119,19 @@ export function ChallengeOverviewTab({
                   <h2 className="text-2xl font-extrabold text-[#ffffff] tracking-tight">
                      Welcome to the {challenge.title}!
                   </h2>
-                  <p className="text-sm leading-relaxed text-[#d1d1d1]">
-                     {challenge.title} is an automated study battle governed by
-                     the HoldMeToIt three-condition accountability system. All
-                     scholars declare their individual target hours and weekly
-                     milestone intentions before kickoff, commit to daily study
-                     sessions, solve their deficits with the catch-up model, and
-                     compete for victory.
+                  <p className="text-sm leading-relaxed text-[#d1d1d1] whitespace-pre-line">
+                     {challenge.description?.trim() || (
+                        <>
+                           {challenge.title} is an automated study battle
+                           governed by the HoldMeToIt three-condition
+                           accountability system. All scholars declare their
+                           individual target hours and weekly milestone
+                           intentions before kickoff, commit to daily study
+                           sessions, solve their deficits with the catch-up
+                           model, and compete for victory.
+                        </>
+                     )}
                   </p>
-               </div>
-
-               {/* Timetable (UTC) - Merged from About tab */}
-               <div className="space-y-2.5 pt-1">
-                  <h4 className="text-xs uppercase font-bold tracking-wider text-[#868686] flex items-center gap-1.5">
-                     <Calendar className="h-3.5 w-3.5 text-[#868686]" />
-                     <span>Timetable (UTC)</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
-                        <p className="text-[#868686] text-[11px]">
-                           Kickoff Date
-                        </p>
-                        <p className="font-sans font-medium text-[#ffffff] mt-1">
-                           {new Date(challenge.startAt)
-                              .toUTCString()
-                              .replace("GMT", "UTC")}
-                        </p>
-                     </div>
-                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
-                        <p className="text-[#868686] text-[11px]">
-                           Conclusion Date
-                        </p>
-                        <p className="font-sans font-medium text-[#ffffff] mt-1">
-                           {new Date(challenge.endAt)
-                              .toUTCString()
-                              .replace("GMT", "UTC")}
-                        </p>
-                     </div>
-                  </div>
                </div>
 
                <hr className="border-[#262626]" />
@@ -230,6 +205,38 @@ export function ChallengeOverviewTab({
                      custom highlight badges for top contributors. Scholars who
                      maintain commitments preserve their standard avatar honor.
                   </p>
+               </div>
+
+               <hr className="border-[#262626]" />
+
+               {/* Timetable (UTC) */}
+               <div className="space-y-2.5 pt-1">
+                  <h4 className="text-xs uppercase font-bold tracking-wider text-[#868686] flex items-center gap-1.5">
+                     <Calendar className="h-3.5 w-3.5 text-[#868686]" />
+                     <span>Timetable (UTC)</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
+                        <p className="text-[#868686] text-[11px]">
+                           Kickoff Date
+                        </p>
+                        <p className="font-sans font-medium text-[#ffffff] mt-1">
+                           {new Date(challenge.startAt)
+                              .toUTCString()
+                              .replace("GMT", "UTC")}
+                        </p>
+                     </div>
+                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
+                        <p className="text-[#868686] text-[11px]">
+                           Conclusion Date
+                        </p>
+                        <p className="font-sans font-medium text-[#ffffff] mt-1">
+                           {new Date(challenge.endAt)
+                              .toUTCString()
+                              .replace("GMT", "UTC")}
+                        </p>
+                     </div>
+                  </div>
                </div>
             </div>
 

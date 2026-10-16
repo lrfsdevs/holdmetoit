@@ -112,10 +112,36 @@ describe("ChallengeOverviewTab", () => {
       );
 
       expect(html).toContain("Welcome to the Midterm Sprint!");
+      expect(html).toContain(
+         "Midterm Sprint is an automated study battle governed by the HoldMeToIt three-condition accountability system."
+      );
       expect(html).toContain("Alice Scholar");
       expect(html).toContain("Honey Bees");
       expect(html).toContain("Active");
       expect(html).not.toContain("Edit hr");
+   });
+
+   it("renders custom challenge description when provided", () => {
+      const customDescription =
+         "Special Reading Week Sprint!\nPush for 50 hours of deep study and conquer the deficit.";
+      const html = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, {
+            challenge: {
+               ...mockChallenge,
+               description: customDescription,
+            },
+            isAdmin: false,
+         })
+      );
+
+      expect(html).toContain("Welcome to the Midterm Sprint!");
+      expect(html).toContain("Special Reading Week Sprint!");
+      expect(html).toContain(
+         "Push for 50 hours of deep study and conquer the deficit."
+      );
+      expect(html).not.toContain(
+         "Midterm Sprint is an automated study battle governed by the HoldMeToIt three-condition accountability system."
+      );
    });
 
    it("does not render Edit hr buttons when isAdmin is omitted", () => {

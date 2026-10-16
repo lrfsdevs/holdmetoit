@@ -84,11 +84,17 @@ const PRESET_THEMES: Record<string, { label: string; teams: TeamConfig[] }> = {
    },
 };
 
+const DEFAULT_CHALLENGE_DESCRIPTION =
+   "An automated study battle governed by the HoldMeToIt three-condition accountability system. All scholars declare their individual target hours and weekly milestone intentions before kickoff, commit to daily study sessions, solve their deficits with the catch-up model, and compete for victory.";
+
 /** Renders the multi-step host challenge creation wizard. */
 export function ChallengeCreatorWizard() {
    const router = useRouter();
    const [format, setFormat] = useState<Format>("TEAM_VS_TEAM");
    const [title, setTitle] = useState("");
+   const [description, setDescription] = useState(
+      DEFAULT_CHALLENGE_DESCRIPTION
+   );
    const [startAt, setStartAt] = useState(() => {
       const d = new Date();
       d.setMinutes(0, 0, 0);
@@ -204,6 +210,7 @@ export function ChallengeCreatorWizard() {
          try {
             const result = await createChallengeAction({
                title,
+               description: description.trim() || undefined,
                format,
                startAt: parseUtcInputStringToIso(startAt),
                endAt: parseUtcInputStringToIso(endAt),
@@ -332,6 +339,19 @@ export function ChallengeCreatorWizard() {
                   minLength={3}
                   maxLength={80}
                   className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] placeholder-[#d2d2d2] rounded-xl"
+               />
+            </div>
+
+            <div>
+               <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5">
+                  Challenge Description
+               </label>
+               <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. October Team Battle is an automated study battle governed by the HoldMeToIt three-condition accountability system..."
+                  className="w-full bg-[#545454] border border-[#484848] text-[#f4f3f6] placeholder-[#d2d2d2] rounded-xl p-3 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20"
                />
             </div>
 

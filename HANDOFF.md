@@ -4,17 +4,17 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)  
+> **Last Updated:** 2026-10-16 (Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-16, Session 110 — PR #111 Context Menu Alignment & Selection Fixes on `krish`)                                                                                                                                                                                                                                                                                                                |
+| Gate                                         | Result (2026-10-16, Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)                                                                                                                                                                                                                                                                                |
 | :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 104 files green (1110/1110 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
+| `npm run test`                               | ✅ 105 files green (1131/1131 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
 | `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
 | Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
@@ -391,4 +391,45 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (105 test files, 1125/1125 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Push branch updates and close GitHub issue #118.
+- **NEXT STEP (completed in Session 113):** Dynamic challenge description and timetable repositioning (KAN-8 / GitHub #90).
+
+### Session 113 — 2026-10-16 (Dynamic Challenge Description & Timetable Layout Adjustment — KAN-8 / GitHub #90)
+
+- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Problem Analysis (KAN-8 / GitHub #90):**
+   - Collaborator `@HyperAfnan` requested adding a `description` field to `Challenge` in the challenge table to make the "Welcome to the [Title]!" container dynamic instead of static.
+   - User requirement: Fallback seamlessly to the current boilerplate paragraph so older/legacy challenges without a description do not break. Pre-fill the default paragraph in the challenge creation modal/wizard with an editable textarea field. Also allow editing in the Manage tab. Move the `Timetable (UTC)` component lower so the overview reads naturally.
+- **Implementation & Resolution:**
+   - **Database & Prisma Migration:**
+      - Added `description String? @db.Text` to `model Challenge` in `prisma/schema.prisma`.
+      - Generated and applied declarative migration `prisma/migrations/20261016000000_add_description_to_challenge/migration.sql`.
+      - Documented in `prisma/migrations/README.md`.
+      - Successfully ran `npx prisma migrate deploy` and `npx prisma generate`.
+   - **Domain & Repository Layer:**
+      - Updated `ChallengeCreationInput` (`challenge-lifecycle.ts`) to accept `description?: string | null`.
+      - Updated `ExistingEventState` and `IncomingEventInput` in `event-audit-diff.ts` to log description modifications to the audit trail.
+      - Updated `createAdminChallenge`, `UpdateAdminChallengeInput`, and `updateAdminChallenge` in `challenge-admin.repository.ts` to persist `description`.
+      - Updated `createChallengeSchema` and `updateChallengeSchema` in `challenge-admin.actions.ts` with optional string validation.
+      - Updated `ChallengeScoreboardViewModel` in `leaderboard.types.ts` and `buildScoreboardViewModel` in `leaderboard-data.ts` to surface `challenge.description`.
+   - **Presentation Layer:**
+      - **`features/challenges/presentation/challenge-overview-tab.tsx`:**
+         - Replaced hardcoded paragraphs with dynamic `challenge.description` supporting multi-line spacing (`whitespace-pre-line`).
+         - Preserved exact backward compatibility: falls back to the default boilerplate paragraph when `description` is null, undefined, or empty string.
+         - Repositioned `Timetable (UTC)` component lower to the bottom of the card, directly after "Prizes & Rewards".
+      - **`features/challenges/presentation/challenge-creator-wizard.tsx`:**
+         - Added `DEFAULT_CHALLENGE_DESCRIPTION` constant and editable textarea input in Step 2 right below `Challenge Title`.
+         - Passed `description` payload to `createChallengeAction`.
+      - **`features/challenges/presentation/challenge-manage-tab.tsx`:**
+         - Added editable `description` textarea input in Section 1 ("Challenge Details & Timetable") with full form hydration and reset on cancel.
+         - Passed `description` payload to `updateChallengeAction`.
+   - **Test Coverage:**
+      - Unit tests for fallback and custom description rendering in `challenge-overview-tab.test.tsx`.
+      - Event audit diff tests for description field changes in `event-audit-diff.test.ts`.
+      - Repository tests for challenge creation and updates with description in `challenge-admin.repository.test.ts`.
+      - Server action tests for description validation in `challenge-admin.actions.test.ts`.
+      - Updated mock models in catalog tests (`app/challenges/page.test.tsx`, `challenges-list-view.test.tsx`).
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (105 test files, 1131/1131 tests green).
+   - `npm run build` passed (12 routes compiled cleanly).
+- **NEXT STEP:** Commit and push branch updates to `krish` for collaborator review and merge.
