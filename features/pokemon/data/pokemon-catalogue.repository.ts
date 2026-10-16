@@ -25,6 +25,29 @@ export interface ListPokemonSpeciesOptions {
    offset?: number;
 }
 
+export interface PokemonFormRecord {
+   id: string;
+   speciesId: string;
+   pokemonId: number;
+   name: string;
+   slug: string;
+   primaryType: string;
+   secondaryType: string | null;
+   baseStatTotal: number;
+   spritePngUrl: string | null;
+   spriteGifUrl: string | null;
+   officialArtworkUrl: string | null;
+   createdAt: Date;
+}
+
+export interface PokemonAbilityRecord {
+   id: string;
+   speciesId: string;
+   name: string;
+   isHidden: boolean;
+   slot: number;
+}
+
 export interface PokemonSpeciesWithCounts {
    id: string;
    pokedexNumber: number;
@@ -41,6 +64,20 @@ export interface PokemonSpeciesWithCounts {
    baseHp: number;
    baseAttack: number;
    baseDefense: number;
+   specialAttack?: number;
+   specialDefense?: number;
+   speed?: number;
+   baseStatTotal?: number;
+   heightDecimetres?: number | null;
+   weightHectograms?: number | null;
+   baseExperience?: number | null;
+   color?: string | null;
+   captureRate?: number | null;
+   baseHappiness?: number | null;
+   hatchCounter?: number | null;
+   evolvesFromSpeciesId?: number | null;
+   evolutionChainId?: number | null;
+   growthRateId?: number | null;
    generation: number;
    isLegendary?: boolean;
    isMythical?: boolean;
@@ -48,7 +85,8 @@ export interface PokemonSpeciesWithCounts {
    isAvailable: boolean;
    sourceId?: string | null;
    referenceUrl: string | null;
-   metadata?: any | null;
+   forms?: PokemonFormRecord[];
+   abilities?: PokemonAbilityRecord[];
    createdAt: Date;
    updatedAt: Date;
 }
@@ -115,6 +153,9 @@ export async function listPokemonSpecies(
          prisma.pokemonSpecies.findMany({
             where,
             orderBy,
+            include: {
+               forms: { orderBy: { pokemonId: "asc" } },
+            },
             take: options.limit
                ? Math.min(200, Math.max(1, options.limit))
                : undefined,
@@ -178,6 +219,10 @@ export async function findPokemonSpeciesById(
    try {
       const species = await prisma.pokemonSpecies.findUnique({
          where: { id },
+         include: {
+            forms: { orderBy: { pokemonId: "asc" } },
+            abilities: { orderBy: { slot: "asc" } },
+         },
       });
       return species as unknown as PokemonSpeciesWithCounts | null;
    } catch (error) {
@@ -192,6 +237,10 @@ export async function findPokemonSpeciesBySlug(
    try {
       const species = await prisma.pokemonSpecies.findUnique({
          where: { slug },
+         include: {
+            forms: { orderBy: { pokemonId: "asc" } },
+            abilities: { orderBy: { slot: "asc" } },
+         },
       });
       return species as unknown as PokemonSpeciesWithCounts | null;
    } catch (error) {
@@ -241,6 +290,20 @@ export async function adminUpsertPokemonSpecies(
          baseHp: input.baseHp ?? 50,
          baseAttack: input.baseAttack ?? 50,
          baseDefense: input.baseDefense ?? 50,
+         specialAttack: input.specialAttack ?? 0,
+         specialDefense: input.specialDefense ?? 0,
+         speed: input.speed ?? 0,
+         baseStatTotal: input.baseStatTotal ?? 0,
+         heightDecimetres: input.heightDecimetres ?? null,
+         weightHectograms: input.weightHectograms ?? null,
+         baseExperience: input.baseExperience ?? null,
+         color: input.color ?? null,
+         captureRate: input.captureRate ?? null,
+         baseHappiness: input.baseHappiness ?? null,
+         hatchCounter: input.hatchCounter ?? null,
+         evolvesFromSpeciesId: input.evolvesFromSpeciesId ?? null,
+         evolutionChainId: input.evolutionChainId ?? null,
+         growthRateId: input.growthRateId ?? null,
          generation: input.generation ?? 1,
          isLegendary: input.isLegendary ?? false,
          isMythical: input.isMythical ?? false,
@@ -248,7 +311,6 @@ export async function adminUpsertPokemonSpecies(
          isAvailable: input.isAvailable ?? true,
          sourceId: input.sourceId ?? null,
          referenceUrl: input.referenceUrl ?? null,
-         metadata: input.metadata ?? null,
       },
       create: {
          pokedexNumber: input.pokedexNumber,
@@ -267,6 +329,20 @@ export async function adminUpsertPokemonSpecies(
          baseHp: input.baseHp ?? 50,
          baseAttack: input.baseAttack ?? 50,
          baseDefense: input.baseDefense ?? 50,
+         specialAttack: input.specialAttack ?? 0,
+         specialDefense: input.specialDefense ?? 0,
+         speed: input.speed ?? 0,
+         baseStatTotal: input.baseStatTotal ?? 0,
+         heightDecimetres: input.heightDecimetres ?? null,
+         weightHectograms: input.weightHectograms ?? null,
+         baseExperience: input.baseExperience ?? null,
+         color: input.color ?? null,
+         captureRate: input.captureRate ?? null,
+         baseHappiness: input.baseHappiness ?? null,
+         hatchCounter: input.hatchCounter ?? null,
+         evolvesFromSpeciesId: input.evolvesFromSpeciesId ?? null,
+         evolutionChainId: input.evolutionChainId ?? null,
+         growthRateId: input.growthRateId ?? null,
          generation: input.generation ?? 1,
          isLegendary: input.isLegendary ?? false,
          isMythical: input.isMythical ?? false,
@@ -274,7 +350,6 @@ export async function adminUpsertPokemonSpecies(
          isAvailable: input.isAvailable ?? true,
          sourceId: input.sourceId ?? null,
          referenceUrl: input.referenceUrl ?? null,
-         metadata: input.metadata ?? null,
       },
    });
 

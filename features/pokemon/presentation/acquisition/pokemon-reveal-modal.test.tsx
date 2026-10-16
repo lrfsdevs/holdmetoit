@@ -33,7 +33,6 @@ describe("PokemonRevealModal Component", () => {
          isAvailable: true,
          sourceId: "6",
          referenceUrl: null,
-         metadata: null,
          createdAt: new Date(),
          updatedAt: new Date(),
       },

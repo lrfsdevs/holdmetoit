@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { seedPokemonCatalogue } from "./seed-pokemon";
 
 const prisma = new PrismaClient();
 
@@ -109,9 +108,6 @@ async function main() {
          });
       }
    }
-
-   // Seed Pokemon Species Catalogue (Phase 3)
-   await seedPokemonCatalogue(prisma);
 
    console.log(
       `Seed complete: challenge "${challenge.title}" (${challenge.id}) with Honey Bees vs Lavender Butterflies and sample user tasks.`

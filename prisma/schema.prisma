@@ -681,6 +681,20 @@ model PokemonSpecies {
   baseHp         Int           @default(0)
   baseAttack     Int           @default(0)
   baseDefense    Int           @default(0)
+  specialAttack    Int         @default(0)
+  specialDefense   Int         @default(0)
+  speed            Int         @default(0)
+  baseStatTotal    Int         @default(0)
+  heightDecimetres Int?
+  weightHectograms Int?
+  baseExperience   Int?
+  color            String?     @db.VarChar(32)
+  captureRate      Int?
+  baseHappiness    Int?
+  hatchCounter     Int?
+  evolvesFromSpeciesId Int?
+  evolutionChainId Int?
+  growthRateId     Int?
   generation     Int           @default(1)
   isLegendary    Boolean       @default(false)
   isMythical     Boolean       @default(false)
@@ -688,10 +702,11 @@ model PokemonSpecies {
   isAvailable    Boolean       @default(true)
   sourceId       String?       @db.VarChar(64)
   referenceUrl   String?       @db.VarChar(512)
-  metadata       Json?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  forms          PokemonForm[]
+  abilities      PokemonAbility[]
   instances      UserPokemon[]
   featuredBanners PokemonBanner[]       @relation("FeaturedBannerSpecies")
   acquisitions    PokemonAcquisition[]
@@ -704,6 +719,38 @@ model PokemonSpecies {
   @@index([isMythical])
   @@index([isAvailable])
   @@index([name])
+}
+
+model PokemonForm {
+  id                 String         @id @default(cuid())
+  speciesId          String
+  pokemonId          Int            @unique
+  name               String         @db.VarChar(128)
+  slug               String         @unique @db.VarChar(128)
+  primaryType        String         @db.VarChar(32)
+  secondaryType      String?        @db.VarChar(32)
+  baseStatTotal      Int            @default(0)
+  spritePngUrl       String?        @db.VarChar(512)
+  spriteGifUrl       String?        @db.VarChar(512)
+  officialArtworkUrl String?        @db.VarChar(512)
+  createdAt          DateTime       @default(now())
+
+  species            PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@index([speciesId])
+}
+
+model PokemonAbility {
+  id        String         @id @default(cuid())
+  speciesId String
+  name      String         @db.VarChar(64)
+  isHidden  Boolean        @default(false)
+  slot      Int
+
+  species   PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@unique([speciesId, name])
+  @@index([speciesId])
 }
 
 model UserPokemon {

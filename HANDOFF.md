@@ -4,25 +4,25 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 118 — Header Extraction to Shared UI + Root-Layout Mount on `afnan`)
+> **Last Updated:** 2026-10-16 (Session 119 — Pokémon Catalogue Importer Removal & Schema Normalization via DB Backfill on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                                         | Result (2026-10-16 — Session 116: ypt-js Integration on `afnan`)                                                                                                                                                                                             |
-| :----------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                                          | ✅ 0 errors (`npx prisma generate && tsc --noEmit`)                                                                                                                                                                                                          |
-| `npm test`                                                   | ✅ 147 files green (1382/1382 tests passing, 100% green across all modules)                                                                                                                                                                                  |
-| `npm run build`                                              | ✅ 17 routes compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                            |
-| Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                               |
-| Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                   |
-| Phase 2A (Pokémon Metadata Bundle Importer)                  | ✅ 100% Shipped & Verified: Tri-format inspection (CSV/JSON/SQLite, 1351 rows, 0 mismatches), JSON canonical importer with `--dry-run`, 1025 canonical species, 326 alternate forms consolidated into species metadata, Gen 1–9 & classification filters     |
-| Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support        |
-| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions |
-| Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile       |
-| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits            |
+| Gate                                                         | Result (2026-10-16 — Session 116: ypt-js Integration on `afnan`)                                                                                                                                                                                                                                                                                                                                                 |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                          | ✅ 0 errors (`npx prisma generate && tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                              |
+| `npm test`                                                   | ✅ 147 files green (1382/1382 tests passing, 100% green across all modules)                                                                                                                                                                                                                                                                                                                                      |
+| `npm run build`                                              | ✅ 17 routes compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                                                                                                                                                                                |
+| Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                                                                                                                                                                                   |
+| Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                                                                                                                                                                       |
+| Phase 2A (Pokémon Catalogue Data — DB-resident)              | ✅ Catalogue lives entirely in the DB (1,025 species + 326 forms). The one-off bundle importer, its CLI, and the 21-species seed were removed; the `metadata` JSON was normalized into `PokemonForm` / `PokemonAbility` tables + scalar columns via `20261022000000_normalize_pokemon_catalogue`. The DB is the source of truth; the offline seeder `npm run db:seed:pokemon` re-populates an empty environment. |
+| Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                                                                                                                                            |
+| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
+| Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile                                                                                                                                                           |
+| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits                                                                                                                                                                |
 
 ### 1.1 Live Routes
 
@@ -159,6 +159,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 >    - `20261011120100_challenge_linked_tasks_and_soft_delete`
 >    - `20261012120000_add_challenge_feedback_table`
 > 4. Reconcile remaining schema drift (D5): generate catch-up migrations for `feedbacks` and the `sort_order` columns.
+> 5. Apply the Pokémon catalogue normalization migration on the hosted DB (**backup first** — it is a one-time, non-reversible backfill that drops `PokemonSpecies.metadata`), then seed the catalogue:
+>    - `npx prisma migrate deploy`
+>    - `npm run db:seed:pokemon`
 
 ---
 
@@ -383,9 +386,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `pokemon-catalogue.repository.ts`: Catalogue queries with case-insensitive search, rarity/type filtering, stable sorting, and admin upsert.
    - `user-pokemon.repository.ts`: Isolated collection queries scoped strictly by `userId`, collection summary metrics with duplicate count mapping, and server-internal idempotent `grantUserPokemon` operation.
    - `pokemon.actions.ts`: Server Actions supporting spectator access for catalogue and species detail, session-authenticated collection retrieval, and `requireAdminUser()` gated catalogue administration.
-- **Catalogue Seeding & Data Quality (`prisma/seed-pokemon.ts`):**
-   - Idempotent upsert script (`npm run db:seed:pokemon`) populating 23 canonical Pokémon across Generations 1–4 referencing official Pokédex metadata (https://www.pokemon.com/us/pokedex).
-   - Integrated into root `prisma/seed.ts` runner.
+- **Catalogue Seeding & Data Quality (superseded by Session 119):**
+   - The 23-species idempotent upsert script (`npm run db:seed:pokemon`) and `prisma/seed-pokemon.ts` were removed in Session 119 — the catalogue is DB-resident and there is no re-seed path.
 - **Presentation & Routes (`app/pokemon/`, `app/pokedex/`, & `features/pokemon/presentation/`):**
    - `/pokemon`: Server component rendering `PokemonView` with initial catalogue and summary.
    - `/pokedex`: Permanent redirect to `/pokemon`.
@@ -400,9 +402,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (production build clean across all routes).
 - **Strict Exclusions Preserved:**
    - No Gacha pull buttons, no pity counters, no trading, no combat/battle stats, no secondary currency, no production migrations or deployments.
-- **NEXT STEP:** Run `npm run db:import:pokemon -- --dry-run` to validate catalogue import or `npm run db:import:pokemon` to execute live database upsert once migration is applied.
+- **NEXT STEP (superseded by Session 119):** The catalogue importer was removed; the catalogue now lives in the DB. See Session 119.
 
-### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`)
+### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119 (importer removed; schema normalized)
 
 - **Scope:** Inspected, verified, and integrated the complete Pokémon metadata bundle (`pokemon_metadata.json`, `pokemon_metadata.csv`, `pokemon_metadata.sqlite`) covering Generations 1 through 9 (1,351 entries), distinguished canonical species from alternate forms, separated source lore classification from HoldMeToIt game economy rarity, implemented an idempotent CLI importer with `--dry-run`, and connected Generation and Classification filters into the Pokédex UI.
 - **Triple-Format Dataset Inspection (Step 1 & Step 2):**
@@ -442,7 +444,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Dry run validated 100% of the 1,025 species with 0 rejected records.
 - **Strict Data Protection (Step 9):**
    - Zero database resets, zero destructive migrations, zero touches on participant wallets, ledger transactions, or challenge records.
-- **NEXT STEP:** Maintainer applies database migration `20261018000000_phase3_pokemon_catalogue_and_collection` on development database (`npx prisma migrate deploy`), then executes `npm run db:import:pokemon` to populate all 1,025 canonical species and 326 form variants into the catalogue.
+- **NEXT STEP (superseded by Session 119):** Live DB upsert completed; the importer and `npm run db:import:pokemon` were removed in Session 119.
 
 ### Session 112 — 2026-10-16 (Frontend Design System Audit & Token Refactoring of Economy & Pokédex on `afnan`)
 
@@ -491,7 +493,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - No changes to UI outside the economy and Pokédex scopes.
    - No database resets, migrations, or schema modifications.
    - No commits or pushes without explicit user instruction.
-- **NEXT STEP:** Maintainer applies database migrations on development database (`npx prisma migrate deploy`), runs `npm run db:import:pokemon` to populate the catalogue, and creates/activates promotional banners via Admin Console.
+- **NEXT STEP (superseded by Session 119):** The catalogue is DB-resident and the importer was removed. See Session 119.
 
 ### Session 113 — 2026-10-16 (Phase 4: Pokémon Acquisition, Gacha, Pity System & Cinematic Reveal on `afnan`)
 
@@ -642,3 +644,22 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm test`: 149 test files passed, 1,397/1,397 tests green (including new classifier, rate limiter, actions, and settings card tests).
    - `npm run build`: 17/17 App Router routes compiled cleanly.
 - **NEXT STEP:** Maintainer or participant opens `/wallet` to connect YPT session, select group identity, and synchronize study hours.
+
+### Session 119 — 2026-10-16 (Pokémon Catalogue Importer Removal & Schema Normalization via DB Backfill on `afnan`)
+
+- **Scope:** Resolved the CI failure caused by the gitignored `pokemon_metadata.json` bundle by making the database the single source of truth for the Pokémon catalogue, deleting the one-off importer path, and normalizing the denormalized `PokemonSpecies.metadata` JSON into typed columns + child tables via a one-time backfill migration.
+- **Root Cause:** `features/pokemon/data/pokemon-bundle-importer.test.ts` dry-ran the real `pokemon_metadata.json` at repo root, which is now in `.gitignore` (lines 40–43). It exists locally but never in CI checkout, so `npm run test` failed with `Pokemon metadata bundle file not found`.
+- **Schema Normalization (`prisma/schema.prisma`):**
+   - Promoted `PokemonSpecies` metadata scalars to columns: `specialAttack`, `specialDefense`, `speed`, `baseStatTotal`, `heightDecimetres`, `weightHectograms`, `baseExperience`, `color`, `captureRate`, `baseHappiness`, `hatchCounter`, `evolvesFromSpeciesId`, `evolutionChainId`, `growthRateId`.
+   - Added `PokemonForm` (unique `pokemonId`/`slug`, `speciesId` FK cascade) and `PokemonAbility` (`@@unique([speciesId, name])`, `speciesId` FK cascade).
+   - Dropped the denormalized `PokemonSpecies.metadata` column (kept `UserPokemon.metadata`).
+- **Backfill Migration (`prisma/migrations/20261022000000_normalize_pokemon_catalogue/migration.sql`):**
+   - Adds the columns/tables, then one-time transforms the existing `metadata` JSON in the DB into the new shape (`jsonb_array_elements` for `abilities`/`forms`, scalar casts for the rest), then drops the column.
+   - Non-reversible — requires a DB snapshot before deploy.
+- **Importer Removal:** Deleted `features/pokemon/data/pokemon-bundle-importer.ts`, its `...test.ts`, `scripts/import-pokemon-bundle.ts`, and the vestigial `prisma/seed-pokemon.ts`. Removed the `db:import:pokemon` and `db:seed:pokemon` npm scripts and the `seedPokemonCatalogue` call from `prisma/seed.ts`. `.gitignore` bundle entries and the local raw files were left in place.
+- **Consumer Updates:** `pokemon.schema.ts` (dropped `metadata`, added new fields + `PokemonFormSchema`/`PokemonAbilitySchema`), `pokemon-catalogue.repository.ts` (new DTO fields, `forms`/`abilities` includes on detail queries and `forms` on the list query, admin upsert remapped), `pokemon-detail-modal.tsx` (reads normalized columns + `forms` relation). Updated affected pokemon test fixtures.
+- **Quality Gates Verified:**
+   - `npm run typecheck`: 0 errors.
+   - `npm run test`: 152 test files, 1417/1417 tests green (importer test removed).
+- **Re-seed path (`scripts/seed-pokemon-catalogue.ts` + `npm run db:seed:pokemon`):** Offline seeder that reads a raw metadata bundle and writes the normalized catalogue (idempotent upserts on `slug`; replaces `forms`/`abilities` on re-run). Flags: `--file=<path>` (default `./pokemon_metadata.json`), `--limit=<N>`, `--dry-run`. Used to seed the dev DB `holdmetoit3`: **1,025 species / 326 forms / 2,411 abilities** (generation coverage 1–9 exact).
+- **NEXT STEP:** Maintainer snapshots the hosted DB, applies `20261022000000_normalize_pokemon_catalogue` (`npx prisma migrate deploy`), then runs `npm run db:seed:pokemon` (with the raw bundle available) and spot-checks `PokemonForm` (326) / `PokemonAbility` counts and the `/pokemon` detail modal.

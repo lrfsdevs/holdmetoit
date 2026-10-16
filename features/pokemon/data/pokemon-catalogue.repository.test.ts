@@ -107,6 +107,10 @@ describe("Pokemon Catalogue Repository", () => {
          expect(result?.name).toBe("Bulbasaur");
          expect(prisma.pokemonSpecies.findUnique).toHaveBeenCalledWith({
             where: { id: "sp_1" },
+            include: {
+               forms: { orderBy: { pokemonId: "asc" } },
+               abilities: { orderBy: { slot: "asc" } },
+            },
          });
       });
 
@@ -121,6 +125,10 @@ describe("Pokemon Catalogue Repository", () => {
          expect(result?.slug).toBe("charmander");
          expect(prisma.pokemonSpecies.findUnique).toHaveBeenCalledWith({
             where: { slug: "charmander" },
+            include: {
+               forms: { orderBy: { pokemonId: "asc" } },
+               abilities: { orderBy: { slot: "asc" } },
+            },
          });
       });
    });

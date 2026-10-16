@@ -38,6 +38,8 @@ HoldMeToIt is primarily a gamified study and accountability platform. Phase 3 in
 erDiagram
     User ||--o{ UserPokemon : "owns"
     PokemonSpecies ||--o{ UserPokemon : "instantiates (onDelete: Restrict)"
+    PokemonSpecies ||--o{ PokemonForm : "has forms (onDelete: Cascade)"
+    PokemonSpecies ||--o{ PokemonAbility : "has abilities (onDelete: Cascade)"
 
     PokemonSpecies {
         string id PK
@@ -51,14 +53,46 @@ erDiagram
         string classification
         string imageUrl
         string spriteUrl
+        string spriteGifUrl
         int baseHp
         int baseAttack
         int baseDefense
+        int specialAttack
+        int specialDefense
+        int speed
+        int baseStatTotal
+        int heightDecimetres
+        int weightHectograms
+        boolean isLegendary
+        boolean isMythical
+        boolean isBaby
         int generation
         boolean isAvailable
         string referenceUrl
         datetime createdAt
         datetime updatedAt
+    }
+
+    PokemonForm {
+        string id PK
+        string speciesId FK
+        int pokemonId UK
+        string name
+        string slug UK
+        string primaryType
+        string secondaryType
+        int baseStatTotal
+        string spritePngUrl
+        string spriteGifUrl
+        string officialArtworkUrl
+    }
+
+    PokemonAbility {
+        string id PK
+        string speciesId FK
+        string name
+        boolean isHidden
+        int slot
     }
 
     UserPokemon {
@@ -133,30 +167,23 @@ $$\text{Completion Percentage} = \min\left(100, \text{round}\left(\frac{\text{Un
 
 ---
 
-## 5. Metadata Bundle Importer & Provenance (Phase 2A)
+## 5. Catalogue Data Lifecycle & Provenance
 
-A structured multi-format Pokémon metadata bundle (`pokemon_metadata.json`, `pokemon_metadata.csv`, `pokemon_metadata.sqlite`) covering Generations 1 through 9 (1,351 total entries) is integrated via a repeatable, idempotent CLI importer.
+The Pokémon catalogue is **data-driven from the database** — `PokemonSpecies` (plus the normalized `PokemonForm` and `PokemonAbility` tables) is the single source of truth at runtime. There is no runtime file dependency: the application only ever reads the DB through `features/pokemon/data/*`.
 
-### 5.1 Dataset Schema & Triple-Format Verification
+The catalogue was populated once (1,025 canonical species + 326 alternate forms) from a curated Generations 1–9 dataset. The one-off bundle importer and its CLI have been removed; the former JSON `metadata` column was promoted into first-class columns and child tables by the `20261022000000_normalize_pokemon_catalogue` migration (see §5.1). The DB is the source of truth at runtime, and an offline seeder (`npm run db:seed:pokemon`, §5.6) can (re)populate an empty environment from a raw metadata bundle.
 
-Before importing, all three bundle formats were programmatically inspected:
+### 5.1 Normalized Data Model
 
-- **Record Parity:** All three files contain exactly **1,351 rows** and 37 fields with **0 field or row mismatches**.
-- **Field Consistency:**
-   - `pokemon_id`: 1,351 unique IDs. 1 to 1025 represent canonical National Pokédex species; 10001 to 10326 represent special forms.
-   - `pokemon_slug`: 1,351 unique lowercase alphanumeric slugs with zero collisions.
-   - `species_id`: 1,025 distinct species IDs (1 through 1025, from Bulbasaur #1 to Pecharunt #1025).
-   - `evolves_from_species_id`: 0 unresolved evolution references (all point to valid 1..1025 species IDs).
-   - Types: All 18 official elemental types are represented across Generations 1 through 9.
-   - Asset URLs: 100% of records contain valid artwork, PNG sprite, and animated GIF URLs.
+All previously denormalized `PokemonSpecies.metadata` JSON has been promoted to typed columns and child tables:
 
-### 5.2 Canonical Format Selection
+- **`PokemonSpecies` scalars:** `specialAttack`, `specialDefense`, `speed`, `baseStatTotal`, `heightDecimetres`, `weightHectograms`, `baseExperience`, `color`, `captureRate`, `baseHappiness`, `hatchCounter`, `evolvesFromSpeciesId`, `evolutionChainId`, `growthRateId`.
+- **`PokemonForm`** (326 rows): `pokemonId` (unique), `name`, `slug` (unique), `primaryType`, `secondaryType`, `baseStatTotal`, sprite/artwork URLs. FK `speciesId` → `PokemonSpecies` (`onDelete: Cascade`).
+- **`PokemonAbility`**: `name`, `isHidden`, `slot`; `@@unique([speciesId, name])`, FK `speciesId` → `PokemonSpecies` (`onDelete: Cascade`).
 
-`pokemon_metadata.json` is selected as the canonical repeatable import format:
+The `20261022000000_normalize_pokemon_catalogue` migration performs a **one-time, non-reversible backfill**: it adds the columns/tables, transforms the existing `metadata` JSON already in the DB into the new shape, then drops the `metadata` column. Take a DB snapshot before deploying.
 
-1. **Pre-parsed Structures:** Arrays (`types`, `abilities`) and sub-objects (`base_stats`) are natively parsed, eliminating complex and error-prone CSV string unescaping.
-2. **Zero Extra Dependencies:** Pure Node.js `fs` + `JSON.parse` avoids introducing native C-bindings (like `sqlite3` or `better-sqlite3`) to the Next.js runtime.
-3. **Reproducibility:** Consistent across all developer and CI/CD environments.
+To rebuild the catalogue from scratch (e.g. after a DB reset), run the offline seeder against a raw PokéAPI/Veekun dump: `npm run db:seed:pokemon -- --file=<bundle.json>` (see §5.6).
 
 ### 5.3 Provenance & Legal Licensing Constraints
 
@@ -171,7 +198,7 @@ A critical architectural distinction is maintained between **Pokémon species** 
 
 - **Canonical Species (`is_default_form: true`):** Exactly 1,025 entries corresponding 1:1 with National Pokédex numbers #1 to #1025. These constitute the canonical Pokédex catalogue and collection progress denominator.
 - **Form Variations (`is_default_form: false`):** 326 alternate forms (Mega Evolutions, Gigantamax, Alolan/Galarian/Hisuian/Paldean regional variants, Totem forms).
-- **Consolidation Rule:** Alternate forms are grouped under their parent species and catalogued in `species.metadata.forms`. This strictly prevents duplicate Pokédex entries and unique constraint violations on `pokedexNumber`.
+- **Consolidation Rule:** Alternate forms are grouped under their parent species in the normalized `PokemonForm` table via the `speciesId` foreign key. This strictly prevents duplicate Pokédex entries and unique constraint violations on `pokedexNumber`.
 
 ### 5.5 Separation of Official Lore from Game Economy
 
@@ -191,36 +218,22 @@ A critical architectural distinction is maintained between **Pokémon species** 
 > [!IMPORTANT]
 > **Strict Economy Invariance:** Combat statistics (BST, Attack, Defense, HP) and rarity tiers have **zero influence** on study coin rewards, challenge deficit catch-up math, or wager betting odds.
 
-### 5.6 CLI Importer Usage
+### 5.6 Catalogue Lifecycle
 
-The importer is built as a repeatable, safe CLI command:
-
-```bash
-# 1. Validation & Dry Run (Inspect without writing to DB)
-npm run db:import:pokemon -- --dry-run
-
-# 2. Test small batch in dry run
-npm run db:import:pokemon -- --limit=20 --dry-run
-
-# 3. Live Idempotent Database Import
-npm run db:import:pokemon
-```
-
-**Safety Invariants:**
-
-- **Zero Data Loss:** Existing `UserPokemon`, `Wallet`, `Challenge`, and `DailyStudyLog` records are never modified or purged.
-- **Idempotency:** Uses `upsert` keyed on unique `slug` and `pokedexNumber`.
-- **Pre-Validation:** Every record is validated against `UpsertPokemonSpeciesSchema` before database dispatch.
+- **Ingestion (one-time):** The catalogue was imported once into the DB. The former importer engine (`features/pokemon/data/pokemon-bundle-importer.ts`), its CLI (`scripts/import-pokemon-bundle.ts`), and the `db:import:pokemon` script have been removed.
+- **Schema change:** `npx prisma migrate deploy` applies `20261022000000_normalize_pokemon_catalogue`, which backfills the normalized tables/columns from the existing `metadata` JSON and then drops the column.
+- **Re-seed path:** `prisma/seed.ts` no longer seeds Pokémon, but the offline seeder `npm run db:seed:pokemon` (`scripts/seed-pokemon-catalogue.ts`) populates the normalized catalogue from a raw metadata bundle. Flags: `--file=<path>` (default `./pokemon_metadata.json`), `--limit=<N>`, `--dry-run`. Idempotent upserts on `slug`; each species' `forms` and `abilities` are replaced on re-run.
+- **Runtime reads:** All catalogue access flows through `features/pokemon/data/pokemon-catalogue.repository.ts`; the detail queries eagerly load `forms` and `abilities`.
 
 ### 5.7 Comprehensive Data Coverage Report
 
 ```text
 ================================================================================
-  HOLDMETOIT — POKÉMON METADATA BUNDLE IMPORTER SUMMARY
+  HOLDMETOIT — POKÉMON CATALOGUE COMPOSITION
 ================================================================================
  Total Source Rows:       1,351
  Canonical Base Species:  1,025 (is_default_form: true, National Dex 1..1025)
- Alternate Form Variants: 326 (associated in species metadata)
+ Alternate Form Variants: 326 (PokemonForm rows)
  Validated Domain Items:  1,025 (100%)
  Rejected Records:        0 (0%)
 

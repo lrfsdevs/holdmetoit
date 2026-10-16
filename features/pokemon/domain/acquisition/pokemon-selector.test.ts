@@ -30,7 +30,6 @@ describe("Server-Side Pokemon Selection Engine", () => {
          isAvailable: true,
          sourceId: null,
          referenceUrl: null,
-         metadata: null,
          createdAt: new Date(),
          updatedAt: new Date(),
          ...partial,

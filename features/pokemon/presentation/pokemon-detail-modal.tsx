@@ -260,32 +260,25 @@ export function PokemonDetailModal({
                </div>
 
                {/* Physical Dimensions (Height & Weight) */}
-               {(species.metadata?.heightDecimetres ||
-                  species.metadata?.weightHectograms) && (
+               {(species.heightDecimetres || species.weightHectograms) && (
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                     {species.metadata?.heightDecimetres && (
+                     {species.heightDecimetres && (
                         <div className="p-2.5 rounded-xl bg-pokedex-card/80 border border-pokedex-border/60 flex items-center justify-between">
                            <span className="text-pokedex-textMuted">
                               Height
                            </span>
                            <span className="font-semibold text-white">
-                              {(species.metadata.heightDecimetres / 10).toFixed(
-                                 1
-                              )}{" "}
-                              m
+                              {(species.heightDecimetres / 10).toFixed(1)} m
                            </span>
                         </div>
                      )}
-                     {species.metadata?.weightHectograms && (
+                     {species.weightHectograms && (
                         <div className="p-2.5 rounded-xl bg-pokedex-card/80 border border-pokedex-border/60 flex items-center justify-between">
                            <span className="text-pokedex-textMuted">
                               Weight
                            </span>
                            <span className="font-semibold text-white">
-                              {(species.metadata.weightHectograms / 10).toFixed(
-                                 1
-                              )}{" "}
-                              kg
+                              {(species.weightHectograms / 10).toFixed(1)} kg
                            </span>
                         </div>
                      )}
@@ -293,30 +286,27 @@ export function PokemonDetailModal({
                )}
 
                {/* Alternate Forms & Special Variations */}
-               {species.metadata?.forms &&
-                  species.metadata.forms.length > 0 && (
-                     <div className="space-y-2 p-3.5 rounded-xl bg-pokedex-card/60 border border-pokedex-border/60">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-pokedex-textMuted flex items-center justify-between">
-                           <span>Form Variations</span>
-                           <span className="text-rose-400 font-mono text-[11px]">
-                              {species.metadata.forms.length}{" "}
-                              {species.metadata.forms.length === 1
-                                 ? "variant"
-                                 : "variants"}
+               {species.forms && species.forms.length > 0 && (
+                  <div className="space-y-2 p-3.5 rounded-xl bg-pokedex-card/60 border border-pokedex-border/60">
+                     <h4 className="text-xs font-semibold uppercase tracking-wider text-pokedex-textMuted flex items-center justify-between">
+                        <span>Form Variations</span>
+                        <span className="text-rose-400 font-mono text-[11px]">
+                           {species.forms.length}{" "}
+                           {species.forms.length === 1 ? "variant" : "variants"}
+                        </span>
+                     </h4>
+                     <div className="flex flex-wrap gap-1.5 pt-1">
+                        {species.forms.map((f) => (
+                           <span
+                              key={f.slug}
+                              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-pokedex-inset border border-pokedex-borderLight text-pokedex-textSecondary"
+                           >
+                              {f.name}
                            </span>
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                           {species.metadata.forms.map((f: any) => (
-                              <span
-                                 key={f.slug}
-                                 className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-pokedex-inset border border-pokedex-borderLight text-pokedex-textSecondary"
-                              >
-                                 {f.name}
-                              </span>
-                           ))}
-                        </div>
+                        ))}
                      </div>
-                  )}
+                  </div>
+               )}
 
                {/* User Ownership Section */}
                <div className="p-3.5 rounded-xl bg-pokedex-card/80 border border-pokedex-border text-xs">
