@@ -1,6 +1,14 @@
-import { redirect } from "next/navigation";
+import { Metadata } from "next";
+import { AdminConsoleView } from "@/features/admin/presentation/admin-console-view";
 
-/** Redirects the legacy admin landing route to the challenges directory. */
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+   title: "Administration Console — HoldMeToIt",
+   description:
+      "Review and verify member YPT identities, adjust trophy ratings, and monitor operations.",
+};
+
 export default function AdminDashboardPage() {
-   redirect("/challenges");
+   return <AdminConsoleView />;
 }

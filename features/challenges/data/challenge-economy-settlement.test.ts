@@ -6,6 +6,7 @@ import {
 import { prisma } from "@/core/db";
 import * as wagerRepo from "@/features/wagers/data/wager.repository";
 import * as walletRepo from "@/features/economy/data/wallet.repository";
+import * as trophyRepo from "@/features/trophies/data/trophy.repository";
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -26,6 +27,11 @@ vi.mock("@/core/db", () => ({
 vi.mock("@/features/wagers/data/wager.repository", () => ({
    settleChallengeWagers: vi.fn().mockResolvedValue({ settledCount: 1 }),
    refundAllChallengeWagers: vi.fn().mockResolvedValue({ refundedCount: 1 }),
+}));
+
+vi.mock("@/features/trophies/data/trophy.repository", () => ({
+   settleChallengeTrophies: vi.fn().mockResolvedValue({ settledCount: 2 }),
+   reverseChallengeTrophies: vi.fn().mockResolvedValue({ reversedCount: 2 }),
 }));
 
 vi.mock("@/features/economy/data/wallet.repository", () => ({
@@ -157,9 +163,18 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
          ["team_alpha"],
          mockTx
       );
+
+      // Verify trophies were settled (Phase 5)
+      expect(trophyRepo.settleChallengeTrophies).toHaveBeenCalledWith(
+         expect.objectContaining({
+            challengeId: "chal_bonus_1",
+            winningTeamIds: ["team_alpha"],
+         }),
+         mockTx
+      );
    });
 
-   it("refunds accepted wagers when challenge results are unlocked", async () => {
+   it("refunds accepted wagers and reverses trophies when challenge results are unlocked", async () => {
       const lockedChallenge = {
          id: "chal_locked",
          title: "Autumn League",
@@ -193,6 +208,12 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       await unlockChallengeResults("chal_locked", mockActor);
 
       expect(wagerRepo.refundAllChallengeWagers).toHaveBeenCalledWith(
+         "chal_locked",
+         mockTx,
+         "Challenge results unlocked by admin"
+      );
+
+      expect(trophyRepo.reverseChallengeTrophies).toHaveBeenCalledWith(
          "chal_locked",
          mockTx,
          "Challenge results unlocked by admin"

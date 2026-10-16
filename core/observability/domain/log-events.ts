@@ -72,6 +72,18 @@ export const logEvents = {
    pokemonAcquired: "pokemon.acquired",
    pokemonBannerUpdated: "pokemon.banner_updated",
 
+   yptClaimCreated: "ypt.claim_created",
+   yptClaimApproved: "ypt.claim_approved",
+   yptClaimRejected: "ypt.claim_rejected",
+   yptSyncStarted: "ypt.sync_started",
+   yptSyncCompleted: "ypt.sync_completed",
+   yptSyncFailed: "ypt.sync_failed",
+
+   trophyAwarded: "trophy.awarded",
+   trophyDeducted: "trophy.deducted",
+   trophyReversal: "trophy.reversal",
+   rankChanged: "trophy.rank_changed",
+
    appError: "app.error",
 } as const;
 

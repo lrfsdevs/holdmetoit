@@ -27,6 +27,10 @@ vi.mock("@/features/ypt/data/ypt.repository", () => ({
    getUserYptId: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("@/features/trophies/data/trophy.repository", () => ({
+   getUserTrophyBalance: vi.fn().mockResolvedValue(1250),
+}));
+
 describe("WalletPage (/wallet)", () => {
    beforeEach(() => {
       vi.clearAllMocks();

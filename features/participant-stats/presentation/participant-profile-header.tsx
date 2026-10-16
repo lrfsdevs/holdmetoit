@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ParticipantProfileHeader as ProfileHeaderType } from "../domain/participant-stats.types";
 import { getTeamBadgeStyle } from "@/features/challenges/domain/team-colors";
+import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
 
 interface ParticipantProfileHeaderProps {
    profile: ProfileHeaderType;
@@ -119,6 +120,14 @@ export function ParticipantProfileHeader({
                               <span>{profile.teamIcon || "🛡️"}</span>
                               <span>{profile.teamName}</span>
                            </span>
+                        )}
+
+                        {/* Trophy Rank Role Badge */}
+                        {typeof profile.trophies === "number" && (
+                           <TrophyRoleBadge
+                              trophies={profile.trophies}
+                              size="sm"
+                           />
                         )}
 
                         {/* Pace Status Badge */}

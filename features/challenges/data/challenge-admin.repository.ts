@@ -24,6 +24,10 @@ import {
    settleChallengeWagers,
    refundAllChallengeWagers,
 } from "@/features/wagers/data/wager.repository";
+import {
+   settleChallengeTrophies,
+   reverseChallengeTrophies,
+} from "@/features/trophies/data/trophy.repository";
 import { listAllChallenges } from "./challenge.repository";
 
 export async function listAllChallengesForAdmin() {
@@ -374,6 +378,19 @@ export async function lockChallengeResults(
       // 4. Wager settlement (Stage 4)
       await settleChallengeWagers(challengeId, winningTeamIds, tx);
 
+      // 5. Trophy settlement (Phase 5)
+      await settleChallengeTrophies(
+         {
+            challengeId,
+            challengeTitle: challenge.title,
+            winningTeamIds,
+            totalTeamsCount: challenge.teams.length,
+            participants: challenge.participants,
+            savedParticipantIds,
+         },
+         tx
+      );
+
       await recordAuditEvent({
          actorId: actor.id,
          actorUsername: actor.username,
@@ -483,6 +500,13 @@ export async function unlockChallengeResults(
 
       // Refund any accepted wagers if challenge is unlocked
       await refundAllChallengeWagers(
+         challengeId,
+         tx,
+         "Challenge results unlocked by admin"
+      );
+
+      // Reverse any awarded challenge trophies
+      await reverseChallengeTrophies(
          challengeId,
          tx,
          "Challenge results unlocked by admin"

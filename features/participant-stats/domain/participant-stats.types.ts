@@ -18,6 +18,8 @@ export interface ParticipantProfileHeader {
    challengeTitle: string;
    challengeFormat: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
    challengeStatus: "UPCOMING" | "ACTIVE" | "COMPLETED";
+   trophies?: number;
+   role?: string;
 }
 
 export interface ParticipantSummaryStats {
@@ -93,12 +95,35 @@ export interface ParticipantAccountabilityStats {
    statusBadge: "On-Track" | "Catch-Up" | "Punished" | "Excused" | "Completed";
 }
 
+export interface ParticipantTrophyHistoryItem {
+   id: string;
+   amount: number;
+   balanceAfter: number;
+   type: string;
+   description: string | null;
+   createdAt: string;
+}
+
+export interface ParticipantCompetitiveStats {
+   trophies: number;
+   role: string;
+   wins: number;
+   losses: number;
+   winRate: number;
+   coins: number;
+   totalStudySeconds: number;
+   yptStatus: "VERIFIED" | "PENDING" | "REJECTED" | "NOT_CONNECTED";
+   yptId: string | null;
+   trophyHistory: ParticipantTrophyHistoryItem[];
+}
+
 export interface ParticipantStatsViewModel {
    profile: ParticipantProfileHeader;
    summary: ParticipantSummaryStats;
    dailyHistory: ParticipantDailyHistoryEntry[];
    teamStats: ParticipantTeamStats | null;
    accountability: ParticipantAccountabilityStats;
+   competitive?: ParticipantCompetitiveStats | null;
    viewer: {
       isAdmin: boolean;
       isOwner: boolean;

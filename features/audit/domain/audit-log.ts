@@ -16,10 +16,29 @@ export type AuditEventType =
    | "PUNISHMENT_PFP_UPDATED"
    | "HOUSE_IDENTITY_UPDATED"
    | "CHALLENGE_DELETED"
-   | "ROSTER_EDIT";
+   | "ROSTER_EDIT"
+   | "YPT_CLAIM_CREATED"
+   | "YPT_CLAIM_APPROVED"
+   | "YPT_CLAIM_REJECTED"
+   | "YPT_ID_UNLINKED"
+   | "YPT_SYNC_STARTED"
+   | "YPT_SYNC_COMPLETED"
+   | "YPT_SYNC_FAILED"
+   | "TROPHY_AWARDED"
+   | "TROPHY_DEDUCTED"
+   | "TROPHY_REVERSAL"
+   | "RANK_CHANGED"
+   | "ADMIN_TROPHY_ADJUSTMENT";
 
 export type AuditTargetType =
-   "DAILY_STUDY_LOG" | "WEEKLY_GOAL" | "CHALLENGE" | "PARTICIPANT" | "TEAM";
+   | "DAILY_STUDY_LOG"
+   | "WEEKLY_GOAL"
+   | "CHALLENGE"
+   | "PARTICIPANT"
+   | "TEAM"
+   | "USER"
+   | "YPT_CLAIM"
+   | "TROPHY";
 
 export interface AuditEvent {
    id: string;

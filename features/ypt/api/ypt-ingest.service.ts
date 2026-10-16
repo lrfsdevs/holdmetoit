@@ -42,6 +42,35 @@ export async function ingestYptActivity(
          };
       }
 
+      // 1b. Enforce YPT verification requirement (Law / Section 6 & 34)
+      if (!user.yptId) {
+         logger.warn(logEvents.yptSyncFailed, {
+            context: {
+               action: "ingestYptActivity",
+               reason: "User has not verified YPT identity",
+               userId: user.id,
+            },
+         });
+         return {
+            ok: false,
+            code: "YPT_NOT_VERIFIED",
+            message:
+               "User does not have an active verified YPT identity. Please request admin verification first.",
+            durationSeconds: payload.durationSeconds,
+            coinsCredited: 0,
+            isDuplicate: false,
+         };
+      }
+
+      logger.info(logEvents.yptSyncStarted, {
+         context: {
+            userId: user.id,
+            yptId: user.yptId,
+            date: payload.date,
+            durationSeconds: payload.durationSeconds,
+         },
+      });
+
       // 2. Validate date (cannot be future date)
       const [year, month, day] = payload.date.split("-").map(Number);
       const targetDate = new Date(Date.UTC(year, month - 1, day));
@@ -160,6 +189,15 @@ export async function ingestYptActivity(
       logger.info(logEvents.studyLogAdded, {
          context: {
             source,
+            userId: user.id,
+            participantId: participant.id,
+            studyLogId: updatedLog.id,
+            coinsCredited,
+         },
+      });
+
+      logger.info(logEvents.yptSyncCompleted, {
+         context: {
             userId: user.id,
             participantId: participant.id,
             studyLogId: updatedLog.id,

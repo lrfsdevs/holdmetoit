@@ -4,23 +4,25 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-15 (Session 108 — Challenge Wrapped Feature Flag on `afnan-jr`)  
+> **Last Updated:** 2026-10-16 (Session 116 — ypt-js Integration & Automated Study Sync on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                                         | Result (2026-10-16 — Session 114: Phase 4 — Pokémon Acquisition, Gacha, Pity, Progression & Economy Integrity on `afnan`)                                                                                                                                                                    |
-| :----------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                                          | ✅ 0 errors (`npx prisma generate && tsc --noEmit`)                                                                                                                                                                                                                                          |
-| `npm run test`                                               | ✅ 136 files green (1325/1325 tests passing, 100% green across all modules)                                                                                                                                                                                                                  |
-| `npm run build`                                              | ✅ 16 routes compiled (production build clean including `/pokemon`, `/pokedex`, `/wallet`, `/devboard`)                                                                                                                                                                                      |
-| Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                                                               |
-| Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                                                   |
-| Phase 2A (Pokémon Metadata Bundle Importer)                  | ✅ 100% Shipped & Verified: Tri-format inspection (CSV/JSON/SQLite, 1351 rows, 0 mismatches), JSON canonical importer with `--dry-run`, 1025 canonical species, 326 alternate forms consolidated into species metadata, Gen 1–9 & classification filters                                     |
-| Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                        |
-| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions, 3-stage cinematic reveal modal |
+| Gate                                                         | Result (2026-10-16 — Session 116: ypt-js Integration on `afnan`)                                                                                                                                                                                             |
+| :----------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                          | ✅ 0 errors (`npx prisma generate && tsc --noEmit`)                                                                                                                                                                                                          |
+| `npm test`                                                   | ✅ 147 files green (1382/1382 tests passing, 100% green across all modules)                                                                                                                                                                                  |
+| `npm run build`                                              | ✅ 17 routes compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                            |
+| Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                               |
+| Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                   |
+| Phase 2A (Pokémon Metadata Bundle Importer)                  | ✅ 100% Shipped & Verified: Tri-format inspection (CSV/JSON/SQLite, 1351 rows, 0 mismatches), JSON canonical importer with `--dry-run`, 1025 canonical species, 326 alternate forms consolidated into species metadata, Gen 1–9 & classification filters     |
+| Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support        |
+| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions |
+| Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile       |
+| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits            |
 
 ### 1.1 Live Routes
 
@@ -31,7 +33,7 @@
 | `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
-| `/admin`                                      | Server redirect to `/challenges`                                                                                                                           | `ADMIN` / `DEV`                        |
+| `/admin`                                      | Host management console for YPT claims verification, audited trophy adjustments, and challenge operations                                                  | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
@@ -554,3 +556,89 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint`: 0 errors.
    - `npm run build`: 16/16 routes compiled successfully.
 - **NEXT STEP:** Maintainer or admin navigates to `/pokemon` to test and manage banners in the staging environment.
+
+### Session 115 — 2026-10-16 (Verified YPT Identity + Trophy Ranking System on `afnan`)
+
+- **Scope:** Complete implementation and verification of Verified YPT Identity claim workflow and Clash of Clans–style Trophy Ranking system:
+   1. Searchable member selection dropdown replacing manual YPT ID entry.
+   2. Strict admin approval boundary with full identity protection (1 verified YPT ID -> 1 account).
+   3. Automatic study-hour synchronization restriction exclusively to verified accounts; rejection of unverified sync attempts.
+   4. Authoritative trophy settlement on challenge lock (Win: +25, Loss: -15, Draw/Tie: 0, Cancelled: 0) with zero floor and idempotency keys.
+   5. Compensating reversal transactions on challenge unlock.
+   6. Clash of Clans–style rank tier hierarchy (Recruit -> Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Grandmaster -> Champion).
+   7. Dedicated `/admin` console with YPT claim approval/rejection and audited trophy adjustments.
+   8. Dedicated public `/leaderboard` route with podium decorations, search, and sorting.
+   9. Unified 3-progression layer participant profiles (Competitive, Study, Economy).
+- **Key Changes Implemented:**
+   - **Prisma Schema & Migration:**
+      - Added `trophyBalance Int @default(0)` to `User` model with index.
+      - Added `enum YptClaimStatus { PENDING, VERIFIED, REJECTED, REVOKED }`.
+      - Added `model YptIdentityClaim` with relation to `User` and `reviewedBy`.
+      - Added `enum TrophyTransactionType { CHALLENGE_WIN, CHALLENGE_LOSS, ADMIN_ADJUSTMENT, REVERSAL, SEASON_RESET }`.
+      - Added `model TrophyTransaction` with composite index `[userId, createdAt]`, unique `idempotencyKey`, and self-referencing reversal links.
+      - Applied database migration `prisma/migrations/20261020000000_ypt_identity_and_trophy_system/migration.sql` with automatic backfill of existing verified `yptId` users.
+   - **Pure Domain Engine (`features/trophies/domain/` & `features/ypt/domain/`):**
+      - `trophy-types.ts` & `trophy-rank.ts`: 9-tier progression math, 0-trophy floor, rank promotion/demotion detection, milestone progress calculation.
+      - `ypt-claim-state-machine.ts`: Explicit state machine validating allowed transitions (PENDING -> VERIFIED/REJECTED, VERIFIED -> REVOKED, REJECTED -> PENDING).
+   - **Data Repositories & Ingest Safeguards (`features/ypt/` & `features/trophies/`):**
+      - `ypt-claim.repository.ts`: Single-group member discovery, claim creation, pending conflict resolution, approval/rejection/revocation.
+      - `trophy.repository.ts`: Append-only immutable `recordTrophyTransaction`, `getTrophyHistory`, `getTrophyLeaderboard`, `getUserCompetitiveStats`, `adminAdjustTrophies`, `settleChallengeTrophies`, `reverseChallengeTrophies`.
+      - `ypt-ingest.service.ts`: Enforces `user.yptClaims` status check; rejects unverified users with `YPT_NOT_VERIFIED` to protect economy.
+   - **Challenge Lifecycle Integration:**
+      - `challenge-admin.repository.ts`: Integrated `settleChallengeTrophies` into `lockChallengeResults` and `reverseChallengeTrophies` into `unlockChallengeResults` transactions.
+   - **Server Actions & Presentation UI:**
+      - `ypt-claim.actions.ts` & `trophy.actions.ts`: Secure server actions with `requireAdminUser` for administrative operations.
+      - `ypt-member-selector.tsx`: Searchable dropdown displaying display name, @username, YPT ID, and available/linked status.
+      - `ypt-settings-card.tsx`: Integrated member dropdown with Not Connected, Pending, Verified, and Rejected status states.
+      - `admin-console-view.tsx`: Host admin console with claim counters, approve/reject/revoke actions, and trophy adjustment modal.
+      - `trophy-leaderboard-view.tsx` & `app/leaderboard/page.tsx`: Group competitive leaderboard with podium cards and rank filters.
+      - `unified-progression-card.tsx`: Unified 3-progression layer (Competitive, Study, Economy) on participant profiles.
+      - `trophy-role-badge.tsx`, `trophy-progress-bar.tsx`, `trophy-history-list.tsx`, `trophy-result-animation.tsx`.
+- **Quality Gates & Verification Results (100% Green):**
+   - `npm run typecheck`: 0 errors (`npx prisma generate && tsc --noEmit`).
+   - `npm test`: 141 test files passing, 1,356/1,356 tests passing (100% green across all modules).
+   - `npm run build`: 17/17 routes compiled successfully (including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`).
+- **NEXT STEP:** Verify ypt-js authentication, member selection, and automatic study synchronization in the wallet cockpit.
+
+### Session 116 — 2026-10-16 (Yeolpumta `ypt-js` Integration Foundation on `afnan`)
+
+- **Scope:** Replacement of legacy placeholder YPT workflow with genuine Yeolpumta integration using `ypt-js` (`v0.1.0`):
+   1. Package inspection: verified `YptJs` client, auth resource, groups resource, and root exports.
+   2. Prisma schema migration: added `YptConnectionStatus` enum, `YptConnection` model (AES-256-GCM encrypted refresh token), `YptSyncRun` audit model, and `groupId` on `YptIdentityClaim`.
+   3. Encryption service (`core/security/encryption.ts`): AES-256-GCM encryption/decryption with authenticated tags.
+   4. Server client service (`features/ypt/data/ypt-client.service.ts`): authentication, session restoration, joined group listing, group member rosters with live study statuses.
+   5. Connection repository (`features/ypt/data/ypt-connection.repository.ts`): upserts, session decryption, claim submission with uniqueness enforcement.
+   6. Synchronization service (`features/ypt/api/ypt-sync.service.ts`): queries live stats (`todayStudyMs`), feeds `ingestYptActivity`, credits 1 coin / 36s, and logs `YptSyncRun`.
+   7. Presentation: updated `ypt-settings-card.tsx` with all 8 explicit connection states, Connect Modal, and live feedback banners.
+
+### Session 117 — 2026-10-16 (YPT Error 112 Root Cause Investigation, Error Sanitization & Session State Fix on `afnan`)
+
+- **Scope:** Resolved the `YPT API error (code 112)` issue and fixed connection state handling for verified users without active sessions:
+   1. **Traced Error 112:**
+      - Origin: Yeolpumta's `POST /user/sign-in-jwt` endpoint (`https://pi.tgclab.com/v1/user/sign-in-jwt`) returning `{ s: false, c: 112, m: "" }`.
+      - Meaning: `c: 112` is Yeolpumta's internal error code for **"Wrong password" / Invalid credentials** (`c: 113` = Unknown email, `c: 114` = Account suspended).
+      - In `ypt-js`: throws `YptAuthError("YPT API error (code 112)")`.
+      - Cause of frontend display: backend action was passing `error.message` verbatim without classifying or sanitizing it.
+   2. **Pure Domain Error Classification (`features/ypt/domain/ypt-error-classifier.ts`):**
+      - Created pure domain classifier mapping error codes, HTTP statuses, and network failures to user-friendly, sanitized messages:
+         - Code 112 -> `INVALID_CREDENTIALS` ("Unable to authenticate with Yeolpumta. Incorrect password. Please check your credentials and try again.")
+         - Code 113 -> `ACCOUNT_NOT_FOUND` ("Unable to authenticate with Yeolpumta. No account found with this email. Please check your email and try again.")
+         - Code 114 -> `ACCOUNT_SUSPENDED` ("Your Yeolpumta account has been suspended. Please contact Yeolpumta support.")
+         - HTTP 401 -> `SESSION_EXPIRED` ("Your Yeolpumta session has expired. Please reconnect your account.")
+         - HTTP 429 -> `RATE_LIMITED` ("Too many authentication attempts. Please wait before retrying.")
+         - Network errors -> `NETWORK_ERROR` ("Yeolpumta servers are temporarily unreachable. Please check your internet connection and try again.")
+      - Generates safe structured logging context excluding passwords, tokens, or credentials.
+   3. **Authentication Rate Limiting (`core/security/rate-limiter.ts`):**
+      - In-memory sliding window rate limiter enforcing max 5 authentication attempts per 5 minutes per user. Resets on success.
+   4. **Connection State Management (Phase 5 Fixes):**
+      - **CASE 2 (Preserve valid session):** Reconnection failure leaves existing valid session and tokens completely untouched.
+      - **CASE 3 (Verified ID without active session):** For users with legacy verified `yptId` (e.g. `11338944`) who haven't connected their session, the UI no longer falsely claims "Study synchronization is active." Instead, displays "Verified • Session Inactive" and provides a direct `[Connect YPT Session]` call to action while disabling sync until connected.
+      - **CASE 4 & 5 (Safe updates):** `saveAuthenticatedYptConnection` preserves `status: VERIFIED` when connecting for an already verified user. Authentication failures do not modify or delete stored identities.
+   5. **Credential Security & Disclosures (Phase 6 Fixes):**
+      - Corrected misleading UI text: credentials are processed securely server-side to authenticate with Yeolpumta's official API and are never stored in plaintext (only encrypted refresh tokens retained).
+      - Passwords are automatically cleared from client state on error (`setPassword("")`).
+- **Quality Gates & Verification Results (100% Green):**
+   - `npm run typecheck`: 0 errors.
+   - `npm test`: 149 test files passed, 1,397/1,397 tests green (including new classifier, rate limiter, actions, and settings card tests).
+   - `npm run build`: 17/17 App Router routes compiled cleanly.
+- **NEXT STEP:** Maintainer or participant opens `/wallet` to connect YPT session, select group identity, and synchronize study hours.

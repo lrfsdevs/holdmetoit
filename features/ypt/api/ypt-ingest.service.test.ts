@@ -172,4 +172,20 @@ describe("ingestYptActivity", () => {
          })
       );
    });
+
+   it("rejects ingest if user does not have a verified YPT ID", async () => {
+      vi.mocked(yptRepo.findUserByYptOrDiscordId).mockResolvedValue({
+         ...mockUser,
+         yptId: null as any,
+      } as any);
+
+      const result = await ingestYptActivity({
+         discordId: "disc_100",
+         date: "2026-10-14",
+         durationSeconds: 3600,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.code).toBe("YPT_NOT_VERIFIED");
+   });
 });

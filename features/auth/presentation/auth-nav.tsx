@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Eye, EyeOff, LogOut, Shield } from "lucide-react";
+import { BookOpen, Eye, EyeOff, LogOut, Shield, Trophy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
@@ -314,6 +314,15 @@ export function AppHeader({
                </Link>
 
                <Link
+                  href="/leaderboard"
+                  data-testid="trophy-leaderboard-nav-link"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+               >
+                  <Trophy className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Leaderboard</span>
+               </Link>
+
+               <Link
                   href="/pokemon"
                   data-testid="pokemon-nav-link"
                   className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
@@ -331,6 +340,17 @@ export function AppHeader({
                      DevBoard
                   </Link>
                )}
+
+               {(isActualAdmin || hasAdminPrivileges(user?.role)) &&
+                  !isPreviewActive && (
+                     <Link
+                        href="/admin"
+                        data-testid="admin-nav-link"
+                        className="text-xs sm:text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors border-l border-[#292929] pl-2 sm:pl-3"
+                     >
+                        Admin
+                     </Link>
+                  )}
 
                {subtitle && (
                   <span className="hidden sm:inline-block text-xs text-[#868686] border-l border-[#292929] pl-2 sm:pl-3">

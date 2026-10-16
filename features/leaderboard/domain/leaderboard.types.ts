@@ -57,6 +57,7 @@ export interface ScoreboardStandingEntry {
    status?: string | null;
    deficitSeconds: number;
    dailyLogs?: Record<string, number>;
+   trophies?: number;
 }
 
 export interface ChallengeScoreboardViewModel {

@@ -374,6 +374,7 @@ export function buildScoreboardViewModel(
          status: liveStatus,
          deficitSeconds,
          dailyLogs,
+         trophies: (p.user as any)?.trophyBalance ?? 0,
       };
    });
 
@@ -477,6 +478,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                            username: true,
                            name: true,
                            image: true,
+                           trophyBalance: true,
                         },
                      },
                      dailyStudyLogs: {

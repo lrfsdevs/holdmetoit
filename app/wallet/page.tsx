@@ -10,6 +10,7 @@ import { WalletView } from "@/features/economy/presentation/wallet-view";
 import { getWalletSummary } from "@/features/economy/data/wallet.repository";
 import { findTransactionsByUserId } from "@/features/economy/data/ledger.repository";
 import { getUserYptId } from "@/features/ypt/data/ypt.repository";
+import { getUserTrophyBalance } from "@/features/trophies/data/trophy.repository";
 import { SignInWithDiscordButton } from "@/features/auth/presentation/auth-nav";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 
@@ -66,10 +67,11 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
    }
 
    const userId = session.user.id;
-   const [summary, history, yptId] = await Promise.all([
+   const [summary, history, yptId, userTrophies] = await Promise.all([
       getWalletSummary(userId),
       findTransactionsByUserId(userId, { page: 1, limit: 20 }),
       getUserYptId(userId),
+      getUserTrophyBalance(userId),
    ]);
 
    return (
@@ -98,6 +100,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
                isAdmin={isAdmin}
                userId={userId}
                initialYptId={yptId}
+               userTrophies={userTrophies}
             />
          </main>
       </div>

@@ -57,6 +57,14 @@ model User {
   updatedBanners              PokemonBanner[]       @relation("BannerUpdater")
   bannerPityStates            UserBannerPity[]
   pokemonAcquisitions         PokemonAcquisition[]
+  trophyBalance               Int                   @default(0)
+  yptClaims                   YptIdentityClaim[]    @relation("UserYptClaims")
+  reviewedYptClaims           YptIdentityClaim[]    @relation("AdminYptClaimReviews")
+  trophyTransactions          TrophyTransaction[]
+  yptConnection               YptConnection?
+  yptSyncRuns                 YptSyncRun[]
+
+  @@index([trophyBalance(sort: Desc)])
 }
 
 model Account {
@@ -814,4 +822,125 @@ model PokemonAcquisition {
   @@index([bannerId, createdAt(sort: Desc)])
   @@index([speciesId])
   @@index([ledgerTransactionId])
+}
+
+// ---------------------------------------------------------------------------
+// Verified YPT Identity (Phase 5)
+// ---------------------------------------------------------------------------
+
+enum YptClaimStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+model YptIdentityClaim {
+  id              String         @id @default(cuid())
+  userId          String
+  selectedUserId  String?
+  yptId           String         @db.VarChar(64)
+  yptName         String?        @db.VarChar(128)
+  groupId         String?        @db.VarChar(64)
+  status          YptClaimStatus @default(PENDING)
+  rejectionReason String?        @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user            User           @relation("UserYptClaims", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy      User?          @relation("AdminYptClaimReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([yptId, status])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+enum YptConnectionStatus {
+  NOT_CONNECTED
+  CONNECTING
+  CONNECTED
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+  SYNC_ERROR
+  REAUTHENTICATION_REQUIRED
+}
+
+model YptConnection {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  yptUserId             String              @db.VarChar(64)
+  yptNickname           String?             @db.VarChar(128)
+  status                YptConnectionStatus @default(NOT_CONNECTED)
+  encryptedRefreshToken String?             @db.Text
+  lastSyncedAt          DateTime?
+  lastSyncError         String?             @db.Text
+  metadata              Json?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncRuns              YptSyncRun[]
+
+  @@index([yptUserId])
+}
+
+model YptSyncRun {
+  id                      String        @id @default(cuid())
+  connectionId            String
+  userId                  String
+  status                  String        @db.VarChar(32)
+  startedAt               DateTime      @default(now())
+  completedAt             DateTime?
+  importedDurationSeconds Int           @default(0)
+  eligibleDurationSeconds Int           @default(0)
+  coinsCredited           Int           @default(0)
+  errorCode               String?       @db.VarChar(64)
+  errorMessage            String?       @db.Text
+  createdAt               DateTime      @default(now())
+
+  connection              YptConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// Trophy Ranking System (Phase 5)
+// ---------------------------------------------------------------------------
+
+enum TrophyTransactionType {
+  CHALLENGE_WIN
+  CHALLENGE_LOSS
+  ADMIN_ADJUSTMENT
+  REVERSAL
+  SEASON_RESET
+}
+
+model TrophyTransaction {
+  id                   String                @id @default(cuid())
+  userId               String
+  groupId              String?               @db.VarChar(64)
+  amount               Int
+  balanceAfter         Int
+  type                 TrophyTransactionType
+  sourceType           String?               @db.VarChar(64)
+  sourceId             String?               @db.VarChar(128)
+  idempotencyKey       String?               @unique @db.VarChar(255)
+  description          String                @db.VarChar(512)
+  metadata             Json?
+  relatedTransactionId String?
+  createdAt            DateTime              @default(now())
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedTransaction   TrophyTransaction?    @relation("TrophyReversal", fields: [relatedTransactionId], references: [id], onDelete: SetNull)
+  reversals            TrophyTransaction[]   @relation("TrophyReversal")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([sourceType, sourceId])
+  @@index([groupId])
 }

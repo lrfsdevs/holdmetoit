@@ -13,9 +13,11 @@ import {
    getTransactionHistoryAction,
 } from "../api/wallet.actions";
 import type { WalletSummary } from "../domain/wallet-accounting";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { YptSettingsCard } from "@/features/ypt/presentation/ypt-settings-card";
+import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
 
 export interface WalletViewProps {
    initialSummary?: WalletSummary | null;
@@ -29,6 +31,7 @@ export interface WalletViewProps {
    isAdmin?: boolean;
    userId?: string;
    initialYptId?: string | null;
+   userTrophies?: number | null;
 }
 
 export function WalletView({
@@ -38,6 +41,7 @@ export function WalletView({
    isAdmin = false,
    userId = "",
    initialYptId = null,
+   userTrophies = null,
 }: WalletViewProps) {
    const [summary, setSummary] = useState<WalletSummary | null>(
       initialSummary ?? null
@@ -140,6 +144,24 @@ export function WalletView({
 
    return (
       <div className="space-y-6">
+         {typeof userTrophies === "number" && (
+            <div className="flex items-center justify-between rounded-2xl border border-obsidian-border bg-obsidian-card px-4 py-3 text-xs shadow-md">
+               <div className="flex items-center gap-2.5">
+                  <span className="text-obsidian-textDim text-[11px] font-medium">
+                     Competitive Rating:
+                  </span>
+                  <TrophyRoleBadge trophies={userTrophies} size="sm" />
+               </div>
+               <Link
+                  href="/leaderboard"
+                  className="text-xs text-economy-gold hover:underline flex items-center gap-1 font-medium"
+               >
+                  <span>Leaderboard</span>
+                  <ExternalLink className="h-3 w-3" />
+               </Link>
+            </div>
+         )}
+
          {summary && (
             <WalletSummaryCard
                summary={summary}
