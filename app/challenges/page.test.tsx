@@ -83,6 +83,7 @@ function setChallenge(url: string | null) {
       {
          id: "challenge-1",
          title: "Study Battle",
+         description: null,
          format: "TEAM_VS_TEAM",
          challengeColor: null,
          startAt: new Date("2026-10-01T00:00:00.000Z"),

@@ -97,6 +97,7 @@ export async function createAdminChallenge(
       const challenge = await tx.challenge.create({
          data: {
             title: input.title.trim(),
+            description: input.description?.trim() || null,
             format: input.format,
             startAt: new Date(input.startAt),
             endAt: new Date(input.endAt),
@@ -633,6 +634,7 @@ export async function adminEnrollParticipant(params: {
 
 export interface UpdateAdminChallengeInput {
    title: string;
+   description?: string | null;
    startAt: string;
    endAt: string;
    eventBannerUrl: string | null;
@@ -670,21 +672,36 @@ export async function updateAdminChallenge(
 
    return prisma.$transaction(async (tx) => {
       // 1. Update challenge basic details (economic terms can only be modified before kickoff)
+      const challengeUpdateData: {
+         title: string;
+         startAt: Date;
+         endAt: Date;
+         eventBannerUrl: string | null;
+         punishmentPfpUrl: string | null;
+         description?: string | null;
+         rewardCoins?: number;
+         isBettingEnabled?: boolean;
+      } = {
+         title: input.title.trim(),
+         startAt: new Date(input.startAt),
+         endAt: new Date(input.endAt),
+         eventBannerUrl: input.eventBannerUrl,
+         punishmentPfpUrl: input.punishmentPfpUrl,
+      };
+
+      if (input.description !== undefined) {
+         challengeUpdateData.description = input.description?.trim() || null;
+      }
+      if (!isStarted && input.rewardCoins !== undefined) {
+         challengeUpdateData.rewardCoins = Math.max(0, input.rewardCoins);
+      }
+      if (!isStarted && input.isBettingEnabled !== undefined) {
+         challengeUpdateData.isBettingEnabled = input.isBettingEnabled;
+      }
+
       const updatedChallenge = await tx.challenge.update({
          where: { id: challengeId },
-         data: {
-            title: input.title.trim(),
-            startAt: new Date(input.startAt),
-            endAt: new Date(input.endAt),
-            eventBannerUrl: input.eventBannerUrl,
-            punishmentPfpUrl: input.punishmentPfpUrl,
-            ...(!isStarted && input.rewardCoins !== undefined
-               ? { rewardCoins: Math.max(0, input.rewardCoins) }
-               : {}),
-            ...(!isStarted && input.isBettingEnabled !== undefined
-               ? { isBettingEnabled: input.isBettingEnabled }
-               : {}),
-         },
+         data: challengeUpdateData,
       });
 
       // 2. Process teams: update existing or create new ones
@@ -749,6 +766,7 @@ export async function updateAdminChallenge(
       const diff = computeEventDetailsDiff(
          {
             title: challenge.title,
+            description: challenge.description,
             startAt: challenge.startAt,
             endAt: challenge.endAt,
             eventBannerUrl: challenge.eventBannerUrl,

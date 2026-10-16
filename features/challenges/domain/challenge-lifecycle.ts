@@ -175,6 +175,7 @@ export function isChallengeResultsLocked(challenge: {
 
 export interface ChallengeCreationInput {
    title: string;
+   description?: string | null;
    format: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
    startAt: Date | string;
    endAt: Date | string;
