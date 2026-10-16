@@ -95,7 +95,9 @@ export function calculateParticipantDailyTimeline(
          isLeave: false,
       };
       const durationSeconds = log.durationSeconds;
-      cumulativeSeconds += durationSeconds;
+      if (!day.isFuture) {
+         cumulativeSeconds += durationSeconds;
+      }
 
       history.push({
          dayNumber: day.dayNumber,
@@ -106,9 +108,13 @@ export function calculateParticipantDailyTimeline(
          durationSeconds,
          durationClock: formatSecondsToClock(durationSeconds),
          durationHuman: formatSecondsToHuman(durationSeconds),
-         cumulativeSeconds,
-         cumulativeClock: formatSecondsToClock(cumulativeSeconds),
-         cumulativeHuman: formatSecondsToHuman(cumulativeSeconds),
+         cumulativeSeconds: day.isFuture ? 0 : cumulativeSeconds,
+         cumulativeClock: day.isFuture
+            ? "—"
+            : formatSecondsToClock(cumulativeSeconds),
+         cumulativeHuman: day.isFuture
+            ? "—"
+            : formatSecondsToHuman(cumulativeSeconds),
          isToday: day.isToday,
          isYesterday: day.isYesterday,
          isFuture: day.isFuture,

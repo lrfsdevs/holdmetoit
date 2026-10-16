@@ -79,7 +79,9 @@ export function ParticipantProgressChart({
                                  : day.durationClock}
                            </p>
                            <p className="text-[10px] text-[#868686]">
-                              Cumulative: {day.cumulativeClock}
+                              {day.isFuture
+                                 ? "Upcoming Day"
+                                 : `Cumulative: ${day.cumulativeClock}`}
                            </p>
                         </div>
 
