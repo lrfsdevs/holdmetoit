@@ -30,6 +30,7 @@ import {
 } from "@/features/study-logs/domain/leave-allowance";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { processStudyReward } from "@/features/economy/api/study-reward.service";
 
 const logger = createLogger("study.log");
 
@@ -139,7 +140,7 @@ export async function logStudyTimeAction(
          };
       }
 
-      await upsertDailyStudyLog({
+      const updatedLog = await upsertDailyStudyLog({
          participantId: participant.id,
          challengeId: parsed.data.challengeId,
          logDate,
@@ -153,6 +154,24 @@ export async function logStudyTimeAction(
          },
       });
 
+      // Fail-safe economy study reward trigger (Law L8 precision; exact-once idempotent)
+      if (updatedLog?.id && !parsed.data.isLeave && durationSeconds > 0) {
+         try {
+            await processStudyReward({
+               studyLogId: updatedLog.id,
+               userId: user.id,
+            });
+         } catch (rewardErr) {
+            logger.error(logEvents.appError, {
+               context: {
+                  action: "processStudyRewardTrigger",
+                  studyLogId: updatedLog.id,
+               },
+               error: rewardErr,
+            });
+         }
+      }
+
       invalidateTags([
          cacheTags.challengeScoreboard(parsed.data.challengeId),
          cacheTags.participantCockpit(user.id, parsed.data.challengeId),
@@ -160,6 +179,7 @@ export async function logStudyTimeAction(
 
       revalidatePath("/");
       revalidatePath("/dashboard");
+      revalidatePath("/wallet");
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
       revalidatePath(
          `/challenge/${parsed.data.challengeId}/participant/${participant.id}`

@@ -7,7 +7,7 @@
       "node": ">=22.12.0"
    },
    "scripts": {
-      "dev": "next dev",
+      "dev": "prisma generate && next dev",
       "build": "prisma generate && next build",
       "start": "next start",
       "lint": "next lint",
@@ -15,9 +15,12 @@
       "test": "vitest run",
       "test:watch": "vitest",
       "db:generate": "prisma generate",
-      "db:validate": "DATABASE_URL=postgresql://localhost:5432/holdmetoit prisma validate",
+      "db:validate": "DATABASE_URL=postgresql://localhost:5432/holdmetoit DIRECT_URL=postgresql://localhost:5432/holdmetoit prisma validate",
       "db:push": "prisma db push",
+      "db:migrate": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate deploy",
+      "db:migrate:status": "node --env-file=.env.local ./node_modules/prisma/build/index.js migrate status",
       "db:seed": "prisma db seed",
+      "db:seed:pokemon": "tsx --env-file=.env scripts/seed-pokemon-catalogue.ts",
       "db:link-tasks": "tsx --env-file=.env scripts/link-tasks-to-challenge.ts",
       "db:unlock-results": "tsx --env-file=.env scripts/unlock-challenge-results.ts",
       "postinstall": "prisma generate",
@@ -44,6 +47,7 @@
       "react-dom": "^18.3.1",
       "sharp": "^0.35.5",
       "tailwind-merge": "^3.3.0",
+      "ypt-js": "^0.1.0",
       "zod": "^4.5.4"
    },
    "devDependencies": {

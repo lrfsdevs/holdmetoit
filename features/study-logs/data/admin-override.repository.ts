@@ -57,22 +57,23 @@ export async function executeAdminHoursOverride(params: AdminOverrideInput) {
       },
    });
 
-   const updatedLog = await prisma.dailyStudyLog.upsert({
+   if (!existingLog) {
+      throw new Error(
+         "Cannot create arbitrary study hours. Technical corrections must reference an existing study session."
+      );
+   }
+
+   if (params.reason.trim().length < 10) {
+      throw new Error(
+         "Correction audit reason must be at least 10 characters detailing the technical or logging error."
+      );
+   }
+
+   const updatedLog = await prisma.dailyStudyLog.update({
       where: {
-         participantId_logDate: {
-            participantId: params.participantId,
-            logDate,
-         },
+         id: existingLog.id,
       },
-      create: {
-         participantId: params.participantId,
-         logDate,
-         durationSeconds: params.durationSeconds,
-         isOverride: true,
-         overrideById: params.admin.id,
-         overrideReason: params.reason.trim(),
-      },
-      update: {
+      data: {
          durationSeconds: params.durationSeconds,
          isOverride: true,
          overrideById: params.admin.id,
@@ -89,8 +90,7 @@ export async function executeAdminHoursOverride(params: AdminOverrideInput) {
    });
 
    const challengeId =
-      existingLog?.participant.challengeId ??
-      updatedLog.participant.challengeId;
+      existingLog.participant.challengeId ?? updatedLog.participant.challengeId;
    const participantName =
       updatedLog.participant.user?.displayName ||
       updatedLog.participant.user?.username ||
@@ -104,12 +104,10 @@ export async function executeAdminHoursOverride(params: AdminOverrideInput) {
       targetEntityType: "DAILY_STUDY_LOG",
       targetEntityName: participantName,
       challengeId,
-      previousValue: existingLog
-         ? {
-              durationSeconds: existingLog.durationSeconds,
-              isOverride: existingLog.isOverride,
-           }
-         : null,
+      previousValue: {
+         durationSeconds: existingLog.durationSeconds,
+         isOverride: existingLog.isOverride,
+      },
       newValue: {
          durationSeconds: updatedLog.durationSeconds,
          isOverride: true,
@@ -132,83 +130,13 @@ export interface AdminResetOverallHoursInput {
 }
 
 /**
- * Resets a participant's overall challenge study hours to 0 (Law L5 / FEAT-LOG-04).
- * Sets all existing daily study logs for this participant to 0 seconds with audit flags,
- * or creates a baseline 0s log if none exist yet.
+ * Resets a participant's overall challenge study hours to 0.
+ * Disallowed per Section 4 (Elimination of arbitrary additions/deductions).
  */
 export async function executeAdminResetOverallHours(
-   params: AdminResetOverallHoursInput
+   _params: AdminResetOverallHoursInput
 ) {
-   const participant = await prisma.challengeParticipant.findUnique({
-      where: { id: params.participantId },
-      include: {
-         user: { select: { displayName: true, username: true } },
-         dailyStudyLogs: true,
-      },
-   });
-
-   if (!participant) {
-      throw new Error("Participant not found.");
-   }
-
-   const logs = participant.dailyStudyLogs ?? [];
-   const previousTotalSeconds = logs.reduce(
-      (acc, log) => acc + log.durationSeconds,
-      0
+   throw new Error(
+      "Arbitrary reset or modification of cumulative study totals is disallowed by system policy."
    );
-
-   if (logs.length > 0) {
-      await prisma.dailyStudyLog.updateMany({
-         where: { participantId: params.participantId },
-         data: {
-            durationSeconds: 0,
-            isOverride: true,
-            overrideById: params.admin.id,
-            overrideReason: params.reason.trim(),
-         },
-      });
-   } else {
-      const today = toUtcDateOnly(new Date());
-      await prisma.dailyStudyLog.create({
-         data: {
-            participantId: params.participantId,
-            logDate: today,
-            durationSeconds: 0,
-            status: "Offline",
-            isOverride: true,
-            overrideById: params.admin.id,
-            overrideReason: params.reason.trim(),
-         },
-      });
-   }
-
-   const participantName =
-      participant.user?.displayName ||
-      participant.user?.username ||
-      "Participant";
-
-   await recordAuditEvent({
-      actorId: params.admin.id,
-      actorUsername: params.admin.username,
-      actionType: "HOURS_OVERRIDE",
-      targetEntityId: params.participantId,
-      targetEntityType: "PARTICIPANT",
-      targetEntityName: participantName,
-      challengeId: params.challengeId,
-      previousValue: {
-         totalLoggedSeconds: previousTotalSeconds,
-         logsCount: logs.length,
-      },
-      newValue: {
-         totalLoggedSeconds: 0,
-         isOverride: true,
-      },
-      auditReason: params.reason.trim(),
-   });
-
-   return {
-      participantId: params.participantId,
-      previousTotalSeconds,
-      resetCount: logs.length,
-   };
 }

@@ -74,24 +74,20 @@ export async function adminOverrideStudyHoursAction(
       }
 
       const rawReason = parsed.data.reason?.trim() ?? "";
-      if (durationSeconds > 0 && rawReason.length < 3) {
+      if (rawReason.length < 10) {
          return {
             ok: false,
             code: "INVALID_INPUT",
-            message: "Audit reason must be at least 3 characters.",
+            message:
+               "Audit reason must be at least 10 characters detailing the technical or logging error.",
          };
       }
-
-      const effectiveReason =
-         rawReason.length >= 3
-            ? rawReason
-            : "Set study hours to 00:00:00 by moderator";
 
       await executeAdminHoursOverride({
          participantId: parsed.data.participantId,
          logDate: parsed.data.logDate,
          durationSeconds,
-         reason: effectiveReason,
+         reason: rawReason,
          admin: {
             id: admin.id,
             username: admin.username,
@@ -143,72 +139,16 @@ const resetOverallSchema = z.object({
 });
 
 /**
- * Host manual overall hours reset action (Law L5 / FEAT-LOG-04).
- * Resets all study time for a participant across all challenge days to 0.
+ * Host manual overall hours reset action.
+ * Disallowed per Section 4 (Elimination of arbitrary additions/deductions).
  */
 export async function adminResetParticipantOverallHoursAction(
-   input: z.infer<typeof resetOverallSchema>
+   _input: z.infer<typeof resetOverallSchema>
 ): Promise<AdminOverrideResult> {
-   try {
-      const admin = await requireAdminUser();
-      const parsed = resetOverallSchema.safeParse(input);
-
-      if (!parsed.success) {
-         return {
-            ok: false,
-            code: "INVALID_INPUT",
-            message: "Invalid input provided.",
-         };
-      }
-
-      const rawReason = parsed.data.reason?.trim() ?? "";
-      const effectiveReason =
-         rawReason.length >= 3
-            ? rawReason
-            : "Reset overall study hours to 00:00:00 by moderator";
-
-      await executeAdminResetOverallHours({
-         participantId: parsed.data.participantId,
-         challengeId: parsed.data.challengeId,
-         reason: effectiveReason,
-         admin: {
-            id: admin.id,
-            username: admin.username,
-         },
-      });
-
-      invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);
-
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}`);
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}/roster`);
-      revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
-      revalidatePath("/");
-
-      logger.info(logEvents.studyLogTotalReset, {
-         context: {
-            challengeId: parsed.data.challengeId,
-            participantId: parsed.data.participantId,
-            adminId: admin.id,
-         },
-      });
-
-      return { ok: true };
-   } catch (error) {
-      logger.error(logEvents.studyLogTotalReset, {
-         context: {
-            challengeId: input?.challengeId,
-            participantId: input?.participantId,
-         },
-         error,
-      });
-      return {
-         ok: false,
-         code: "RESET_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to reset overall hours.",
-      };
-   }
+   return {
+      ok: false,
+      code: "ARBITRARY_RESET_DISALLOWED",
+      message:
+         "Arbitrary manual reset or modification of cumulative study totals is disallowed by system policy.",
+   };
 }

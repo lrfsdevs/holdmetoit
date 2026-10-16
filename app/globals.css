@@ -32,6 +32,36 @@
       --ring: 0 0% 100%;
 
       --radius: 0.75rem;
+
+      /* Economy & Virtual Currency Tokens */
+      --economy-gold: 38 92% 50%;
+      --economy-gold-light: 45 93% 56%;
+      --economy-gold-dark: 35 92% 43%;
+      --economy-admin: 28 75% 54%;
+      --economy-admin-hover: 32 90% 61%;
+      --economy-credit: 142 71% 45%;
+      --economy-debit: 347 89% 60%;
+      --economy-reserved: 38 92% 50%;
+      --economy-refund: 217 91% 60%;
+      --economy-adjustment: 271 91% 65%;
+      --economy-reversal: 330 81% 60%;
+
+      /* Pokédex & Companion Collection Tokens */
+      --pokedex-bg: 260 33% 6%;
+      --pokedex-card: 255 35% 10%;
+      --pokedex-card-subtle: 254 35% 8%;
+      --pokedex-elevated: 256 33% 12%;
+      --pokedex-inset: 255 35% 9%;
+      --pokedex-border: 256 30% 21%;
+      --pokedex-border-subtle: 257 29% 17%;
+      --pokedex-border-light: 256 29% 25%;
+      --pokedex-text: 270 5% 96%;
+      --pokedex-text-secondary: 253 28% 87%;
+      --pokedex-text-muted: 257 6% 64%;
+      --pokedex-text-dim: 257 7% 48%;
+      --pokedex-accent-rose: 347 89% 60%;
+      --pokedex-accent-purple: 271 81% 56%;
+      --pokedex-accent-amber: 38 92% 50%;
    }
 
    * {

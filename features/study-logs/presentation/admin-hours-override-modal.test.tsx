@@ -56,11 +56,11 @@ describe("AdminHoursOverrideModal", () => {
       expect(html).toContain("Alice Scholar");
       expect(html).toContain("@alice");
       expect(html).toContain("Honey Bees");
-      expect(html).toContain("Edit Participant Study Hours");
+      expect(html).toContain("Correct Participant Study Session");
       expect(html).not.toContain("Law L5 Audit");
       expect(html).toContain("Clear Time");
       expect(html).not.toContain("Presets:");
-      expect(html).toContain("Mandatory Reason for Override");
+      expect(html).toContain("Mandatory Technical Correction Reason");
       // All 7 days should be present in the day grid
       expect(html).toContain("D1");
       expect(html).toContain("D2");
@@ -123,17 +123,13 @@ describe("AdminHoursOverrideModal", () => {
          })
       );
 
-      // Unlike participant DailyHoursModal which has disabled buttons for non-today/yesterday,
-      // the admin override modal permits mods to click any day
       const dayButtonsHtml = html.slice(html.indexOf("Select Challenge Day"));
-      // Ensure D1, D2, D3 etc. do not have "disabled" in their button markup
       expect(dayButtonsHtml).not.toMatch(
          /<button[^>]*disabled[^>]*>[^<]*<span[^>]*>[^<]*<\/span><span[^>]*>D1<\/span>/
       );
    });
 
    it("disables future day buttons in the 7-day selector with disabled attribute and Locked status", () => {
-      // Challenge starting today or with future days
       const html = renderToStaticMarkup(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
@@ -142,21 +138,18 @@ describe("AdminHoursOverrideModal", () => {
             challengeStartDate: new Date().toISOString().slice(0, 10),
             totalChallengeDays: 7,
             participant: sampleParticipant,
-            initialDayNumber: 1, // Today is Day 1; Days 2..7 are future
+            initialDayNumber: 1,
          })
       );
 
-      // Day 1 (today) is active, Day 2..7 are future and disabled
       expect(html).toContain("D1");
       expect(html).toContain("D2");
       expect(html).toContain("Locked");
-      // Ensure future day button has disabled attribute and cursor-not-allowed
       expect(html).toContain("cursor-not-allowed");
       expect(html).toContain("Future date (cannot log or edit yet)");
    });
 
    it("disables input fields and displays warning banner when all challenge days are in the future", () => {
-      // Challenge starting in the future (UPCOMING)
       const futureDate = "2099-01-01";
       const html = renderToStaticMarkup(
          createElement(AdminHoursOverrideModal, {
@@ -173,11 +166,10 @@ describe("AdminHoursOverrideModal", () => {
       expect(html).toContain(
          "Future date (2099-01-01): moderators cannot add or edit study hours for future dates."
       );
-      // Submit button is disabled
-      expect(html).toContain("Save Override");
+      expect(html).toContain("Save Correction");
    });
 
-   it("renders scope selector with Single Day and Overall Time options", () => {
+   it("does NOT render arbitrary overall reset controls", () => {
       const html = renderToStaticMarkup(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
@@ -190,19 +182,12 @@ describe("AdminHoursOverrideModal", () => {
          })
       );
 
-      expect(html).toContain("Single Day (D1–D7)");
-      expect(html).toContain("Overall Time (Reset to 0)");
+      expect(html).not.toContain("Overall Time (Reset to 0)");
+      expect(html).not.toContain("Reset Overall Time to 0");
    });
 
-   it("permits 00:00:00 submission without requiring manual reason", () => {
-      // Participant with 0 hours logged on Day 1
-      const participantWithZero = {
-         ...sampleParticipant,
-         dailyLogs: {
-            "2026-10-01": 0,
-         },
-      };
-
+   it("shows warning and disables inputs when no study session exists for selected day", () => {
+      // Participant with no logs on Day 3 (2026-10-03)
       const html = renderToStaticMarkup(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
@@ -210,18 +195,19 @@ describe("AdminHoursOverrideModal", () => {
             challengeId: "chal-1",
             challengeStartDate: "2026-10-01",
             totalChallengeDays: 7,
-            participant: participantWithZero,
-            initialDayNumber: 1,
+            participant: sampleParticipant,
+            initialDayNumber: 3,
          })
       );
 
-      // Label indicates reason is optional when clearing/at 0
-      expect(html).toContain("(Optional if clearing to 0)");
-      // Save Override button is not disabled due to missing reason (no disabled="" attribute)
+      expect(html).toContain(
+         "No study session recorded on Day 3 (2026-10-03). In accordance with system policy, arbitrary additions are prohibited; technical corrections require an existing session record."
+      );
+      // Submit button is disabled
       const submitBtnMatch = html.match(
          /<button[^>]*type="submit"[^>]*>([\s\S]*?)<\/button>/
       );
       expect(submitBtnMatch).not.toBeNull();
-      expect(submitBtnMatch?.[0]).not.toContain('disabled=""');
+      expect(submitBtnMatch?.[0]).toContain("disabled");
    });
 });

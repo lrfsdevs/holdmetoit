@@ -17,6 +17,7 @@ import {
    getChallengeDayOptions,
    type ChallengeDayOption,
 } from "@/features/study-logs/domain/challenge-day";
+import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 
 export interface DailyHoursModalProps {
    challengeId: string;
@@ -821,6 +822,31 @@ export function DailyHoursModal({
                      />
                   </div>
                </div>
+
+               {(() => {
+                  const enteredSeconds =
+                     parseInt(hours || "0", 10) * 3600 +
+                     parseInt(minutes || "0", 10) * 60 +
+                     parseInt(seconds || "0", 10);
+                  if (enteredSeconds > 0 && !isSelectedDateLeave) {
+                     const coins = Math.floor(enteredSeconds / 36);
+                     return (
+                        <div
+                           data-testid="projected-reward-banner"
+                           className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/25 text-xs text-[#f59e0b] animate-in fade-in"
+                        >
+                           <span className="flex items-center gap-1.5 font-medium">
+                              <CoinsIcon className="h-3.5 w-3.5" />
+                              Estimated Study Reward
+                           </span>
+                           <span className="font-semibold tabular-nums">
+                              +{coins} coin{coins === 1 ? "" : "s"}
+                           </span>
+                        </div>
+                     );
+                  }
+                  return null;
+               })()}
 
                {feedback && (
                   <p className="text-xs text-[#ff5757] bg-[#381717] p-2.5 rounded-lg border border-[#ff5757]/30">

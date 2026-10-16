@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
    findLatestCompletedChallengeForWrapped: vi.fn(),
    getChallengeScoreboard: vi.fn(),
    homeCockpitView: vi.fn(),
-   appHeader: vi.fn(),
    isFeatureEnabled: vi.fn(),
 }));
 
@@ -25,12 +24,6 @@ vi.mock("@/features/auth/domain/preview-mode", () => ({
       isAdmin: false,
       effectiveRole: "PARTICIPANT",
    })),
-}));
-vi.mock("@/features/auth/presentation/auth-nav", () => ({
-   AppHeader: (props: unknown) => {
-      mocks.appHeader(props);
-      return createElement("header", null, "header");
-   },
 }));
 vi.mock("@/features/study-logs/presentation/home-cockpit-view", () => ({
    HomeCockpitView: (props: unknown) => {
@@ -57,7 +50,6 @@ vi.mock("@/features/feature-flags/api/server", () => ({
 }));
 
 import HomePage from "./page";
-import { getEffectiveAdminState } from "@/features/auth/domain/preview-mode";
 
 function deferred<T>() {
    let resolve!: (value: T) => void;
@@ -158,27 +150,5 @@ describe("HomePage data loading", () => {
          wrappedChallenge: unknown;
       };
       expect(viewProps.wrappedChallenge).toEqual({ id: "chal-wrapped" });
-   });
-
-   it("passes the preview-downgraded user to the header", async () => {
-      vi.mocked(getEffectiveAdminState).mockReturnValueOnce({
-         isActualAdmin: true,
-         isPreviewActive: true,
-         isAdmin: false,
-         effectiveRole: "PARTICIPANT",
-      });
-      mocks.auth.mockResolvedValue({
-         user: { id: "user-1", role: "DEV" },
-      });
-      mocks.getParticipantCockpit.mockResolvedValue(null);
-      mocks.getUserCategorizedTasks.mockResolvedValue(null);
-      mocks.findLatestAvailableChallenge.mockResolvedValue(null);
-      mocks.findLatestCompletedChallengeForWrapped.mockResolvedValue(null);
-
-      renderToStaticMarkup(await HomePage({}));
-
-      expect(mocks.appHeader.mock.calls[0]?.[0]).toMatchObject({
-         user: expect.objectContaining({ role: "PARTICIPANT" }),
-      });
    });
 });

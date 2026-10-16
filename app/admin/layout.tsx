@@ -9,7 +9,6 @@ import {
    getEffectiveAdminState,
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
-import { AppHeader } from "@/features/auth/presentation/auth-nav";
 
 /** Provides admin authorization and shared layout chrome for admin routes. */
 export default async function AdminLayout({
@@ -45,16 +44,7 @@ export default async function AdminLayout({
    }
 
    return (
-      <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6] font-sans flex flex-col">
-         <AppHeader
-            user={session?.user}
-            subtitle="Admin Console"
-            isActualAdmin={
-               hasAdminPrivileges(session?.user?.role) || isDevBypass
-            }
-            isPreviewActive={false}
-         />
-
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0d0d0d] text-[#f4f3f6] font-sans flex flex-col">
          {/* Main Content Area */}
          <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
             {children}

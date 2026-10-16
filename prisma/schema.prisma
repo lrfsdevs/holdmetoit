@@ -48,6 +48,23 @@ model User {
   featureFlagTargets          FeatureFlagTarget[]   @relation("FeatureFlagTargetUser")
   assignedFeatureFlagTargets  FeatureFlagTarget[]   @relation("FeatureFlagTargetAssigner")
   featureFlagAuditLogs        FeatureFlagAuditLog[] @relation("FeatureFlagAuditActor")
+  wallet                      Wallet?
+  ledgerTransactions          LedgerTransaction[]
+  studyRewardRecords          StudyRewardRecord[]
+  wagers                      Wager[]
+  pokemonCollection           UserPokemon[]
+  createdBanners              PokemonBanner[]       @relation("BannerCreator")
+  updatedBanners              PokemonBanner[]       @relation("BannerUpdater")
+  bannerPityStates            UserBannerPity[]
+  pokemonAcquisitions         PokemonAcquisition[]
+  trophyBalance               Int                   @default(0)
+  yptClaims                   YptIdentityClaim[]    @relation("UserYptClaims")
+  reviewedYptClaims           YptIdentityClaim[]    @relation("AdminYptClaimReviews")
+  trophyTransactions          TrophyTransaction[]
+  yptConnection               YptConnection?
+  yptSyncRuns                 YptSyncRun[]
+
+  @@index([trophyBalance(sort: Desc)])
 }
 
 model Account {
@@ -121,6 +138,12 @@ model Challenge {
   auditLogs        AuditLog[]
   challengeFeedbacks ChallengeFeedback[]
 
+  rewardCoins      Int             @default(0)
+  isRewardSettled  Boolean         @default(false)
+  rewardSettledAt  DateTime?
+  isBettingEnabled Boolean         @default(true)
+  wagers           Wager[]
+
   @@index([hostId])
   @@index([isDeleted, startAt])
 }
@@ -141,6 +164,7 @@ model Team {
 
   challenge    Challenge              @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   participants ChallengeParticipant[]
+  wagers       Wager[]
 
   @@unique([challengeId, name])
   @@index([challengeId, isDeleted])
@@ -191,6 +215,10 @@ model DailyStudyLog {
   overrideById   String?
   overrideReason String?
 
+  source             String   @default("MANUAL") @db.VarChar(32)
+  externalActivityId String?  @db.VarChar(128)
+  yptSubject         String?  @db.VarChar(128)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -200,6 +228,7 @@ model DailyStudyLog {
   @@unique([participantId, logDate])
   @@index([participantId])
   @@index([logDate])
+  @@index([participantId, externalActivityId])
 }
 
 // ---------------------------------------------------------------------------
@@ -479,3 +508,487 @@ model FeatureFlagAuditLog {
   @@index([actorId])
 }
 
+// ---------------------------------------------------------------------------
+// Virtual Economy (Phase 1: Wallet, Ledger, and Study Rewards)
+// ---------------------------------------------------------------------------
+
+enum TransactionType {
+  STUDY_REWARD
+  CHALLENGE_REWARD
+  WAGER_RESERVATION
+  WAGER_SETTLEMENT
+  WAGER_REFUND
+  GACHA_PURCHASE
+  TRADE_RESERVATION
+  TRADE_SETTLEMENT
+  TRADE_REFUND
+  ADMIN_ADJUSTMENT
+  REVERSAL
+}
+
+enum RewardProcessingStatus {
+  PROCESSED
+  FAILED
+  REVOKED
+}
+
+model Wallet {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  totalBalance          Int                 @default(0)
+  reservedBalance       Int                 @default(0)
+  rewardProgressSeconds Int                 @default(0)
+  lifetimeEarned        Int                 @default(0)
+  lifetimeSpent         Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          LedgerTransaction[]
+  studyRewards          StudyRewardRecord[]
+  wagers                Wager[]
+
+  @@index([userId])
+}
+
+model LedgerTransaction {
+  id                   String             @id @default(cuid())
+  walletId             String
+  userId               String
+  type                 TransactionType
+  amount               Int
+  totalDelta           Int
+  reservedDelta        Int                @default(0)
+  sourceType           String?            @db.VarChar(64)
+  sourceId             String?            @db.VarChar(128)
+  idempotencyKey       String             @unique @db.VarChar(255)
+  description          String             @db.VarChar(512)
+  metadata             Json?
+  relatedTransactionId String?
+  createdAt            DateTime           @default(now())
+
+  wallet               Wallet             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedTransaction   LedgerTransaction? @relation("TransactionReversal", fields: [relatedTransactionId], references: [id], onDelete: SetNull)
+  reversals            LedgerTransaction[] @relation("TransactionReversal")
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([sourceType, sourceId])
+}
+
+model StudyRewardRecord {
+  id                         String                 @id @default(cuid())
+  userId                     String
+  walletId                   String
+  studySessionId             String                 @db.VarChar(128)
+  sourceType                 String                 @default("DAILY_STUDY_LOG") @db.VarChar(64)
+  eligibleSeconds            Int                    @default(0)
+  coinsCredited              Int                    @default(0)
+  fractionalSecondsConsumed  Int                    @default(0)
+  fractionalSecondsRemaining Int                    @default(0)
+  status                     RewardProcessingStatus @default(PROCESSED)
+  idempotencyKey             String                 @unique @db.VarChar(255)
+  ledgerTransactionId        String?
+  metadata                   Json?
+  createdAt                  DateTime               @default(now())
+  processedAt                DateTime               @default(now())
+
+  wallet                     Wallet                 @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user                       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, studySessionId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([walletId])
+}
+
+// ---------------------------------------------------------------------------
+// Betting & Wagers (Phase 2)
+// ---------------------------------------------------------------------------
+
+enum WagerStatus {
+  PENDING
+  ACCEPTED
+  WON
+  LOST
+  REFUNDED
+  CANCELLED
+}
+
+model Wager {
+  id                  String      @id @default(cuid())
+  challengeId         String
+  userId              String
+  walletId            String
+  teamId              String
+  stake               Int
+  status              WagerStatus @default(ACCEPTED)
+  payout              Int         @default(0)
+  settledAt           DateTime?
+  ledgerReservationId String?
+  ledgerSettlementId  String?
+  idempotencyKey      String      @unique @db.VarChar(255)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  challenge           Challenge   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet              Wallet      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  team                Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, status])
+  @@index([userId, status])
+  @@index([walletId])
+  @@index([teamId])
+}
+
+// ---------------------------------------------------------------------------
+// Pokémon Catalogue & Collection (Phase 3)
+// ---------------------------------------------------------------------------
+
+enum PokemonRarity {
+  NORMAL
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHICAL
+}
+
+enum PokemonAcquisitionSource {
+  SEED
+  ADMIN_GRANT
+  STUDY_MILESTONE
+  CHALLENGE_REWARD
+  GACHA
+  EVENT
+  TRADE
+}
+
+model PokemonSpecies {
+  id             String        @id @default(cuid())
+  pokedexNumber  Int           @unique
+  name           String        @db.VarChar(128)
+  slug           String        @unique @db.VarChar(128)
+  rarity         PokemonRarity @default(NORMAL)
+  primaryType    String        @db.VarChar(32)
+  secondaryType  String?       @db.VarChar(32)
+  description    String        @db.Text
+  classification String?       @db.VarChar(128)
+  imageUrl       String?       @db.VarChar(512)
+  spriteUrl      String?       @db.VarChar(512)
+  spriteGifUrl   String?       @db.VarChar(512)
+  baseHp         Int           @default(0)
+  baseAttack     Int           @default(0)
+  baseDefense    Int           @default(0)
+  specialAttack    Int         @default(0)
+  specialDefense   Int         @default(0)
+  speed            Int         @default(0)
+  baseStatTotal    Int         @default(0)
+  heightDecimetres Int?
+  weightHectograms Int?
+  baseExperience   Int?
+  color            String?     @db.VarChar(32)
+  captureRate      Int?
+  baseHappiness    Int?
+  hatchCounter     Int?
+  evolvesFromSpeciesId Int?
+  evolutionChainId Int?
+  growthRateId     Int?
+  generation     Int           @default(1)
+  isLegendary    Boolean       @default(false)
+  isMythical     Boolean       @default(false)
+  isBaby         Boolean       @default(false)
+  isAvailable    Boolean       @default(true)
+  sourceId       String?       @db.VarChar(64)
+  referenceUrl   String?       @db.VarChar(512)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  forms          PokemonForm[]
+  abilities      PokemonAbility[]
+  instances      UserPokemon[]
+  featuredBanners PokemonBanner[]       @relation("FeaturedBannerSpecies")
+  acquisitions    PokemonAcquisition[]
+
+  @@index([pokedexNumber])
+  @@index([rarity])
+  @@index([primaryType])
+  @@index([generation])
+  @@index([isLegendary])
+  @@index([isMythical])
+  @@index([isAvailable])
+  @@index([name])
+}
+
+model PokemonForm {
+  id                 String         @id @default(cuid())
+  speciesId          String
+  pokemonId          Int            @unique
+  name               String         @db.VarChar(128)
+  slug               String         @unique @db.VarChar(128)
+  primaryType        String         @db.VarChar(32)
+  secondaryType      String?        @db.VarChar(32)
+  baseStatTotal      Int            @default(0)
+  spritePngUrl       String?        @db.VarChar(512)
+  spriteGifUrl       String?        @db.VarChar(512)
+  officialArtworkUrl String?        @db.VarChar(512)
+  createdAt          DateTime       @default(now())
+
+  species            PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@index([speciesId])
+}
+
+model PokemonAbility {
+  id        String         @id @default(cuid())
+  speciesId String
+  name      String         @db.VarChar(64)
+  isHidden  Boolean        @default(false)
+  slot      Int
+
+  species   PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@unique([speciesId, name])
+  @@index([speciesId])
+}
+
+model UserPokemon {
+  id                String                   @id @default(cuid())
+  userId            String
+  speciesId         String
+  obtainedAt        DateTime                 @default(now())
+  source            PokemonAcquisitionSource @default(SEED)
+  sourceReferenceId String?                  @db.VarChar(128)
+  idempotencyKey    String?                  @unique @db.VarChar(255)
+  nickname          String?                  @db.VarChar(64)
+  isFavorite        Boolean                  @default(false)
+  metadata          Json?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species           PokemonSpecies           @relation(fields: [speciesId], references: [id], onDelete: Restrict)
+  acquisitions      PokemonAcquisition[]
+
+  @@index([userId, isFavorite])
+  @@index([userId, speciesId])
+  @@index([speciesId])
+  @@index([obtainedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Pokémon Acquisition & Banners (Phase 4)
+// ---------------------------------------------------------------------------
+
+enum PokemonBannerStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+  DISABLED
+}
+
+model PokemonBanner {
+  id                String              @id @default(cuid())
+  name              String              @db.VarChar(128)
+  slug              String              @unique @db.VarChar(128)
+  description       String              @db.Text
+  bannerType        String              @default("STANDARD") @db.VarChar(64)
+  status            PokemonBannerStatus @default(DRAFT)
+  startAt           DateTime
+  endAt             DateTime?
+  pullCost          Int
+  allowedQuantities Int[]               @default([1])
+  version           Int                 @default(1)
+  featuredSpeciesId String?
+  rarityRates       Json
+  poolFilter        Json?
+  pityConfig        Json?
+  duplicatePolicy   String              @default("ADD_COPY") @db.VarChar(64)
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  featuredSpecies   PokemonSpecies?     @relation("FeaturedBannerSpecies", fields: [featuredSpeciesId], references: [id], onDelete: SetNull)
+  createdBy         User?               @relation("BannerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy         User?               @relation("BannerUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  acquisitions      PokemonAcquisition[]
+  userPityStates    UserBannerPity[]
+
+  @@index([status, startAt, endAt])
+  @@index([slug])
+  @@index([featuredSpeciesId])
+}
+
+model UserBannerPity {
+  id                 String        @id @default(cuid())
+  userId             String
+  bannerId           String
+  pityCount          Int           @default(0)
+  guaranteedFeatured Boolean       @default(false)
+  lastPullAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  banner             PokemonBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bannerId])
+  @@index([userId])
+  @@index([bannerId])
+}
+
+model PokemonAcquisition {
+  id                  String         @id @default(cuid())
+  userId              String
+  bannerId            String
+  bannerVersion       Int
+  speciesId           String
+  userPokemonId       String?
+  rarity              PokemonRarity
+  isFeatured          Boolean        @default(false)
+  isDuplicate         Boolean        @default(false)
+  duplicateOutcome    String?        @db.VarChar(128)
+  costPaid            Int
+  ledgerTransactionId String?
+  idempotencyKey      String         @unique @db.VarChar(255)
+  pityCountBefore     Int            @default(0)
+  pityCountAfter      Int            @default(0)
+  pityTriggered       Boolean        @default(false)
+  metadata            Json?
+  createdAt           DateTime       @default(now())
+
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  banner              PokemonBanner  @relation(fields: [bannerId], references: [id], onDelete: Restrict)
+  species             PokemonSpecies @relation(fields: [speciesId], references: [id], onDelete: Restrict)
+  userPokemon         UserPokemon?   @relation(fields: [userPokemonId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([bannerId, createdAt(sort: Desc)])
+  @@index([speciesId])
+  @@index([ledgerTransactionId])
+}
+
+// ---------------------------------------------------------------------------
+// Verified YPT Identity (Phase 5)
+// ---------------------------------------------------------------------------
+
+enum YptClaimStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REVOKED
+}
+
+model YptIdentityClaim {
+  id              String         @id @default(cuid())
+  userId          String
+  selectedUserId  String?
+  yptId           String         @db.VarChar(64)
+  yptName         String?        @db.VarChar(128)
+  groupId         String?        @db.VarChar(64)
+  status          YptClaimStatus @default(PENDING)
+  rejectionReason String?        @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user            User           @relation("UserYptClaims", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy      User?          @relation("AdminYptClaimReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([yptId, status])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+enum YptConnectionStatus {
+  NOT_CONNECTED
+  CONNECTING
+  CONNECTED
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+  SYNC_ERROR
+  REAUTHENTICATION_REQUIRED
+}
+
+model YptConnection {
+  id                    String              @id @default(cuid())
+  userId                String              @unique
+  yptUserId             String              @db.VarChar(64)
+  yptNickname           String?             @db.VarChar(128)
+  status                YptConnectionStatus @default(NOT_CONNECTED)
+  encryptedRefreshToken String?             @db.Text
+  lastSyncedAt          DateTime?
+  lastSyncError         String?             @db.Text
+  metadata              Json?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncRuns              YptSyncRun[]
+
+  @@index([yptUserId])
+}
+
+model YptSyncRun {
+  id                      String        @id @default(cuid())
+  connectionId            String
+  userId                  String
+  status                  String        @db.VarChar(32)
+  startedAt               DateTime      @default(now())
+  completedAt             DateTime?
+  importedDurationSeconds Int           @default(0)
+  eligibleDurationSeconds Int           @default(0)
+  coinsCredited           Int           @default(0)
+  errorCode               String?       @db.VarChar(64)
+  errorMessage            String?       @db.Text
+  createdAt               DateTime      @default(now())
+
+  connection              YptConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// Trophy Ranking System (Phase 5)
+// ---------------------------------------------------------------------------
+
+enum TrophyTransactionType {
+  CHALLENGE_WIN
+  CHALLENGE_LOSS
+  ADMIN_ADJUSTMENT
+  REVERSAL
+  SEASON_RESET
+}
+
+model TrophyTransaction {
+  id                   String                @id @default(cuid())
+  userId               String
+  groupId              String?               @db.VarChar(64)
+  amount               Int
+  balanceAfter         Int
+  type                 TrophyTransactionType
+  sourceType           String?               @db.VarChar(64)
+  sourceId             String?               @db.VarChar(128)
+  idempotencyKey       String?               @unique @db.VarChar(255)
+  description          String                @db.VarChar(512)
+  metadata             Json?
+  relatedTransactionId String?
+  createdAt            DateTime              @default(now())
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedTransaction   TrophyTransaction?    @relation("TrophyReversal", fields: [relatedTransactionId], references: [id], onDelete: SetNull)
+  reversals            TrophyTransaction[]   @relation("TrophyReversal")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([sourceType, sourceId])
+  @@index([groupId])
+}

@@ -57,6 +57,7 @@ export interface ScoreboardStandingEntry {
    status?: string | null;
    deficitSeconds: number;
    dailyLogs?: Record<string, number>;
+   trophies?: number;
 }
 
 export interface ChallengeScoreboardViewModel {
@@ -73,6 +74,9 @@ export interface ChallengeScoreboardViewModel {
    resultsLockedAt?: string | null;
    startAt: string;
    endAt: string;
+   rewardCoins?: number;
+   isRewardSettled?: boolean;
+   isBettingEnabled?: boolean;
    daysRemaining: number;
    totalDays: number;
    currentDayNumber: number;

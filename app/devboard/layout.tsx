@@ -6,7 +6,6 @@ import {
    getEffectiveAdminState,
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
-import { AppHeader } from "@/features/auth/presentation/auth-nav";
 
 export const metadata = {
    title: "DevBoard | HoldMeToIt",
@@ -45,13 +44,7 @@ export default async function DevBoardLayout({
    }
 
    return (
-      <div className="min-h-screen bg-[#0d0d0d] text-[#f4f3f6] font-sans flex flex-col">
-         <AppHeader
-            user={session?.user}
-            isActualAdmin={true}
-            isPreviewActive={false}
-         />
-
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0d0d0d] text-[#f4f3f6] font-sans flex flex-col">
          <main className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
             {children}
          </main>

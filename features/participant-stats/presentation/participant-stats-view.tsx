@@ -9,6 +9,7 @@ import { ParticipantDailyHistory } from "./participant-daily-history";
 import { ParticipantTeamStats } from "./participant-team-stats";
 import { ParticipantAccountability } from "./participant-accountability";
 import { AdminTargetOverrideModal } from "@/features/challenges/presentation/admin-target-override-modal";
+import { UnifiedProgressionCard } from "./unified-progression-card";
 
 interface ParticipantStatsViewProps {
    stats: ParticipantStatsViewModel;
@@ -38,6 +39,14 @@ export function ParticipantStatsView({
             isAdmin={viewer.isAdmin}
             onEditTarget={() => setIsTargetModalOpen(true)}
          />
+
+         {/* 3. Unified 3-Layer Progression (Competitive, Study, Economy) */}
+         {stats.competitive && (
+            <UnifiedProgressionCard
+               competitive={stats.competitive}
+               displayName={profile.displayName}
+            />
+         )}
 
          {/* 3. Progress Visualization Chart */}
          <ParticipantProgressChart dailyHistory={dailyHistory} />

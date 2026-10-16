@@ -4,21 +4,25 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)  
+> **Last Updated:** 2026-10-16 (Session 119 — Pokémon Catalogue Importer Removal & Schema Normalization via DB Backfill on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-16, Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)                                                                                                                                                                                                                                                                                |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 105 files green (1131/1131 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                                                                |
+| Gate                                                         | Result (2026-10-16 — Session 116: ypt-js Integration on `afnan`)                                                                                                                                                                                                                                                                                                                                                 |
+| :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                                          | ✅ 0 errors (`npx prisma generate && tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                              |
+| `npm test`                                                   | ✅ 147 files green (1382/1382 tests passing, 100% green across all modules)                                                                                                                                                                                                                                                                                                                                      |
+| `npm run build`                                              | ✅ 17 routes compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                                                                                                                                                                                |
+| Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                                                                                                                                                                                   |
+| Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                                                                                                                                                                       |
+| Phase 2A (Pokémon Catalogue Data — DB-resident)              | ✅ Catalogue lives entirely in the DB (1,025 species + 326 forms). The one-off bundle importer, its CLI, and the 21-species seed were removed; the `metadata` JSON was normalized into `PokemonForm` / `PokemonAbility` tables + scalar columns via `20261022000000_normalize_pokemon_catalogue`. The DB is the source of truth; the offline seeder `npm run db:seed:pokemon` re-populates an empty environment. |
+| Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                                                                                                                                            |
+| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
+| Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile                                                                                                                                                           |
+| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits                                                                                                                                                                |
 
 ### 1.1 Live Routes
 
@@ -29,10 +33,13 @@
 | `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
-| `/admin`                                      | Server redirect to `/challenges`                                                                                                                           | `ADMIN` / `DEV`                        |
+| `/admin`                                      | Host management console for YPT claims verification, audited trophy adjustments, and challenge operations                                                  | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
+| `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                              | Authenticated / Participant            |
+| `/pokemon`                                    | Pokédex catalogue, personal study-backed companion collection, species detail modal, progress metrics                                                      | Public spectator / Participant         |
+| `/pokedex`                                    | Public alias and permanent redirect to `/pokemon`                                                                                                          | Public spectator / Participant         |
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                                                 | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                                              | Authenticated                          |
 
@@ -83,7 +90,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | Capability                                            | Location                                                            | Notes                                                                                                                                                                                                              |
 | :---------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                |
-| Global Participant Preview Mode                       | `features/auth/presentation/auth-nav.tsx`, `preview-mode.ts`        | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
+| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
 | Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                                 |
 | LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                        |
 | Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                 |
@@ -152,6 +159,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 >    - `20261011120100_challenge_linked_tasks_and_soft_delete`
 >    - `20261012120000_add_challenge_feedback_table`
 > 4. Reconcile remaining schema drift (D5): generate catch-up migrations for `feedbacks` and the `sort_order` columns.
+> 5. Apply the Pokémon catalogue normalization migration on the hosted DB (**backup first** — it is a one-time, non-reversible backfill that drops `PokemonSpecies.metadata`), then seed the catalogue:
+>    - `npx prisma migrate deploy`
+>    - `npm run db:seed:pokemon`
 
 ---
 
@@ -171,7 +181,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (12 routes compiled cleanly).
 - **NEXT STEP (completed in Session 89):** Challenge Feedback Backend Bridge & Discord Channel 1558594247895289877.
 
-### Sessions 89–104 (Summarized; includes late 82/83 addenda)
+### Sessions 89–103 (Summarized; includes late 82/83 addenda)
 
 - **Session 89** (2026-10-12): 8-Question Challenge Feedback Survey Dialog & Discord Channel 1558594247895289877
 - **Session 90** (2026-10-12): Feedback Dialog Obsidian Tokens Harmonization, Badge Removal & Unified Single-Section Flow
@@ -188,7 +198,24 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Session 101** (2026-10-14): Manual Leaderboard Feature Removal & 100% Law L8 Compliance
 - **Session 102** (2026-10-14): Database Table Names Standardized to PascalCase
 - **Session 103** (2026-10-14): Database Column Names Standardized to camelCase
-- **Session 104** (2026-10-14): Removal of Discord Summary Feature (`FEAT-DISC-01`) and its dead domain code, tests, and docs references
+
+### Session 104 — 2026-10-14 (Removal of Discord Summary Feature)
+
+- **Agent Role:** Admin Operations & Broadcaster Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Fully remove the Discord Summary feature (`FEAT-DISC-01`), eliminating dead domain code, test suites, and documentation references.
+- **Code & Test Removals:**
+   - Deleted `features/notifications/domain/discord-summary.ts` and `features/notifications/domain/discord-summary.test.ts`.
+   - Removed empty directory `features/notifications/`.
+   - Updated E2E Quality Matrix test `features/e2e/quality-matrix-j1-j6.test.ts`: removed `generateDiscordSummary` import and Step 3 assertion from Journey J6. J6 now focuses cleanly on Event Lock and Three-Condition Auto-Punishment evaluation.
+- **Documentation Alignments:**
+   - Updated `AGENTS.md`: removed `features/notifications/` and Discord summary copy step from J6 Mermaid diagram and specification.
+   - Updated `FEATURES.md`: marked `FEAT-DISC-01` as removed (superseded by Challenge Summary tab and personal Wrapped dialog).
+   - Updated `README.md`, `ROADMAP.md`, `ISSUES.md`: removed Discord summary generator references and resolved Defect D3 Discord summary debt.
+- **Quality Gates Verified:**
+   - `npm run typecheck` passed (0 errors).
+   - `npm run test` passed (92 test files, 1024/1024 tests green).
+   - `npm run build` passed (11 routes compiled cleanly).
+- **NEXT STEP (completed in Session 105):** Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1.
 
 ### Session 105 — 2026-10-14 (Participant Leave Budget Feature & Elimination of Legacy DailyStudyLog V1)
 
@@ -220,35 +247,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test` passed (93 test files, 1037/1037 tests green).
    - `npm run build` passed (11 routes compiled cleanly).
    - `bash scripts/check-schema-migration.sh origin/main` passed.
-- **NEXT STEP (completed in Session 106):** Fix todo context menu alignment on scroll and resolution change (KAN-18 / GitHub #100).
 
-### Session 106 — 2026-10-15 (Self-Aligning Task & Category Context Menus via Radix/shadcn — KAN-18 / GitHub #100)
-
-- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
-- **Scope & Objectives:**
-   - Resolve Jira KAN-18 (GitHub Issue #100): "the todo's context menu does not self align itself with scrolls and resolution change".
-   - Replace the legacy manual fixed-coordinate floating `<div>` implementation with modular `shadcn` components (`@radix-ui/react-dropdown-menu` and `@radix-ui/react-context-menu`) as recommended by collaborators.
-- **Component Primitives Added (`components/ui/`):**
-   - `dropdown-menu.tsx`: Radix UI DropdownMenu wrapped and styled with Obsidian Dark palette tokens (`#222222`, `#383838`, `rounded-xl`, `border-stone-700/60`, elevated shadow, accessible keyboard navigation).
-   - `context-menu.tsx`: Radix UI ContextMenu styled identically to match Obsidian Dark theme with support for Submenus, Checkboxes, Radio items, and keyboard shortcuts.
-- **Modular Presentation (`features/study-logs/presentation/cockpit/`):**
-   - `cockpit-task-menu.tsx`: Pure, reusable menu items component providing `TaskMenuItems` and `CategoryMenuItems`. Designed with generic item primitives (`Item`, `Separator`, `Label`) so the exact same menu items render seamlessly within both `<DropdownMenuContent>` (3-dots button trigger) and `<ContextMenuContent>` (right-click trigger).
-   - Fully supports all task and category operations: status toggles (In Progress / Complete / Reopen), challenge-day move targets (with Past-day move guards via `validateMoveTaskChallengeDay`), editing, and locked past-day deletion safeguards.
-- **Cockpit Tasks Section Refactored (`cockpit-tasks-section.tsx`):**
-   - Removed legacy manual `contextMenu` React state (`{ x, y, type, task, category }`).
-   - Removed manual coordinate calculators and window resize/scroll listeners (`openCategoryMenuFromButton`, `handleCategoryContextMenu`, `openTaskMenuFromButton`, `handleTaskContextMenu`).
-   - Removed the legacy absolute-positioned `<div>` (`style={{ top: contextMenu.y, left: contextMenu.x }}`).
-   - Wrapped category headers and task items in `<ContextMenu modal={false}>` with `<ContextMenuTrigger asChild>`.
-   - Converted 3-dots action buttons to `<DropdownMenu modal={false}>` with `<DropdownMenuTrigger asChild>`.
-   - Radix Popper / Floating UI (`modal={false}`) continuously tracks trigger positions during container and ancestor scrolling and dynamically recalculates positioning during resolution changes and window resizing.
-- **Quality Gates Verified:**
-   - `features/study-logs/presentation/cockpit/cockpit-task-menu.test.tsx`: 5 unit tests verifying task status transitions, challenge-day move options, past-day delete lockdown, and category menu actions.
-   - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (95 test files, 1053/1053 tests green).
-   - `npm run build` passed (11 routes compiled cleanly).
-- **NEXT STEP:** Restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`).
-
-### Session 107 — 2026-10-14 (DevBoard & Lightweight Self-Hosted Feature Flags System)
+### Session 106 — 2026-10-14 (DevBoard & Lightweight Self-Hosted Feature Flags System)
 
 - **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations & Broadcaster Agent.
 - **Scope & Objectives:**
@@ -289,7 +289,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `tester-selector-dialog.tsx`: live search & 1-click assign/remove of Discord testers.
       - `flag-audit-drawer.tsx`: chronological audit history with diff visualizer.
       - `devboard-view.tsx`: master interactive client orchestrator with optimistic state updates.
-   - Added `[⚡ DEVBOARD]` header navigation link in `features/auth/presentation/auth-nav.tsx` for `DEV` users.
+   - Added `[⚡ DEVBOARD]` header navigation link in `components/ui/header.tsx` for `DEV` users.
    - Added presentation test suite `devboard-view.test.tsx` (2 tests, 100% green).
 - **Documentation (`docs/feature-flags/` & `docs/feature-flag/`):**
    - Created comprehensive documentation in `docs/feature-flags/README.md` and mirrored to `docs/feature-flag/README.md` per Rule §9.4.
@@ -310,7 +310,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run build` passed (12 routes compiled cleanly, `/devboard` size 10.9 kB).
 - **NEXT STEP (completed in Session 108):** Gate the Challenge Wrapped experience behind the `challenge_wrapped_v1` feature flag.
 
-### Session 108 — 2026-10-15 (Leaderboard Domain Type Boundary)
+### Session 107 — 2026-10-15 (Leaderboard Domain Type Boundary)
 
 - **Scope:** Resolved issue #35 by moving scoreboard view-model contracts out of the Prisma/Next cache repository.
 - **Architecture:** Added `features/leaderboard/domain/leaderboard.types.ts` for `ChallengeScoreboardViewModel` and its related scoreboard contracts. Updated the leaderboard data repository, domain modules, presentation components, and tests to import types inward from the domain layer.
@@ -318,7 +318,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` passed; focused leaderboard/wrapped/participant-stats tests passed (20 files, 204 tests); `npm run test` passed (100 files, 1076 tests); `npm run build` passed (12 routes).
 - **NEXT STEP:** Restore remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
 
-### Session 109 — 2026-10-15 (Challenge Wrapped Gated Behind `challenge_wrapped_v1` Feature Flag)
+### Session 108 — 2026-10-15 (Challenge Wrapped Gated Behind `challenge_wrapped_v1` Feature Flag)
 
 - **Scope:** Put the entire Challenge Wrapped experience behind the self-hosted feature-flag engine so it can be dark-launched or killed from `/devboard` without a deploy.
 - **Single Source of Truth:** New `features/wrapped/api/wrapped-flag.ts` exports `WRAPPED_FEATURE_FLAG_KEY = "challenge_wrapped_v1"` and the server-only `isWrappedFeatureEnabled()` helper (delegates to `isFeatureEnabled`, fails closed).
@@ -334,102 +334,332 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (101 test files, 1089/1089 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+- **NEXT STEP (completed in Session 109):** Implemented Phase 1 Virtual Economy Foundation.
 
-### Session 109 — 2026-10-15 (Participant Preview Mode Admin/Host Leak Fix)
+### Session 109 — 2026-10-15 (Phase 1 — Economy Foundation on `afnan`)
 
-- **Scope:** Resolved `ISSUES.md` #47 — "Preview as Participant" still rendered admin-side controls because three paths re-derived admin/host status from the raw session instead of the preview-aware `getEffectiveAdminState()`.
-- **Finding A (host re-grant):** `GetChallengeParticipantStatsOptions` gained `isPreviewActive`; `participant-stats.repository.ts` now computes `isEffectiveAdmin = isAdmin || (isHost && !isPreviewActive)`. `app/challenge/[id]/participant/[participantId]/page.tsx` forwards `isPreviewActive` from `getEffectiveAdminState`, so a previewing host no longer sees **Admin Controls** / **Edit Target** / the target-override modal.
-- **Finding B (raw session in header):** `app/page.tsx` now passes `user={effectiveUser}` (role downgraded to `PARTICIPANT`) to `AppHeader` instead of the raw `session.user`.
-- **Finding C (DevBoard link):** `auth-nav.tsx` gates the DevBoard nav link with `&& !(isPreviewActive ?? false)`, matching the preview-aware DEV badge.
-- **Finding D (admin routes):** `app/admin/layout.tsx` and `app/devboard/layout.tsx` read the preview cookie and `redirect("/")` while preview is active.
-- **Tests:** New `features/auth/domain/preview-mode.test.ts` (8 tests; also closes `ISSUES.md` #19) plus preview regression cases in `participant-stats.repository.test.ts`, `app/challenge/[id]/participant/[participantId]/page.test.tsx`, `auth-nav.test.tsx`, and `app/page.test.tsx`.
+- **Scope:** Implemented the complete Phase 1 HoldMeToIt Virtual Economy Foundation: user wallets, append-only transaction ledger, 100 coins/hr proportional rewards with fractional progress preservation, idempotent study logging, available vs reserved funds accounting, live reconciliation audit, and responsive Obsidian dark cockpit.
+- **Database Architecture (`prisma/schema.prisma` & migration `20261016000000_create_economy_models`):**
+   - `Wallet`: 1-to-1 with `User`, tracking `balance` (total held coins), `reservedBalance` (committed), `lifetimeEarned`, `lifetimeSpent`, and `rewardProgress` (accumulated eligible seconds modulo 36).
+   - `LedgerTransaction`: Append-only immutable ledger with signed amounts (`+` credit, `-` debit), `balanceDelta`, `reservedDelta`, `TransactionType` (STUDY_REWARD, CHALLENGE_REWARD, WAGER_RESERVATION, WAGER_SETTLEMENT, WAGER_REFUND, GACHA_PURCHASE, TRADE_RESERVATION, TRADE_SETTLEMENT, TRADE_REFUND, ADMIN_ADJUSTMENT, REVERSAL), and unique `idempotencyKey`.
+   - `StudyRewardRecord`: Exactly-once tracking with unique compound index `@@unique([sourceType, studySessionId])` and status tracking.
+- **Domain Logic (Law L7 Pure Isolation):**
+   - `features/economy/domain/economy-constants.ts`: Base rates (100 coins/hr, 36s/coin).
+   - `features/economy/domain/reward-calculation.ts`: Exact integer arithmetic $Q = \lfloor (P + S) / 36 \rfloor, P_{\text{next}} = (P + S) \pmod{36}$.
+   - `features/economy/domain/wallet-accounting.ts`: Pure accounting transitions enforcing $\text{availableBalance} = \text{totalBalance} - \text{reservedBalance} \ge 0$.
+   - `features/economy/domain/reconciliation.ts`: Audit verification comparing stored wallet totals against ledger delta sums.
+- **Data & API Layer (`features/economy/data/` & `features/economy/api/`):**
+   - `wallet.repository.ts`: Serializable Prisma transactions (`TransactionIsolationLevel.Serializable`) with retry loop for P2034 write conflicts.
+   - `study-reward.service.ts`: Server-authoritative session evaluation and idempotency verification.
+   - `wallet.actions.ts`: Authenticated server actions for summary, paginated history, admin adjustments, reconciliation audit, and reversals.
+   - `log-study-time.actions.ts`: Non-blocking, fail-safe trigger integration into study time logging.
+- **Presentation & Routes (`app/wallet/` & `features/economy/presentation/`):**
+   - `/wallet` route (Page, loading skeleton, error recovery boundary per Law L9).
+   - `wallet-summary-card.tsx`: Metric cards, fractional progress bar.
+   - `transaction-history-table.tsx`: Desktop table + mobile card layout (<640px) with category filter tabs and pagination.
+   - `admin-adjustment-dialog.tsx`: Native dialog for authorized adjustments.
+   - `reconciliation-dialog.tsx`: Native dialog rendering live discrepancy audits.
+   - Header coin badge in `features/economy/presentation/header-coin-badge.tsx` and `/wallet` navigation link in `header.tsx`.
+   - Projected coin reward preview in `DailyHoursModal`.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (102 test files, 1102/1102 tests green).
-   - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP (unchanged from Session 108):** Create the `challenge_wrapped_v1` row in the target DB via `/devboard` (`isEnabled = true` + `rolloutMode = TARGETED` for testers, then `GLOBAL`), then restore the remaining deleted P0 UIs: host pardon modal (`FEAT-PUN-04`) and Punishment Wall (`FEAT-PUN-02`).
+   - `npm run test` passed (110 test files, 1150/1150 tests green, 60 new tests).
+   - `npm run lint` passed (0 errors in new economy code).
+   - `npm run build` passed (13 routes compiled cleanly, `/wallet` size 8.33 kB).
+- **Documentation:** Created comprehensive `docs/economy/README.md`.
+- **NEXT STEP (completed in Session 110):** Implemented Phase 3 Pokémon Catalogue, Collection & Progression Foundation.
 
-### Session 111 — 2026-10-16 (PR #111 Context Menu Alignment, Touch/Keyboard Selection & Design Token Fixes)
+### Session 110 — 2026-10-15 (Phase 3 — Pokémon Catalogue, Collection & Progression Foundation on `afnan`)
 
-- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
-- **Scope & Problem Analysis (KAN-18 / GitHub #100 / PR #111):**
-   - Collaborator `@HyperAfnan` reported that PR #111 was giving issues and held off merging.
-   - **Root Cause 1 (Mid-Air Orphaned Context Menus):** With `<ContextMenu modal={false}>`, Radix UI positions the menu at a virtual point `(clientX, clientY)`. Without external scroll or window resize dismissal listeners, scrolling the page or resizing the window left the context menu floating in mid-air at the old screen coordinates, detached from the task/category.
-   - **Root Cause 2 (Touchscreen & Keyboard Selection Failure):** All items in `cockpit-task-menu.tsx` only had `onClick`. Radix `ContextMenuItem` and `DropdownMenuItem` unmount on `pointerup`, canceling synthetic `click` events on mobile browsers. For keyboard users (Enter/Space), Radix fires `onSelect`, not `onClick`.
-   - **Root Cause 3 (Design Token Regression):** `components/ui/dropdown-menu.tsx` was reverted to generic shadcn tokens (`bg-popover`, `text-popover-foreground`, `focus:bg-accent`, etc.) instead of the ratified Obsidian Dark tokens.
-- **Implementation & Resolution:**
-   - **`components/ui/context-menu.tsx`:** Added captured passive `scroll` and `resize` event listeners in `ContextMenuContent`. When any external container or the window scrolls, or when the window resizes, the menu cleanly self-dismisses via an Escape keydown dispatch. Added `collisionPadding={8}` to prevent edge clipping.
-   - **`components/ui/dropdown-menu.tsx`:** Fully harmonized with Obsidian Dark design tokens (`bg-[#222222]`, `border-[#383838]`, `rounded-xl`, `p-1.5`, `text-[#f4f3f6]`, `focus:bg-[#333333] focus:text-[#ffffff]`, `collisionPadding={8}`).
-   - **`features/study-logs/presentation/cockpit/cockpit-task-menu.tsx`:** Added both `onSelect` and `onClick` handlers across all items in `TaskMenuItems` and `CategoryMenuItems`, ensuring reliable execution on mouse, touchscreen, and keyboard interactions.
-   - **Data & Test Restorations:** Re-exported required scoreboard types in `features/leaderboard/data/leaderboard-data.ts`; updated mock parameters in `app/challenge/[id]/page.test.tsx` and `challenge-manage-tab.test.tsx`.
-   - **Test Coverage:** Added `components/ui/context-menu.test.tsx` (2 tests) and added selection callback verification tests to `cockpit-task-menu.test.tsx` (7 tests).
+- **Scope:** Established the normalized Pokémon species catalogue, user collection management, 6-tier rarity system, Pokédex completion progress engine, Obsidian dark presentation views at `/pokemon` (with `/pokedex` redirect), idempotent seeding mechanism, and server-side authorization controls.
+- **Database Architecture (`prisma/schema.prisma` & migration `20261018000000_phase3_pokemon_catalogue_and_collection`):**
+   - `PokemonRarity`: Enum (`NORMAL`, `UNCOMMON`, `RARE`, `EPIC`, `LEGENDARY`, `MYTHICAL`).
+   - `PokemonAcquisitionSource`: Enum (`STARTER`, `STUDY_REWARD`, `ACHIEVEMENT`, `GACHA`, `EVENT`, `ADMIN_GRANT`).
+   - `PokemonSpecies`: Global catalogue entry (`pokedexNumber` UK, `name`, `slug` UK, `rarity`, `primaryType`, `secondaryType`, `description`, `classification`, `imageUrl`, `spriteUrl`, `baseHp`, `baseAttack`, `baseDefense`, `generation`, `isAvailable`, `referenceUrl`).
+   - `UserPokemon`: Owned participant instance (`userId` FK -> `User` with Cascade, `speciesId` FK -> `PokemonSpecies` with `onDelete: Restrict`, `obtainedAt`, `source`, `sourceReferenceId`, `idempotencyKey` UK, `nickname`, `isFavorite`, `metadata`). Foreign key constraint `onDelete: Restrict` prevents accidental cascade deletion of user collections.
+- **Domain Layer (Law L7 Pure Isolation):**
+   - `features/pokemon/domain/pokemon-rarity.ts`: Rarity hierarchy, visual star ratings (1★ to 6★), indicative planning costs (Normal 10k, Uncommon 50k, Rare 100k, Epic 250k, Legendary 500k, Mythical 1M), custom sort comparator (`compareRarity`), and validators.
+   - `features/pokemon/domain/pokemon-types.ts`: All 18 official elemental types with color tokens, badges, and validation.
+   - `features/pokemon/domain/collection-progress.ts`: Pure mathematics for completion percentage: $(uniqueOwned / totalAvailable) \times 100$, denominator safety (only available species count), division-by-zero protection, and mastery tiers (Novice, Collector, Master, Champion).
+   - `features/pokemon/domain/pokemon.schema.ts`: Zod validation schemas for catalogue listing, collection filtering, and admin upsert.
+- **Data & API Repositories (`features/pokemon/data/` & `features/pokemon/api/`):**
+   - `pokemon-catalogue.repository.ts`: Catalogue queries with case-insensitive search, rarity/type filtering, stable sorting, and admin upsert.
+   - `user-pokemon.repository.ts`: Isolated collection queries scoped strictly by `userId`, collection summary metrics with duplicate count mapping, and server-internal idempotent `grantUserPokemon` operation.
+   - `pokemon.actions.ts`: Server Actions supporting spectator access for catalogue and species detail, session-authenticated collection retrieval, and `requireAdminUser()` gated catalogue administration.
+- **Catalogue Seeding & Data Quality (superseded by Session 119):**
+   - The 23-species idempotent upsert script (`npm run db:seed:pokemon`) and `prisma/seed-pokemon.ts` were removed in Session 119 — the catalogue is DB-resident and there is no re-seed path.
+- **Presentation & Routes (`app/pokemon/`, `app/pokedex/`, & `features/pokemon/presentation/`):**
+   - `/pokemon`: Server component rendering `PokemonView` with initial catalogue and summary.
+   - `/pokedex`: Permanent redirect to `/pokemon`.
+   - `PokemonProgressHeader`: Progress gauge, completion percentage, species/total counters, and spectator login guidance.
+   - `PokemonFilterBar`: Tab switcher (Catalogue vs Collection), search input, rarity filter, type filter, sort selector, and filter reset.
+   - `PokemonCard`: Ambient rarity glow, `#XXXX` Pokédex number, ownership badge (`xN Owned` vs `Unowned`), sprite/artwork with resilient fallback SVG Pokéball silhouette, and click-to-detail interaction.
+   - `PokemonDetailModal`: Accessible modal with high-res art, rarity stars, official classification, description, base stat progress bars (HP, ATK, DEF), ownership history, and official Pokédex external reference link.
+   - `AppHeader` navigation: Added "Pokédex" link with `BookOpen` icon.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (104 test files, 1110/1110 tests green).
-   - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Push `krish` branch to remote for collaborator review and merge PR #111.
+   - `npm run test` passed (126 test files, 1257/1257 tests green, 56 new tests across domain, repo, actions, and presentation).
+   - `npm run build` passed (production build clean across all routes).
+- **Strict Exclusions Preserved:**
+   - No Gacha pull buttons, no pity counters, no trading, no combat/battle stats, no secondary currency, no production migrations or deployments.
+- **NEXT STEP (superseded by Session 119):** The catalogue importer was removed; the catalogue now lives in the DB. See Session 119.
 
-### Session 112 — 2026-10-16 (Fix: Daily Study History Cumulative Hours on Upcoming Days — GitHub #118)
+### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119 (importer removed; schema normalized)
 
-- **Agent Role:** Scoring & Engine Agent, Participant UI Agent.
-- **Scope & Problem Analysis (GitHub #118):**
-   - Collaborator `@HyperAfnan` reported that the Daily Study History table continues to display running cumulative study totals (e.g. `53:57:45`) for challenge days marked with the status `Upcoming`.
-   - **Root Cause:** In `features/participant-stats/domain/participant-stats.ts` (`calculateParticipantDailyTimeline`), the loop iterated over all challenge `dayOptions` without checking whether a day was in the future (`isFuture: true`). Even though future days had zero study logs, `cumulativeSeconds` retained the cumulative sum achieved up to the present day and assigned it to every upcoming day row, which was subsequently displayed unconditionally in `ParticipantDailyHistory` (desktop table & mobile cards) and `ParticipantProgressChart` tooltips.
-- **Implementation & Resolution:**
-   - **`features/participant-stats/domain/participant-stats.ts`:**
-      - Updated `calculateParticipantDailyTimeline` so that `cumulativeSeconds` only increments when `!day.isFuture`.
-      - For future days (`day.isFuture === true`), `cumulativeSeconds` defaults to `0`, and both `cumulativeClock` and `cumulativeHuman` are set to `"—"`.
-   - **`features/participant-stats/presentation/participant-daily-history.tsx`:**
-      - Added defensive checks in both the mobile cards view and the desktop table view: `day.isFuture ? "—" : day.cumulativeClock`.
-   - **`features/participant-stats/presentation/participant-progress-chart.tsx`:**
-      - Updated hover tooltip to display `"Upcoming Day"` instead of misleading cumulative times when hovering future chart bars.
-   - **Test Coverage:**
-      - Added unit test in `features/participant-stats/domain/participant-stats.test.ts` verifying that future days (`isFuture: true`) set `cumulativeSeconds = 0`, `cumulativeClock = "—"`, and `cumulativeHuman = "—"`.
-      - Added view test in `features/participant-stats/presentation/participant-stats-view.test.tsx` verifying that upcoming days render em-dash (`—`) in the rendered markup.
+- **Scope:** Inspected, verified, and integrated the complete Pokémon metadata bundle (`pokemon_metadata.json`, `pokemon_metadata.csv`, `pokemon_metadata.sqlite`) covering Generations 1 through 9 (1,351 entries), distinguished canonical species from alternate forms, separated source lore classification from HoldMeToIt game economy rarity, implemented an idempotent CLI importer with `--dry-run`, and connected Generation and Classification filters into the Pokédex UI.
+- **Triple-Format Dataset Inspection (Step 1 & Step 2):**
+   - Confirmed 100% record parity across all three files: exactly 1,351 rows, 37 columns, zero field or row discrepancies.
+   - Selected `pokemon_metadata.json` as canonical repeatable import format (natively parsed types/abilities, avoids native SQLite C-bindings).
+   - Provenance: PokéAPI / Veekun open-source relational database dump and Pokémon Showdown battle sprites mirrored by PokéAPI on GitHub.
+   - IP & Licensing: Trademarks and copyright belong to Nintendo, Creatures Inc., and GAME FREAK Inc. Non-commercial fair-use educational study gamification without redistribution. Resilient fallback SVG Pokéball silhouettes prevent external host dependency breakage.
+- **Species vs. Form Distinction (Step 3):**
+   - 1,025 canonical species (`is_default_form: true`, National Dex #1 to #1025).
+   - 326 alternate forms (`is_default_form: false`, IDs 10001..10326) consolidated into `species.metadata.forms`.
+   - Strictly prevents duplicate Pokédex entries and unique constraint collisions on `pokedexNumber`.
+- **Lore vs. Game Economy Rarity Separation (Step 4):**
+   - Stored source classifications (`is_legendary`, `is_mythical`, `is_baby`) as distinct boolean flags in `PokemonSpecies`.
+   - HoldMeToIt Game Rarity (`PokemonRarity`) calculated via approved domain heuristic (`calculateHoldMeToItRarity` in `features/pokemon/domain/pokemon-rarity.ts`):
+      - Mythical -> `MYTHICAL` (23 species, 2.2%)
+      - Legendary -> `LEGENDARY` (71 species, 6.9%)
+      - BST >= 540 -> `EPIC` (59 species, 5.8%)
+      - 450 <= BST < 540 -> `RARE` (372 species, 36.3%)
+      - 320 <= BST < 450 -> `UNCOMMON` (262 species, 25.6%)
+      - BST < 320 -> `NORMAL` (238 species, 23.2%)
+   - Non-negotiable: Combat stats and rarity do NOT alter study coin generation rates, challenge deficits, or betting odds.
+- **Repeatable CLI Importer (`scripts/import-pokemon-bundle.ts` & `features/pokemon/data/pokemon-bundle-importer.ts`) (Step 5):**
+   - Command: `npm run db:import:pokemon`
+   - Flags: `--dry-run`, `--limit=<N>`, `--file=<path>`.
+   - Idempotent upserts on `slug` preserving existing user collections (`UserPokemon`), wallets, wagers, and study logs.
+   - Zod validation on all records against `UpsertPokemonSpeciesSchema`.
+- **Pokédex Presentation Integration (Step 7):**
+   - Added Generation Filter (Gen 1 to Gen 9) in `pokemon-filter-bar.tsx`.
+   - Added Source Classification Quick Filter (All, Legendary, Mythical, Standard) in `pokemon-filter-bar.tsx`.
+   - Added Mythical / Legendary visual badges in `PokemonCard.tsx` and `PokemonDetailModal.tsx`.
+   - Added physical dimensions (Height, Weight) and alternate form variant chips in `PokemonDetailModal.tsx`.
+   - Verified collection progress denominator dynamically tracks available canonical species count (1,025).
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (105 test files, 1125/1125 tests green).
-   - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP (completed in Session 113):** Dynamic challenge description and timetable repositioning (KAN-8 / GitHub #90).
+   - `npm run test` passed (127 test files, 1269/1269 tests green, 12 new importer tests).
+   - `npm run build` passed (production build clean across all routes).
+   - Dry run validated 100% of the 1,025 species with 0 rejected records.
+- **Strict Data Protection (Step 9):**
+   - Zero database resets, zero destructive migrations, zero touches on participant wallets, ledger transactions, or challenge records.
+- **NEXT STEP (superseded by Session 119):** Live DB upsert completed; the importer and `npm run db:import:pokemon` were removed in Session 119.
 
-### Session 113 — 2026-10-16 (Dynamic Challenge Description & Timetable Layout Adjustment — KAN-8 / GitHub #90)
+### Session 112 — 2026-10-16 (Frontend Design System Audit & Token Refactoring of Economy & Pokédex on `afnan`)
 
-- **Agent Role:** Data & Identity Agent, Scoring & Engine Agent, Participant UI Agent, Admin Operations & Broadcaster Agent.
-- **Scope & Problem Analysis (KAN-8 / GitHub #90):**
-   - Collaborator `@HyperAfnan` requested adding a `description` field to `Challenge` in the challenge table to make the "Welcome to the [Title]!" container dynamic instead of static.
-   - User requirement: Fallback seamlessly to the current boilerplate paragraph so older/legacy challenges without a description do not break. Pre-fill the default paragraph in the challenge creation modal/wizard with an editable textarea field. Also allow editing in the Manage tab. Move the `Timetable (UTC)` component lower so the overview reads naturally.
-- **Implementation & Resolution:**
-   - **Database & Prisma Migration:**
-      - Added `description String? @db.Text` to `model Challenge` in `prisma/schema.prisma`.
-      - Generated and applied declarative migration `prisma/migrations/20261016000000_add_description_to_challenge/migration.sql`.
-      - Documented in `prisma/migrations/README.md`.
-      - Successfully ran `npx prisma migrate deploy` and `npx prisma generate`.
-   - **Domain & Repository Layer:**
-      - Updated `ChallengeCreationInput` (`challenge-lifecycle.ts`) to accept `description?: string | null`.
-      - Updated `ExistingEventState` and `IncomingEventInput` in `event-audit-diff.ts` to log description modifications to the audit trail.
-      - Updated `createAdminChallenge`, `UpdateAdminChallengeInput`, and `updateAdminChallenge` in `challenge-admin.repository.ts` to persist `description`.
-      - Updated `createChallengeSchema` and `updateChallengeSchema` in `challenge-admin.actions.ts` with optional string validation.
-      - Updated `ChallengeScoreboardViewModel` in `leaderboard.types.ts` and `buildScoreboardViewModel` in `leaderboard-data.ts` to surface `challenge.description`.
-   - **Presentation Layer:**
-      - **`features/challenges/presentation/challenge-overview-tab.tsx`:**
-         - Replaced hardcoded paragraphs with dynamic `challenge.description` supporting multi-line spacing (`whitespace-pre-line`).
-         - Preserved exact backward compatibility: falls back to the default boilerplate paragraph when `description` is null, undefined, or empty string.
-         - Repositioned `Timetable (UTC)` component lower to the bottom of the card, directly after "Prizes & Rewards".
-      - **`features/challenges/presentation/challenge-creator-wizard.tsx`:**
-         - Added `DEFAULT_CHALLENGE_DESCRIPTION` constant and editable textarea input in Step 2 right below `Challenge Title`.
-         - Passed `description` payload to `createChallengeAction`.
-      - **`features/challenges/presentation/challenge-manage-tab.tsx`:**
-         - Added editable `description` textarea input in Section 1 ("Challenge Details & Timetable") with full form hydration and reset on cancel.
-         - Passed `description` payload to `updateChallengeAction`.
-   - **Test Coverage:**
-      - Unit tests for fallback and custom description rendering in `challenge-overview-tab.test.tsx`.
-      - Event audit diff tests for description field changes in `event-audit-diff.test.ts`.
-      - Repository tests for challenge creation and updates with description in `challenge-admin.repository.test.ts`.
-      - Server action tests for description validation in `challenge-admin.actions.test.ts`.
-      - Updated mock models in catalog tests (`app/challenges/page.test.tsx`, `challenges-list-view.test.tsx`).
+- **Scope:** Frontend design system audit and token refactor strictly confined to the recently created Economy, Wallet, Betting, YPT, and Pokédex feature slices (`app/wallet/`, `app/pokemon/`, `features/economy/presentation/`, `features/pokemon/presentation/`, `features/ypt/presentation/ypt-settings-card.tsx`, `features/challenges/presentation/challenge-betting-card.tsx`, and `components/ui/header.tsx`).
+- **Phase 1: Centralized Theme Tokens & CSS Custom Properties (`app/globals.css` & `tailwind.config.ts`):**
+   - Extended `:root` in `app/globals.css` with semantic CSS variables:
+      - `--economy-gold`, `--economy-gold-light`, `--economy-gold-dark` (amber/gold virtual currency)
+      - `--economy-credit` (emerald green study earnings & win payouts)
+      - `--economy-debit` (rose/red stake deductions & debits)
+      - `--economy-refund` (sky blue wager refunds)
+      - `--economy-admin` (purple admin adjustments & reconciliations)
+      - `--pokedex-bg`, `--pokedex-card`, `--pokedex-card-subtle`, `--pokedex-inset`, `--pokedex-elevated` (mystical dark surfaces)
+      - `--pokedex-border`, `--pokedex-border-subtle`, `--pokedex-border-light` (purple/slate borders)
+      - `--pokedex-text`, `--pokedex-text-secondary`, `--pokedex-text-muted`, `--pokedex-text-dim` (hierarchical text)
+      - `--pokedex-accent`, `--pokedex-accent-light` (rose/pink interactive highlights)
+   - Extended `tailwind.config.ts` to map `economy` and `pokedex` color families using `<alpha-value>` for full Tailwind opacity modifier support (e.g., `bg-economy-gold/15`, `border-pokedex-border/60`), along with Obsidian helper tokens (`obsidian.subtle`, `obsidian.cardHover`, `obsidian.borderSubtle`, `obsidian.borderHighlight`).
+- **Phase 2: shadcn/ui Component Infrastructure & Consistency (`components/ui/`):**
+   - Added `components/ui/badge.tsx` with CVA variants (`default`, `secondary`, `outline`, `destructive`, `gold`, `credit`, `debit`, `admin`).
+   - Added `components/ui/card.tsx` with Radix/shadcn standard primitives styled to match Obsidian tokens (`Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`).
+   - Extended `components/ui/button.tsx` with `gold` and `admin` semantic button variants.
+- **Phase 3: Economy & Wallet Presentation Standardization:**
+   - `coins-icon.tsx`: Migrated SVG fill/stroke to `hsl(var(--economy-gold))` and `hsl(var(--economy-gold-light))`.
+   - `header-coin-badge.tsx`: Converted to `border-economy-gold/40 bg-economy-gold/10 text-economy-gold`.
+   - `wallet-summary-card.tsx`: Replaced all hardcoded hex borders, surfaces, badges, and progress meters with Obsidian and Economy tokens.
+   - `transaction-history-table.tsx`: Migrated all badge styles, credit/debit indicators, table headers, and mobile cards to semantic tokens.
+   - `wallet-view.tsx`: Standardized loading and error states with tokenized styling and shadcn `Button`.
+   - `admin-adjustment-dialog.tsx`: Standardized frame, inputs, and actions using `Button variant="admin"` and tokens.
+   - `reconciliation-dialog.tsx`: Migrated discrepancy lists, audit info cards, and buttons to tokens.
+   - `ypt-settings-card.tsx`: Replaced ad-hoc `zinc-*` classes with Obsidian tokens and shadcn `Button variant="gold"`.
+   - `challenge-betting-card.tsx`: Converted form inputs to shadcn `Input`, submit actions to shadcn `Button variant="gold"`, and colors to tokens.
+   - `app/wallet/page.tsx`, `loading.tsx`, `error.tsx`: Migrated all layout backgrounds and cards to Obsidian tokens.
+- **Phase 4: Pokédex Presentation Standardization:**
+   - `pokemon-progress-header.tsx`: Converted to `pokedex-*` surfaces, text, and `economy-gold` tokens.
+   - `pokemon-filter-bar.tsx`: Converted tab switcher, search input, and selects to `pokedex-*` tokens.
+   - `pokemon-card.tsx`: Replaced all hardcoded dark purple hex values (`#2d2544`, `#100d1a`, `#221c33`, `#382f54`, `#9f9ba8`, `#757082`, `#141021`) with `pokedex-*` tokens; zero hardcoded hex colors remaining.
+   - `pokemon-detail-modal.tsx`: Replaced modal gradient, borders, stat bar tracks, dimension cards, variant chips, and external link styling with `pokedex-*` tokens; zero hardcoded hex colors remaining.
+   - `pokemon-view.tsx`: Standardized empty state with `pokedex-*` tokens.
+   - `app/pokemon/page.tsx`: Standardized page container with `bg-obsidian-bg text-obsidian-text`.
+   - `header.tsx`: Converted wallet coin icon to `text-economy-gold`.
 - **Quality Gates Verified:**
    - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (105 test files, 1131/1131 tests green).
-   - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Commit and push branch updates to `krish` for collaborator review and merge.
+   - `npm run lint` passed (0 errors).
+   - `npm run test` passed (127 test files, 1269/1269 tests green).
+   - `npm run build` passed (production build clean across all 16 routes).
+- **Strict Exclusions Preserved:**
+   - No changes to UI outside the economy and Pokédex scopes.
+   - No database resets, migrations, or schema modifications.
+   - No commits or pushes without explicit user instruction.
+- **NEXT STEP (superseded by Session 119):** The catalogue is DB-resident and the importer was removed. See Session 119.
+
+### Session 113 — 2026-10-16 (Phase 4: Pokémon Acquisition, Gacha, Pity System & Cinematic Reveal on `afnan`)
+
+- **Scope:** Implementation of Phase 4 — server-authoritative Pokémon acquisition, configurable banners, pity engine, atomic coin ledger integration, duplicate tracking, cursor-paginated acquisition history, administrative controls, and 3-stage cinematic reveal modal.
+- **Database & Prisma Architecture (`prisma/schema.prisma`):**
+   - Added `enum PokemonBannerStatus { DRAFT, ACTIVE, PAUSED, ENDED, DISABLED }`.
+   - Added `model PokemonBanner`: ID, name, slug, description, bannerType, status, startAt, endAt, pullCost, allowedQuantities, version, featuredSpeciesId, rarityRates (basis points JSON), poolFilter, pityConfig, duplicatePolicy, audit timestamps.
+   - Added `model UserBannerPity`: composite key `@@unique([userId, bannerId])`, pityCount, guaranteedFeatured (50/50 rule), lastPulledAt.
+   - Added `model PokemonAcquisition`: unique acquisition ID, userId, bannerId, bannerVersion, speciesId, gameplayRarity, isFeatured, pullCost, ledgerTxId (foreign key to `LedgerTransaction`), pityCountBefore, pityCountAfter, pityTriggered, isDuplicate, duplicateOutcome, idempotencyKey (unique), createdAt.
+   - Reverse relations wired into `User`, `PokemonSpecies`, `UserPokemon`, and `LedgerTransaction`.
+   - Migration created: `prisma/migrations/20261019000000_phase4_pokemon_acquisition_and_pity/migration.sql`.
+- **Pure Domain Engine (`features/pokemon/domain/acquisition/`):**
+   - `banner-config.ts`: Configuration assertion enforcing basis points summing to 10,000 (100.00%), positive pull costs, active time windows, and valid duplicate policies.
+   - `pity-engine.ts`: `evaluatePity` and `calculateNextPityState` evaluating hard-pity threshold guarantees, natural reset rarities, and 50/50 featured guarantee transitions.
+   - `pokemon-selector.ts`: Cryptographically secure random selection (`crypto.randomInt`) with injectable `RandomSource` for deterministic testing.
+- **Data & Transaction Safety (`features/pokemon/data/`):**
+   - `acquisition.repository.ts`: `executePokemonAcquisition` running inside serializable database transactions ($transaction) with retry loop on P2034 conflicts. Atomic sequence: checks available balance (`totalBalance - reservedBalance >= pullCost`), reserves/debits coins via `applyDebit`, inserts `LedgerTransaction` (`type: "GACHA_PURCHASE"`), creates `UserPokemon` record (`source: "GACHA"`, `isDuplicate: true/false`), upserts `UserBannerPity`, and logs `PokemonAcquisition`.
+   - `acquisition-history.repository.ts`: `getUserAcquisitionHistory` with cursor pagination, total counts, and strict participant isolation.
+- **API & Server Actions (`features/pokemon/api/acquisition.actions.ts`):**
+   - `listActiveBannersAction` and `getBannerDetailAction` for public discovery.
+   - `getUserBannerPityAction`, `pullPokemonAction`, `getUserAcquisitionHistoryAction` with strict Discord session authentication.
+   - `adminListAllBannersAction`, `adminCreateBannerAction`, `adminUpdateBannerAction`, `adminSetBannerStatusAction` strictly protected by `requireAdminUser()`.
+- **Presentation & Cinematic Reveal UI (`features/pokemon/presentation/`):**
+   - `pokemon-reveal-modal.tsx`: 3-stage visual sequence (Stage A/B Anticipation Pokéball energy burst -> Stage C Flash Burst -> Stage D/E Result Details with Pokédex #, typing, rarity aura, and coin summary). Accessible visible "Skip Reveal" button (`data-testid="skip-reveal-button"`), `prefers-reduced-motion` compliance, escape key handler, and fallback SVG Pokéball for missing artwork.
+   - `banner-card.tsx`: Banner showcase with featured companion pill, pity meter, probability breakdown dropdown, loading state, and client-generated idempotency key.
+   - `acquisition-history-modal.tsx`: Cursor-paginated history modal showing all past summons with copyable acquisition IDs.
+   - `admin-banner-modal.tsx`: Dedicated host portal to create draft banners and toggle banner statuses.
+   - `pokemon-filter-bar.tsx` & `pokemon-view.tsx`: Seamless "Summon Portal" tab switcher, auto-hiding catalogue filters, and real-time balance and collection state updates upon successful pulls.
+   - `app/pokemon/page.tsx`: Server page concurrently preloading active banners, user wallet balance, and user pity states.
+- **Verification & Quality Gates (100% Green):**
+   - `npm run typecheck`: 0 errors (`prisma generate && tsc --noEmit`).
+   - `npm run lint`: 0 errors.
+   - `npx vitest run features/pokemon`: 17 test files, 107/107 tests passing.
+   - `npm test`: 134 test files, 1,308/1,308 tests passing.
+   - `npm run build`: 16/16 routes compiled successfully without hydration errors or missing types.
+- **Migration Deployment & Operational Scripts:**
+   - Added `npm run db:migrate` and `npm run db:migrate:status` to `package.json` with `.env.local` bindings.
+   - Successfully deployed migration `20261019000000_phase4_pokemon_acquisition_and_pity` to the Supabase database. Schema is fully up to date (`PokemonBanner`, `UserBannerPity`, `PokemonAcquisition` created).
+- **NEXT STEP:** Maintainer or admin navigates to `/pokemon` to view the sealed summon portal empty state, opens Admin Banner Manager to create and configure banners (or activate draft banners), and pulls companions with study coins.
+
+### Session 114 — 2026-10-16 (Phase 4: Pokémon Acquisition, Gacha, Pity, Progression & Economy Integrity on `afnan`)
+
+- **Scope:** Complete audit and enforcement of Phase 4 progression and economy integrity: elimination of arbitrary manual study-hour adjustments, establishment of authoritative deduplicated study hours, enforcement of 500h (Legendary) and 1,000h (Mythical) hidden lifetime progression gates across all gacha selection and pity pathways, mathematical probability redistribution, auditable technical corrections, and full E2E quality matrix verification.
+- **Key Changes Implemented:**
+   - **Elimination of Arbitrary Manual Adjustments (Section 4 & 6):**
+      - `features/study-logs/data/admin-override.repository.ts`: Explicitly removed arbitrary overall hours reset (`executeAdminResetOverallHours` throws policy violation error).
+      - Restricted `executeAdminHoursOverride` strictly to existing validated study sessions (`prisma.dailyStudyLog.findUnique`); throws if no session exists for that calendar date; requires minimum 10-character technical audit reason; logs `HOURS_OVERRIDE` with prior and new values.
+      - `features/study-logs/api/admin-override.actions.ts`: Enforces audit reason constraint (>= 10 chars) and disables overall resets.
+      - `features/study-logs/presentation/admin-hours-override-modal.tsx`: Removed overall reset UI; displays existing session notice/warning; enforces 10-character minimum explanation.
+   - **Authoritative Deduplicated Study-Hour Source (Section 5):**
+      - `features/study-logs/data/study-hours.repository.ts`: Implemented `getUserAuthoritativeStudySeconds` which queries `DailyStudyLog` for active (non-deleted) challenges, excludes leave days (`isLeave = false`), deduplicates across overlapping challenges per calendar date (`YYYY-MM-DD`), and strictly caps study duration at 86,400s per day.
+   - **Hidden Lifetime Progression Gates (Section 7):**
+      - `features/study-logs/domain/study-eligibility.ts`: Pure domain thresholds `LEGENDARY_THRESHOLD_HOURS = 500` (1,800,000s) and `MYTHICAL_THRESHOLD_HOURS = 1000` (3,600,000s). Exact boundary testing (499h locked, 500h unlocked; 999h locked, 1000h unlocked).
+      - `features/pokemon/domain/acquisition/pokemon-selector.ts`: Computes effective probability redistribution (`calculateEffectiveProbabilities`) scaling base probabilities proportionally among unlocked rarities without silent substitution.
+   - **Pity Engine Progression Integration (Section 11):**
+      - `features/pokemon/domain/acquisition/pity-engine.ts`: Hard pity checks rarity eligibility (`isRarityEligible`). If target rarity is locked, hard pity does NOT trigger; player pity counter is safely preserved at `threshold - 1` without consuming pity pulls.
+   - **Server-Authoritative Acquisition Transaction (Section 10 & 12):**
+      - `features/pokemon/data/acquisition.repository.ts`: Calls `getUserAuthoritativeStudySeconds(userId, tx)`, passes authoritative study seconds into `evaluatePity` and `selectPokemon`, debits coins, logs to immutable ledger, updates `UserBannerPity`, and logs `PokemonAcquisition`.
+- **Quality Gates & Verification Results:**
+   - `npm test`: 136/136 test files passing, 1,325/1,325 tests passing (100% GREEN, including Journey J1–J6).
+   - `npm run typecheck`: 0 errors.
+   - `npm run lint`: 0 errors.
+   - `npm run build`: 16/16 routes compiled successfully.
+- **NEXT STEP:** Maintainer or admin navigates to `/pokemon` to test and manage banners in the staging environment.
+
+### Session 115 — 2026-10-16 (Verified YPT Identity + Trophy Ranking System on `afnan`)
+
+- **Scope:** Complete implementation and verification of Verified YPT Identity claim workflow and Clash of Clans–style Trophy Ranking system:
+   1. Searchable member selection dropdown replacing manual YPT ID entry.
+   2. Strict admin approval boundary with full identity protection (1 verified YPT ID -> 1 account).
+   3. Automatic study-hour synchronization restriction exclusively to verified accounts; rejection of unverified sync attempts.
+   4. Authoritative trophy settlement on challenge lock (Win: +25, Loss: -15, Draw/Tie: 0, Cancelled: 0) with zero floor and idempotency keys.
+   5. Compensating reversal transactions on challenge unlock.
+   6. Clash of Clans–style rank tier hierarchy (Recruit -> Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Grandmaster -> Champion).
+   7. Dedicated `/admin` console with YPT claim approval/rejection and audited trophy adjustments.
+   8. Dedicated public `/leaderboard` route with podium decorations, search, and sorting.
+   9. Unified 3-progression layer participant profiles (Competitive, Study, Economy).
+- **Key Changes Implemented:**
+   - **Prisma Schema & Migration:**
+      - Added `trophyBalance Int @default(0)` to `User` model with index.
+      - Added `enum YptClaimStatus { PENDING, VERIFIED, REJECTED, REVOKED }`.
+      - Added `model YptIdentityClaim` with relation to `User` and `reviewedBy`.
+      - Added `enum TrophyTransactionType { CHALLENGE_WIN, CHALLENGE_LOSS, ADMIN_ADJUSTMENT, REVERSAL, SEASON_RESET }`.
+      - Added `model TrophyTransaction` with composite index `[userId, createdAt]`, unique `idempotencyKey`, and self-referencing reversal links.
+      - Applied database migration `prisma/migrations/20261020000000_ypt_identity_and_trophy_system/migration.sql` with automatic backfill of existing verified `yptId` users.
+   - **Pure Domain Engine (`features/trophies/domain/` & `features/ypt/domain/`):**
+      - `trophy-types.ts` & `trophy-rank.ts`: 9-tier progression math, 0-trophy floor, rank promotion/demotion detection, milestone progress calculation.
+      - `ypt-claim-state-machine.ts`: Explicit state machine validating allowed transitions (PENDING -> VERIFIED/REJECTED, VERIFIED -> REVOKED, REJECTED -> PENDING).
+   - **Data Repositories & Ingest Safeguards (`features/ypt/` & `features/trophies/`):**
+      - `ypt-claim.repository.ts`: Single-group member discovery, claim creation, pending conflict resolution, approval/rejection/revocation.
+      - `trophy.repository.ts`: Append-only immutable `recordTrophyTransaction`, `getTrophyHistory`, `getTrophyLeaderboard`, `getUserCompetitiveStats`, `adminAdjustTrophies`, `settleChallengeTrophies`, `reverseChallengeTrophies`.
+      - `ypt-ingest.service.ts`: Enforces `user.yptClaims` status check; rejects unverified users with `YPT_NOT_VERIFIED` to protect economy.
+   - **Challenge Lifecycle Integration:**
+      - `challenge-admin.repository.ts`: Integrated `settleChallengeTrophies` into `lockChallengeResults` and `reverseChallengeTrophies` into `unlockChallengeResults` transactions.
+   - **Server Actions & Presentation UI:**
+      - `ypt-claim.actions.ts` & `trophy.actions.ts`: Secure server actions with `requireAdminUser` for administrative operations.
+      - `ypt-member-selector.tsx`: Searchable dropdown displaying display name, @username, YPT ID, and available/linked status.
+      - `ypt-settings-card.tsx`: Integrated member dropdown with Not Connected, Pending, Verified, and Rejected status states.
+      - `admin-console-view.tsx`: Host admin console with claim counters, approve/reject/revoke actions, and trophy adjustment modal.
+      - `trophy-leaderboard-view.tsx` & `app/leaderboard/page.tsx`: Group competitive leaderboard with podium cards and rank filters.
+      - `unified-progression-card.tsx`: Unified 3-progression layer (Competitive, Study, Economy) on participant profiles.
+      - `trophy-role-badge.tsx`, `trophy-progress-bar.tsx`, `trophy-history-list.tsx`, `trophy-result-animation.tsx`.
+- **Quality Gates & Verification Results (100% Green):**
+   - `npm run typecheck`: 0 errors (`npx prisma generate && tsc --noEmit`).
+   - `npm test`: 141 test files passing, 1,356/1,356 tests passing (100% green across all modules).
+   - `npm run build`: 17/17 routes compiled successfully (including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`).
+- **NEXT STEP:** Verify ypt-js authentication, member selection, and automatic study synchronization in the wallet cockpit.
+
+### Session 116 — 2026-10-16 (Yeolpumta `ypt-js` Integration Foundation on `afnan`)
+
+- **Scope:** Replacement of legacy placeholder YPT workflow with genuine Yeolpumta integration using `ypt-js` (`v0.1.0`):
+   1. Package inspection: verified `YptJs` client, auth resource, groups resource, and root exports.
+   2. Prisma schema migration: added `YptConnectionStatus` enum, `YptConnection` model (AES-256-GCM encrypted refresh token), `YptSyncRun` audit model, and `groupId` on `YptIdentityClaim`.
+   3. Encryption service (`core/security/encryption.ts`): AES-256-GCM encryption/decryption with authenticated tags.
+   4. Server client service (`features/ypt/data/ypt-client.service.ts`): authentication, session restoration, joined group listing, group member rosters with live study statuses.
+   5. Connection repository (`features/ypt/data/ypt-connection.repository.ts`): upserts, session decryption, claim submission with uniqueness enforcement.
+   6. Synchronization service (`features/ypt/api/ypt-sync.service.ts`): queries live stats (`todayStudyMs`), feeds `ingestYptActivity`, credits 1 coin / 36s, and logs `YptSyncRun`.
+   7. Presentation: updated `ypt-settings-card.tsx` with all 8 explicit connection states, Connect Modal, and live feedback banners.
+
+### Session 117 — 2026-10-16 (YPT Error 112 Root Cause Investigation, Error Sanitization & Session State Fix on `afnan`)
+
+- **Scope:** Resolved the `YPT API error (code 112)` issue and fixed connection state handling for verified users without active sessions:
+   1. **Traced Error 112:**
+      - Origin: Yeolpumta's `POST /user/sign-in-jwt` endpoint (`https://pi.tgclab.com/v1/user/sign-in-jwt`) returning `{ s: false, c: 112, m: "" }`.
+      - Meaning: `c: 112` is Yeolpumta's internal error code for **"Wrong password" / Invalid credentials** (`c: 113` = Unknown email, `c: 114` = Account suspended).
+      - In `ypt-js`: throws `YptAuthError("YPT API error (code 112)")`.
+      - Cause of frontend display: backend action was passing `error.message` verbatim without classifying or sanitizing it.
+   2. **Pure Domain Error Classification (`features/ypt/domain/ypt-error-classifier.ts`):**
+      - Created pure domain classifier mapping error codes, HTTP statuses, and network failures to user-friendly, sanitized messages:
+         - Code 112 -> `INVALID_CREDENTIALS` ("Unable to authenticate with Yeolpumta. Incorrect password. Please check your credentials and try again.")
+         - Code 113 -> `ACCOUNT_NOT_FOUND` ("Unable to authenticate with Yeolpumta. No account found with this email. Please check your email and try again.")
+         - Code 114 -> `ACCOUNT_SUSPENDED` ("Your Yeolpumta account has been suspended. Please contact Yeolpumta support.")
+         - HTTP 401 -> `SESSION_EXPIRED` ("Your Yeolpumta session has expired. Please reconnect your account.")
+         - HTTP 429 -> `RATE_LIMITED` ("Too many authentication attempts. Please wait before retrying.")
+         - Network errors -> `NETWORK_ERROR` ("Yeolpumta servers are temporarily unreachable. Please check your internet connection and try again.")
+      - Generates safe structured logging context excluding passwords, tokens, or credentials.
+   3. **Authentication Rate Limiting (`core/security/rate-limiter.ts`):**
+      - In-memory sliding window rate limiter enforcing max 5 authentication attempts per 5 minutes per user. Resets on success.
+   4. **Connection State Management (Phase 5 Fixes):**
+      - **CASE 2 (Preserve valid session):** Reconnection failure leaves existing valid session and tokens completely untouched.
+      - **CASE 3 (Verified ID without active session):** For users with legacy verified `yptId` (e.g. `11338944`) who haven't connected their session, the UI no longer falsely claims "Study synchronization is active." Instead, displays "Verified • Session Inactive" and provides a direct `[Connect YPT Session]` call to action while disabling sync until connected.
+      - **CASE 4 & 5 (Safe updates):** `saveAuthenticatedYptConnection` preserves `status: VERIFIED` when connecting for an already verified user. Authentication failures do not modify or delete stored identities.
+   5. **Credential Security & Disclosures (Phase 6 Fixes):**
+      - Corrected misleading UI text: credentials are processed securely server-side to authenticate with Yeolpumta's official API and are never stored in plaintext (only encrypted refresh tokens retained).
+      - Passwords are automatically cleared from client state on error (`setPassword("")`).
+- **Quality Gates & Verification Results (100% Green):**
+   - `npm run typecheck`: 0 errors.
+   - `npm test`: 149 test files passed, 1,397/1,397 tests green (including new classifier, rate limiter, actions, and settings card tests).
+   - `npm run build`: 17/17 App Router routes compiled cleanly.
+- **NEXT STEP:** Maintainer or participant opens `/wallet` to connect YPT session, select group identity, and synchronize study hours.
+
+### Session 119 — 2026-10-16 (Pokémon Catalogue Importer Removal & Schema Normalization via DB Backfill on `afnan`)
+
+- **Scope:** Resolved the CI failure caused by the gitignored `pokemon_metadata.json` bundle by making the database the single source of truth for the Pokémon catalogue, deleting the one-off importer path, and normalizing the denormalized `PokemonSpecies.metadata` JSON into typed columns + child tables via a one-time backfill migration.
+- **Root Cause:** `features/pokemon/data/pokemon-bundle-importer.test.ts` dry-ran the real `pokemon_metadata.json` at repo root, which is now in `.gitignore` (lines 40–43). It exists locally but never in CI checkout, so `npm run test` failed with `Pokemon metadata bundle file not found`.
+- **Schema Normalization (`prisma/schema.prisma`):**
+   - Promoted `PokemonSpecies` metadata scalars to columns: `specialAttack`, `specialDefense`, `speed`, `baseStatTotal`, `heightDecimetres`, `weightHectograms`, `baseExperience`, `color`, `captureRate`, `baseHappiness`, `hatchCounter`, `evolvesFromSpeciesId`, `evolutionChainId`, `growthRateId`.
+   - Added `PokemonForm` (unique `pokemonId`/`slug`, `speciesId` FK cascade) and `PokemonAbility` (`@@unique([speciesId, name])`, `speciesId` FK cascade).
+   - Dropped the denormalized `PokemonSpecies.metadata` column (kept `UserPokemon.metadata`).
+- **Backfill Migration (`prisma/migrations/20261022000000_normalize_pokemon_catalogue/migration.sql`):**
+   - Adds the columns/tables, then one-time transforms the existing `metadata` JSON in the DB into the new shape (`jsonb_array_elements` for `abilities`/`forms`, scalar casts for the rest), then drops the column.
+   - Non-reversible — requires a DB snapshot before deploy.
+- **Importer Removal:** Deleted `features/pokemon/data/pokemon-bundle-importer.ts`, its `...test.ts`, `scripts/import-pokemon-bundle.ts`, and the vestigial `prisma/seed-pokemon.ts`. Removed the `db:import:pokemon` and `db:seed:pokemon` npm scripts and the `seedPokemonCatalogue` call from `prisma/seed.ts`. `.gitignore` bundle entries and the local raw files were left in place.
+- **Consumer Updates:** `pokemon.schema.ts` (dropped `metadata`, added new fields + `PokemonFormSchema`/`PokemonAbilitySchema`), `pokemon-catalogue.repository.ts` (new DTO fields, `forms`/`abilities` includes on detail queries and `forms` on the list query, admin upsert remapped), `pokemon-detail-modal.tsx` (reads normalized columns + `forms` relation). Updated affected pokemon test fixtures.
+- **Quality Gates Verified:**
+   - `npm run typecheck`: 0 errors.
+   - `npm run test`: 152 test files, 1417/1417 tests green (importer test removed).
+- **Re-seed path (`scripts/seed-pokemon-catalogue.ts` + `npm run db:seed:pokemon`):** Offline seeder that reads a raw metadata bundle and writes the normalized catalogue (idempotent upserts on `slug`; replaces `forms`/`abilities` on re-run). Flags: `--file=<path>` (default `./pokemon_metadata.json`), `--limit=<N>`, `--dry-run`. Used to seed the dev DB `holdmetoit3`: **1,025 species / 326 forms / 2,411 abilities** (generation coverage 1–9 exact).
+- **NEXT STEP:** Maintainer snapshots the hosted DB, applies `20261022000000_normalize_pokemon_catalogue` (`npx prisma migrate deploy`), then runs `npm run db:seed:pokemon` (with the raw bundle available) and spot-checks `PokemonForm` (326) / `PokemonAbility` counts and the `/pokemon` detail modal.

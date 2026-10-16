@@ -34,6 +34,7 @@ import {
    getTeamColorPalette,
    getTeamBadgeStyle,
 } from "@/features/challenges/domain/team-colors";
+import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
 import {
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
@@ -892,6 +893,15 @@ export function ChallengeLeaderboardTab({
                                                       >
                                                          {entry.displayName}
                                                       </Link>
+                                                      {typeof entry.trophies ===
+                                                         "number" && (
+                                                         <TrophyRoleBadge
+                                                            trophies={
+                                                               entry.trophies
+                                                            }
+                                                            size="sm"
+                                                         />
+                                                      )}
                                                       <YptStatusPill
                                                          status={entry.status}
                                                       />
@@ -1050,6 +1060,12 @@ export function ChallengeLeaderboardTab({
                                        >
                                           {entry.displayName}
                                        </Link>
+                                       {typeof entry.trophies === "number" && (
+                                          <TrophyRoleBadge
+                                             trophies={entry.trophies}
+                                             size="sm"
+                                          />
+                                       )}
                                        <YptStatusPill status={entry.status} />
                                        <span
                                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0"
@@ -1212,6 +1228,13 @@ export function ChallengeLeaderboardTab({
                                                 >
                                                    {entry.displayName}
                                                 </Link>
+                                                {typeof entry.trophies ===
+                                                   "number" && (
+                                                   <TrophyRoleBadge
+                                                      trophies={entry.trophies}
+                                                      size="sm"
+                                                   />
+                                                )}
                                                 <YptStatusPill
                                                    status={entry.status}
                                                 />

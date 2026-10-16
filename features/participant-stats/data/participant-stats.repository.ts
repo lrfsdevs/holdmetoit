@@ -7,6 +7,11 @@ import {
    calculateParticipantAccountability,
 } from "../domain/participant-stats";
 import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
+import {
+   getUserCompetitiveStats,
+   getTrophyHistory,
+} from "@/features/trophies/data/trophy.repository";
+import { getRankForTrophies } from "@/features/trophies/domain/trophy-rank";
 
 export interface GetChallengeParticipantStatsOptions {
    currentUserId?: string;
@@ -33,6 +38,7 @@ export async function getChallengeParticipantStats(
                username: true,
                name: true,
                image: true,
+               trophyBalance: true,
             },
          },
          team: {
@@ -183,6 +189,44 @@ export async function getChallengeParticipantStats(
       participant.user.username ||
       "Scholar";
 
+   const userTrophies = participant.user.trophyBalance ?? 0;
+   const rankCalc = getRankForTrophies(userTrophies);
+   let competitive = null;
+
+   try {
+      const [compStats, historyResult] = await Promise.all([
+         getUserCompetitiveStats(participant.userId),
+         getTrophyHistory(participant.userId, { limit: 10 }),
+      ]);
+
+      if (compStats) {
+         competitive = {
+            trophies: compStats.trophies,
+            role: compStats.rank.role,
+            wins: compStats.wins,
+            losses: compStats.losses,
+            winRate: compStats.winRate,
+            coins: compStats.coins,
+            totalStudySeconds: compStats.totalStudySeconds,
+            yptStatus: compStats.yptStatus,
+            yptId: compStats.yptId,
+            trophyHistory: historyResult.transactions.map((h) => ({
+               id: h.id,
+               amount: h.amount,
+               balanceAfter: h.balanceAfter,
+               type: h.type,
+               description: h.description,
+               createdAt:
+                  typeof h.createdAt === "string"
+                     ? h.createdAt
+                     : h.createdAt.toISOString(),
+            })),
+         };
+      }
+   } catch {
+      competitive = null;
+   }
+
    return {
       profile: {
          participantId: participant.id,
@@ -202,11 +246,14 @@ export async function getChallengeParticipantStats(
          challengeTitle: participant.challenge.title,
          challengeFormat: participant.challenge.format,
          challengeStatus: scoreboard.status,
+         trophies: userTrophies,
+         role: rankCalc.role,
       },
       summary,
       dailyHistory,
       teamStats,
       accountability,
+      competitive,
       viewer: {
          isAdmin: isEffectiveAdmin,
          isOwner,
