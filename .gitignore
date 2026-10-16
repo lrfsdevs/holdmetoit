@@ -35,3 +35,8 @@ yarn-error.log*
 
 # vitest
 .vitest
+.agents/agents
+.agents/rules
+.agents/ecc-install-state.json
+.agents/workflows
+
