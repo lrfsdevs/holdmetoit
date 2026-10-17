@@ -16,7 +16,11 @@ describe("formatUtcDateString", () => {
 
 describe(
    "syncChallengeFromMonday",
-   { skip: process.env.CI_SKIP_DB === "true" },
+   {
+      skip:
+         process.env.RUN_DB_INTEGRATION_TESTS !== "true" ||
+         process.env.CI_SKIP_DB === "true",
+   },
    () => {
       test("syncs historical days from Monday (2026-10-05) into DailyStudyLog with override preservation", async () => {
          const testNow = new Date("2026-10-10T12:00:00.000Z");

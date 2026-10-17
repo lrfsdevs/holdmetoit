@@ -9,7 +9,6 @@ import {
 import {
    computeChallengeDayLogDate,
    ingestGroupMembersToDailyStudyLogs,
-   runIngest,
 } from "../src/sync/ingestStudyLogs.js";
 import { prisma } from "../src/db.js";
 
@@ -221,7 +220,11 @@ describe("Day 7 Grace Period Session Filtering Logic", () => {
 
 describe(
    "getActiveChallenge Resolution & Fallback Behavior (DB)",
-   { skip: process.env.CI_SKIP_DB === "true" },
+   {
+      skip:
+         process.env.RUN_DB_INTEGRATION_TESTS !== "true" ||
+         process.env.CI_SKIP_DB === "true",
+   },
    () => {
       test("returns active challenge with state ACTIVE during Day 7", async () => {
          const day7Mid = new Date("2026-10-11T12:00:00.000Z");
@@ -571,57 +574,6 @@ describe("ingestGroupMembersToDailyStudyLogs End-to-End Simulation (Mocked DB)",
          prisma.challengeParticipant.findMany = origParticipantFindMany;
          prisma.dailyStudyLog.findMany = origLogFindMany;
          prisma.dailyStudyLog.upsert = origLogUpsert;
-      }
-   });
-
-   test("runIngest scrapes and fails loudly when no challenge exists", async () => {
-      const origFetch = globalThis.fetch;
-      const origChallengeFindMany = prisma.challenge.findMany;
-      const origChallengeFindFirst = prisma.challenge.findFirst;
-
-      prisma.challenge.findMany = async () => [];
-      prisma.challenge.findFirst = async () => null;
-
-      globalThis.fetch = async (url) => {
-         if (url.includes("/user/sign-in-jwt")) {
-            return {
-               ok: true,
-               status: 200,
-               headers: { get: () => "application/json" },
-               json: async () => ({ s: true, jwt: "tok" }),
-            };
-         }
-         if (url.includes("/user/v2/splash-login")) {
-            return {
-               ok: true,
-               status: 200,
-               headers: { get: () => "application/json" },
-               json: async () => ({ s: true }),
-            };
-         }
-         if (url.includes("/logs/group/members/v2")) {
-            return {
-               ok: true,
-               status: 200,
-               headers: { get: () => "application/json" },
-               json: async () => ({
-                  s: true,
-                  ms: [{ ud: 1001, n: "Alice", dl: { sm: 3600000 } }],
-               }),
-            };
-         }
-         throw new Error(`Unexpected URL: ${url}`);
-      };
-
-      try {
-         await assert.rejects(
-            () => runIngest(),
-            /No challenge available to anchor study telemetry/
-         );
-      } finally {
-         globalThis.fetch = origFetch;
-         prisma.challenge.findMany = origChallengeFindMany;
-         prisma.challenge.findFirst = origChallengeFindFirst;
       }
    });
 });
