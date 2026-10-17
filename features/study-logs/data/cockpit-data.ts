@@ -170,14 +170,17 @@ export async function getParticipantCockpit(
 
    const userTasks = await getUserCategorizedTasks(userId);
 
+   const isSolo = participant.challenge.format === "SOLOS";
+
    return {
       challengeId: participant.challengeId,
       challengeTitle: participant.challenge.title,
       challengeStatus,
       challengeFormat: participant.challenge.format,
-      teamName: participant.team?.name ?? "Unassigned",
-      teamColor: participant.team?.color ?? null,
-      teamIcon: participant.team?.iconEmoji ?? "⏳",
+      teamName:
+         participant.team?.name ?? (isSolo ? "Solo Scholar" : "Unassigned"),
+      teamColor: participant.team?.color ?? (isSolo ? "#3b82f6" : null),
+      teamIcon: participant.team?.iconEmoji ?? (isSolo ? "⚡" : "⏳"),
       participant: {
          id: participant.id,
          userId: participant.userId,

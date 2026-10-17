@@ -362,9 +362,13 @@ export function buildScoreboardViewModel(
          username: p.user.username,
          image: p.user.image,
          teamId: p.teamId ?? "no-assigned",
-         teamName: team?.name ?? "Unassigned",
-         teamColor: team?.color ?? null,
-         teamIcon: team?.iconEmoji ?? "⏳",
+         teamName:
+            team?.name ??
+            (challenge.format === "SOLOS" ? "Solo Scholar" : "Unassigned"),
+         teamColor:
+            team?.color ?? (challenge.format === "SOLOS" ? "#3b82f6" : null),
+         teamIcon:
+            team?.iconEmoji ?? (challenge.format === "SOLOS" ? "⚡" : "⏳"),
          totalLoggedSeconds,
          totalLoggedClock: formatSecondsToClock(totalLoggedSeconds),
          todayLoggedSeconds,
