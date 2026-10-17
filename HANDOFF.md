@@ -11,14 +11,14 @@
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-18, Session 115 — Solo Free-For-All Readiness & Host Pardon UI on `krish`)                                                                                                                                                                                              |
-| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                        |
-| `npm run test`                               | ✅ 106 files green (1144/1144 tests passing)                                                                                                                                                                                                                                            |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                    |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~99%** — Solo Free-For-All auto-punishment math resolved; unlimited solo team capacity unlocked; "⚡ Solo Scholar" branding unified; `FEAT-PUN-04` Host Pardon Modal implemented and integrated into Manage tab; remaining minor gap is deleted Punishment Wall UI (`FEAT-PUN-02`) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                              |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                          |
+| Gate                                         | Result (2026-10-18, Session 116 — Punishment Wall Restoration & Solo Lifecycle E2E Verification on `krish`)                                                                                                                                                                                                                                                     |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                |
+| `npm run test`                               | ✅ 108 files green (1149/1149 tests passing)                                                                                                                                                                                                                                                                                                                    |
+| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                            |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ✅ **100%** — All P0 MVP features implemented and verified: Solo Free-For-All auto-punishment math resolved; unlimited solo team capacity unlocked; "⚡ Solo Scholar" branding unified; `FEAT-PUN-04` Host Pardon Modal live; `FEAT-PUN-02` Punishment Wall restored in Overview tab; automated Solo Challenge Lifecycle E2E test suite green (1149/1149 tests) |
+| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                      |
+| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                  |
 
 ### 1.1 Live Routes
 
@@ -71,7 +71,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | `FEAT-LEAD-02`  | Unified standings table            |   ✅   | Desktop table plus mobile card layout. Standings now carry real weekly-task counts (challenge-linked, soft-deletes included) which also drive the sort tie-break — no "Goals Done" column                                                                                                                                                                                                  |
 | `FEAT-LEAD-03`  | Catch-up deficit engine            |   ✅   | `deficit.ts` + `cockpit-progress-card.tsx`                                                                                                                                                                                                                                                                                                                                                 |
 | `FEAT-PUN-01`   | Three-condition auto-flagging      |   ✅   | `evaluateLockOutcome` (pure): saved = hours met AND all challenge-linked weekly tasks complete (soft-deleted rows count) AND in a winning team; ties never punish (`resolveWinningTeamIds`). `PunishmentRecord` row presence = punished; pardons preserved                                                                                                                                 |
-| `FEAT-PUN-02`   | Punishment Wall                    |   ❌   | `punishment-wall.tsx` was deleted in `88779bd`. The Overview tab only mentions it in copy                                                                                                                                                                                                                                                                                                  |
+| `FEAT-PUN-02`   | Punishment Wall                    |   ✅   | `PunishmentWall` implemented in `features/accountability/presentation/punishment-wall.tsx` with Obsidian tokens; integrated into `ChallengeOverviewTab` displaying live deficit preview & post-lock accountability roster; unit tested in `punishment-wall.test.tsx`                                                                                                                       |
 | `FEAT-PUN-03`   | Punishment PFP download button     |   ✅   | Overview tab contains dedicated Forfeit Avatar & Accountability card with image preview, Law L6 explanation, and direct "Download Forfeit PFP" button                                                                                                                                                                                                                                      |
 | `FEAT-PUN-04`   | Host pardon                        |   ✅   | `AdminPardonModal` implemented in `features/accountability/presentation/admin-pardon-modal.tsx` with Obsidian styling and error/success feedback; integrated into Manage tab roster actions with `cacheTags.challengeScoreboard` invalidation and unit tests in `admin-pardon-modal.test.tsx`                                                                                              |
 | `FEAT-WRAP-01`  | Challenge wrapped story popup      |   ✅   | `features/wrapped/presentation/challenge-wrapped-modal.tsx`: auto-opens for enrolled participants while locked; localStorage-first flags (`hmt:wrapped:{challengeId}`); `isWrappedSeen` flips at the feedback slide; 3-day window + page-load auto-seen (`markWrappedSeenIfExpiredAction`); feedback flow deferred (button ships empty); gated behind `challenge_wrapped_v1` (fail-closed) |
@@ -503,8 +503,38 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `participant.repository.test.ts`: Added tests verifying uncapped enrollment for `SOLOS` challenges.
    - `admin-pardon-modal.test.tsx`: Added 4 unit tests covering modal rendering, reason validation, action submission, and close handlers.
    - `challenge-manage-tab.test.tsx` and `challenge-images.test.tsx`: Verified all tests pass.
+- **NEXT STEP (completed in Session 116):** Restore Punishment Wall UI (`FEAT-PUN-02`) and build automated Solo Challenge lifecycle E2E verification suite.
+
+### Session 116 — 2026-10-18 (Punishment Wall Restoration & Solo Challenge Lifecycle E2E Suite on `krish`)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Admin Operations Agent.
+- **Scope & Objectives:**
+   1. Restore and integrate the Punishment Wall (`FEAT-PUN-02`) into the challenge Overview tab (`ChallengeOverviewTab`), completing the final missing P0 user interface component.
+   2. Implement an automated end-to-end Solo Challenge Lifecycle verification suite (`features/e2e/solo-challenge-lifecycle.test.ts`), completing Phase 4 of `solo-blockers.md`.
+- **Implementation & Resolution:**
+   - **`PunishmentWall` Component (`features/accountability/presentation/punishment-wall.tsx`):**
+      - Built using Obsidian Dark design tokens (`#141414`, `#1c1c1c`, `#262626`, `#ff5757`, `#85ff93`).
+      - Pre-lock mode: Previews scholars in live deficit / catch-up mode, remaining deficit hours, and weekly goals progress, with an accessible zero-state alert when all participants are on track.
+      - Post-lock mode: Renders the final accountability roster displaying punished scholars and excused scholars (host pardons).
+      - Preserves 1-click direct Forfeit Avatar download button (`FEAT-PUN-03`).
+      - Integrated directly into `features/challenges/presentation/challenge-overview-tab.tsx`.
+   - **Automated Solo Challenge Lifecycle E2E Suite (`features/e2e/solo-challenge-lifecycle.test.ts`):**
+      - Tests full end-to-end Solo Free-For-All challenge lifecycle:
+         1. Admin creates `SOLOS` challenge with uncapped solo team (`maxMembers: null`).
+         2. Multiple scholars enroll without hitting capacity limits; declarations lock upon kickoff transition (`UPCOMING` -> `ACTIVE`).
+         3. Dynamic daily study logging and catch-up deficit pace calculation without grace passes (Law L3).
+         4. Results lock evaluation (Law L6): verifies participants meeting hours and goals are saved (bypassing losing_team penalty for `SOLOS`), participants with deficits are punished with `hours_deficit`, and participants with incomplete tasks are punished with `incomplete_weekly_tasks`.
+         5. Wrapped story generation (`buildChallengeWrappedViewModel`): verifies `verdict: "saved"` for compliant scholars, `verdict: "punished"` for deficit scholars, and `teamResult: "winner"` across all solo participants.
+- **Test Coverage:**
+   - `features/accountability/presentation/punishment-wall.test.tsx`: 4 unit tests covering header rendering, zero-state active, live deficit members, and completed roster.
+   - `features/challenges/presentation/challenge-overview-tab.test.tsx`: Updated tests verifying integrated PunishmentWall rendering.
+   - `features/e2e/solo-challenge-lifecycle.test.ts`: 1 comprehensive E2E journey test passing.
 - **Quality Gates Verified:**
-   - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (106 test files, 1144/1144 tests green).
-   - `npm run build` passed (all 12 routes compiled cleanly).
-- **NEXT STEP (Phase 4):** End-to-end rehearsal and verification of the Solo Challenge lifecycle (Create Solo Challenge -> Enroll Participants -> Kickoff -> Daily Log -> Final Lock & Results).
+   - `npx tsc --noEmit` passed (0 errors).
+   - `npm run test` passed (108 test files, 1149/1149 tests green).
+   - `npx next build` passed (all 12 routes compiled cleanly).
+- **NEXT STEP (Monday Kickoff Operations):**
+   1. Confirm Supabase storage environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+   2. Confirm Discord OAuth configuration (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, redirect URI) and admin credentials (`DISCORD_ADMIN_ROLE_IDS` or `DEV_DISCORD_IDS`).
+   3. Run `npx prisma migrate status` on the production database.
+   4. Host creates the Solo Free-For-All challenge on Monday, participants enroll, and host triggers "Start Event Now".

@@ -13,14 +13,14 @@ Before launching the Solo Free-For-All challenge on Monday, we identified **2 Cr
 
 ### Status Tracker
 
-| #   | Item                                                                 | Severity    | Status                    | Verification                                                                                   |
-| --- | -------------------------------------------------------------------- | ----------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1   | Solo Auto-Punishment Math (Bypass losing team penalty for SOLOS)     | 🚨 Critical | ✅ **RESOLVED (Phase 2)** | Unit tested in `challenge-admin.repository.test.ts`                                            |
-| 2   | Team Capacity Bottleneck (`maxMembers = 1` blocking solo enrollment) | 🚨 Critical | ✅ **RESOLVED (Phase 2)** | Unit tested in `participant.repository.test.ts`                                                |
-| 3   | Missing Host Pardon UI (`FEAT-PUN-04`)                               | 🚨 Critical | ✅ **RESOLVED (Phase 3)** | Implemented `AdminPardonModal`, wired into Manage tab, tested in `admin-pardon-modal.test.tsx` |
-| 4   | "Unassigned ⏳" Team Branding in Cockpit/Leaderboard/Profile         | ⚠️ Polish   | ✅ **RESOLVED (Phase 2)** | Shows "⚡ Solo Scholar" for SOLOS                                                              |
-| 5   | Leaderboard Head-to-Head Banner on Solos                             | ⚠️ Polish   | ℹ️ Handled                | Auto-hides when < 2 teams; emphasizes podium                                                   |
-| 6   | Missing Punishment Wall UI (`FEAT-PUN-02`)                           | ⚠️ Polish   | ⏸️ P0 Backlog             | Overview tab PFP download active                                                               |
+| #   | Item                                                                 | Severity    | Status                    | Verification                                                                                               |
+| --- | -------------------------------------------------------------------- | ----------- | ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | Solo Auto-Punishment Math (Bypass losing team penalty for SOLOS)     | 🚨 Critical | ✅ **RESOLVED (Phase 2)** | Unit tested in `challenge-admin.repository.test.ts`                                                        |
+| 2   | Team Capacity Bottleneck (`maxMembers = 1` blocking solo enrollment) | 🚨 Critical | ✅ **RESOLVED (Phase 2)** | Unit tested in `participant.repository.test.ts`                                                            |
+| 3   | Missing Host Pardon UI (`FEAT-PUN-04`)                               | 🚨 Critical | ✅ **RESOLVED (Phase 3)** | Implemented `AdminPardonModal`, wired into Manage tab, tested in `admin-pardon-modal.test.tsx`             |
+| 4   | "Unassigned ⏳" Team Branding in Cockpit/Leaderboard/Profile         | ⚠️ Polish   | ✅ **RESOLVED (Phase 2)** | Shows "⚡ Solo Scholar" for SOLOS                                                                          |
+| 5   | Leaderboard Head-to-Head Banner on Solos                             | ⚠️ Polish   | ℹ️ Handled                | Auto-hides when < 2 teams; emphasizes podium                                                               |
+| 6   | Missing Punishment Wall UI (`FEAT-PUN-02`)                           | ⚠️ Polish   | ✅ **RESOLVED (Phase 4)** | Implemented `PunishmentWall`, integrated into `ChallengeOverviewTab`, tested in `punishment-wall.test.tsx` |
 
 ---
 
@@ -86,11 +86,15 @@ Before launching the Solo Free-For-All challenge on Monday, we identified **2 Cr
 
 ---
 
-### 6. Missing Punishment Wall Component (`FEAT-PUN-02`) — ⏸️ P0 Backlog
+### 6. Punishment Wall Component (`FEAT-PUN-02`) — ✅ RESOLVED (Phase 4)
 
-- **Location:** `features/leaderboard/presentation/` (formerly `punishment-wall.tsx`).
-- **Status:** Deleted during the Obsidian refactor; pending restoration.
-- **Current Fallback:** The Punishment PFP download card is live and accessible on the Overview tab for flagged participants.
+- **Location:** `features/accountability/presentation/punishment-wall.tsx`, `features/challenges/presentation/challenge-overview-tab.tsx`.
+- **Status:** Fully restored and styled with Obsidian Dark tokens (`#141414`, `#1c1c1c`, `#262626`, `#ff5757`, `#85ff93`).
+- **Functionality:**
+   - Pre-lock (`UPCOMING` / `ACTIVE`): Displays live deficit watch for scholars in catch-up mode with current deficit hours, task completion status, and dynamic alert zero-state when all scholars are on track.
+   - Post-lock (`COMPLETED`): Displays final accountability roster of punished scholars (unmet hours / tasks) and excused scholars (host pardons).
+   - Preserves 1-click forfeit avatar download button (`FEAT-PUN-03`).
+   - Covered by unit tests in `features/accountability/presentation/punishment-wall.test.tsx` (4 tests) and `challenge-overview-tab.test.tsx` (9 tests).
 
 ---
 
@@ -128,5 +132,10 @@ Before launching on Monday, verify these operational prerequisites:
    4. Created unit test suite in `features/accountability/presentation/admin-pardon-modal.test.tsx` (4 tests passing).
    5. Decoupled client modal imports from server-only auth dependencies via dynamic import.
    6. Verified 100% green test suite (1,144/1,144 tests passing across 106 test files) and production build.
-- ⏳ **Phase 4 (Next):**
-   1. End-to-end rehearsal and verification of the Solo Challenge lifecycle (Create Solo Challenge -> Enroll Participants -> Kickoff -> Daily Log -> Final Lock & Results).
+- ✅ **Phase 4 (Complete):**
+   1. Restored and integrated `PunishmentWall` (`FEAT-PUN-02`) with live deficit preview and final punished/excused accountability roster.
+   2. Built automated end-to-end Solo Challenge Lifecycle verification suite in `features/e2e/solo-challenge-lifecycle.test.ts` covering creation, multi-enrollment (uncapped capacity), kickoff locking, daily logging & catch-up deficit calculation, results lock (three-condition evaluation bypassing losing_team penalty for solos), and wrapped story generation.
+   3. Verified 100% green test suite (1,149/1,149 tests passing across 108 test files) and production build (12 routes clean).
+- ⏳ **Phase 5 (Monday Kickoff Operations):**
+   1. Execute Tier 3 operational checklist: verify Supabase bucket, Discord OAuth envs, and production database migrations (`prisma migrate status`).
+   2. Host creates Solo challenge via `/admin/challenges/new`, participants enroll, and host triggers "Start Event Now".
