@@ -292,3 +292,19 @@ Live keys wired into production code, with the surfaces each one gates:
    - Once created, a flag's `key` cannot be renamed through the UI. Renaming keys in a live database breaks code references.
 4. **Feature Flags $\neq$ Permissions:**
    - Flags dictate _what code branches execute_, not _who is authorized to perform privileged operations_. A participant with a feature flag enabled still cannot access administrative endpoints.
+
+---
+
+## 8. DevBoard Sections (Feature Flags + YPT Verification)
+
+The `/devboard` route is a **DEV-only** workspace with a top-level section switcher:
+
+- **Feature Flags** — the flag table described in §1–§7 (default section).
+- **YPT Verification** — the YPT identity claim review surface, moved here from the `/admin` host console.
+
+Notes:
+
+- The route is gated to the `DEV` role (`app/devboard/layout.tsx` + `requireDevUser()` in the actions).
+- The YPT verification actions (`features/ypt/api/ypt-claim.actions.ts`: `getAdminClaimsListAction`, `adminApproveClaimAction`, `adminRejectClaimAction`, `adminRevokeClaimAction`) are guarded by `requireDevUser()` and return `FORBIDDEN_NOT_DEV` for non-DEV callers. The participant-facing YPT actions are unchanged.
+- The panel lives in `features/ypt/presentation/ypt-verification-panel.tsx` and renders under the **YPT Verification** tab; it does not affect flag evaluation.
+- The `/admin` host console now only carries trophy management + the challenges entry point.

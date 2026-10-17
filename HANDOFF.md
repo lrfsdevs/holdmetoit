@@ -699,3 +699,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` 154 files / 1,452 tests green; `npm run build` clean (17 routes); live DB spot-check via temporary `tsx` scripts (since removed) confirmed 24/page, 1025 total, rarity/name ordering, search, and the ownership filter.
 - **Docs:** `docs/pokemon/README.md` §6 added.
 - **NEXT STEP:** Optional — layer request caching on the catalogue action if the extra round-trips per interaction feel slow in practice; otherwise none.
+
+### Session 124 — 2026-10-18 (Header Admin Color, `/admin` Obsidian Theming & YPT Verification → DevBoard)
+
+- **Scope:** (1) header Admin nav link recolored to match the other nav items; (2) the `/admin` shell moved onto `obsidian-*` tokens; (3) YPT identity verification moved from the host admin console into the DEV-only DevBoard.
+- **Header (`components/ui/header.tsx`):** Admin link `text-emerald-400 hover:text-emerald-300` → `text-[#868686] hover:text-[#f4f3f6]` (identical to every other nav item).
+- **`/admin` theming:** `app/admin/layout.tsx`, `app/admin/loading.tsx`, `app/admin/challenges/new/page.tsx`, `app/admin/challenges/new/loading.tsx` converted from hardcoded hex to `obsidian-*` tokens (`bg-obsidian-bg`/`card`/`elevated`/`cardHover`, `border-obsidian-border`/`borderSubtle`, `text-obsidian-text`/`textDim`, `bg-obsidian-text/20`). `AdminConsoleView` was already token-based. No hex remains under `app/admin`.
+- **YPT → DevBoard:** NEW `features/ypt/presentation/ypt-verification-panel.tsx` (extracted from the admin console; themed; non-blocking inline error instead of `alert()`; reject dialog now traps focus, closes on Escape, and restores focus; stat counters are real buttons with `aria-pressed`). `features/feature-flags/presentation/devboard-view.tsx` gained a `Feature Flags | YPT Verification` section switcher (`role="tablist"`, `aria-selected`, `aria-controls`) that mounts the panel.
+- **DEV-only guard:** `features/ypt/api/ypt-claim.actions.ts` — the four admin actions (`getAdminClaimsListAction`, `adminApproveClaimAction`, `adminRejectClaimAction`, `adminRevokeClaimAction`) now call `requireDevUser()` and return `FORBIDDEN_NOT_DEV`; participant-facing actions untouched. Added `revalidatePath("/devboard")` on mutations.
+- **Admin console (`features/admin/presentation/admin-console-view.tsx`):** YPT tab/section/handlers/reject modal removed; now a trophy-management console (+ Challenges link).
+- **Access change (intended):** YPT verification is DEV-only; ADMINs no longer see it.
+- **Tests:** NEW `features/ypt/api/ypt-claim.actions.test.ts` (DEV guard allow/deny); `devboard-view.test.tsx` mocks the panel and asserts the section switcher.
+- **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` 155 files / 1,455 tests green; `npm run build` clean (17 routes).
+- **Docs:** `docs/feature-flags/README.md` §8 added.
+- **NEXT STEP:** Optional — bring the DevBoard's remaining hardcoded hex onto `obsidian-*` (deferred; only the new switcher + YPT panel are tokenized); otherwise none.

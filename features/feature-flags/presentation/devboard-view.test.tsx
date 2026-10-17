@@ -16,6 +16,10 @@ vi.mock("../api/feature-flags.actions", () => ({
    searchDiscordUsersAction: vi.fn(),
 }));
 
+vi.mock("@/features/ypt/presentation/ypt-verification-panel", () => ({
+   YptVerificationPanel: () => null,
+}));
+
 describe("DevBoardView Presentation", () => {
    it("renders empty state when there are no feature flags", () => {
       const html = renderToStaticMarkup(
@@ -97,5 +101,16 @@ describe("DevBoardView Presentation", () => {
       expect(html).toContain('aria-label="Actions for voice_logging"');
       expect(html).not.toContain("font-mono");
       expect(html).not.toContain("#a78bfa");
+   });
+
+   it("renders the Feature Flags | YPT Verification section switcher", () => {
+      const html = renderToStaticMarkup(
+         createElement(DevBoardView, { initialFlags: [] })
+      );
+
+      expect(html).toContain("Feature Flags");
+      expect(html).toContain("YPT Verification");
+      expect(html).toContain('role="tablist"');
+      expect(html).toContain('aria-selected="true"');
    });
 });

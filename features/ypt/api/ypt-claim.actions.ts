@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSessionUser } from "@/features/auth/api/require-session";
-import { requireAdminUser } from "@/features/auth/api/require-admin";
+import {
+   DevAccessError,
+   requireDevUser,
+} from "@/features/auth/api/require-dev";
 import {
    getEligibleYptMembers,
    getUserActiveClaim,
@@ -123,18 +126,27 @@ export async function submitYptClaimAction(input: SubmitYptClaimInput) {
    }
 }
 
+function isDevAccessError(error: unknown): boolean {
+   return (
+      error instanceof DevAccessError ||
+      (typeof error === "object" &&
+         error !== null &&
+         (error as { code?: string }).code === "FORBIDDEN_NOT_DEV")
+   );
+}
+
 export async function adminApproveClaimAction(
    claimId: string,
    reason?: string
 ) {
    try {
-      const admin = await requireAdminUser();
+      const dev = await requireDevUser();
 
       const updated = await adminApproveYptClaim({
          claimId,
          admin: {
-            id: admin.id,
-            username: admin.username,
+            id: dev.id,
+            username: dev.username,
          },
          reason,
       });
@@ -142,12 +154,20 @@ export async function adminApproveClaimAction(
       revalidatePath("/wallet");
       revalidatePath("/profile");
       revalidatePath("/admin");
+      revalidatePath("/devboard");
 
       return {
          ok: true,
          data: updated,
       };
    } catch (error) {
+      if (isDevAccessError(error)) {
+         return {
+            ok: false,
+            code: "FORBIDDEN_NOT_DEV",
+            message: "Developer permissions required.",
+         };
+      }
       return {
          ok: false,
          code: "APPROVAL_FAILED",
@@ -161,13 +181,13 @@ export async function adminApproveClaimAction(
 
 export async function adminRejectClaimAction(claimId: string, reason: string) {
    try {
-      const admin = await requireAdminUser();
+      const dev = await requireDevUser();
 
       const updated = await adminRejectYptClaim({
          claimId,
          admin: {
-            id: admin.id,
-            username: admin.username,
+            id: dev.id,
+            username: dev.username,
          },
          reason,
       });
@@ -175,12 +195,20 @@ export async function adminRejectClaimAction(claimId: string, reason: string) {
       revalidatePath("/wallet");
       revalidatePath("/profile");
       revalidatePath("/admin");
+      revalidatePath("/devboard");
 
       return {
          ok: true,
          data: updated,
       };
    } catch (error) {
+      if (isDevAccessError(error)) {
+         return {
+            ok: false,
+            code: "FORBIDDEN_NOT_DEV",
+            message: "Developer permissions required.",
+         };
+      }
       return {
          ok: false,
          code: "REJECTION_FAILED",
@@ -194,13 +222,13 @@ export async function adminRejectClaimAction(claimId: string, reason: string) {
 
 export async function adminRevokeClaimAction(claimId: string, reason: string) {
    try {
-      const admin = await requireAdminUser();
+      const dev = await requireDevUser();
 
       const updated = await adminRevokeYptClaim({
          claimId,
          admin: {
-            id: admin.id,
-            username: admin.username,
+            id: dev.id,
+            username: dev.username,
          },
          reason,
       });
@@ -208,12 +236,20 @@ export async function adminRevokeClaimAction(claimId: string, reason: string) {
       revalidatePath("/wallet");
       revalidatePath("/profile");
       revalidatePath("/admin");
+      revalidatePath("/devboard");
 
       return {
          ok: true,
          data: updated,
       };
    } catch (error) {
+      if (isDevAccessError(error)) {
+         return {
+            ok: false,
+            code: "FORBIDDEN_NOT_DEV",
+            message: "Developer permissions required.",
+         };
+      }
       return {
          ok: false,
          code: "REVOCATION_FAILED",
@@ -229,7 +265,7 @@ export async function getAdminClaimsListAction(
    options?: GetAdminClaimsOptions
 ) {
    try {
-      await requireAdminUser();
+      await requireDevUser();
       const list = await getAdminClaimsList(options);
 
       return {
@@ -237,6 +273,18 @@ export async function getAdminClaimsListAction(
          data: list,
       };
    } catch (error) {
+      if (isDevAccessError(error)) {
+         return {
+            ok: false,
+            code: "FORBIDDEN_NOT_DEV",
+            message: "Developer permissions required.",
+            data: {
+               claims: [],
+               pagination: { page: 1, limit: 20, totalCount: 0, totalPages: 1 },
+               counts: { pending: 0, verified: 0, rejected: 0 },
+            },
+         };
+      }
       return {
          ok: false,
          code: "FETCH_CLAIMS_FAILED",

@@ -241,7 +241,7 @@ export function AppHeader({
                   <Link
                      href="/admin"
                      data-testid="admin-nav-link"
-                     className="text-xs sm:text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors border-l border-[#292929] pl-2 sm:pl-3"
+                     className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
                   >
                      Admin
                   </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Flag, Plus } from "lucide-react";
+import { Flag, Plus, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
    assignTesterAction,
@@ -25,6 +25,7 @@ import { FlagAuditDrawer } from "./flag-audit-drawer";
 import { FlagEditorModal } from "./flag-editor-modal";
 import { FlagTable } from "./flag-table";
 import { TesterSelectorDialog } from "./tester-selector-dialog";
+import { YptVerificationPanel } from "@/features/ypt/presentation/ypt-verification-panel";
 
 interface DevBoardViewProps {
    initialFlags: FeatureFlagEntity[];
@@ -39,6 +40,9 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
    const [selectedFlagIds, setSelectedFlagIds] = useState<Set<string>>(
       () => new Set()
    );
+
+   // Section switcher (Feature Flags | YPT Verification)
+   const [section, setSection] = useState<"flags" | "ypt">("flags");
 
    // Modals state
    const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -320,69 +324,126 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
    return (
       <div className="space-y-6">
-         {/* DevBoard Header with Status Pills, New Flag, and Search/Filters */}
-         <DevBoardHeader
-            totalCount={totalCount}
-            globalCount={globalCount}
-            targetedCount={targetedCount}
-            killedOrDisabledCount={killedOrDisabledCount}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            onCreateClick={() => {
-               setEditingFlag(null);
-               setIsEditorOpen(true);
-            }}
-         />
+         {/* Section Switcher: Feature Flags | YPT Verification */}
+         <div
+            role="tablist"
+            aria-label="DevBoard sections"
+            className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-[#121212] border border-[#262626]"
+         >
+            <button
+               type="button"
+               role="tab"
+               aria-selected={section === "flags"}
+               id="devboard-tab-flags"
+               aria-controls="devboard-panel-flags"
+               onClick={() => setSection("flags")}
+               className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                  section === "flags"
+                     ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
+                     : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+               }`}
+            >
+               <Flag className="h-3.5 w-3.5" />
+               Feature Flags
+            </button>
+            <button
+               type="button"
+               role="tab"
+               aria-selected={section === "ypt"}
+               id="devboard-tab-ypt"
+               aria-controls="devboard-panel-ypt"
+               onClick={() => setSection("ypt")}
+               className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                  section === "ypt"
+                     ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
+                     : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+               }`}
+            >
+               <UserCheck className="h-3.5 w-3.5" />
+               YPT Verification
+            </button>
+         </div>
 
-         {/* Flag Table or Empty State */}
-         {filteredFlags.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#292929] bg-[#101010] p-12 text-center">
-               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181818] border border-[#2e2e2e] text-[#868686]">
-                  <Flag className="h-6 w-6" />
-               </div>
-               <h3 className="mt-4 text-base font-semibold text-[#f4f3f6]">
-                  {searchQuery || activeFilter !== "ALL"
-                     ? "No matching flags found"
-                     : "No feature flags configured"}
-               </h3>
-               <p className="mt-1 text-xs text-[#868686] max-w-sm mx-auto text-wrap:balance">
-                  {searchQuery || activeFilter !== "ALL"
-                     ? "Try clearing your search query or switching filters to view other release toggles."
-                     : "Create your first feature flag to safely control production rollouts without redeployments."}
-               </p>
-               <div className="mt-6">
-                  <Button
-                     onClick={() => {
-                        setEditingFlag(null);
+         {section === "flags" ? (
+            <div
+               id="devboard-panel-flags"
+               role="tabpanel"
+               aria-labelledby="devboard-tab-flags"
+               className="space-y-6"
+            >
+               {/* DevBoard Header with Status Pills, New Flag, and Search/Filters */}
+               <DevBoardHeader
+                  totalCount={totalCount}
+                  globalCount={globalCount}
+                  targetedCount={targetedCount}
+                  killedOrDisabledCount={killedOrDisabledCount}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  activeFilter={activeFilter}
+                  onFilterChange={setActiveFilter}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  onCreateClick={() => {
+                     setEditingFlag(null);
+                     setIsEditorOpen(true);
+                  }}
+               />
+
+               {/* Flag Table or Empty State */}
+               {filteredFlags.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#292929] bg-[#101010] p-12 text-center">
+                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181818] border border-[#2e2e2e] text-[#868686]">
+                        <Flag className="h-6 w-6" />
+                     </div>
+                     <h3 className="mt-4 text-base font-semibold text-[#f4f3f6]">
+                        {searchQuery || activeFilter !== "ALL"
+                           ? "No matching flags found"
+                           : "No feature flags configured"}
+                     </h3>
+                     <p className="mt-1 text-xs text-[#868686] max-w-sm mx-auto text-wrap:balance">
+                        {searchQuery || activeFilter !== "ALL"
+                           ? "Try clearing your search query or switching filters to view other release toggles."
+                           : "Create your first feature flag to safely control production rollouts without redeployments."}
+                     </p>
+                     <div className="mt-6">
+                        <Button
+                           onClick={() => {
+                              setEditingFlag(null);
+                              setIsEditorOpen(true);
+                           }}
+                           className="bg-white hover:bg-neutral-200 text-black rounded-xl text-xs font-semibold px-4 py-2 inline-flex items-center gap-1.5 active:scale-[0.96] transition-transform duration-150"
+                        >
+                           <Plus className="h-4 w-4 text-black" />
+                           <span>Create Feature Flag</span>
+                        </Button>
+                     </div>
+                  </div>
+               ) : (
+                  <FlagTable
+                     flags={filteredFlags}
+                     selectedFlagIds={selectedFlagIds}
+                     onToggleSelectAll={handleToggleSelectAll}
+                     onToggleSelectRow={handleToggleSelectRow}
+                     onToggleMaster={handleToggleMaster}
+                     onSetRolloutMode={handleSetRolloutMode}
+                     onManageTesters={(f) => setTesterFlag(f)}
+                     onViewAuditLogs={(f) => setAuditFlag(f)}
+                     onEdit={(f) => {
+                        setEditingFlag(f);
                         setIsEditorOpen(true);
                      }}
-                     className="bg-white hover:bg-neutral-200 text-black rounded-xl text-xs font-semibold px-4 py-2 inline-flex items-center gap-1.5 active:scale-[0.96] transition-transform duration-150"
-                  >
-                     <Plus className="h-4 w-4 text-black" />
-                     <span>Create Feature Flag</span>
-                  </Button>
-               </div>
+                     onDelete={handleDelete}
+                  />
+               )}
             </div>
          ) : (
-            <FlagTable
-               flags={filteredFlags}
-               selectedFlagIds={selectedFlagIds}
-               onToggleSelectAll={handleToggleSelectAll}
-               onToggleSelectRow={handleToggleSelectRow}
-               onToggleMaster={handleToggleMaster}
-               onSetRolloutMode={handleSetRolloutMode}
-               onManageTesters={(f) => setTesterFlag(f)}
-               onViewAuditLogs={(f) => setAuditFlag(f)}
-               onEdit={(f) => {
-                  setEditingFlag(f);
-                  setIsEditorOpen(true);
-               }}
-               onDelete={handleDelete}
-            />
+            <div
+               id="devboard-panel-ypt"
+               role="tabpanel"
+               aria-labelledby="devboard-tab-ypt"
+            >
+               <YptVerificationPanel />
+            </div>
          )}
 
          {/* Editor Modal */}
