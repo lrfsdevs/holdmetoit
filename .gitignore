@@ -1,18 +1,19 @@
 # dependencies
-/node_modules
+**/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
-/coverage
+**/coverage
 
 # next.js
-/.next/
-/out/
+**/.next/
+**/out/
 
-# production
-/build
+# build output
+**/dist/
+**/build/
 
 # misc
 .DS_Store
@@ -40,4 +41,3 @@ skills-lock.json
 pokemon_metadata.csv
 pokemon_metadata.json
 pokemon_metadata.sqlite
-

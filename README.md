@@ -53,33 +53,33 @@ The technology stack is locked to guarantee high velocity, zero CORS overhead, a
 
 The project maintains a lean, highly focused documentation and specification suite:
 
-| Document                                                       | Primary Authority & Purpose                                                                                                                                            |
-| :------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[FEATURES.md](FEATURES.md)**                                 | Absolute source of truth for **product behavior, screen layouts, UX flows, and phase tags** (`[P0]` to `[V2]`).                                                        |
-| **[DESIGN.md](DESIGN.md)**                                     | Absolute source of truth for **visual identity, Obsidian theme, color tokens, typography, and mobile responsive rules**.                                               |
-| **[AGENTS.md](AGENTS.md)**                                     | Absolute source of truth for **agent protocol, locked stack, stack laws L1–L9, git safety, and quality matrix**.                                                       |
-| **[ROADMAP.md](ROADMAP.md)**                                   | Product and technical evolution trajectory across phases (`[P0]` MVP $\rightarrow$ `[P1]` $\rightarrow$ `[V1]` $\rightarrow$ `[V2]`), plus current status vs timeline. |
-| **[HANDOFF.md](HANDOFF.md)**                                   | Living operational relay, verified feature completion matrix, known defects, and next step between engineering sessions.                                               |
-| **[README.md](README.md)**                                     | Developer onboarding, mission overview, locked stack matrix, and local dev setup.                                                                                      |
-| **[prisma/migrations/README.md](prisma/migrations/README.md)** | Migration baseline procedure and known schema drift.                                                                                                                   |
+| Document                                                                         | Primary Authority & Purpose                                                                                                                                            |
+| :------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[FEATURES.md](FEATURES.md)**                                                   | Absolute source of truth for **product behavior, screen layouts, UX flows, and phase tags** (`[P0]` to `[V2]`).                                                        |
+| **[DESIGN.md](DESIGN.md)**                                                       | Absolute source of truth for **visual identity, Obsidian theme, color tokens, typography, and mobile responsive rules**.                                               |
+| **[AGENTS.md](AGENTS.md)**                                                       | Absolute source of truth for **agent protocol, locked stack, stack laws L1–L9, git safety, and quality matrix**.                                                       |
+| **[ROADMAP.md](ROADMAP.md)**                                                     | Product and technical evolution trajectory across phases (`[P0]` MVP $\rightarrow$ `[P1]` $\rightarrow$ `[V1]` $\rightarrow$ `[V2]`), plus current status vs timeline. |
+| **[HANDOFF.md](HANDOFF.md)**                                                     | Living operational relay, verified feature completion matrix, known defects, and next step between engineering sessions.                                               |
+| **[README.md](README.md)**                                                       | Developer onboarding, mission overview, locked stack matrix, and local dev setup.                                                                                      |
+| **[prisma/migrations/README.md](packages/database/prisma/migrations/README.md)** | Migration baseline procedure and known schema drift.                                                                                                                   |
 
 ---
 
 ## 🗂️ Repository Structure
 
 ```text
-app/                     # Next.js App Router routes
-├── page.tsx             # Home cockpit (/)
-├── admin/               # Admin console + /admin/challenges/new wizard
-├── challenge/[id]/      # Public challenge view (Overview, Leaderboard, Summary, Manage, Audit)
-└── api/                 # auth, feedback, tasks/sync route handlers
-core/                    # auth (Auth.js), db (Prisma client), storage (Supabase), observability (LogRocket)
-features/<slice>/        # Vertical slices: domain/ · data/ · api/ · presentation/
-│                        #   accountability, audit, auth, challenges, e2e, feedback,
-│                        #   leaderboard, study-logs, tasks
-components/              # shadcn/ui primitives + shared Loading/Empty/Error states
-prisma/                  # schema.prisma, migrations/, seed.ts
+apps/
+├── web/                   # Next.js app (app/, core/, features/, components/, lib/, types/)
+└── ypt-bot/               # YPT study-log ingestion bot (Node ESM; src/, test/)
+packages/
+└── database/              # Shared Prisma schema, migrations, seed, and client singleton
+    ├── prisma/            # schema.prisma + migrations/
+    └── src/index.ts       # @holdmetoit/database (built to dist/)
+docs/                      # Shared feature documentation (pokemon, economy, feature-flags, ypt-bot)
+AGENTS.md · DESIGN.md · FEATURES.md · ROADMAP.md · HANDOFF.md · CHANGELOG.md
 ```
+
+`apps/web` keeps the Feature-First slices (`features/<slice>/` → `domain/ · data/ · api/ · presentation/`). Both apps consume the single `@holdmetoit/database` client against the same PostgreSQL database.
 
 ---
 
@@ -107,8 +107,9 @@ prisma/                  # schema.prisma, migrations/, seed.ts
 ```bash
 git clone https://github.com/Afnanpathan2004/holdmetoit.git
 cd holdmetoit
-npm install            # also runs `prisma generate`
-cp .env.example .env.local
+npm install            # workspaces + prisma generate + builds @holdmetoit/database
+cp apps/web/.env.example apps/web/.env
+# The bot reads apps/ypt-bot/.env (DATABASE_URL + YPT credentials)
 ```
 
 | Variable                                                                      | Purpose                                                                 |
@@ -126,39 +127,30 @@ cp .env.example .env.local
 
 ### 3. Database Setup and Local Development
 
-Review [`prisma/migrations/README.md`](prisma/migrations/README.md) before applying migrations.
+Review [`packages/database/prisma/migrations/README.md`](packages/database/prisma/migrations/README.md) before applying migrations.
 
 > [!WARNING]
 > **Known schema drift:** the `feedbacks` table and the `sort_order` columns on `categories`/`tasks` were applied with `prisma db push` and have no migration files yet. On a fresh database, `prisma migrate deploy` alone produces an incomplete schema. Until catch-up migrations land (`HANDOFF.md` D5), run `npx prisma db push` on **fresh local dev databases only**.
 
 ```bash
-npx prisma migrate deploy   # apply migration history
-npm run dev                 # http://localhost:3000
+npm run db:migrate          # apply migration history (packages/database)
+npm run dev:web             # http://localhost:3000
 ```
 
 Existing databases previously created with `db push` must be backed up and verified against the baseline before marking it applied (see the migration README). Don't run the baseline SQL against a populated database.
 
-### 4. Ops Scripts (local database only)
-
-Both scripts hard-abort unless `DATABASE_URL` points at a local host (`localhost` / `127.0.0.1`), are **dry-run by default**, and require `--apply` to write.
+### 4. Seed Scripts (local database only)
 
 ```bash
-# Link every user's tasks to the October challenge (idempotent; --force relinks everything)
-npm run db:link-tasks
-npm run db:link-tasks -- --apply
-
-# Roll back a mistaken "Lock Final Results" — resets statuses to NORMAL, deletes all
-# punishment records, resets wrapped flags, and restores the pre-lock endAt
-npm run db:unlock-results                                  # dry run (auto-picks the locked challenge)
-npm run db:unlock-results -- --challenge-id <id> --apply
+# Seed/refresh the normalized Pokémon catalogue (offline bundle; idempotent)
+npm run db:seed:pokemon
 ```
-
-> The Manage tab also exposes the same rollback as a **10-second Undo** prompt right after locking.
 
 ### 5. Verification (run before every PR)
 
 ```bash
-npm run typecheck   # tsc --noEmit (delete a stale .next/ folder if it references removed routes)
-npm run test        # vitest run
-npm run build       # next build
+npm run typecheck:web   # tsc --noEmit (apps/web)
+npm run test:web        # vitest run (apps/web)
+npm run build:web       # next build (apps/web)
+npm run test:ypt-bot    # node --test (apps/ypt-bot)
 ```

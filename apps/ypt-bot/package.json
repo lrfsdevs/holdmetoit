@@ -1,0 +1,24 @@
+{
+   "name": "@holdmetoit/ypt-bot",
+   "version": "1.0.0",
+   "private": true,
+   "description": "YPT study-log ingestion bot for HoldMeToIt",
+   "main": "src/server.js",
+   "type": "module",
+   "engines": {
+      "node": ">=22.12.0"
+   },
+   "scripts": {
+      "start": "node src/server.js",
+      "build": "echo \"ypt-bot: no build step\"",
+      "test": "LOG_SILENT=true node --test",
+      "ingest": "node src/sync/ingestStudyLogs.js",
+      "challenge_sync": "node src/sync/challenge_sync.js"
+   },
+   "dependencies": {
+      "@holdmetoit/database": "*",
+      "dotenv": "^16.6.1",
+      "express": "^5.2.1",
+      "winston": "^3.19.0"
+   }
+}
