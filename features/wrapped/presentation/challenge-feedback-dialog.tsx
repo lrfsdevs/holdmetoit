@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { CheckCircle2Icon, Loader2Icon, XIcon } from "lucide-react";
 
+import { Textarea } from "@/components/ui/textarea";
+
 import {
    consistencyOptions,
    soloPunishmentOptions,
@@ -312,7 +314,7 @@ export function ChallengeFeedbackDialog({
                            4. Suggestions to improve Team Battles or any
                            complaints?
                         </label>
-                        <textarea
+                        <Textarea
                            rows={3}
                            value={teamBattleFeedback}
                            onChange={(e) =>
@@ -320,7 +322,7 @@ export function ChallengeFeedbackDialog({
                            }
                            placeholder="Share your thoughts on balance, rosters, pacing, etc..."
                            maxLength={2000}
-                           className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1c] border border-[#292929] text-xs text-[#f4f3f6] placeholder-[#868686]/70 focus:border-[#22c55e] focus:outline-none focus:ring-1 focus:ring-[#22c55e]/40 transition-colors resize-none"
+                           className="rounded-xl bg-[#1c1c1c] border-[#292929] text-xs text-[#f4f3f6] placeholder:text-[#868686]/70 focus:border-[#22c55e] focus:bg-[#1c1c1c] resize-none"
                         />
                      </div>
 
@@ -446,13 +448,13 @@ export function ChallengeFeedbackDialog({
                            8. Any other ideas or thoughts for the upcoming Solo
                            Challenge?
                         </label>
-                        <textarea
+                        <Textarea
                            rows={3}
                            value={soloIdeas}
                            onChange={(e) => setSoloIdeas(e.target.value)}
                            placeholder="Rules, duration, rewards, formats, features..."
                            maxLength={2000}
-                           className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1c] border border-[#292929] text-xs text-[#f4f3f6] placeholder-[#868686]/70 focus:border-[#22c55e] focus:outline-none focus:ring-1 focus:ring-[#22c55e]/40 transition-colors resize-none"
+                           className="rounded-xl bg-[#1c1c1c] border-[#292929] text-xs text-[#f4f3f6] placeholder:text-[#868686]/70 focus:border-[#22c55e] focus:bg-[#1c1c1c] resize-none"
                         />
                      </div>
                   </div>

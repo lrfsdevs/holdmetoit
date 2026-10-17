@@ -209,8 +209,8 @@ describe("ChallengeOverviewTab", () => {
       );
 
       expect(html).toContain("Search participants...");
-      expect(html).toContain("All Teams");
-      expect(html).toContain("Honey Bees");
+      // Team filter is a Radix Select; assert its trigger
+      expect(html).toContain('data-testid="overview-team-select"');
    });
 
    it("renders Timetable (UTC) kickoff and conclusion dates", () => {

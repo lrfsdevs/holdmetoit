@@ -4,6 +4,14 @@ import React from "react";
 import { POKEMON_RARITIES, PokemonRarity } from "../domain/pokemon-rarity";
 import { POKEMON_ELEMENTAL_TYPES } from "../domain/pokemon-types";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 
 export type PokemonActiveTab = "pokedex" | "collection" | "summon";
 
@@ -155,98 +163,131 @@ export function PokemonFilterBar({
                {/* Search */}
                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pokedex-textDim" />
-                  <input
+                  <Input
                      type="text"
                      placeholder="Search species or classification..."
                      value={search}
                      onChange={(e) => onSearchChange(e.target.value)}
-                     className="w-full pl-9 pr-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white placeholder:text-pokedex-textDim focus:outline-none focus:border-rose-500/70 transition-colors"
                      data-testid="pokemon-search-input"
+                     className="h-9 min-h-0 pl-9 pr-3 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white placeholder:text-pokedex-textDim focus:border-rose-500/70"
                   />
                </div>
 
                {/* Generation Filter (Gen 1-9) */}
-               <div>
-                  <select
-                     value={selectedGeneration}
-                     onChange={(e) => onGenerationChange(e.target.value)}
-                     className="w-full px-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500/70 transition-colors"
+               <Select
+                  value={selectedGeneration || "ALL"}
+                  onValueChange={(v) =>
+                     onGenerationChange(v === "ALL" ? "" : v)
+                  }
+               >
+                  <SelectTrigger
                      data-testid="pokemon-generation-select"
+                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
                   >
-                     <option value="">All Generations (1–9)</option>
+                     <SelectValue placeholder="All Generations (1–9)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value="ALL">All Generations (1–9)</SelectItem>
                      {GENERATION_OPTIONS.map((g) => (
-                        <option key={g.value} value={g.value}>
+                        <SelectItem key={g.value} value={g.value}>
                            {g.label}
-                        </option>
+                        </SelectItem>
                      ))}
-                  </select>
-               </div>
+                  </SelectContent>
+               </Select>
 
                {/* Rarity Filter */}
-               <div>
-                  <select
-                     value={selectedRarity}
-                     onChange={(e) => onRarityChange(e.target.value)}
-                     className="w-full px-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500/70 transition-colors"
+               <Select
+                  value={selectedRarity || "ALL"}
+                  onValueChange={(v) => onRarityChange(v === "ALL" ? "" : v)}
+               >
+                  <SelectTrigger
                      data-testid="pokemon-rarity-select"
+                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
                   >
-                     <option value="">All Rarities</option>
+                     <SelectValue placeholder="All Rarities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value="ALL">All Rarities</SelectItem>
                      {POKEMON_RARITIES.map((r) => (
-                        <option key={r} value={r}>
+                        <SelectItem key={r} value={r}>
                            {r.charAt(0) + r.slice(1).toLowerCase()}
-                        </option>
+                        </SelectItem>
                      ))}
-                  </select>
-               </div>
+                  </SelectContent>
+               </Select>
 
                {/* Type Filter */}
-               <div>
-                  <select
-                     value={selectedType}
-                     onChange={(e) => onTypeChange(e.target.value)}
-                     className="w-full px-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500/70 transition-colors"
+               <Select
+                  value={selectedType || "ALL"}
+                  onValueChange={(v) => onTypeChange(v === "ALL" ? "" : v)}
+               >
+                  <SelectTrigger
                      data-testid="pokemon-type-select"
+                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
                   >
-                     <option value="">All Elemental Types</option>
+                     <SelectValue placeholder="All Elemental Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value="ALL">All Elemental Types</SelectItem>
                      {POKEMON_ELEMENTAL_TYPES.map((t) => (
-                        <option key={t} value={t}>
+                        <SelectItem key={t} value={t}>
                            {t.charAt(0) + t.slice(1).toLowerCase()}
-                        </option>
+                        </SelectItem>
                      ))}
-                  </select>
-               </div>
+                  </SelectContent>
+               </Select>
 
                {/* Source Classification Filter (Legendary / Mythical / All) */}
-               <div>
-                  <select
-                     value={selectedClassification}
-                     onChange={(e) => onClassificationChange(e.target.value)}
-                     className="w-full px-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500/70 transition-colors"
+               <Select
+                  value={selectedClassification || "ALL"}
+                  onValueChange={(v) =>
+                     onClassificationChange(v === "ALL" ? "" : v)
+                  }
+               >
+                  <SelectTrigger
                      data-testid="pokemon-classification-select"
+                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
                   >
-                     <option value="">All Classifications</option>
-                     <option value="legendary">Legendary Only</option>
-                     <option value="mythical">Mythical Only</option>
-                     <option value="standard">Standard (Non-Legendary)</option>
-                  </select>
-               </div>
+                     <SelectValue placeholder="All Classifications" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value="ALL">All Classifications</SelectItem>
+                     <SelectItem value="legendary">Legendary Only</SelectItem>
+                     <SelectItem value="mythical">Mythical Only</SelectItem>
+                     <SelectItem value="standard">
+                        Standard (Non-Legendary)
+                     </SelectItem>
+                  </SelectContent>
+               </Select>
 
                {/* Sort Options & Clear */}
                <div className="flex items-center gap-2">
-                  <select
-                     value={sortBy}
-                     onChange={(e) => onSortChange(e.target.value)}
-                     className="w-full px-3 py-2 rounded-xl bg-pokedex-card border border-pokedex-border text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500/70 transition-colors"
-                     data-testid="pokemon-sort-select"
-                  >
-                     <option value="pokedex">Pokédex # (Ascending)</option>
-                     <option value="name">Name (A-Z)</option>
-                     <option value="rarity_desc">Rarity (Highest First)</option>
-                     <option value="rarity_asc">Rarity (Lowest First)</option>
-                     {activeTab === "collection" && (
-                        <option value="recent">Recently Obtained</option>
-                     )}
-                  </select>
+                  <Select value={sortBy} onValueChange={onSortChange}>
+                     <SelectTrigger
+                        data-testid="pokemon-sort-select"
+                        className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                     >
+                        <SelectValue placeholder="Pokédex # (Ascending)" />
+                     </SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="pokedex">
+                           Pokédex # (Ascending)
+                        </SelectItem>
+                        <SelectItem value="name">Name (A-Z)</SelectItem>
+                        <SelectItem value="rarity_desc">
+                           Rarity (Highest First)
+                        </SelectItem>
+                        <SelectItem value="rarity_asc">
+                           Rarity (Lowest First)
+                        </SelectItem>
+                        {activeTab === "collection" && (
+                           <SelectItem value="recent">
+                              Recently Obtained
+                           </SelectItem>
+                        )}
+                     </SelectContent>
+                  </Select>
 
                   {hasActiveFilters && (
                      <button

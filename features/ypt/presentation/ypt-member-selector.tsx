@@ -12,6 +12,7 @@ import {
    Loader2,
    BookOpen,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { getRealYptGroupMembersAction } from "../api/ypt-connection.actions";
 import type { YptRealGroupMemberItem } from "../data/ypt-connection.repository";
 
@@ -147,12 +148,12 @@ export function YptMemberSelector({
                {/* Search Box */}
                <div className="relative mb-2">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-obsidian-textDim" />
-                  <input
+                  <Input
                      type="text"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
                      placeholder="Search members by nickname or YPT ID..."
-                     className="w-full rounded-xl border border-obsidian-border bg-obsidian-elevated pl-8 pr-3 py-2 text-xs text-white placeholder:text-obsidian-textDim focus:outline-none focus:border-economy-gold/50"
+                     className="h-8 min-h-0 rounded-xl border-obsidian-border bg-obsidian-elevated pl-8 pr-3 py-2 text-xs text-white placeholder:text-obsidian-textDim focus:border-economy-gold/50 focus:bg-obsidian-elevated"
                      autoFocus
                   />
                </div>

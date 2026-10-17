@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -135,7 +136,7 @@ export function EnrollmentModal({
                         <label className="block text-xl font-bold text-[#ffffff] tracking-tight">
                            So how many hours can you put in?
                         </label>
-                        <input
+                        <Input
                            type="number"
                            min={1}
                            max={100}
@@ -143,7 +144,7 @@ export function EnrollmentModal({
                            onChange={(e) => setHours(e.target.value)}
                            placeholder="Enter hours..."
                            required
-                           className="w-full h-12 rounded-full border border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm outline-none focus:border-[#ffffff] transition-colors"
+                           className="h-12 min-h-0 rounded-full border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm focus:border-[#ffffff] focus:bg-[#3a3a3a]"
                         />
                      </div>
 
@@ -151,14 +152,14 @@ export function EnrollmentModal({
                         <label className="block text-xl font-bold text-[#ffffff] tracking-tight">
                            How many leaves you might take
                         </label>
-                        <input
+                        <Input
                            type="number"
                            min={0}
                            max={3}
                            value={leaveDays}
                            onChange={(e) => setLeaveDays(e.target.value)}
                            placeholder="Enter days..."
-                           className="w-full h-12 rounded-full border border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm outline-none focus:border-[#ffffff] transition-colors"
+                           className="h-12 min-h-0 rounded-full border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm focus:border-[#ffffff] focus:bg-[#3a3a3a]"
                         />
                      </div>
 

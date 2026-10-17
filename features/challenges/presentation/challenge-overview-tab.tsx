@@ -11,7 +11,6 @@ import {
    Award,
    Clock,
    Search,
-   ChevronDown,
    X,
    RotateCcw,
    Calendar,
@@ -19,6 +18,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import { DataPagination } from "@/components/ui/data-pagination";
 import {
    AdminHoursOverrideModal,
@@ -354,25 +360,33 @@ export function ChallengeOverviewTab({
 
                      {activeTeams.length > 0 && (
                         <div className="relative">
-                           <select
+                           <Select
                               value={selectedTeamId}
-                              onChange={(e) => {
-                                 setSelectedTeamId(e.target.value);
+                              onValueChange={(value) => {
+                                 setSelectedTeamId(value);
                                  setParticipantPage(1);
                               }}
-                              className="h-8 w-full rounded-xl border border-[#333333] bg-[#1c1c1c] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                            >
-                              <option value="ALL">
-                                 All Teams ({standings.length})
-                              </option>
-                              {activeTeams.map((t) => (
-                                 <option key={t.id} value={t.id}>
-                                    {t.iconEmoji ? `${t.iconEmoji} ` : ""}
-                                    {t.name} ({t.companionCount})
-                                 </option>
-                              ))}
-                           </select>
-                           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
+                              <SelectTrigger
+                                 data-testid="overview-team-select"
+                                 className="h-8 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                              >
+                                 <SelectValue
+                                    placeholder={`All Teams (${standings.length})`}
+                                 />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 <SelectItem value="ALL">
+                                    All Teams ({standings.length})
+                                 </SelectItem>
+                                 {activeTeams.map((t) => (
+                                    <SelectItem key={t.id} value={t.id}>
+                                       {t.iconEmoji ? `${t.iconEmoji} ` : ""}
+                                       {t.name} ({t.companionCount})
+                                    </SelectItem>
+                                 ))}
+                              </SelectContent>
+                           </Select>
                         </div>
                      )}
 

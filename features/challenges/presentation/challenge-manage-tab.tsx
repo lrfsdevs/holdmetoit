@@ -8,7 +8,6 @@ import {
    AlertTriangle,
    Calendar,
    Check,
-   ChevronDown,
    Clock,
    Loader2,
    Lock,
@@ -25,6 +24,14 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import { DataPagination } from "@/components/ui/data-pagination";
 import type {
    ChallengeScoreboardViewModel,
@@ -821,12 +828,12 @@ export function ChallengeManageTab({
                      <label className="text-xs font-semibold text-[#a3a3a3]">
                         Challenge Description
                      </label>
-                     <textarea
+                     <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Explain the challenge rules and accountability system..."
                         rows={4}
-                        className="w-full rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white p-3 text-xs leading-relaxed focus:outline-none"
+                        className="rounded-2xl bg-[#292929] border-[#383838] text-white p-3 text-xs leading-relaxed focus:border-[#545454] focus:bg-[#292929]"
                      />
                   </div>
 
@@ -1039,34 +1046,41 @@ export function ChallengeManageTab({
                      </div>
 
                      {/* Team Filter Dropdown (View by Team) */}
-                     <div className="relative w-full sm:w-56 shrink-0">
-                        <select
+                     <div className="w-full sm:w-56 shrink-0">
+                        <Select
                            value={rosterTeamFilter}
-                           onChange={(e) => {
-                              const val = e.target.value;
+                           onValueChange={(val) => {
                               setRosterTeamFilter(val);
                               setRosterPage(1);
                               updateUrlParams({ team: val, page: 1 });
                            }}
-                           className="h-8 w-full rounded-xl border border-[#383838] bg-[#242424] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                         >
-                           <option value="ALL">
-                              All Houses ({visibleStandings.length})
-                           </option>
-                           {teams.map((t) => (
-                              <option
-                                 key={t.id || t.name}
-                                 value={t.id || t.name}
-                              >
-                                 {t.iconEmoji ? `${t.iconEmoji} ` : ""}
-                                 {t.name}
-                              </option>
-                           ))}
-                           <option value="UNASSIGNED">
-                              Unassigned Scholars
-                           </option>
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
+                           <SelectTrigger
+                              data-testid="manage-roster-team-select"
+                              className="h-8 rounded-xl border-[#383838] bg-[#242424] text-xs text-[#ffffff]"
+                           >
+                              <SelectValue
+                                 placeholder={`All Houses (${visibleStandings.length})`}
+                              />
+                           </SelectTrigger>
+                           <SelectContent>
+                              <SelectItem value="ALL">
+                                 All Houses ({visibleStandings.length})
+                              </SelectItem>
+                              {teams.map((t) => (
+                                 <SelectItem
+                                    key={t.id || t.name}
+                                    value={t.id || t.name}
+                                 >
+                                    {t.iconEmoji ? `${t.iconEmoji} ` : ""}
+                                    {t.name}
+                                 </SelectItem>
+                              ))}
+                              <SelectItem value="UNASSIGNED">
+                                 Unassigned Scholars
+                              </SelectItem>
+                           </SelectContent>
+                        </Select>
                      </div>
 
                      {hasActiveRosterFilters && (
@@ -1164,34 +1178,37 @@ export function ChallengeManageTab({
                                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
                                     {/* Team Selector Dropdown */}
                                     <div className="relative flex-1 sm:flex-initial w-full sm:w-auto">
-                                       <select
+                                       <Select
                                           value={currentSelectedTeamId}
-                                          onChange={(e) =>
+                                          onValueChange={(value) =>
                                              handleReassign(
                                                 participant.participantId,
-                                                e.target.value
+                                                value
                                              )
                                           }
                                           disabled={isReassigning}
-                                          className="h-9 w-full sm:w-auto pl-3 pr-8 rounded-xl bg-[#292929] border border-[#383838] focus:border-[#545454] text-xs font-semibold text-[#ffffff] appearance-none cursor-pointer focus:outline-none disabled:opacity-50"
                                        >
-                                          <option
-                                             value="no-assigned"
-                                             className="bg-[#1c1c1c] text-[#868686]"
-                                          >
-                                             ⏳ Not Assigned
-                                          </option>
-                                          {teams.map((t) => (
-                                             <option
-                                                key={t.id || t.name}
-                                                value={t.id}
-                                                className="bg-[#1c1c1c] text-white"
+                                          <SelectTrigger className="h-9 w-full sm:w-auto rounded-xl border-[#383838] bg-[#292929] text-xs font-semibold text-[#ffffff] disabled:opacity-50">
+                                             <SelectValue placeholder="⏳ Not Assigned" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                             <SelectItem
+                                                value="no-assigned"
+                                                className="text-[#868686]"
                                              >
-                                                {t.iconEmoji || "🛡️"} {t.name}
-                                             </option>
-                                          ))}
-                                       </select>
-                                       <ChevronDown className="h-3.5 w-3.5 text-[#868686] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                ⏳ Not Assigned
+                                             </SelectItem>
+                                             {teams.map((t) => (
+                                                <SelectItem
+                                                   key={t.id || t.name}
+                                                   value={t.id || t.name}
+                                                >
+                                                   {t.iconEmoji || "🛡️"}{" "}
+                                                   {t.name}
+                                                </SelectItem>
+                                             ))}
+                                          </SelectContent>
+                                       </Select>
                                     </div>
 
                                     {/* Override Hours Button */}

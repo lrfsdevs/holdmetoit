@@ -728,7 +728,7 @@ export function DailyHoursModal({
                      <Calendar className="h-3.5 w-3.5 text-[#a1a1a1]" />
                      <span>Or pick date</span>
                   </label>
-                  <input
+                  <Input
                      id="log-date-picker"
                      type="date"
                      min={
@@ -739,7 +739,7 @@ export function DailyHoursModal({
                      max={todayDate}
                      value={selectedDate}
                      onChange={(e) => handleDateInputChange(e.target.value)}
-                     className="bg-[#292929] border border-[#484848] text-[#ffffff] text-xs px-2.5 py-1 rounded-lg focus:outline-none focus:border-[#ffffff] font-sans-tabular"
+                     className="w-auto h-9 min-h-0 bg-[#292929] border-[#484848] text-[#ffffff] text-xs px-2.5 py-1 rounded-lg focus:border-[#ffffff] focus:bg-[#292929] font-sans-tabular"
                   />
                </div>
             </div>

@@ -2,9 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Users, Search, ChevronDown, X, RotateCcw } from "lucide-react";
+import { Plus, Users, Search, X, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import { DataPagination } from "@/components/ui/data-pagination";
 import { ChallengeCardImage } from "@/features/challenges/presentation/challenge-card-image";
 import type { ChallengeCatalogItem } from "@/features/challenges/data/challenge.repository";
@@ -235,12 +242,12 @@ export function ChallengesListView({
                      )}
                   </div>
 
-                  <div className="relative w-full sm:w-48 shrink-0">
-                     <select
+                  <div className="w-full sm:w-48 shrink-0">
+                     <Select
                         value={formatFilter}
-                        onChange={(e) => {
+                        onValueChange={(value) => {
                            setFormatFilter(
-                              e.target.value as
+                              value as
                                  | "ALL"
                                  | "TEAM_VS_TEAM"
                                  | "SOLOS"
@@ -249,15 +256,23 @@ export function ChallengesListView({
                            );
                            setCurrentPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-[#292929] bg-[#141414] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                      >
-                        <option value="ALL">All Formats</option>
-                        <option value="TEAM_VS_TEAM">Team vs Team</option>
-                        <option value="SOLOS">Solo Battles</option>
-                        <option value="DUOS">Duo Battles</option>
-                        <option value="SQUADS">Squad Battles</option>
-                     </select>
-                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
+                        <SelectTrigger
+                           data-testid="challenges-format-select"
+                           className="h-10 rounded-xl border-[#292929] bg-[#141414] text-xs text-[#ffffff]"
+                        >
+                           <SelectValue placeholder="All Formats" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="ALL">All Formats</SelectItem>
+                           <SelectItem value="TEAM_VS_TEAM">
+                              Team vs Team
+                           </SelectItem>
+                           <SelectItem value="SOLOS">Solo Battles</SelectItem>
+                           <SelectItem value="DUOS">Duo Battles</SelectItem>
+                           <SelectItem value="SQUADS">Squad Battles</SelectItem>
+                        </SelectContent>
+                     </Select>
                   </div>
 
                   {hasActiveFilters && (

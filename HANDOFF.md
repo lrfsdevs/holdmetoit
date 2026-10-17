@@ -713,3 +713,14 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` 155 files / 1,455 tests green; `npm run build` clean (17 routes).
 - **Docs:** `docs/feature-flags/README.md` §8 added.
 - **NEXT STEP:** Optional — bring the DevBoard's remaining hardcoded hex onto `obsidian-*` (deferred; only the new switcher + YPT panel are tokenized); otherwise none.
+
+### Session 125 — 2026-10-18 (shadcn Select / Textarea / Input Migration)
+
+- **Scope:** Replaced all **14 native `<select>`** with a new Radix-based `Select`, all **7 native `<textarea>`** with a new `Textarea`, and the remaining raw text/number/date `<input>`s with the shared `Input`. Kept native by design: the hidden file input, `<input type="color">` (×2), and the borderless emoji field.
+- **Primitives:** NEW `components/ui/select.tsx` (added `@radix-ui/react-select@2.4.1`) and `components/ui/textarea.tsx`, hand-authored in the obsidian palette (trigger mirrors `input.tsx`; popover mirrors `dropdown-menu.tsx`). No shadcn CLI run (avoids rewriting the Tailwind v4 / `globals.css` setup).
+- **Selects (14):** `pokemon-filter-bar` (×5; `""`↔`"ALL"` sentinel mapping keeps filter/reset semantics), `flag-editor-modal`, `challenge-leaderboard-tab` (×2), `challenge-manage-tab` (×2, incl. per-row reassign `disabled`), `challenge-overview-tab`, `challenges-list-view`, `admin-banner-modal`, `cockpit-tasks-section` (optgroups → `SelectGroup`/`SelectLabel`, `__NEW__` action item, trigger ref type → `HTMLButtonElement`).
+- **Textareas (7):** `flag-editor-modal`, `admin-banner-modal`, `challenge-manage-tab`, `challenge-feedback-dialog` (×2), `challenge-creator-wizard`, `feedback-form`.
+- **Inputs:** `pokemon-filter-bar` search, `ypt-member-selector` search, `feedback-form` title, `enrollment-modal` numbers (×2, pill preserved), `daily-hours-modal` date. (The other `type="number"` fields already used `Input`.)
+- **Tests:** 3 static-markup tests now assert Select triggers via new `data-testid`s instead of `<option>` text (Radix portals options on open): `challenges-list-view.test`, `challenge-overview-tab.test`, `challenge-leaderboard-tab.test`.
+- **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` 155 files / 1,455 tests green; `npm run build` clean. Note: `/pokemon` First Load JS grew ~153 → 184 kB (five Radix Selects).
+- **NEXT STEP:** Optional — continue the design-system migration for modals (Dialog/AlertDialog/Sheet), tabs, tables, switches and tooltips; verify the new Selects visually in-browser at 360px.

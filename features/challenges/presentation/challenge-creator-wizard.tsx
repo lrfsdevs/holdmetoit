@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -346,12 +347,12 @@ export function ChallengeCreatorWizard() {
                <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5">
                   Challenge Description
                </label>
-               <textarea
+               <Textarea
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. October Team Battle is an automated study battle governed by the HoldMeToIt three-condition accountability system..."
-                  className="w-full bg-[#545454] border border-[#484848] text-[#f4f3f6] placeholder-[#d2d2d2] rounded-xl p-3 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="bg-[#545454] border-[#484848] text-[#f4f3f6] placeholder:text-[#d2d2d2] rounded-xl p-3 text-xs leading-relaxed focus:bg-[#545454]"
                />
             </div>
 

@@ -246,10 +246,9 @@ describe("ChallengesListView", () => {
       expect(html).toContain("Active (1)");
       expect(html).toContain("Upcoming (1)");
       expect(html).toContain("Completed (0)");
-      // Format dropdown
-      expect(html).toContain("All Formats");
-      expect(html).toContain("Team vs Team");
-      expect(html).toContain("Solo Battles");
+      // Format dropdown (Radix Select renders options on open; assert the trigger)
+      expect(html).toContain('data-testid="challenges-format-select"');
+      expect(html).toContain('role="combobox"');
    });
 
    it("filters out soft-deleted challenges (isDeleted = true) from the rendered list and counts", () => {

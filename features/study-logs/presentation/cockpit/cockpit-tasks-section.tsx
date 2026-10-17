@@ -31,6 +31,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+   Select,
+   SelectContent,
+   SelectGroup,
+   SelectItem,
+   SelectLabel,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
+import {
    DropdownMenu,
    DropdownMenuTrigger,
    DropdownMenuContent,
@@ -147,7 +156,7 @@ export function CockpitTasksSection({
    const [addTodoDateKey, setAddTodoDateKey] = useState<string>("");
 
    const categoryInputRef = useRef<HTMLInputElement>(null);
-   const categorySelectRef = useRef<HTMLSelectElement>(null);
+   const categorySelectRef = useRef<HTMLButtonElement>(null);
 
    useEffect(() => {
       if (isCreatingCategory && addModalType) {
@@ -4614,82 +4623,88 @@ export function CockpitTasksSection({
                         </label>
                         {!isCreatingCategory ? (
                            <div className="flex gap-2">
-                              <select
-                                 ref={categorySelectRef}
+                              <Select
                                  value={selectedCategory}
-                                 onChange={(e) => {
-                                    if (e.target.value === "__NEW__") {
+                                 onValueChange={(value) => {
+                                    if (value === "__NEW__") {
                                        setIsCreatingCategory(true);
                                        setTimeout(() => {
                                           categoryInputRef.current?.focus();
                                           categoryInputRef.current?.select();
                                        }, 50);
                                     } else {
-                                       setSelectedCategory(e.target.value);
+                                       setSelectedCategory(value);
                                     }
                                  }}
-                                 className="w-full h-11 bg-[#545454] border border-[#484848] text-[#f4f3f6] rounded-xl px-3 text-sm focus:outline-none focus:ring-1 focus:ring-white"
                               >
-                                 {addModalType === "daily" ? (
-                                    <>
-                                       {weeklyCategoryOptions.length > 0 && (
-                                          <optgroup label="Weekly Categories (Inherited)">
-                                             {weeklyCategoryOptions.map(
-                                                (catName) => (
-                                                   <option
-                                                      key={catName}
-                                                      value={catName}
-                                                      className="bg-[#292929] text-white"
-                                                   >
-                                                      {catName}
-                                                   </option>
-                                                )
-                                             )}
-                                          </optgroup>
-                                       )}
-                                       {independentDailyCategoryOptions.length >
-                                          0 && (
-                                          <optgroup label="Independent Daily Categories">
-                                             {independentDailyCategoryOptions.map(
-                                                (catName) => (
-                                                   <option
-                                                      key={catName}
-                                                      value={catName}
-                                                      className="bg-[#292929] text-white"
-                                                   >
-                                                      {catName}
-                                                   </option>
-                                                )
-                                             )}
-                                          </optgroup>
-                                       )}
-                                       <option
-                                          value="__NEW__"
-                                          className="bg-[#292929] text-white font-medium"
-                                       >
-                                          + Create Independent Category...
-                                       </option>
-                                    </>
-                                 ) : (
-                                    <>
-                                       {weeklyCategoryOptions.map((catName) => (
-                                          <option
-                                             key={catName}
-                                             value={catName}
-                                             className="bg-[#292929] text-white"
-                                          >
-                                             {catName}
-                                          </option>
-                                       ))}
-                                       <option
-                                          value="__NEW__"
-                                          className="bg-[#292929] text-white font-medium"
-                                       >
-                                          + Create New Category...
-                                       </option>
-                                    </>
-                                 )}
-                              </select>
+                                 <SelectTrigger
+                                    ref={categorySelectRef}
+                                    data-testid="todo-category-select"
+                                    className="h-11 w-full rounded-xl border-[#484848] bg-[#545454] px-3 text-sm text-[#f4f3f6]"
+                                 >
+                                    <SelectValue placeholder="Select a category" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                    {addModalType === "daily" ? (
+                                       <>
+                                          {weeklyCategoryOptions.length > 0 && (
+                                             <SelectGroup>
+                                                <SelectLabel>
+                                                   Weekly Categories (Inherited)
+                                                </SelectLabel>
+                                                {weeklyCategoryOptions.map(
+                                                   (catName) => (
+                                                      <SelectItem
+                                                         key={catName}
+                                                         value={catName}
+                                                      >
+                                                         {catName}
+                                                      </SelectItem>
+                                                   )
+                                                )}
+                                             </SelectGroup>
+                                          )}
+                                          {independentDailyCategoryOptions.length >
+                                             0 && (
+                                             <SelectGroup>
+                                                <SelectLabel>
+                                                   Independent Daily Categories
+                                                </SelectLabel>
+                                                {independentDailyCategoryOptions.map(
+                                                   (catName) => (
+                                                      <SelectItem
+                                                         key={catName}
+                                                         value={catName}
+                                                      >
+                                                         {catName}
+                                                      </SelectItem>
+                                                   )
+                                                )}
+                                             </SelectGroup>
+                                          )}
+                                          <SelectItem value="__NEW__">
+                                             + Create Independent Category...
+                                          </SelectItem>
+                                       </>
+                                    ) : (
+                                       <>
+                                          {weeklyCategoryOptions.map(
+                                             (catName) => (
+                                                <SelectItem
+                                                   key={catName}
+                                                   value={catName}
+                                                >
+                                                   {catName}
+                                                </SelectItem>
+                                             )
+                                          )}
+                                          <SelectItem value="__NEW__">
+                                             + Create New Category...
+                                          </SelectItem>
+                                       </>
+                                    )}
+                                 </SelectContent>
+                              </Select>
                            </div>
                         ) : (
                            <div className="flex gap-2">

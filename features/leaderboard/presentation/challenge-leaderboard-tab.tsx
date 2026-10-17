@@ -10,13 +10,19 @@ import {
    Pencil,
    Users,
    Trophy,
-   ChevronDown,
    X,
    RotateCcw,
    Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import type {
    ChallengeScoreboardViewModel,
    ScoreboardStandingEntry,
@@ -630,44 +636,64 @@ export function ChallengeLeaderboardTab({
 
                   {/* Team Filter Dropdown */}
                   <div className="sm:col-span-4 relative">
-                     <select
+                     <Select
                         value={selectedTeamId}
-                        onChange={(e) => {
-                           setSelectedTeamId(e.target.value);
+                        onValueChange={(value) => {
+                           setSelectedTeamId(value);
                            setCurrentPage(1);
                         }}
-                        className="h-9 w-full rounded-xl border border-[#333333] bg-[#1c1c1c] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                      >
-                        <option value="ALL">
-                           All Teams ({standings.length})
-                        </option>
-                        {teams.map((t) => (
-                           <option key={t.id} value={t.id}>
-                              {t.iconEmoji ? `${t.iconEmoji} ` : ""}
-                              {t.name} ({t.companionCount})
-                           </option>
-                        ))}
-                     </select>
-                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
+                        <SelectTrigger
+                           data-testid="leaderboard-team-select"
+                           className="h-9 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                        >
+                           <SelectValue
+                              placeholder={`All Teams (${standings.length})`}
+                           />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="ALL">
+                              All Teams ({standings.length})
+                           </SelectItem>
+                           {teams.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                 {t.iconEmoji ? `${t.iconEmoji} ` : ""}
+                                 {t.name} ({t.companionCount})
+                              </SelectItem>
+                           ))}
+                        </SelectContent>
+                     </Select>
                   </div>
 
                   {/* Pace / Status Filter Dropdown */}
                   <div className="sm:col-span-3 relative">
-                     <select
+                     <Select
                         value={statusFilter}
-                        onChange={(e) => {
+                        onValueChange={(value) => {
                            setStatusFilter(
-                              e.target.value as "ALL" | "on-track" | "catch-up"
+                              value as "ALL" | "on-track" | "catch-up"
                            );
                            setCurrentPage(1);
                         }}
-                        className="h-9 w-full rounded-xl border border-[#333333] bg-[#1c1c1c] px-3 pr-8 text-xs text-[#ffffff] focus:border-[#ffffff]/60 focus:outline-none appearance-none cursor-pointer"
                      >
-                        <option value="ALL">All Pace Statuses</option>
-                        <option value="on-track">On Track / Ahead</option>
-                        <option value="catch-up">Catch-Up / Behind</option>
-                     </select>
-                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
+                        <SelectTrigger
+                           data-testid="leaderboard-pace-select"
+                           className="h-9 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                        >
+                           <SelectValue placeholder="All Pace Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="ALL">
+                              All Pace Statuses
+                           </SelectItem>
+                           <SelectItem value="on-track">
+                              On Track / Ahead
+                           </SelectItem>
+                           <SelectItem value="catch-up">
+                              Catch-Up / Behind
+                           </SelectItem>
+                        </SelectContent>
+                     </Select>
                   </div>
                </div>
 

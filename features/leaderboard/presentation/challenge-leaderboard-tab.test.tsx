@@ -245,14 +245,9 @@ describe("ChallengeLeaderboardTab", () => {
       // View mode toggle buttons
       expect(html).toContain("Overall Rank");
       expect(html).toContain("View by Team");
-      // Team filter dropdown
-      expect(html).toContain("All Teams");
-      expect(html).toContain("Serpents");
-      expect(html).toContain("Raven");
-      // Pace filter dropdown
-      expect(html).toContain("All Pace Statuses");
-      expect(html).toContain("On Track / Ahead");
-      expect(html).toContain("Catch-Up / Behind");
+      // Team + pace filters are Radix Selects; assert their triggers
+      expect(html).toContain('data-testid="leaderboard-team-select"');
+      expect(html).toContain('data-testid="leaderboard-pace-select"');
    });
 
    it("renders teams side-by-side in a responsive grid when initialViewMode is 'team'", () => {

@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import type {
    FeatureFlagEntity,
    RolloutModeType,
@@ -177,12 +185,12 @@ export function FlagEditorModal({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
                      Description
                   </label>
-                  <textarea
+                  <Textarea
                      value={description}
                      onChange={(e) => setDescription(e.target.value)}
                      placeholder="Explain what this feature controls and rollout intentions..."
                      rows={3}
-                     className="w-full rounded-xl bg-[#111111] border border-[#292929] p-3 text-xs text-[#f4f3f6] placeholder:text-[#666666] focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                     className="rounded-xl bg-[#111111] border-[#292929] p-3 text-xs text-[#f4f3f6] placeholder:text-[#666666] focus:border-emerald-500/50 focus:bg-[#111111]"
                   />
                </div>
 
@@ -209,17 +217,21 @@ export function FlagEditorModal({
                         <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
                            Initial Mode
                         </label>
-                        <select
+                        <Select
                            value={rolloutMode}
-                           onChange={(e) =>
-                              setRolloutMode(e.target.value as RolloutModeType)
+                           onValueChange={(v) =>
+                              setRolloutMode(v as RolloutModeType)
                            }
-                           className="w-full rounded-xl border border-[#292929] bg-[#111111] px-3 py-2 text-xs text-[#f4f3f6] outline-none focus-visible:border-[#868686] focus-visible:ring-1 focus-visible:ring-[#868686] focus-visible:ring-offset-0"
                         >
-                           <option value="DISABLED">Disabled</option>
-                           <option value="TARGETED">Targeted</option>
-                           <option value="GLOBAL">Global</option>
-                        </select>
+                           <SelectTrigger className="h-9 rounded-xl border-[#292929] bg-[#111111] text-xs text-[#f4f3f6]">
+                              <SelectValue placeholder="Disabled" />
+                           </SelectTrigger>
+                           <SelectContent>
+                              <SelectItem value="DISABLED">Disabled</SelectItem>
+                              <SelectItem value="TARGETED">Targeted</SelectItem>
+                              <SelectItem value="GLOBAL">Global</SelectItem>
+                           </SelectContent>
+                        </Select>
                      </div>
                   </div>
                )}

@@ -10,6 +10,14 @@ import { BannerViewModel } from "../../data/acquisition.repository";
 import { BannerStatus } from "../../domain/acquisition/banner-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+} from "@/components/ui/select";
 import {
    Shield,
    X,
@@ -350,13 +358,13 @@ export function AdminBannerModal({
                         <label className="block text-obsidian-textDim mb-1 font-medium text-xs">
                            Description
                         </label>
-                        <textarea
+                        <Textarea
                            required
                            rows={2}
                            value={description}
                            onChange={(e) => setDescription(e.target.value)}
                            placeholder="Summon description and companion highlights..."
-                           className="w-full rounded-xl border border-obsidian-border bg-obsidian-elevated p-2 text-xs text-white placeholder-obsidian-textDim"
+                           className="rounded-xl border-obsidian-border bg-obsidian-elevated p-2 text-xs text-white placeholder:text-obsidian-textDim focus:bg-obsidian-elevated"
                         />
                      </div>
 
@@ -393,16 +401,24 @@ export function AdminBannerModal({
                            <label className="block text-obsidian-textDim mb-1 font-medium">
                               Pity Target Rarity
                            </label>
-                           <select
+                           <Select
                               value={targetRarity}
-                              onChange={(e) => setTargetRarity(e.target.value)}
-                              className="w-full h-9 rounded-xl border border-obsidian-border bg-obsidian-elevated px-2 text-xs text-white"
+                              onValueChange={setTargetRarity}
                            >
-                              <option value="LEGENDARY">LEGENDARY</option>
-                              <option value="MYTHICAL">MYTHICAL</option>
-                              <option value="EPIC">EPIC</option>
-                              <option value="RARE">RARE</option>
-                           </select>
+                              <SelectTrigger className="h-9 rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white">
+                                 <SelectValue placeholder="LEGENDARY" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 <SelectItem value="LEGENDARY">
+                                    LEGENDARY
+                                 </SelectItem>
+                                 <SelectItem value="MYTHICAL">
+                                    MYTHICAL
+                                 </SelectItem>
+                                 <SelectItem value="EPIC">EPIC</SelectItem>
+                                 <SelectItem value="RARE">RARE</SelectItem>
+                              </SelectContent>
+                           </Select>
                         </div>
                      </div>
 
