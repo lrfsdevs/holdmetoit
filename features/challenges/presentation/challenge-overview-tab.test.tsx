@@ -227,7 +227,7 @@ describe("ChallengeOverviewTab", () => {
          })
       );
 
-      expect(html).toContain("Forfeit Avatar &amp; Accountability");
+      expect(html).toContain("Forfeits &amp; Accountability Wall");
       expect(html).toContain("No Custom Forfeit Avatar Set");
       expect(html).toContain("Accountability rules still apply");
       expect(html).not.toContain("Download Forfeit PFP");
@@ -247,7 +247,7 @@ describe("ChallengeOverviewTab", () => {
          })
       );
 
-      expect(html).toContain("Forfeit Avatar &amp; Accountability");
+      expect(html).toContain("Forfeits &amp; Accountability Wall");
       expect(html).toContain("Assigned Forfeit Picture");
       expect(html).toContain(pfpUrl);
       expect(html).toContain("Download Forfeit PFP");
