@@ -9,6 +9,7 @@ import { logEvents } from "@/core/observability/domain/log-events";
 import { PokemonRarity, isValidPokemonRarity } from "../domain/pokemon-rarity";
 import { isValidPokemonType } from "../domain/pokemon-types";
 import { UpsertPokemonSpeciesInput } from "../domain/pokemon.schema";
+import { CATALOGUE_PAGE_SIZE } from "../domain/catalogue-query";
 
 const logger = createLogger("pokemon-catalogue-repo");
 
@@ -21,6 +22,8 @@ export interface ListPokemonSpeciesOptions {
    isAvailable?: boolean;
    search?: string;
    sortBy?: "pokedex" | "name" | "rarity_desc" | "rarity_asc" | "recent";
+   /** Restrict to species owned by this user (Collection scope). */
+   ownedByUserId?: string;
    limit?: number;
    offset?: number;
 }
@@ -139,65 +142,42 @@ export async function listPokemonSpecies(
          }
       }
 
-      // Determine order
-      let orderBy: any = { pokedexNumber: "asc" };
-      if (options.sortBy === "name") {
-         orderBy = { name: "asc" };
-      } else if (options.sortBy === "recent") {
-         orderBy = { createdAt: "desc" };
-      } else if (options.sortBy === "pokedex") {
-         orderBy = { pokedexNumber: "asc" };
+      if (options.ownedByUserId) {
+         where.instances = { some: { userId: options.ownedByUserId } };
+      }
+
+      const limit = options.limit
+         ? Math.min(200, Math.max(1, options.limit))
+         : CATALOGUE_PAGE_SIZE;
+      const offset = options.offset ? Math.max(0, options.offset) : 0;
+
+      // "Recently obtained" is a per-user ordering (earliest obtainedAt), which
+      // Prisma can't express as an orderBy on a relation — resolve it over the
+      // user's owned set (bounded by their collection).
+      if (options.sortBy === "recent" && options.ownedByUserId) {
+         return await listRecentlyObtained(
+            options.ownedByUserId,
+            where,
+            limit,
+            offset
+         );
       }
 
       const [species, totalCount] = await Promise.all([
          prisma.pokemonSpecies.findMany({
             where,
-            orderBy,
+            orderBy: resolveCatalogueOrderBy(options.sortBy),
             include: {
                forms: { orderBy: { pokemonId: "asc" } },
             },
-            take: options.limit
-               ? Math.min(200, Math.max(1, options.limit))
-               : undefined,
-            skip: options.offset ? Math.max(0, options.offset) : undefined,
+            take: limit,
+            skip: offset,
          }),
          prisma.pokemonSpecies.count({ where }),
       ]);
 
-      // Handle rarity sorting in memory if requested (since rarity ranks are custom domain hierarchy)
-      let sortedSpecies = species as unknown as PokemonSpeciesWithCounts[];
-      if (options.sortBy === "rarity_desc") {
-         const rankMap: Record<string, number> = {
-            MYTHICAL: 6,
-            LEGENDARY: 5,
-            EPIC: 4,
-            RARE: 3,
-            UNCOMMON: 2,
-            NORMAL: 1,
-         };
-         sortedSpecies = [...sortedSpecies].sort(
-            (a, b) =>
-               (rankMap[b.rarity] ?? 0) - (rankMap[a.rarity] ?? 0) ||
-               a.pokedexNumber - b.pokedexNumber
-         );
-      } else if (options.sortBy === "rarity_asc") {
-         const rankMap: Record<string, number> = {
-            NORMAL: 1,
-            UNCOMMON: 2,
-            RARE: 3,
-            EPIC: 4,
-            LEGENDARY: 5,
-            MYTHICAL: 6,
-         };
-         sortedSpecies = [...sortedSpecies].sort(
-            (a, b) =>
-               (rankMap[a.rarity] ?? 0) - (rankMap[b.rarity] ?? 0) ||
-               a.pokedexNumber - b.pokedexNumber
-         );
-      }
-
       return {
-         species: sortedSpecies,
+         species: species as unknown as PokemonSpeciesWithCounts[],
          totalCount,
       };
    } catch (error) {
@@ -211,6 +191,73 @@ export async function listPokemonSpecies(
       });
       return { species: [], totalCount: 0 };
    }
+}
+
+/**
+ * Rarity ordering is safe at the DB level: the `PokemonRarity` enum is declared
+ * NORMAL → MYTHICAL, matching the domain rank order, so `orderBy: { rarity }`
+ * is correct across pages (ties broken by Pokédex number).
+ */
+function resolveCatalogueOrderBy(sortBy?: string): any {
+   switch (sortBy) {
+      case "name":
+         return { name: "asc" };
+      case "rarity_desc":
+         return [{ rarity: "desc" }, { pokedexNumber: "asc" }];
+      case "rarity_asc":
+         return [{ rarity: "asc" }, { pokedexNumber: "asc" }];
+      case "recent":
+         return { createdAt: "desc" };
+      case "pokedex":
+      default:
+         return { pokedexNumber: "asc" };
+   }
+}
+
+async function listRecentlyObtained(
+   ownedByUserId: string,
+   where: any,
+   limit: number,
+   offset: number
+): Promise<{ species: PokemonSpeciesWithCounts[]; totalCount: number }> {
+   // Filters + ownership resolve the bounded set of owned species.
+   const owned = await prisma.pokemonSpecies.findMany({
+      where,
+      select: { id: true },
+   });
+   const ids = owned.map((s) => s.id);
+   const totalCount = ids.length;
+   if (totalCount === 0) {
+      return { species: [], totalCount: 0 };
+   }
+
+   const groups = await prisma.userPokemon.groupBy({
+      by: ["speciesId"],
+      where: { userId: ownedByUserId, speciesId: { in: ids } },
+      _min: { obtainedAt: true },
+   });
+   const earliest = new Map(
+      groups.map((g) => [g.speciesId, g._min.obtainedAt?.getTime() ?? 0])
+   );
+
+   const orderedIds = [...ids].sort(
+      (a, b) => (earliest.get(b) ?? 0) - (earliest.get(a) ?? 0)
+   );
+   const pageIds = orderedIds.slice(offset, offset + limit);
+   if (pageIds.length === 0) {
+      return { species: [], totalCount };
+   }
+
+   const rows = await prisma.pokemonSpecies.findMany({
+      where: { id: { in: pageIds } },
+      include: { forms: { orderBy: { pokemonId: "asc" } } },
+   });
+   const byId = new Map(rows.map((r) => [r.id, r]));
+   const species = pageIds
+      .map((id) => byId.get(id))
+      .filter(Boolean) as unknown as PokemonSpeciesWithCounts[];
+
+   return { species, totalCount };
 }
 
 export async function findPokemonSpeciesById(

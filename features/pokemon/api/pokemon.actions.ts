@@ -15,9 +15,13 @@ import {
    findPokemonSpeciesById,
    findPokemonSpeciesBySlug,
    listPokemonSpecies,
-   ListPokemonSpeciesOptions,
    PokemonSpeciesWithCounts,
 } from "../data/pokemon-catalogue.repository";
+import {
+   CATALOGUE_PAGE_SIZE,
+   type CatalogueScope,
+   type CatalogueSortKey,
+} from "../domain/catalogue-query";
 import {
    getUserCollectionSummary,
    getUserPokemonById,
@@ -36,17 +40,32 @@ import {
 export type ActionResult<T> =
    { ok: true; data: T } | { ok: false; error: string; code?: string };
 
+export interface CatalogueQueryInput {
+   scope?: CatalogueScope;
+   page?: number;
+   limit?: number;
+   search?: string;
+   rarity?: string;
+   type?: string;
+   generation?: number;
+   classification?: "legendary" | "mythical" | "standard";
+   sortBy?: CatalogueSortKey;
+}
+
 /**
- * Public action: Get Pokemon catalogue entries with optional filters.
- * Accessible by guests/spectators and authenticated users alike (Law L4).
+ * Get a page of the Pokemon catalogue.
+ *
+ * `scope: "catalogue"` is public (guests/spectators, Law L4) and returns available
+ * species. `scope: "collection"` is scoped to the authenticated session user's
+ * owned species (the id is derived server-side, never trusted from the client).
  */
 export async function getPokemonCatalogueAction(
-   options: ListPokemonSpeciesOptions = {}
+   rawInput: CatalogueQueryInput = {}
 ): Promise<
    ActionResult<{ species: PokemonSpeciesWithCounts[]; totalCount: number }>
 > {
    try {
-      const validated = ListPokemonFilterSchema.safeParse(options);
+      const validated = ListPokemonFilterSchema.safeParse(rawInput);
       if (!validated.success) {
          return {
             ok: false,
@@ -55,7 +74,54 @@ export async function getPokemonCatalogueAction(
          };
       }
 
-      const result = await listPokemonSpecies(validated.data);
+      const {
+         scope = "catalogue",
+         page = 1,
+         limit = CATALOGUE_PAGE_SIZE,
+         search,
+         rarity,
+         type,
+         generation,
+         classification,
+         sortBy,
+      } = validated.data;
+
+      let ownedByUserId: string | undefined;
+      if (scope === "collection") {
+         const session = await auth();
+         if (!session?.user?.id) {
+            return {
+               ok: false,
+               error: "Authentication required to view your collection",
+               code: "UNAUTHORIZED",
+            };
+         }
+         ownedByUserId = session.user.id;
+      }
+
+      const result = await listPokemonSpecies({
+         isAvailable: true,
+         search,
+         rarity,
+         type,
+         generation,
+         isLegendary:
+            classification === "legendary"
+               ? true
+               : classification === "standard"
+                 ? false
+                 : undefined,
+         isMythical:
+            classification === "mythical"
+               ? true
+               : classification === "standard"
+                 ? false
+                 : undefined,
+         sortBy,
+         ownedByUserId,
+         limit,
+         offset: (page - 1) * limit,
+      });
       return { ok: true, data: result };
    } catch (error) {
       return {

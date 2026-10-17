@@ -24,7 +24,6 @@ interface PokemonFilterBarProps {
    onSortChange: (sort: string) => void;
    isSpectator?: boolean;
    isAdmin?: boolean;
-   totalFilteredCount?: number;
    onOpenHistory?: () => void;
    onOpenAdmin?: () => void;
 }
@@ -58,7 +57,6 @@ export function PokemonFilterBar({
    onSortChange,
    isSpectator = false,
    isAdmin = false,
-   totalFilteredCount,
    onOpenHistory,
    onOpenAdmin,
 }: PokemonFilterBarProps) {
@@ -147,16 +145,6 @@ export function PokemonFilterBar({
                   >
                      Admin Banners
                   </button>
-               )}
-
-               {activeTab !== "summon" && totalFilteredCount !== undefined && (
-                  <div className="text-xs text-pokedex-textMuted font-medium">
-                     Showing{" "}
-                     <span className="text-white font-semibold">
-                        {totalFilteredCount}
-                     </span>{" "}
-                     entries
-                  </div>
                )}
             </div>
          </div>

@@ -219,4 +219,36 @@ describe("Trophy Repository", () => {
          );
       });
    });
+
+   describe("getTrophyLeaderboard", () => {
+      it("fetches every user (no skip/take) when all is true", async () => {
+         vi.mocked(prisma.user.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+         const result = await getTrophyLeaderboard({ all: true });
+
+         expect(prisma.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ skip: 0, take: undefined })
+         );
+         expect(result.entries).toEqual([]);
+         expect(result.pagination).toEqual({
+            page: 1,
+            limit: 0,
+            totalCount: 0,
+            totalPages: 1,
+         });
+      });
+
+      it("paginates with skip/take by default", async () => {
+         vi.mocked(prisma.user.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.user.count).mockResolvedValue(120);
+
+         const result = await getTrophyLeaderboard({ page: 3 });
+
+         expect(prisma.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ skip: 100, take: 50 })
+         );
+         expect(result.pagination.totalPages).toBe(3);
+      });
+   });
 });

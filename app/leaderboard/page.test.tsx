@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import LeaderboardPage from "./page";
+import { getTrophyLeaderboard } from "@/features/trophies/data/trophy.repository";
 
 vi.mock("@/core/auth", () => ({
    auth: vi.fn().mockResolvedValue({
@@ -58,8 +59,9 @@ vi.mock("@/features/trophies/presentation/trophy-leaderboard-view", () => ({
 }));
 
 describe("LeaderboardPage", () => {
-   it("renders the TrophyLeaderboardView with fetched entries", async () => {
-      const page = await LeaderboardPage({});
+   it("fetches the full leaderboard set and renders the view", async () => {
+      const page = await LeaderboardPage();
+      expect(getTrophyLeaderboard).toHaveBeenCalledWith({ all: true });
       expect(page).toBeDefined();
    });
 });

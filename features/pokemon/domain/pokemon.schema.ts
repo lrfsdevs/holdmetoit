@@ -92,6 +92,9 @@ export type UpsertPokemonSpeciesOutput = z.infer<
 >;
 
 export const ListPokemonFilterSchema = z.object({
+   scope: z.enum(["catalogue", "collection"]).optional(),
+   page: z.number().int().min(1).optional(),
+   classification: z.enum(["legendary", "mythical", "standard"]).optional(),
    rarity: z.string().optional(),
    type: z.string().optional(),
    generation: z.number().optional(),

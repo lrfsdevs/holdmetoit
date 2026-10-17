@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import { PokemonSpeciesWithCounts } from "../data/pokemon-catalogue.repository";
 import {
    UserCollectionSummary,
@@ -11,6 +11,10 @@ import {
    AcquisitionResultViewModel,
 } from "../data/acquisition.repository";
 import { PityState } from "../domain/acquisition/pity-engine";
+import {
+   CATALOGUE_PAGE_SIZE,
+   CatalogueSortKey,
+} from "../domain/catalogue-query";
 import { PokemonProgressHeader } from "./pokemon-progress-header";
 import { PokemonActiveTab, PokemonFilterBar } from "./pokemon-filter-bar";
 import { PokemonCard } from "./pokemon-card";
@@ -20,11 +24,14 @@ import { AcquisitionHistoryModal } from "./acquisition/acquisition-history-modal
 import { AdminBannerModal } from "./acquisition/admin-banner-modal";
 import { calculateCollectionProgress } from "../domain/collection-progress";
 import { listActiveBannersAction } from "../api/acquisition.actions";
-import { AlertCircle, Inbox, Sparkles } from "lucide-react";
+import { getPokemonCatalogueAction } from "../api/pokemon.actions";
+import { Inbox, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataPagination } from "@/components/ui/data-pagination";
 
 interface PokemonViewProps {
    initialSpecies: PokemonSpeciesWithCounts[];
+   initialTotalCount: number;
    initialSummary: UserCollectionSummary | null;
    initialInstances: UserPokemonInstance[];
    initialBanners?: BannerViewModel[];
@@ -34,8 +41,25 @@ interface PokemonViewProps {
    isSpectator?: boolean;
 }
 
+function CatalogueSkeleton() {
+   return (
+      <div
+         className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+         data-testid="pokemon-cards-skeleton"
+      >
+         {Array.from({ length: 12 }).map((_, i) => (
+            <div
+               key={i}
+               className="h-56 rounded-2xl bg-pokedex-cardSubtle/60 border border-pokedex-border animate-pulse"
+            />
+         ))}
+      </div>
+   );
+}
+
 export function PokemonView({
    initialSpecies,
+   initialTotalCount,
    initialSummary,
    initialInstances,
    initialBanners = [],
@@ -46,11 +70,21 @@ export function PokemonView({
 }: PokemonViewProps) {
    const [activeTab, setActiveTab] = useState<PokemonActiveTab>("pokedex");
    const [search, setSearch] = useState("");
+   const [debouncedSearch, setDebouncedSearch] = useState("");
    const [selectedRarity, setSelectedRarity] = useState("");
    const [selectedType, setSelectedType] = useState("");
    const [selectedGeneration, setSelectedGeneration] = useState("");
    const [selectedClassification, setSelectedClassification] = useState("");
    const [sortBy, setSortBy] = useState("pokedex");
+
+   const [species, setSpecies] =
+      useState<PokemonSpeciesWithCounts[]>(initialSpecies);
+   const [totalCount, setTotalCount] = useState(initialTotalCount);
+   const [currentPage, setCurrentPage] = useState(1);
+   const [error, setError] = useState<string | null>(null);
+   const [reloadKey, setReloadKey] = useState(0);
+   const [isPending, startTransition] = useTransition();
+
    const [selectedSpecies, setSelectedSpecies] =
       useState<PokemonSpeciesWithCounts | null>(null);
 
@@ -73,6 +107,101 @@ export function PokemonView({
    // Modals
    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
    const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+   const didMountRef = useRef(false);
+   const requestIdRef = useRef(0);
+
+   // Debounce the search box so typing doesn't hammer the DB.
+   useEffect(() => {
+      const trimmed = search.trim();
+      const timer = setTimeout(() => setDebouncedSearch(trimmed), 300);
+      return () => clearTimeout(timer);
+   }, [search]);
+
+   // Server-side (re)fetch: page + filters + sort all resolve in the DB.
+   useEffect(() => {
+      if (!didMountRef.current) {
+         didMountRef.current = true;
+         return;
+      }
+
+      const requestId = ++requestIdRef.current;
+      startTransition(async () => {
+         setError(null);
+         const res = await getPokemonCatalogueAction({
+            scope: activeTab === "collection" ? "collection" : "catalogue",
+            page: currentPage,
+            limit: CATALOGUE_PAGE_SIZE,
+            search: debouncedSearch || undefined,
+            rarity: selectedRarity || undefined,
+            type: selectedType || undefined,
+            generation: selectedGeneration
+               ? Number(selectedGeneration)
+               : undefined,
+            classification: (selectedClassification || undefined) as
+               "legendary" | "mythical" | "standard" | undefined,
+            sortBy: sortBy as CatalogueSortKey,
+         });
+
+         if (requestId !== requestIdRef.current) return;
+
+         if (res.ok) {
+            setSpecies(res.data.species);
+            setTotalCount(res.data.totalCount);
+         } else {
+            setError(res.error || "Failed to load the catalogue.");
+         }
+      });
+   }, [
+      activeTab,
+      debouncedSearch,
+      selectedRarity,
+      selectedType,
+      selectedGeneration,
+      selectedClassification,
+      sortBy,
+      currentPage,
+      reloadKey,
+      startTransition,
+   ]);
+
+   // Every filter/search/sort/tab change resets to page 1 (avoids stale pages).
+   const handleTabChange = (tab: PokemonActiveTab) => {
+      setActiveTab(tab);
+      setCurrentPage(1);
+   };
+   const handleSearchChange = (value: string) => {
+      setSearch(value);
+      setCurrentPage(1);
+   };
+   const handleRarityChange = (value: string) => {
+      setSelectedRarity(value);
+      setCurrentPage(1);
+   };
+   const handleTypeChange = (value: string) => {
+      setSelectedType(value);
+      setCurrentPage(1);
+   };
+   const handleGenerationChange = (value: string) => {
+      setSelectedGeneration(value);
+      setCurrentPage(1);
+   };
+   const handleClassificationChange = (value: string) => {
+      setSelectedClassification(value);
+      setCurrentPage(1);
+   };
+   const handleSortChange = (value: string) => {
+      setSortBy(value);
+      setCurrentPage(1);
+   };
+   const handleResetFilters = () => {
+      setSearch("");
+      setSelectedRarity("");
+      setSelectedType("");
+      setSelectedGeneration("");
+      setSelectedClassification("");
+      setCurrentPage(1);
+   };
 
    // Handle live acquisition outcome without full page reload
    const handleAcquisitionSuccess = (result: AcquisitionResultViewModel) => {
@@ -132,109 +261,13 @@ export function PokemonView({
       }
    };
 
-   // Filter and sort items based on active tab and filter criteria
-   const filteredSpecies = useMemo(() => {
-      let list = [...initialSpecies];
-
-      // If active tab is collection, restrict only to owned species
-      if (activeTab === "collection") {
-         list = list.filter((sp) => (ownershipMap[sp.id] ?? 0) > 0);
-      }
-
-      // Text search
-      if (search.trim()) {
-         const q = search.trim().toLowerCase();
-         list = list.filter(
-            (sp) =>
-               sp.name.toLowerCase().includes(q) ||
-               sp.slug.toLowerCase().includes(q) ||
-               (sp.classification &&
-                  sp.classification.toLowerCase().includes(q))
-         );
-      }
-
-      // Generation filter
-      if (selectedGeneration) {
-         const genNum = parseInt(selectedGeneration, 10);
-         list = list.filter((sp) => sp.generation === genNum);
-      }
-
-      // Classification filter (Source classification: legendary / mythical / standard)
-      if (selectedClassification === "legendary") {
-         list = list.filter((sp) => Boolean(sp.isLegendary));
-      } else if (selectedClassification === "mythical") {
-         list = list.filter((sp) => Boolean(sp.isMythical));
-      } else if (selectedClassification === "standard") {
-         list = list.filter((sp) => !sp.isLegendary && !sp.isMythical);
-      }
-
-      // Rarity filter
-      if (selectedRarity) {
-         list = list.filter((sp) => sp.rarity === selectedRarity);
-      }
-
-      // Type filter
-      if (selectedType) {
-         const typeUpper = selectedType.toUpperCase();
-         list = list.filter(
-            (sp) =>
-               sp.primaryType.toUpperCase() === typeUpper ||
-               sp.secondaryType?.toUpperCase() === typeUpper
-         );
-      }
-
-      // Sorting
-      const rankMap: Record<string, number> = {
-         MYTHICAL: 6,
-         LEGENDARY: 5,
-         EPIC: 4,
-         RARE: 3,
-         UNCOMMON: 2,
-         NORMAL: 1,
-      };
-
-      if (sortBy === "name") {
-         list.sort((a, b) => a.name.localeCompare(b.name));
-      } else if (sortBy === "rarity_desc") {
-         list.sort(
-            (a, b) =>
-               (rankMap[b.rarity] ?? 0) - (rankMap[a.rarity] ?? 0) ||
-               a.pokedexNumber - b.pokedexNumber
-         );
-      } else if (sortBy === "rarity_asc") {
-         list.sort(
-            (a, b) =>
-               (rankMap[a.rarity] ?? 0) - (rankMap[b.rarity] ?? 0) ||
-               a.pokedexNumber - b.pokedexNumber
-         );
-      } else if (sortBy === "recent" && activeTab === "collection") {
-         list.sort((a, b) => {
-            const dateA = earliestMap[a.id]
-               ? new Date(earliestMap[a.id]).getTime()
-               : 0;
-            const dateB = earliestMap[b.id]
-               ? new Date(earliestMap[b.id]).getTime()
-               : 0;
-            return dateB - dateA;
-         });
-      } else {
-         // Default: Pokedex number
-         list.sort((a, b) => a.pokedexNumber - b.pokedexNumber);
-      }
-
-      return list;
-   }, [
-      initialSpecies,
-      activeTab,
-      ownershipMap,
-      search,
-      selectedGeneration,
-      selectedClassification,
-      selectedRarity,
-      selectedType,
-      sortBy,
-      earliestMap,
-   ]);
+   const totalPages = Math.max(1, Math.ceil(totalCount / CATALOGUE_PAGE_SIZE));
+   const hasActiveFilters =
+      search.trim() !== "" ||
+      selectedRarity !== "" ||
+      selectedType !== "" ||
+      selectedGeneration !== "" ||
+      selectedClassification !== "";
 
    return (
       <div className="space-y-6 pb-12">
@@ -247,24 +280,21 @@ export function PokemonView({
          {/* Filter and Tab Navigation Bar */}
          <PokemonFilterBar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             search={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             selectedRarity={selectedRarity}
-            onRarityChange={setSelectedRarity}
+            onRarityChange={handleRarityChange}
             selectedType={selectedType}
-            onTypeChange={setSelectedType}
+            onTypeChange={handleTypeChange}
             selectedGeneration={selectedGeneration}
-            onGenerationChange={setSelectedGeneration}
+            onGenerationChange={handleGenerationChange}
             selectedClassification={selectedClassification}
-            onClassificationChange={setSelectedClassification}
+            onClassificationChange={handleClassificationChange}
             sortBy={sortBy}
-            onSortChange={setSortBy}
+            onSortChange={handleSortChange}
             isSpectator={isSpectator}
             isAdmin={isAdmin}
-            totalFilteredCount={
-               activeTab !== "summon" ? filteredSpecies.length : undefined
-            }
             onOpenHistory={() => setIsHistoryOpen(true)}
             onOpenAdmin={() => setIsAdminModalOpen(true)}
          />
@@ -289,7 +319,7 @@ export function PokemonView({
                         userAvailableCoins={availableCoins}
                         isLoggedIn={!isSpectator}
                         onAcquisitionSuccess={handleAcquisitionSuccess}
-                        onViewCollection={() => setActiveTab("collection")}
+                        onViewCollection={() => handleTabChange("collection")}
                      />
                   ))}
                </div>
@@ -322,22 +352,56 @@ export function PokemonView({
                   )}
                </div>
             )
-         ) : filteredSpecies.length > 0 ? (
+         ) : error ? (
             <div
-               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
-               data-testid="pokemon-cards-grid"
+               className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl bg-red-500/5 border border-red-500/30 text-center"
+               data-testid="pokemon-error-state"
             >
-               {filteredSpecies.map((sp) => (
-                  <PokemonCard
-                     key={sp.id}
-                     species={sp}
-                     ownedCount={ownershipMap[sp.id] ?? 0}
-                     earliestObtainedAt={earliestMap[sp.id] ?? null}
-                     mode={activeTab}
-                     onClick={() => setSelectedSpecies(sp)}
-                  />
-               ))}
+               <h3 className="text-base font-semibold text-white mb-1">
+                  Couldn&apos;t load the Pokédex
+               </h3>
+               <p className="text-xs sm:text-sm text-pokedex-textMuted max-w-sm mb-4">
+                  {error}
+               </p>
+               <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="text-xs border-pokedex-borderLight text-pokedex-textSecondary hover:text-white hover:border-pokedex-border"
+               >
+                  Retry
+               </Button>
             </div>
+         ) : species.length > 0 ? (
+            <div className="space-y-4">
+               <div
+                  className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 transition-opacity ${
+                     isPending ? "opacity-50" : "opacity-100"
+                  }`}
+                  data-testid="pokemon-cards-grid"
+               >
+                  {species.map((sp) => (
+                     <PokemonCard
+                        key={sp.id}
+                        species={sp}
+                        ownedCount={ownershipMap[sp.id] ?? 0}
+                        earliestObtainedAt={earliestMap[sp.id] ?? null}
+                        mode={activeTab}
+                        onClick={() => setSelectedSpecies(sp)}
+                     />
+                  ))}
+               </div>
+               <DataPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalCount}
+                  pageSize={CATALOGUE_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="Pokémon"
+               />
+            </div>
+         ) : isPending ? (
+            <CatalogueSkeleton />
          ) : (
             /* Empty State (Law L9) */
             <div
@@ -357,21 +421,11 @@ export function PokemonView({
                      ? "You haven't obtained any Pokémon yet. Complete your daily study goals, earn coins, and head to the Summon Portal to unlock companions!"
                      : "Try adjusting your search terms or clearing your filters."}
                </p>
-               {(search ||
-                  selectedRarity ||
-                  selectedType ||
-                  selectedGeneration ||
-                  selectedClassification) && (
+               {hasActiveFilters && (
                   <Button
                      variant="outline"
                      size="sm"
-                     onClick={() => {
-                        setSearch("");
-                        setSelectedRarity("");
-                        setSelectedType("");
-                        setSelectedGeneration("");
-                        setSelectedClassification("");
-                     }}
+                     onClick={handleResetFilters}
                      className="text-xs border-pokedex-borderLight text-pokedex-textSecondary hover:text-white hover:border-pokedex-border"
                   >
                      Reset Filters

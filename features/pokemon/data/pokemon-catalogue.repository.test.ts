@@ -16,6 +16,9 @@ vi.mock("@/core/db", () => ({
          count: vi.fn(),
          upsert: vi.fn(),
       },
+      userPokemon: {
+         groupBy: vi.fn(),
+      },
    },
 }));
 
@@ -72,27 +75,66 @@ describe("Pokemon Catalogue Repository", () => {
          );
       });
 
-      it("sorts by custom rarity hierarchy descending in memory", async () => {
-         const mockList = [
-            { id: "1", pokedexNumber: 1, rarity: "NORMAL", name: "Pidgey" },
-            {
-               id: "2",
-               pokedexNumber: 150,
-               rarity: "LEGENDARY",
-               name: "Mewtwo",
-            },
-            { id: "3", pokedexNumber: 151, rarity: "MYTHICAL", name: "Mew" },
-         ];
+      it("orders rarity via DB orderBy (enum order matches rank)", async () => {
+         vi.mocked(prisma.pokemonSpecies.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.pokemonSpecies.count).mockResolvedValue(0);
 
-         vi.mocked(prisma.pokemonSpecies.findMany).mockResolvedValue(
-            mockList as any
+         await listPokemonSpecies({ sortBy: "rarity_desc" });
+
+         expect(prisma.pokemonSpecies.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+               orderBy: [{ rarity: "desc" }, { pokedexNumber: "asc" }],
+            })
          );
-         vi.mocked(prisma.pokemonSpecies.count).mockResolvedValue(3);
+      });
 
-         const result = await listPokemonSpecies({ sortBy: "rarity_desc" });
-         expect(result.species[0].rarity).toBe("MYTHICAL");
-         expect(result.species[1].rarity).toBe("LEGENDARY");
-         expect(result.species[2].rarity).toBe("NORMAL");
+      it("defaults to a 24-row page and applies the offset", async () => {
+         vi.mocked(prisma.pokemonSpecies.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.pokemonSpecies.count).mockResolvedValue(0);
+
+         await listPokemonSpecies({ offset: 24 });
+
+         expect(prisma.pokemonSpecies.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ take: 24, skip: 24 })
+         );
+      });
+
+      it("scopes to owned species when ownedByUserId is provided", async () => {
+         vi.mocked(prisma.pokemonSpecies.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.pokemonSpecies.count).mockResolvedValue(0);
+
+         await listPokemonSpecies({ ownedByUserId: "user_1" });
+
+         expect(prisma.pokemonSpecies.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+               where: expect.objectContaining({
+                  instances: { some: { userId: "user_1" } },
+               }),
+            })
+         );
+      });
+
+      it("orders recently-obtained collection species by earliest obtainedAt", async () => {
+         vi.mocked(prisma.pokemonSpecies.findMany)
+            .mockResolvedValueOnce([{ id: "a" }, { id: "b" }] as any)
+            .mockResolvedValueOnce([
+               { id: "a", name: "A" },
+               { id: "b", name: "B" },
+            ] as any);
+         vi.mocked(prisma.userPokemon.groupBy).mockResolvedValue([
+            { speciesId: "a", _min: { obtainedAt: new Date("2026-01-01") } },
+            { speciesId: "b", _min: { obtainedAt: new Date("2026-06-01") } },
+         ] as any);
+
+         const result = await listPokemonSpecies({
+            sortBy: "recent",
+            ownedByUserId: "user_1",
+            limit: 24,
+            offset: 0,
+         });
+
+         expect(result.totalCount).toBe(2);
+         expect(result.species.map((s) => s.id)).toEqual(["b", "a"]);
       });
    });
 

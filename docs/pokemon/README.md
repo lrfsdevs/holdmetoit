@@ -266,7 +266,24 @@ A critical architectural distinction is maintained between **Pokémon species** 
 
 ---
 
-## 6. Future Expansion Roadmap
+## 6. Catalogue Pagination, Search & Sort (Server-Side)
+
+The Pokédex catalogue grid is fully **server-side**: each request loads one page
+(`CATALOGUE_PAGE_SIZE = 24`) plus a matching `count`, instead of fetching all
+~1,025 species on every visit. Pagination, search, filters and sort all resolve in
+the database, so pages stay correct across the whole catalogue.
+
+- **Constant:** `CATALOGUE_PAGE_SIZE` in `features/pokemon/domain/catalogue-query.ts`.
+- **Repository (`features/pokemon/data/pokemon-catalogue.repository.ts`):** `listPokemonSpecies({ limit, offset, search, rarity, type, generation, isLegendary, isMythical, isAvailable, sortBy, ownedByUserId })` returns `{ species, totalCount }`. `ownedByUserId` scopes to species the user owns via `instances.some`.
+- **Sorts:** `pokedex` (pokedexNumber asc), `name` (asc), `rarity_desc` / `rarity_asc` (DB `orderBy: { rarity }` — the `PokemonRarity` enum is declared NORMAL → MYTHICAL, matching the domain rank order, so it is correct across pages), and `recent` (collection only).
+- **`recent` (collection):** Prisma can't `orderBy` a related `obtainedAt`, so it orders the user's owned set (bounded by their collection) by earliest `UserPokemon.obtainedAt` and slices — no raw SQL.
+- **Action (`features/pokemon/api/pokemon.actions.ts`):** `getPokemonCatalogueAction({ scope, page, limit, search, rarity, type, generation, classification, sortBy })`. `scope: "catalogue"` is public; `scope: "collection"` derives the user id from the session server-side (never trusted from the client).
+- **View (`features/pokemon/presentation/pokemon-view.tsx`):** owns filter/search/sort/page state, debounces search (~300 ms), and refetches via the server action on any change (`useTransition` + stale-response guard). Renders `DataPagination` (`itemLabel="Pokémon"`); the filter bar no longer shows a count — the pagination bar is the single source (`Showing 1–24 of 1025 Pokémon`). Any tab/search/filter/sort change resets to page 1.
+- **States (Law L9):** loading skeleton, dimmed grid during a refetch, empty state, and an error state with Retry.
+
+---
+
+## 7. Future Expansion Roadmap
 
 - **Phase 4 (Gacha & Pity Foundation):**
    - Connects to Phase 1 virtual currency wallet to deduct coins atomically.

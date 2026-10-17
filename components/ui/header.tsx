@@ -1,10 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Eye, EyeOff, LogOut, Shield, Trophy } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { LogOut, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DiscordIcon } from "@/components/icons/discord-icon";
@@ -13,13 +12,11 @@ import {
    loginWithDiscordAction,
    logoutAction,
 } from "@/features/auth/api/auth.actions";
-import { toggleParticipantPreviewAction } from "@/features/auth/api/preview-mode.actions";
-import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 import {
    hasAdminPrivileges,
    isDevRole,
 } from "@/features/auth/domain/auth-roles";
-import { PARTICIPANT_PREVIEW_COOKIE } from "@/features/auth/domain/preview-mode";
+import { PreviewModeHotkey } from "@/features/auth/presentation/preview-mode-hotkey";
 
 export function SignInWithDiscordButton({
    redirectTo = "/",
@@ -91,7 +88,6 @@ export interface UserNavProps {
       role?: string;
    } | null;
    redirectTo?: string;
-   isActualAdmin?: boolean;
    isPreviewActive?: boolean;
    profileUrl?: string;
 }
@@ -99,13 +95,9 @@ export interface UserNavProps {
 export function UserNav({
    user,
    redirectTo,
-   isActualAdmin,
    isPreviewActive,
    profileUrl,
 }: UserNavProps) {
-   const router = useRouter();
-   const [isPending, startTransition] = useTransition();
-
    if (!user) {
       return (
          <SignInWithDiscordButton
@@ -116,10 +108,6 @@ export function UserNav({
       );
    }
 
-   const effectiveIsActualAdmin =
-      isActualAdmin !== undefined
-         ? isActualAdmin
-         : hasAdminPrivileges(user.role);
    const effectiveIsPreviewActive = isPreviewActive ?? false;
 
    const displayName =
@@ -128,78 +116,8 @@ export function UserNav({
    const isDev = isDevRole(user.role) && !effectiveIsPreviewActive;
    const activeProfileUrl = profileUrl ?? "/profile";
 
-   const handleToggle = () => {
-      startTransition(async () => {
-         const nextState = !effectiveIsPreviewActive;
-
-         if (typeof document !== "undefined") {
-            if (nextState) {
-               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=true; path=/; max-age=86400; SameSite=Lax`;
-            } else {
-               document.cookie = `${PARTICIPANT_PREVIEW_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
-            }
-         }
-
-         await toggleParticipantPreviewAction(nextState);
-
-         if (
-            typeof window !== "undefined" &&
-            window.location.search.includes("as=participant")
-         ) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete("as");
-            router.replace(url.pathname + (url.search ? url.search : ""));
-            return;
-         }
-
-         router.refresh();
-      });
-   };
-
    return (
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-         {/* Global Participant Preview Toggle Button for Admins/Devs */}
-         {effectiveIsActualAdmin && (
-            <Button
-               type="button"
-               size="sm"
-               variant="outline"
-               onClick={handleToggle}
-               disabled={isPending}
-               data-testid={
-                  effectiveIsPreviewActive
-                     ? "exit-preview-button"
-                     : "enter-preview-button"
-               }
-               className={
-                  effectiveIsPreviewActive
-                     ? "rounded-full bg-[#e08a32]/15 hover:bg-[#e08a32]/25 text-[#e08a32] hover:text-[#f5a742] border-[#e08a32]/40 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto"
-                     : "rounded-full bg-[#1c1c1c] hover:bg-[#292929] text-[#b3b3b3] hover:text-[#f4f3f6] border-[#333333] px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-colors shrink-0 gap-1.5 h-auto"
-               }
-               title={
-                  effectiveIsPreviewActive
-                     ? "Exit Participant Preview and return to Developer / Moderator view"
-                     : "Preview website globally as a regular participant (hides admin controls)"
-               }
-            >
-               {effectiveIsPreviewActive ? (
-                  <>
-                     <EyeOff className="h-3 w-3 shrink-0" />
-                     <span className="sm:hidden">Exit</span>
-                     <span className="hidden sm:inline">Exit Preview</span>
-                  </>
-               ) : (
-                  <>
-                     <Eye className="h-3 w-3 shrink-0" />
-                     <span className="sm:hidden">Preview</span>
-                     <span className="hidden sm:inline">
-                        Preview as Participant
-                     </span>
-                  </>
-               )}
-            </Button>
-         )}
-
          {/* User Capsule */}
          <Link
             href={activeProfileUrl}
@@ -288,28 +206,25 @@ export function AppHeader({
                <Link
                   href="/wallet"
                   data-testid="wallet-nav-link"
-                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
                >
-                  <CoinsIcon className="h-3.5 w-3.5 text-economy-gold" />
-                  <span>Wallet</span>
+                  Wallet
                </Link>
 
                <Link
                   href="/leaderboard"
                   data-testid="trophy-leaderboard-nav-link"
-                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
                >
-                  <Trophy className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Leaderboard</span>
+                  Leaderboard
                </Link>
 
                <Link
                   href="/pokemon"
                   data-testid="pokemon-nav-link"
-                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3 flex items-center gap-1.5"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
                >
-                  <BookOpen className="h-3.5 w-3.5 text-rose-400" />
-                  <span>Pokédex</span>
+                  Pokédex
                </Link>
 
                {isDevRole(effectiveUser?.role) && (
@@ -336,6 +251,10 @@ export function AppHeader({
             <UserNav
                user={effectiveUser}
                redirectTo="/"
+               isPreviewActive={previewActive}
+            />
+
+            <PreviewModeHotkey
                isActualAdmin={resolvedIsActualAdmin}
                isPreviewActive={previewActive}
             />

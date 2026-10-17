@@ -663,3 +663,39 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test`: 152 test files, 1417/1417 tests green (importer test removed).
 - **Re-seed path (`scripts/seed-pokemon-catalogue.ts` + `npm run db:seed:pokemon`):** Offline seeder that reads a raw metadata bundle and writes the normalized catalogue (idempotent upserts on `slug`; replaces `forms`/`abilities` on re-run). Flags: `--file=<path>` (default `./pokemon_metadata.json`), `--limit=<N>`, `--dry-run`. Used to seed the dev DB `holdmetoit3`: **1,025 species / 326 forms / 2,411 abilities** (generation coverage 1–9 exact).
 - **NEXT STEP:** Maintainer snapshots the hosted DB, applies `20261022000000_normalize_pokemon_catalogue` (`npx prisma migrate deploy`), then runs `npm run db:seed:pokemon` (with the raw bundle available) and spot-checks `PokemonForm` (326) / `PokemonAbility` counts and the `/pokemon` detail modal.
+
+### Session 120 — 2026-10-16 (Header Nav Icon Cleanup, Preview-Button Removal & Ctrl+P Preview Hotkey on `afnan`)
+
+- **Scope:** Removed icons from the header navigation links; removed the "Preview as Participant" header button and replaced it with a global Ctrl+P (Cmd+P on macOS) hotkey that toggles participant preview for admins/devs.
+- **Header (`components/ui/header.tsx`):** Removed the `CoinsIcon`/`Trophy`/`BookOpen` icons from the Wallet/Leaderboard/Pokédex nav links (now text-only); removed the preview toggle button from `UserNav` (and its now-unused `isActualAdmin` prop); mounted the new `PreviewModeHotkey` inside `AppHeader`.
+- **Toast infra (`components/ui/sonner.tsx` + `app/layout.tsx`):** Added the `sonner` dependency; `<Toaster>` mounted in the root layout at `position="bottom-right"`, offset (88px) so it clears the fixed Feedback button. (Not fired by the preview toggle — see Session 121.)
+- **Hotkey (`features/auth/presentation/preview-mode-hotkey.tsx`):** Client component listening for Ctrl+P/Cmd+P; reuses the preview cookie + `toggleParticipantPreviewAction` + `router.refresh()`. Gated to admins/devs; `preventDefault` keeps normal browser print for non-admins.
+- **Domain (`features/auth/domain/preview-mode.ts`):** Added the pure `isParticipantPreviewHotkey(event)` matcher (Law L7).
+- **Tests:** Updated `components/ui/header.test.tsx` (removed enter/exit-preview-button assertions); added matcher tests to `features/auth/domain/preview-mode.test.ts`.
+- **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` green; `npm run build` clean.
+- **NEXT STEP:** Optional — verify Ctrl+P UX on Windows/macOS; reuse the `sonner` `<Toaster>` for other admin actions.
+
+### Session 121 — 2026-10-17 (Trophy Leaderboard Pagination, Search & Alphabetical Sort on `afnan`)
+
+- **Scope:** `/leaderboard` now paginates 10 players per page, keeps search by name/@username, and adds an alphabetical A–Z / Z–A sort alongside the existing Trophies / Win Rate / Total Wins sorts. Also removed the per-toggle Sonner toast on the Ctrl+P participant-preview hotkey (Session 120 follow-up) so toggling is silent.
+- **Domain (`features/trophies/domain/leaderboard-query.ts`, NEW):** Pure, generic helpers (Law L7): `filterLeaderboardEntries`, `sortLeaderboardEntries`, `paginateLeaderboard`, plus `LEADERBOARD_PAGE_SIZE = 10`. No data/React/Prisma imports — the domain never depends on `TrophyLeaderboardEntry`.
+- **Data (`features/trophies/data/trophy.repository.ts`):** `getTrophyLeaderboard` gained an `all?: boolean` option (`skip=0`, `take=undefined`) so the page can load the full set for client-side pagination. Default `{ page, limit: 50 }` behaviour is unchanged for the admin console + action wrappers.
+- **Page (`app/leaderboard/page.tsx`):** Fetches `{ all: true }`; dropped the dead `?page=` search param and the unused `initialPagination` prop.
+- **View (`features/trophies/presentation/trophy-leaderboard-view.tsx`):** Uses `useMemo` filter → sort → paginate; renders the `paginated.items` slice + `DataPagination` (`itemLabel="players"`); added a `Name A–Z / Z–A` toggle button (reuses the previously-unused `ArrowUpDown` icon); search/sort changes reset to page 1; rank medals still reflect the true global `entry.rank`.
+- **NEXT STEP:** Optional — if the user base grows large enough that a single full fetch becomes heavy, revisit server-side paging (a server-side variant was implemented and then reverted the same day per maintainer preference for the client-side approach); otherwise none.
+- **Reverted (same day):** The server-side pagination/search/sort variant (server-action refetch, Prisma `where`/`orderBy`/`skip`/`take`, `groupBy` win/loss counts, `$queryRaw` trophy rank) was removed and the client-side approach above restored.
+
+### Session 123 — 2026-10-17 (Server-Side Pokédex Catalogue Pagination on `afnan`)
+
+- **Scope:** `/pokemon`'s catalogue grid is now **server-side** paginated (24/page). Previously the page fetched all ~1,025 species (with forms) on every visit — including spectators — which risked overloading the DB. Search, filters and sort now resolve in the DB so pages stay correct.
+- **Domain (`features/pokemon/domain/catalogue-query.ts`, NEW):** `CATALOGUE_PAGE_SIZE = 24` + `CatalogueSortKey` / `CatalogueScope` types.
+- **Data (`features/pokemon/data/pokemon-catalogue.repository.ts`):** `listPokemonSpecies` gains an `ownedByUserId` option (`instances.some`), defaults `take` to 24, and orders rarity via DB `orderBy: [{ rarity }, { pokedexNumber }]` (the `PokemonRarity` enum order matches the domain rank, so this is now correct across pages — the old in-memory rarity sort is removed). `recent` + collection uses a bounded two-step query (owned ids → earliest `UserPokemon.obtainedAt` → slice) since Prisma can't `orderBy` a relation field.
+- **Schema (`features/pokemon/domain/pokemon.schema.ts`):** `ListPokemonFilterSchema` gains `scope`, `page`, `classification`.
+- **Action (`features/pokemon/api/pokemon.actions.ts`):** `getPokemonCatalogueAction` now pages/filters/sorts; `scope: "collection"` derives the user from the session (`UNAUTHORIZED` otherwise), `scope: "catalogue"` stays public.
+- **Page (`app/pokemon/page.tsx`):** fetches only the first page (`limit: CATALOGUE_PAGE_SIZE`) and passes `initialTotalCount`.
+- **View (`features/pokemon/presentation/pokemon-view.tsx`):** server-refetch state (search debounced ~300 ms, `useTransition`, stale-response guard); renders `DataPagination` (`itemLabel="Pokémon"`); the filter-bar "Showing N entries" text is removed; loading skeleton + error/Retry states added (Law L9); any tab/search/filter/sort change resets to page 1.
+- **Filter bar (`features/pokemon/presentation/pokemon-filter-bar.tsx`):** `totalFilteredCount` prop + count text removed.
+- **Tests:** repository tests cover owned scoping, DB rarity `orderBy`, 24-row page/offset, and the recent-collection branch; action tests cover collection scoping/`UNAUTHORIZED`; view test updated + a page-1-of-25 pagination case.
+- **Quality Gates:** `npm run typecheck` 0 errors; `npm run test` 154 files / 1,452 tests green; `npm run build` clean (17 routes); live DB spot-check via temporary `tsx` scripts (since removed) confirmed 24/page, 1025 total, rarity/name ordering, search, and the ownership filter.
+- **Docs:** `docs/pokemon/README.md` §6 added.
+- **NEXT STEP:** Optional — layer request caching on the catalogue action if the extra round-trips per interaction feel slow in practice; otherwise none.

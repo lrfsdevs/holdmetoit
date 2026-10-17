@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
    getEffectiveAdminState,
    isParticipantPreviewEnabled,
+   isParticipantPreviewHotkey,
 } from "./preview-mode";
 
 describe("isParticipantPreviewEnabled", () => {
@@ -85,5 +86,46 @@ describe("getEffectiveAdminState", () => {
          isAdmin: false,
          effectiveRole: null,
       });
+   });
+});
+
+describe("isParticipantPreviewHotkey", () => {
+   it("matches Ctrl+P", () => {
+      expect(isParticipantPreviewHotkey({ code: "KeyP", ctrlKey: true })).toBe(
+         true
+      );
+   });
+
+   it("matches Cmd+P (metaKey)", () => {
+      expect(isParticipantPreviewHotkey({ code: "KeyP", metaKey: true })).toBe(
+         true
+      );
+   });
+
+   it("ignores P without Ctrl/Cmd", () => {
+      expect(isParticipantPreviewHotkey({ code: "KeyP" })).toBe(false);
+   });
+
+   it("ignores other keys even with Ctrl", () => {
+      expect(isParticipantPreviewHotkey({ code: "KeyO", ctrlKey: true })).toBe(
+         false
+      );
+   });
+
+   it("ignores Ctrl+P when Alt or Shift is also held", () => {
+      expect(
+         isParticipantPreviewHotkey({
+            code: "KeyP",
+            ctrlKey: true,
+            altKey: true,
+         })
+      ).toBe(false);
+      expect(
+         isParticipantPreviewHotkey({
+            code: "KeyP",
+            ctrlKey: true,
+            shiftKey: true,
+         })
+      ).toBe(false);
    });
 });

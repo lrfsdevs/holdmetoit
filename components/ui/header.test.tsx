@@ -47,7 +47,7 @@ describe("UserNav", () => {
       expect(html).not.toContain("exit-preview-button");
    });
 
-   it("renders enter-preview button for ADMIN role without dev badge", () => {
+   it("renders capsule for ADMIN role without preview button or dev badge", () => {
       const html = renderToStaticMarkup(
          createElement(UserNav, {
             user: {
@@ -60,12 +60,13 @@ describe("UserNav", () => {
       expect(html).toContain("HostAdmin");
       expect(html).not.toContain("Admin Console");
       expect(html).not.toContain("/admin");
-      expect(html).toContain('data-testid="enter-preview-button"');
-      expect(html).toContain("Preview as Participant");
+      expect(html).not.toContain('data-testid="enter-preview-button"');
+      expect(html).not.toContain('data-testid="exit-preview-button"');
+      expect(html).not.toContain("Preview as Participant");
       expect(html).not.toContain("dev-role-badge");
    });
 
-   it("renders enter-preview button and DEV badge for DEV role", () => {
+   it("renders DEV badge for DEV role without a preview button", () => {
       const html = renderToStaticMarkup(
          createElement(UserNav, {
             user: {
@@ -78,12 +79,12 @@ describe("UserNav", () => {
       expect(html).toContain("DevArchitect");
       expect(html).not.toContain("Admin Console");
       expect(html).not.toContain("/admin");
-      expect(html).toContain('data-testid="enter-preview-button"');
+      expect(html).not.toContain('data-testid="enter-preview-button"');
       expect(html).toContain('data-testid="dev-role-badge"');
       expect(html).toContain("DEV");
    });
 
-   it("hides DEV badge when isPreviewActive is true, and renders Exit Preview button", () => {
+   it("hides DEV badge when isPreviewActive is true", () => {
       const html = renderToStaticMarkup(
          createElement(UserNav, {
             user: {
@@ -91,7 +92,6 @@ describe("UserNav", () => {
                displayName: "DevArchitect",
                role: "DEV",
             },
-            isActualAdmin: true,
             isPreviewActive: true,
          })
       );
@@ -99,8 +99,7 @@ describe("UserNav", () => {
       expect(html).not.toContain("Admin Console");
       expect(html).not.toContain("/admin");
       expect(html).not.toContain('data-testid="dev-role-badge"');
-      expect(html).toContain('data-testid="exit-preview-button"');
-      expect(html).toContain("Exit Preview");
+      expect(html).not.toContain('data-testid="exit-preview-button"');
    });
 
    it("renders user capsule as a link to /profile by default", () => {
@@ -166,6 +165,6 @@ describe("AppHeader", () => {
          })
       );
       expect(html).not.toContain("/devboard");
-      expect(html).toContain('data-testid="exit-preview-button"');
+      expect(html).not.toContain('data-testid="exit-preview-button"');
    });
 });

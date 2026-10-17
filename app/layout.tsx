@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { Inter, Outfit } from "next/font/google";
 
 import { AppHeader } from "@/components/ui/header";
+import { Toaster } from "@/components/ui/sonner";
 import { auth } from "@/core/auth";
 import { LogRocketProvider } from "@/core/observability/logrocket-provider";
 import {
@@ -71,6 +72,7 @@ export default async function RootLayout({
             </Suspense>
             {children}
             <FeedbackTriggerButton />
+            <Toaster />
          </body>
       </html>
    );

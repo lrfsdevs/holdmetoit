@@ -6,6 +6,7 @@ import {
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
 import { listPokemonSpecies } from "@/features/pokemon/data/pokemon-catalogue.repository";
+import { CATALOGUE_PAGE_SIZE } from "@/features/pokemon/domain/catalogue-query";
 import {
    getUserCollectionSummary,
    getUserPokemonCollection,
@@ -52,7 +53,12 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
       wallet,
       userPityRecords,
    ] = await Promise.all([
-      listPokemonSpecies({ isAvailable: true, sortBy: "pokedex" }),
+      listPokemonSpecies({
+         isAvailable: true,
+         sortBy: "pokedex",
+         limit: CATALOGUE_PAGE_SIZE,
+         offset: 0,
+      }),
       userId ? getUserCollectionSummary(userId) : Promise.resolve(null),
       userId ? getUserPokemonCollection(userId) : Promise.resolve([]),
       listBanners({ includeInactive: false }),
@@ -79,6 +85,7 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
          <main className="mx-auto max-w-6xl px-3 sm:px-6 py-6 sm:py-8">
             <PokemonView
                initialSpecies={catalogueResult.species}
+               initialTotalCount={catalogueResult.totalCount}
                initialSummary={userSummary}
                initialInstances={userInstances}
                initialBanners={bannersResult}

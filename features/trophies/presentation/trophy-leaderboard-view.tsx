@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -8,56 +8,71 @@ import {
    Crown,
    Medal,
    Search,
-   Sparkles,
    ArrowUpDown,
    User as UserIcon,
    Flame,
-   ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DataPagination } from "@/components/ui/data-pagination";
 import { TrophyRoleBadge } from "./trophy-role-badge";
+import {
+   filterLeaderboardEntries,
+   LEADERBOARD_PAGE_SIZE,
+   paginateLeaderboard,
+   sortLeaderboardEntries,
+   type LeaderboardSortKey,
+   type SortDirection,
+} from "../domain/leaderboard-query";
 import type { TrophyLeaderboardEntry } from "../data/trophy.repository";
 
 interface TrophyLeaderboardViewProps {
    initialEntries: TrophyLeaderboardEntry[];
-   initialPagination: {
-      page: number;
-      limit: number;
-      totalCount: number;
-      totalPages: number;
-   };
    currentUserId?: string | null;
 }
 
 export function TrophyLeaderboardView({
    initialEntries = [],
-   initialPagination,
    currentUserId,
 }: TrophyLeaderboardViewProps) {
    const [searchQuery, setSearchQuery] = useState("");
-   const [sortBy, setSortBy] = useState<"trophies" | "winRate" | "wins">(
-      "trophies"
+   const [sortBy, setSortBy] = useState<LeaderboardSortKey>("trophies");
+   const [sortDir, setSortDir] = useState<SortDirection>("desc");
+   const [currentPage, setCurrentPage] = useState(1);
+
+   const filtered = useMemo(
+      () => filterLeaderboardEntries(initialEntries, searchQuery),
+      [initialEntries, searchQuery]
+   );
+   const sorted = useMemo(
+      () => sortLeaderboardEntries(filtered, sortBy, sortDir),
+      [filtered, sortBy, sortDir]
+   );
+   const paginated = useMemo(
+      () => paginateLeaderboard(sorted, currentPage),
+      [sorted, currentPage]
    );
 
-   const filtered = initialEntries
-      .filter((e) => {
-         if (!searchQuery.trim()) return true;
-         const q = searchQuery.toLowerCase();
-         return (
-            e.displayName.toLowerCase().includes(q) ||
-            e.username.toLowerCase().includes(q)
-         );
-      })
-      .sort((a, b) => {
-         if (sortBy === "winRate") {
-            return b.winRate - a.winRate;
-         }
-         if (sortBy === "wins") {
-            return b.wins - a.wins;
-         }
-         return b.trophyBalance - a.trophyBalance;
-      });
+   const handleSearchChange = (value: string) => {
+      setSearchQuery(value);
+      setCurrentPage(1);
+   };
+
+   const handleSelectSort = (key: Exclude<LeaderboardSortKey, "name">) => {
+      setSortBy(key);
+      setSortDir("desc");
+      setCurrentPage(1);
+   };
+
+   const handleToggleNameSort = () => {
+      if (sortBy !== "name") {
+         setSortBy("name");
+         setSortDir("asc");
+      } else {
+         setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+      }
+      setCurrentPage(1);
+   };
 
    const getTopRankDecor = (rank: number) => {
       if (rank === 1) {
@@ -133,18 +148,18 @@ export function TrophyLeaderboardView({
                   type="text"
                   placeholder="Search participants by name or @username..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="rounded-xl border-obsidian-border bg-obsidian-elevated pl-8 text-xs text-white placeholder:text-obsidian-textDim"
                />
             </div>
 
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-obsidian-elevated border border-obsidian-borderSubtle text-xs self-start sm:self-auto">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-obsidian-elevated border border-obsidian-borderSubtle text-xs self-start sm:self-auto">
                <span className="text-[11px] text-obsidian-textDim px-2 font-medium">
                   Sort:
                </span>
                <button
                   type="button"
-                  onClick={() => setSortBy("trophies")}
+                  onClick={() => handleSelectSort("trophies")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "trophies"
                         ? "bg-economy-gold text-black shadow-sm"
@@ -155,7 +170,7 @@ export function TrophyLeaderboardView({
                </button>
                <button
                   type="button"
-                  onClick={() => setSortBy("winRate")}
+                  onClick={() => handleSelectSort("winRate")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "winRate"
                         ? "bg-economy-gold text-black shadow-sm"
@@ -166,7 +181,7 @@ export function TrophyLeaderboardView({
                </button>
                <button
                   type="button"
-                  onClick={() => setSortBy("wins")}
+                  onClick={() => handleSelectSort("wins")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "wins"
                         ? "bg-economy-gold text-black shadow-sm"
@@ -175,18 +190,35 @@ export function TrophyLeaderboardView({
                >
                   Total Wins
                </button>
+               <button
+                  type="button"
+                  onClick={handleToggleNameSort}
+                  aria-label={
+                     sortBy === "name" && sortDir === "desc"
+                        ? "Sort by name descending"
+                        : "Sort by name ascending"
+                  }
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                     sortBy === "name"
+                        ? "bg-economy-gold text-black shadow-sm"
+                        : "text-obsidian-textMuted hover:text-white"
+                  }`}
+               >
+                  <ArrowUpDown className="h-3 w-3" />
+                  Name {sortBy === "name" && sortDir === "desc" ? "Z–A" : "A–Z"}
+               </button>
             </div>
          </div>
 
          {/* Standings Table Card */}
          <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-4 sm:p-6 shadow-xl overflow-hidden">
             <div className="divide-y divide-obsidian-borderSubtle">
-               {filtered.length === 0 ? (
+               {paginated.items.length === 0 ? (
                   <div className="py-16 text-center text-xs text-obsidian-textDim">
                      No competitive players found matching your search.
                   </div>
                ) : (
-                  filtered.map((entry, idx) => {
+                  paginated.items.map((entry, idx) => {
                      const isSelf = currentUserId === entry.userId;
                      const displayRank = entry.rank;
 
@@ -253,6 +285,16 @@ export function TrophyLeaderboardView({
                   })
                )}
             </div>
+
+            <DataPagination
+               currentPage={paginated.page}
+               totalPages={paginated.totalPages}
+               totalItems={paginated.totalItems}
+               pageSize={LEADERBOARD_PAGE_SIZE}
+               onPageChange={setCurrentPage}
+               itemLabel="players"
+               className="mt-4"
+            />
          </div>
       </div>
    );

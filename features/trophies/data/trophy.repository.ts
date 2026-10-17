@@ -186,16 +186,17 @@ export interface TrophyLeaderboardEntry {
 }
 
 export async function getTrophyLeaderboard(
-   options: { page?: number; limit?: number } = {}
+   options: { page?: number; limit?: number; all?: boolean } = {}
 ) {
-   const { page = 1, limit = 50 } = options;
-   const skip = (page - 1) * limit;
+   const { page = 1, limit = 50, all = false } = options;
+   const skip = all ? 0 : (page - 1) * limit;
+   const take = all ? undefined : limit;
 
    const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
          orderBy: { trophyBalance: "desc" },
          skip,
-         take: limit,
+         take,
          select: {
             id: true,
             displayName: true,
@@ -240,12 +241,14 @@ export async function getTrophyLeaderboard(
 
    return {
       entries,
-      pagination: {
-         page,
-         limit,
-         totalCount,
-         totalPages: Math.ceil(totalCount / limit) || 1,
-      },
+      pagination: all
+         ? { page: 1, limit: totalCount, totalCount, totalPages: 1 }
+         : {
+              page,
+              limit,
+              totalCount,
+              totalPages: Math.ceil(totalCount / limit) || 1,
+           },
    };
 }
 

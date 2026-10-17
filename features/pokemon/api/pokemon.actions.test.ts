@@ -86,9 +86,48 @@ describe("Pokemon Server Actions", () => {
             expect(res.data.species).toHaveLength(1);
             expect(res.data.species[0].name).toBe("Bulbasaur");
          }
-         expect(catalogueRepo.listPokemonSpecies).toHaveBeenCalledWith({
-            sortBy: "pokedex",
+         expect(catalogueRepo.listPokemonSpecies).toHaveBeenCalledWith(
+            expect.objectContaining({
+               isAvailable: true,
+               sortBy: "pokedex",
+               limit: 24,
+               offset: 0,
+            })
+         );
+      });
+
+      it("scopes to the session user's collection and rejects unauthenticated", async () => {
+         vi.mocked(coreAuth.auth).mockResolvedValue(null as any);
+
+         const denied = await getPokemonCatalogueAction({
+            scope: "collection",
          });
+         expect(denied.ok).toBe(false);
+         if (!denied.ok) {
+            expect(denied.code).toBe("UNAUTHORIZED");
+         }
+         expect(catalogueRepo.listPokemonSpecies).not.toHaveBeenCalled();
+
+         vi.mocked(coreAuth.auth).mockResolvedValue({
+            user: { id: "user_xyz" },
+         } as any);
+         vi.mocked(catalogueRepo.listPokemonSpecies).mockResolvedValue({
+            species: [],
+            totalCount: 0,
+         });
+
+         const ok = await getPokemonCatalogueAction({
+            scope: "collection",
+            page: 2,
+         });
+         expect(ok.ok).toBe(true);
+         expect(catalogueRepo.listPokemonSpecies).toHaveBeenCalledWith(
+            expect.objectContaining({
+               ownedByUserId: "user_xyz",
+               limit: 24,
+               offset: 24,
+            })
+         );
       });
 
       it("rejects invalid filter parameters", async () => {
