@@ -41,6 +41,11 @@ vi.mock("./admin-target-override-modal", () => ({
       createElement("div", { "data-testid": "admin-target-override-modal" }),
 }));
 
+vi.mock("@/features/accountability/presentation/admin-pardon-modal", () => ({
+   AdminPardonModal: () =>
+      createElement("div", { "data-testid": "admin-pardon-modal" }),
+}));
+
 vi.mock("./challenge-image-input", () => ({
    ChallengeImageInput: () =>
       createElement("div", { "data-testid": "challenge-image-input" }),
