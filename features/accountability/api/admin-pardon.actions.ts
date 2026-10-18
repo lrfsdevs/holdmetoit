@@ -46,9 +46,7 @@ export async function adminPardonAction(
 
       invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);
 
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}`);
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.accountabilityPardoned, {

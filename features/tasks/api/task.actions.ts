@@ -73,7 +73,6 @@ export async function createTaskAction(
       });
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskCreated, {
          context: { userId: user.id, taskId: task.id },
@@ -134,7 +133,6 @@ export async function toggleTaskAction(
       }
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskToggled, {
          context: {
@@ -197,7 +195,6 @@ export async function deleteTaskAction(
       }
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskDeleted, {
          context: { userId: user.id, taskId: parsed.data.taskId },
@@ -243,7 +240,6 @@ export async function createCategoryAction(
       });
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskCategoryCreated, {
          context: { userId: user.id, categoryId: category.id },
@@ -306,7 +302,6 @@ export async function updateTaskAction(
       }
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskUpdated, {
          context: { userId: user.id, taskId: parsed.data.taskId },
@@ -367,7 +362,6 @@ export async function updateCategoryAction(
       }
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskCategoryUpdated, {
          context: { userId: user.id, categoryId: parsed.data.categoryId },
@@ -440,7 +434,6 @@ export async function deleteCategoryAction(
       }
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       invalidateUserTaskCache(user.id);
       logger.info(logEvents.taskCategoryDeleted, {
          context: { userId: user.id, categoryId: parsed.data.categoryId },
