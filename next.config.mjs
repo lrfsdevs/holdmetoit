@@ -58,6 +58,26 @@ const nextConfig = {
             destination: "/",
             permanent: true,
          },
+         {
+            source: "/challenge",
+            destination: "/challenges",
+            permanent: true,
+         },
+         {
+            source: "/challenges/new",
+            destination: "/admin/challenges/new",
+            permanent: true,
+         },
+         {
+            source: "/challenges/:id/:path*",
+            destination: "/challenge/:id/:path*",
+            permanent: true,
+         },
+         {
+            source: "/challenges/:id",
+            destination: "/challenge/:id",
+            permanent: true,
+         },
       ];
    },
    images: {

@@ -141,6 +141,8 @@ describe("AppHeader", () => {
       expect(html).toContain("HoldMeToIt");
       expect(html).toContain("Challenges");
       expect(html).toContain('href="/challenges"');
+      expect(html).toContain("Changelog");
+      expect(html).toContain('href="/changelog"');
    });
 
    it("renders the DevBoard link for a DEV role outside preview", async () => {

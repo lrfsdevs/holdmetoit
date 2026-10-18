@@ -82,7 +82,7 @@ export async function createAdminChallenge(
    actor: { id: string; username: string }
 ) {
    const maxMembers =
-      input.format === "SOLOS" ? 1 : input.format === "DUOS" ? 2 : null;
+      input.format === "SOLOS" ? null : input.format === "DUOS" ? 2 : null;
 
    return prisma.$transaction(async (tx) => {
       const challenge = await tx.challenge.create({
@@ -240,6 +240,9 @@ export async function lockChallengeResults(
       // 2. Three-condition lock evaluation (FEAT-PUN-01): saved = hours met AND all
       //    challenge-linked weekly tasks completed AND in a winning team.
       //    Equal team totals never punish — every team at the max is a winner.
+      //    In SOLOS format, participants compete individually: no team penalty applies.
+      const isSoloChallenge = challenge.format === "SOLOS";
+
       const teamTotals = aggregateTeamScores(
          challenge.teams,
          challenge.participants.map((participant) => ({
@@ -265,8 +268,9 @@ export async function lockChallengeResults(
          }
 
          const isInWinningTeam =
-            participant.teamId != null &&
-            winningTeamIds.includes(participant.teamId);
+            isSoloChallenge ||
+            (participant.teamId != null &&
+               winningTeamIds.includes(participant.teamId));
 
          const outcome = evaluateLockOutcome({
             targetSeconds: participant.targetSeconds,
@@ -492,7 +496,11 @@ export async function adminEnrollParticipant(params: {
       throw new Error("Selected team does not belong to this challenge.");
    }
 
-   if (team.maxMembers && team._count.participants >= team.maxMembers) {
+   if (
+      challenge.format !== "SOLOS" &&
+      team.maxMembers &&
+      team._count.participants >= team.maxMembers
+   ) {
       throw new Error(
          `Team ${team.name} is full (max ${team.maxMembers} member${team.maxMembers === 1 ? "" : "s"}).`
       );
@@ -693,7 +701,7 @@ export async function reassignParticipantTeam(params: {
 }) {
    const participant = await prisma.challengeParticipant.findUnique({
       where: { id: params.participantId },
-      include: { team: true, user: true },
+      include: { team: true, user: true, challenge: true },
    });
 
    if (!participant) {
@@ -764,6 +772,7 @@ export async function reassignParticipantTeam(params: {
    }
 
    if (
+      participant.challenge?.format !== "SOLOS" &&
       destinationTeam.maxMembers &&
       destinationTeam._count.participants >= destinationTeam.maxMembers
    ) {

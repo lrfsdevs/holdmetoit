@@ -301,4 +301,182 @@ describe("ParticipantStatsView", () => {
       expect(html).toContain("Admin Controls");
       expect(html).toContain("/challenge/chal_1?tab=manage");
    });
+
+   it("renders polished fallback profile state when user is not enrolled in challenge", () => {
+      const fallbackStats: ParticipantStatsViewModel = {
+         isFallback: true,
+         profile: {
+            participantId: "fallback-user_new",
+            userId: "user_new",
+            displayName: "New Companion",
+            username: "newbie",
+            image: null,
+            teamId: null,
+            teamName: null,
+            teamColor: null,
+            teamIcon: null,
+            rank: 0,
+            totalParticipants: 10,
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+            challengeId: "chal_completed",
+            challengeTitle: "October Battle",
+            challengeFormat: "TEAM_VS_TEAM",
+            challengeStatus: "COMPLETED",
+         },
+         summary: {
+            totalLoggedSeconds: 0,
+            totalLoggedClock: "00:00:00",
+            totalLoggedHuman: "0s",
+            todayLoggedSeconds: 0,
+            todayLoggedClock: "00:00:00",
+            todayLoggedHuman: "0s",
+            todayIsLeave: false,
+            leavesCount: 0,
+            targetSeconds: 0,
+            targetClock: "00:00:00",
+            targetHuman: "0s",
+            completionPercentage: 0,
+            rank: 0,
+            totalParticipants: 10,
+            remainingSeconds: 0,
+            remainingClock: "00:00:00",
+            remainingHuman: "0s",
+            isTargetMet: false,
+            excessSeconds: 0,
+            excessClock: "00:00:00",
+            excessHuman: "0s",
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+         },
+         dailyHistory: [],
+         teamStats: null,
+         accountability: {
+            deficitSeconds: 0,
+            deficitClock: "00:00:00",
+            deficitHuman: "0s",
+            requiredDailyPaceSeconds: 0,
+            requiredDailyPaceClock: "00:00:00",
+            requiredDailyPaceHuman: "0s",
+            daysRemaining: 0,
+            isPunished: false,
+            isPardoned: false,
+            pardonReason: null,
+            statusBadge: "Completed",
+         },
+         viewer: {
+            isAdmin: false,
+            isOwner: true,
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         <ParticipantStatsView stats={fallbackStats} />
+      );
+
+      // 1. Fallback Banner renders with owner & completed event messaging
+      expect(html).toContain("You Were Not Enrolled in This Challenge");
+      expect(html).toContain("This challenge concluded on record");
+      expect(html).toContain("Browse Challenges Directory");
+      expect(html).toContain("View Challenge Scoreboard");
+      expect(html).toContain("Return to Lounge");
+
+      // 2. Profile Header reflects fallback spectating state
+      expect(html).toContain("Spectating in");
+      expect(html).toContain("Not Enrolled");
+      expect(html).toContain("Unranked");
+      expect(html).not.toContain("Admin Controls");
+
+      // 3. Summary cards render clean zero metrics
+      expect(html).toContain("No target declared");
+      expect(html).toContain("Not on leaderboard");
+      expect(html).toContain("No challenge commitment");
+
+      // 4. Daily history shows dashed zero-state notice
+      expect(html).toContain("No Study Sessions Recorded");
+      expect(html).toContain("This scholar was not enrolled in this challenge");
+
+      // 5. Enrolled-only sections are omitted
+      expect(html).not.toContain("Team Standing &amp; Contribution");
+      expect(html).not.toContain("Accountability Status");
+      expect(html).not.toContain("Deficit Pace");
+   });
+
+   it("renders spectator-focused fallback messaging when viewing someone else's unenrolled profile", () => {
+      const spectatorFallbackStats: ParticipantStatsViewModel = {
+         isFallback: true,
+         profile: {
+            participantId: "fallback-user_other",
+            userId: "user_other",
+            displayName: "Other Scholar",
+            username: "other",
+            image: null,
+            teamId: null,
+            teamName: null,
+            teamColor: null,
+            teamIcon: null,
+            rank: 0,
+            totalParticipants: 5,
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+            challengeId: "chal_active",
+            challengeTitle: "Current Clash",
+            challengeFormat: "SOLOS",
+            challengeStatus: "ACTIVE",
+         },
+         summary: {
+            totalLoggedSeconds: 0,
+            totalLoggedClock: "00:00:00",
+            totalLoggedHuman: "0s",
+            todayLoggedSeconds: 0,
+            todayLoggedClock: "00:00:00",
+            todayLoggedHuman: "0s",
+            todayIsLeave: false,
+            leavesCount: 0,
+            targetSeconds: 0,
+            targetClock: "00:00:00",
+            targetHuman: "0s",
+            completionPercentage: 0,
+            rank: 0,
+            totalParticipants: 5,
+            remainingSeconds: 0,
+            remainingClock: "00:00:00",
+            remainingHuman: "0s",
+            isTargetMet: false,
+            excessSeconds: 0,
+            excessClock: "00:00:00",
+            excessHuman: "0s",
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+         },
+         dailyHistory: [],
+         teamStats: null,
+         accountability: {
+            deficitSeconds: 0,
+            deficitClock: "00:00:00",
+            deficitHuman: "0s",
+            requiredDailyPaceSeconds: 0,
+            requiredDailyPaceClock: "00:00:00",
+            requiredDailyPaceHuman: "0s",
+            daysRemaining: 3,
+            isPunished: false,
+            isPardoned: false,
+            pardonReason: null,
+            statusBadge: "On-Track",
+         },
+         viewer: {
+            isAdmin: false,
+            isOwner: false,
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         <ParticipantStatsView stats={spectatorFallbackStats} />
+      );
+
+      expect(html).toContain("Scholar Not Enrolled in This Challenge");
+      expect(html).toContain(
+         "This scholar does not have an active participation record"
+      );
+   });
 });

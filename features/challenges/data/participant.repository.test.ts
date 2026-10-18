@@ -320,6 +320,49 @@ describe("participant repository", () => {
          ).rejects.toThrow("Team Solar is full (max 2 members).");
       });
 
+      it("allows enrollment in team even if maxMembers limit reached when challenge format is SOLOS", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            id: "c_solo",
+            format: "SOLOS",
+            startAt: new Date(Date.now() + 86400000),
+            endAt: new Date(Date.now() + 7 * 86400000),
+         } as never);
+
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            null
+         );
+
+         vi.mocked(prisma.team.findUnique).mockResolvedValue({
+            id: "t_solo",
+            name: "Solo Grinders",
+            challengeId: "c_solo",
+            maxMembers: 1,
+            _count: { participants: 1 },
+         } as never);
+
+         const createdParticipant = {
+            id: "part_solo_2",
+            userId: "u_2",
+            challengeId: "c_solo",
+            teamId: "t_solo",
+            targetSeconds: 126000,
+            status: "NORMAL",
+         };
+
+         vi.mocked(prisma.challengeParticipant.create).mockResolvedValue(
+            createdParticipant as never
+         );
+
+         const result = await enrollParticipantInChallenge({
+            challengeId: "c_solo",
+            userId: "u_2",
+            teamId: "t_solo",
+            targetSeconds: 126000,
+         });
+
+         expect(result).toEqual(createdParticipant);
+      });
+
       it("successfully enrolls as unassigned when teamId is omitted or no-assigned", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
             id: "c_1",

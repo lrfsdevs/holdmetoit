@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
 import { ParticipantProfileHeader } from "./participant-profile-header";
+import { ParticipantFallbackBanner } from "./participant-fallback-banner";
 import { ParticipantSummaryCards } from "./participant-summary-cards";
 import { ParticipantProgressChart } from "./participant-progress-chart";
 import { ParticipantDailyHistory } from "./participant-daily-history";
@@ -19,8 +20,15 @@ export function ParticipantStatsView({
    stats,
    viewParam,
 }: ParticipantStatsViewProps) {
-   const { profile, summary, dailyHistory, teamStats, accountability, viewer } =
-      stats;
+   const {
+      profile,
+      summary,
+      dailyHistory,
+      teamStats,
+      accountability,
+      viewer,
+      isFallback = false,
+   } = stats;
    const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
    return (
@@ -30,29 +38,47 @@ export function ParticipantStatsView({
             profile={profile}
             isAdmin={viewer.isAdmin}
             viewParam={viewParam}
+            isFallback={isFallback}
          />
 
-         {/* 2. Key Metrics Summary Cards */}
+         {/* 2. Fallback Notice Banner if user is unenrolled or has no data */}
+         {isFallback && (
+            <ParticipantFallbackBanner profile={profile} viewer={viewer} />
+         )}
+
+         {/* 3. Key Metrics Summary Cards */}
          <ParticipantSummaryCards
             summary={summary}
             isAdmin={viewer.isAdmin}
-            onEditTarget={() => setIsTargetModalOpen(true)}
+            onEditTarget={
+               isFallback ? undefined : () => setIsTargetModalOpen(true)
+            }
+            isFallback={isFallback}
          />
 
-         {/* 3. Progress Visualization Chart */}
-         <ParticipantProgressChart dailyHistory={dailyHistory} />
+         {/* 4. Progress Visualization Chart (Enrolled Only) */}
+         {!isFallback && (
+            <ParticipantProgressChart dailyHistory={dailyHistory} />
+         )}
 
-         {/* 4. Team Standing & Share (if team-based challenge) */}
-         {teamStats && <ParticipantTeamStats teamStats={teamStats} />}
+         {/* 5. Team Standing & Share (if team-based challenge & Enrolled Only) */}
+         {!isFallback && teamStats && (
+            <ParticipantTeamStats teamStats={teamStats} />
+         )}
 
-         {/* 5. Accountability & Deficit Status */}
-         <ParticipantAccountability accountability={accountability} />
+         {/* 6. Accountability & Deficit Status (Enrolled Only) */}
+         {!isFallback && (
+            <ParticipantAccountability accountability={accountability} />
+         )}
 
-         {/* 6. Complete Chronological Daily Study History */}
-         <ParticipantDailyHistory dailyHistory={dailyHistory} />
+         {/* 7. Complete Chronological Daily Study History */}
+         <ParticipantDailyHistory
+            dailyHistory={dailyHistory}
+            isFallback={isFallback}
+         />
 
-         {/* 7. Admin Target Override Modal (FEAT-DECL-04) */}
-         {viewer.isAdmin && isTargetModalOpen && (
+         {/* 8. Admin Target Override Modal (FEAT-DECL-04 - Enrolled Only) */}
+         {!isFallback && viewer.isAdmin && isTargetModalOpen && (
             <AdminTargetOverrideModal
                isOpen={isTargetModalOpen}
                onClose={() => setIsTargetModalOpen(false)}

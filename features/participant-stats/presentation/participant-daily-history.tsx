@@ -3,10 +3,12 @@ import type { ParticipantDailyHistoryEntry } from "../domain/participant-stats.t
 
 interface ParticipantDailyHistoryProps {
    dailyHistory: ParticipantDailyHistoryEntry[];
+   isFallback?: boolean;
 }
 
 export function ParticipantDailyHistory({
    dailyHistory,
+   isFallback = false,
 }: ParticipantDailyHistoryProps) {
    return (
       <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-7 shadow-xl space-y-4">
@@ -18,11 +20,25 @@ export function ParticipantDailyHistory({
                </h2>
             </div>
             <span className="text-xs text-[#868686]">
-               {dailyHistory.length} Days Recorded
+               {isFallback
+                  ? "0 Days Logged"
+                  : `${dailyHistory.length} Days Recorded`}
             </span>
          </div>
 
-         {dailyHistory.length === 0 ? (
+         {isFallback ? (
+            <div className="rounded-2xl border border-dashed border-[#292929] bg-[#1a1a1a]/40 p-8 text-center space-y-2 my-2">
+               <Clock className="h-8 w-8 mx-auto text-[#545454]" />
+               <p className="text-sm font-semibold text-[#d1d1d1]">
+                  No Study Sessions Recorded
+               </p>
+               <p className="text-xs text-[#868686] max-w-md mx-auto">
+                  This scholar was not enrolled in this challenge. Daily study
+                  hours, leave days, and audit trails only appear for enrolled
+                  participants.
+               </p>
+            </div>
+         ) : dailyHistory.length === 0 ? (
             <p className="text-center py-8 text-xs text-[#868686]">
                No challenge days recorded yet.
             </p>

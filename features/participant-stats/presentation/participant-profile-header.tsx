@@ -14,14 +14,16 @@ interface ParticipantProfileHeaderProps {
    profile: ProfileHeaderType;
    isAdmin?: boolean;
    viewParam?: string;
+   isFallback?: boolean;
 }
 
 export function ParticipantProfileHeader({
    profile,
    isAdmin = false,
    viewParam,
+   isFallback = false,
 }: ParticipantProfileHeaderProps) {
-   const isRankOne = profile.rank === 1;
+   const isRankOne = !isFallback && profile.rank === 1;
 
    const paceColors = {
       serene: "bg-[#144520] border-[#22c55e]/40 text-[#85ff93]",
@@ -123,9 +125,13 @@ export function ParticipantProfileHeader({
 
                         {/* Pace Status Badge */}
                         <span
-                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${paceClass}`}
+                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                              isFallback
+                                 ? "bg-[#1c1c1c] border-[#383838] text-[#868686]"
+                                 : paceClass
+                           }`}
                         >
-                           {profile.paceLabel}
+                           {isFallback ? "Not Enrolled" : profile.paceLabel}
                         </span>
                      </div>
 
@@ -138,7 +144,7 @@ export function ParticipantProfileHeader({
                      <p className="text-xs text-[#a3a3a3] flex items-center gap-1 pt-0.5">
                         <Shield className="h-3.5 w-3.5 text-[#868686]" />
                         <span>
-                           Competing in{" "}
+                           {isFallback ? "Spectating in " : "Competing in "}
                            <Link
                               href={`/challenge/${profile.challengeId}`}
                               className="text-[#f4f3f6] font-medium hover:underline"
@@ -157,20 +163,30 @@ export function ParticipantProfileHeader({
                         Leaderboard Rank
                      </span>
                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#1c1c1c] border border-[#383838] text-sm font-extrabold text-[#ffffff] font-sans">
-                        <span
-                           className={
-                              isRankOne ? "text-[#22c55e]" : "text-[#f4f3f6]"
-                           }
-                        >
-                           #{profile.rank}
-                        </span>
-                        <span className="text-xs text-[#868686] font-normal">
-                           / {profile.totalParticipants}
-                        </span>
+                        {isFallback || profile.rank === 0 ? (
+                           <span className="text-xs font-medium text-[#868686]">
+                              Unranked
+                           </span>
+                        ) : (
+                           <>
+                              <span
+                                 className={
+                                    isRankOne
+                                       ? "text-[#22c55e]"
+                                       : "text-[#f4f3f6]"
+                                 }
+                              >
+                                 #{profile.rank}
+                              </span>
+                              <span className="text-xs text-[#868686] font-normal">
+                                 / {profile.totalParticipants}
+                              </span>
+                           </>
+                        )}
                      </div>
                   </div>
 
-                  {isAdmin && (
+                  {isAdmin && !isFallback && (
                      <Link
                         href={`/challenge/${profile.challengeId}?tab=manage`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242424] hover:bg-[#333333] border border-[#383838] text-xs font-semibold text-[#d1d1d1] hover:text-white transition-colors"

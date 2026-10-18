@@ -253,6 +253,7 @@ function buildParticipantWrapped(input: {
    participantTotals: Array<{ participantId: string; totalSeconds: number }>;
    dailyTotals: Map<string, number>; // dateKey -> sum across participants
    days: Array<{ dateKey: string; label: string; dayNumber: number }>;
+   challengeFormat?: "TEAM_VS_TEAM" | "DUOS" | "SOLOS";
 }): ParticipantWrappedViewModel {
    const {
       standing,
@@ -262,15 +263,20 @@ function buildParticipantWrapped(input: {
       participantTotals,
       dailyTotals,
       days,
+      challengeFormat,
    } = input;
 
+   const isSolo = challengeFormat === "SOLOS";
    const hasTeam = standing.teamId !== "no-assigned";
-   const isInWinningTeam = hasTeam && winningTeamIds.includes(standing.teamId);
-   const teamResult: ParticipantWrappedViewModel["teamResult"] = !hasTeam
-      ? "no-team"
-      : isInWinningTeam
-        ? "winner"
-        : "beaten";
+   const isInWinningTeam =
+      isSolo || (hasTeam && winningTeamIds.includes(standing.teamId));
+   const teamResult: ParticipantWrappedViewModel["teamResult"] = isSolo
+      ? "winner"
+      : !hasTeam
+        ? "no-team"
+        : isInWinningTeam
+          ? "winner"
+          : "beaten";
 
    const weeklyTasksCompletedCount = standing.weeklyTasksCompletedCount ?? 0;
    const weeklyTasksTotalCount = standing.weeklyTasksTotalCount ?? 0;
@@ -465,6 +471,7 @@ export function buildChallengeWrappedViewModel(
            participantTotals,
            dailyTotals,
            days,
+           challengeFormat: challenge.format,
         })
       : null;
 

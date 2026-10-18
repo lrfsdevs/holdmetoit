@@ -442,6 +442,58 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
       });
 
+      it("evaluates SOLOS format participants individually on target hours and weekly tasks without losing-team penalty", async () => {
+         const soloChallenge = {
+            ...mockLockChallenge([
+               mockParticipant({
+                  id: "p_1",
+                  userId: "u_1",
+                  teamId: null,
+                  targetSeconds: 36000,
+                  dailyStudyLogs: [{ durationSeconds: 36000 }],
+               }),
+               mockParticipant({
+                  id: "p_2",
+                  userId: "u_2",
+                  teamId: null,
+                  targetSeconds: 36000,
+                  dailyStudyLogs: [{ durationSeconds: 18000 }],
+               }),
+            ]),
+            format: "SOLOS",
+         };
+
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            soloChallenge as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+            { userId: "u_2", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         // p_1 (met target hours + tasks) is SAVED (status: NORMAL) even though teamId is null
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
+            data: { status: "NORMAL" },
+         });
+         // p_2 (deficit) is PUNISHED
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_2"] } },
+            data: { status: "PUNISHED" },
+         });
+         expect(prisma.punishmentRecord.createMany).toHaveBeenCalledWith({
+            data: [{ challengeId: "c_act", participantId: "p_2" }],
+         });
+      });
+
       it("successfully locks an expired challenge (COMPLETED status) when results are not yet locked (Fix D1)", async () => {
          const pastEnd = new Date(Date.now() - 3600000); // Ended 1 hour ago
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue({

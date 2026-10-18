@@ -4,21 +4,21 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)  
+> **Last Updated:** 2026-10-18 (Session 117 — Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-16, Session 113 — Dynamic Challenge Description & Timetable Layout Adjustment (KAN-8 / GitHub #90) on `krish`)                                                                                                                                                                                                                                                                                |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                                                              |
-| `npm run test`                               | ✅ 105 files green (1131/1131 tests passing)                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                                                                          |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ⚠️ **~98%** — Wrapped (dashboard popup + Shy Card, Summary tab, feedback survey) is now gated behind `challenge_wrapped_v1` and dark by default; modal starts at Slide 0 and stops auto-opening once seen; no loop on leaderboard navigation; feedback responses dual-persisted to DB (`ChallengeFeedback`) and Discord channel `1558594247895289877`; remaining gaps are deleted P0 UIs (wall, pardon modal) |
-| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                    |
-| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                                                                |
+| Gate                                         | Result (2026-10-18, Session 117 — Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)                                                                                                                                                                                                                                              |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                |
+| `npm run test`                               | ✅ 112 files green (1164/1164 tests passing)                                                                                                                                                                                                                                                                                                                    |
+| `npm run build`                              | ✅ 12 routes + Edge Middleware compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                          |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ✅ **100%** — All P0 MVP features implemented and verified: Solo Free-For-All auto-punishment math resolved; unlimited solo team capacity unlocked; "⚡ Solo Scholar" branding unified; `FEAT-PUN-04` Host Pardon Modal live; `FEAT-PUN-02` Punishment Wall restored in Overview tab; automated Solo Challenge Lifecycle E2E test suite green (1164/1164 tests) |
+| Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                      |
+| Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                  |
 
 ### 1.1 Live Routes
 
@@ -26,7 +26,7 @@
 | :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------- |
 | `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board; wrapped popup + Shy Card when `challenge_wrapped_v1` is on | Guest (local tasks only) / Participant |
 | `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)                                                               | Public spectator / Participant / Admin |
-| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
+| `/changelog`                                  | Public date-grouped product changelog (linked in navigation header alongside Challenges)                                                                   | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Server redirect to `/challenges`                                                                                                                           | `ADMIN` / `DEV`                        |
@@ -36,7 +36,7 @@
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                                                 | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                                              | Authenticated                          |
 
-> **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
+> **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Stale `revalidatePath("/dashboard")` and `/admin/challenges/*` calls were completely purged in Session 117.
 
 ### 1.2 RBAC Model
 
@@ -71,9 +71,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | `FEAT-LEAD-02`  | Unified standings table            |   ✅   | Desktop table plus mobile card layout. Standings now carry real weekly-task counts (challenge-linked, soft-deletes included) which also drive the sort tie-break — no "Goals Done" column                                                                                                                                                                                                  |
 | `FEAT-LEAD-03`  | Catch-up deficit engine            |   ✅   | `deficit.ts` + `cockpit-progress-card.tsx`                                                                                                                                                                                                                                                                                                                                                 |
 | `FEAT-PUN-01`   | Three-condition auto-flagging      |   ✅   | `evaluateLockOutcome` (pure): saved = hours met AND all challenge-linked weekly tasks complete (soft-deleted rows count) AND in a winning team; ties never punish (`resolveWinningTeamIds`). `PunishmentRecord` row presence = punished; pardons preserved                                                                                                                                 |
-| `FEAT-PUN-02`   | Punishment Wall                    |   ❌   | `punishment-wall.tsx` was deleted in `88779bd`. The Overview tab only mentions it in copy                                                                                                                                                                                                                                                                                                  |
+| `FEAT-PUN-02`   | Punishment Wall                    |   ✅   | `PunishmentWall` implemented in `features/accountability/presentation/punishment-wall.tsx` with Obsidian tokens; integrated into `ChallengeOverviewTab` displaying live deficit preview & post-lock accountability roster; unit tested in `punishment-wall.test.tsx`                                                                                                                       |
 | `FEAT-PUN-03`   | Punishment PFP download button     |   ✅   | Overview tab contains dedicated Forfeit Avatar & Accountability card with image preview, Law L6 explanation, and direct "Download Forfeit PFP" button                                                                                                                                                                                                                                      |
-| `FEAT-PUN-04`   | Host pardon                        |   ⚠️   | `adminPardonAction` preserved and adapted (findFirst update-or-create; `PunishmentRecord` keeps `isPardoned/pardonReason/pardonedById`); **no UI** (`admin-goals-pardons.tsx` was deleted in `364c7a1`)                                                                                                                                                                                    |
+| `FEAT-PUN-04`   | Host pardon                        |   ✅   | `AdminPardonModal` implemented in `features/accountability/presentation/admin-pardon-modal.tsx` with Obsidian styling and error/success feedback; integrated into Manage tab roster actions with `cacheTags.challengeScoreboard` invalidation and unit tests in `admin-pardon-modal.test.tsx`                                                                                              |
 | `FEAT-WRAP-01`  | Challenge wrapped story popup      |   ✅   | `features/wrapped/presentation/challenge-wrapped-modal.tsx`: auto-opens for enrolled participants while locked; localStorage-first flags (`hmt:wrapped:{challengeId}`); `isWrappedSeen` flips at the feedback slide; 3-day window + page-load auto-seen (`markWrappedSeenIfExpiredAction`); feedback flow deferred (button ships empty); gated behind `challenge_wrapped_v1` (fail-closed) |
 | `FEAT-WRAP-02`  | Challenge wrapped summary tab      |   ✅   | `?tab=summary` (post-lock): `challenge-summary-tab.tsx` renders the challenge-level story for everyone plus the personal wrapped block (verdict, reasons, best day, vs-average, team share, daily bars, weekly tasks) for enrolled participants; gated behind `challenge_wrapped_v1`                                                                                                       |
 | `FEAT-DISC-01`  | 1-click Discord summary copy       |   ❌   | Removed (superseded by in-app Challenge Summary tab & personal Wrapped story dialog)                                                                                                                                                                                                                                                                                                       |
@@ -432,4 +432,140 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck` passed (0 errors).
    - `npm run test` passed (105 test files, 1131/1131 tests green).
    - `npm run build` passed (12 routes compiled cleanly).
-- **NEXT STEP:** Commit and push branch updates to `krish` for collaborator review and merge.
+- **NEXT STEP (completed in Session 114):** Deliver polished fallback profile page for unenrolled & post-event registered users.
+
+### Session 114 — 2026-10-17 (Fallback Profile Page for Unenrolled & Post-Event Registered Users on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Problem Analysis:**
+   - Users who signed up after a challenge concluded, or who do not have any participation data in the website, received an error page (404 Not Found "Participant Record Not Found" or redirection away) when attempting to view their profile for a challenge.
+   - Root causes:
+      1. `/challenge/[id]/participant/[participantId]/page.tsx` called `notFound()` whenever `getChallengeParticipantStats` returned `null`.
+      2. `getChallengeParticipantStats` only matched on `participantId` (not `userId`) and returned `null` for unenrolled users.
+      3. In `app/profile/page.tsx`, if the user was unenrolled, it attempted to look for another challenge or redirected to `/challenges` instead of allowing viewing of their profile in that challenge context.
+- **Implementation & Resolution:**
+   - **Domain & ViewModel:**
+      - Added `isFallback?: boolean` property to `ParticipantStatsViewModel` in `features/participant-stats/domain/participant-stats.types.ts`.
+   - **Data Layer (`features/participant-stats/data/participant-stats.repository.ts`):**
+      - Updated `getChallengeParticipantStats`:
+         1. First queries `prisma.challengeParticipant.findUnique({ where: { id: participantId } })`.
+         2. If not found, checks `prisma.challengeParticipant.findFirst` matching `userId: participantId` (or `currentUserId` when `participantId === "me"`).
+         3. If still not found, queries `prisma.user.findUnique({ where: { id: targetUserId } })` and `prisma.challenge.findUnique({ where: { id: challengeId, isDeleted: false } })`. If both exist, returns a complete fallback `ParticipantStatsViewModel` with `isFallback: true`, total participants, unranked metrics, and viewer permissions.
+   - **Routing (`app/profile/page.tsx`):**
+      - When `searchParams?.challengeId` is provided and the user is not enrolled, redirects to `/challenge/${searchParams.challengeId}/participant/${session.user.id}` to render the fallback profile in that challenge.
+      - When `searchParams?.challengeId` is not provided and the user has no enrollments across any challenge, finds the latest active/concluded challenge via `prisma.challenge.findFirst({ where: { isDeleted: false }, orderBy: { createdAt: "desc" } })` and redirects to `/challenge/${latestChallenge.id}/participant/${session.user.id}` (falling back to `/challenges` only if no challenges exist at all).
+   - **Presentation Layer:**
+      - **`features/participant-stats/presentation/participant-fallback-banner.tsx` (New):**
+         - Created Obsidian Dark alert card with distinct contextual messaging for completed events vs open enrollment, and for profile owner vs external spectator.
+         - Provides accessible $\ge 44\text{px}$ action buttons (`Browse Challenges Directory`, `View Challenge Scoreboard`, `Return to Lounge`).
+      - **`features/participant-stats/presentation/participant-profile-header.tsx`:**
+         - Displays "Spectating in [Challenge]" instead of "Competing in", neutral "Not Enrolled" status badge, "Unranked", and hides admin controls.
+      - **`features/participant-stats/presentation/participant-summary-cards.tsx`:**
+         - Renders `—` ("No target declared") for target, `0%` ("Not enrolled in challenge") for progress, `Unranked` for rank, and `Not Enrolled` for target status.
+      - **`features/participant-stats/presentation/participant-daily-history.tsx`:**
+         - Renders clean dashed Obsidian zero-state container ("No Study Sessions Recorded") clarifying that daily logs and leave days appear only for enrolled participants.
+      - **`features/participant-stats/presentation/participant-stats-view.tsx`:**
+         - Surfaces `ParticipantFallbackBanner` and suppresses enrolled-only widgets (`ParticipantProgressChart`, `ParticipantTeamStats`, `ParticipantAccountability`, `AdminTargetOverrideModal`).
+- **Test Coverage:**
+   - `features/participant-stats/data/participant-stats.repository.test.ts`: Added unit tests for fallback profile generation, userId lookup, and `me` alias lookup. (9 tests passing).
+   - `app/profile/page.test.tsx`: Added tests verifying fallback routing to targeted challenge or latest challenge for unenrolled users. (6 tests passing).
+   - `features/participant-stats/presentation/participant-stats-view.test.tsx`: Added test cases for fallback profile rendering and spectator-focused fallback messaging. (10 tests passing).
+- **Quality Gates Verified:**
+   - `npx tsc --noEmit` passed (0 errors).
+   - `npm run test` passed (105 test files, 1138/1138 tests green).
+
+### Session 115 — 2026-10-18 (Solo Free-For-All Blocker Resolutions & Host Pardon UI on `krish`)
+
+- **Agent Role:** Scoring & Engine Agent, Admin Operations Agent, Participant UI Agent.
+- **Scope & Problem Analysis:**
+   - Prepared platform for Monday's Solo Free-For-All Challenge.
+   - Identified 2 critical showstoppers:
+      1. _Solo Auto-Punishment Math:_ In `SOLOS` format, evaluating participants on `isInWinningTeam` caused every solo participant to be punished regardless of hours or completed tasks.
+      2. _Team Capacity Bottleneck:_ `createAdminChallenge` capped solo teams at `maxMembers = 1`, blocking all participants beyond the first from joining the challenge team.
+   - Identified missing Host Pardon UI (`FEAT-PUN-04`), leaving admins unable to excuse participants from punishments.
+   - Identified branding discrepancies ("Unassigned ⏳" instead of "⚡ Solo Scholar" for solo participants).
+- **Implementation & Resolution:**
+   - **Solo Auto-Punishment Math:**
+      - Updated `lockChallengeResults` (`features/challenges/data/challenge-admin.repository.ts`) and `buildParticipantWrapped` (`features/wrapped/domain/wrapped.ts`): for `SOLOS` format, `isInWinningTeam = true` automatically.
+      - Solo participants are judged solely on meeting declared target hours and finishing all challenge-linked weekly tasks.
+   - **Team Capacity Uncapped for Solos:**
+      - Updated `createAdminChallenge` to set `maxMembers = null` for `SOLOS`.
+      - Updated `enrollParticipantInChallenge`, `adminEnrollParticipant`, and `reassignParticipantTeam` in `participant.repository.ts` to bypass team capacity checks when `challenge.format === "SOLOS"`.
+   - **Branding Polish:**
+      - Replaced "Unassigned ⏳" with "⚡ Solo Scholar" across `cockpit-data.ts`, `leaderboard-data.ts`, `participant-stats.repository.ts`, and `challenge-manage-tab.tsx`.
+   - **Host Pardon UI (`FEAT-PUN-04`):**
+      - Built `AdminPardonModal` (`features/accountability/presentation/admin-pardon-modal.tsx`) with Obsidian tokens, reason validation ($\ge 3$ characters), loading states, and error handling.
+      - Integrated "Pardon" action button and modal into `ChallengeManageTab`.
+      - Added cache invalidation (`cacheTags.challengeScoreboard`) to `adminPardonAction`.
+      - Decoupled client modal imports from server-only auth dependencies via dynamic import.
+- **Test Coverage:**
+   - `challenge-admin.repository.test.ts`: Added tests for solo challenge locking with target deficits vs target achievements.
+   - `participant.repository.test.ts`: Added tests verifying uncapped enrollment for `SOLOS` challenges.
+   - `admin-pardon-modal.test.tsx`: Added 4 unit tests covering modal rendering, reason validation, action submission, and close handlers.
+   - `challenge-manage-tab.test.tsx` and `challenge-images.test.tsx`: Verified all tests pass.
+- **NEXT STEP (completed in Session 116):** Restore Punishment Wall UI (`FEAT-PUN-02`) and build automated Solo Challenge lifecycle E2E verification suite.
+
+### Session 117 — 2026-10-18 (Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.
+- **Scope & Objectives:**
+   - Audit paths, guards, and routes across the application for security, discoverability, and zero regression.
+   - Implement URL normalization, dead revalidation cleanup, auth dev-bypass hardening, changelog navigation, and lightweight edge guard middleware.
+- **Implementation & Resolution:**
+   - **Phase 1 — Canonical Redirects (`next.config.mjs`):**
+      - Added HTTP 308 permanent redirects: `/challenges/:id` -> `/challenge/:id`, `/challenge` -> `/challenges`, `/challenges/new` -> `/admin/challenges/new`, `/dashboard` -> `/`.
+      - Preserved negative lookahead `(?!new$)` to ensure admin challenge creation is never misdirected.
+      - Verified with `next.config.test.ts`. Commit: `c469028`.
+   - **Phase 2 — Ghost Route & Revalidation Purge:**
+      - Purged dead `revalidatePath("/dashboard")` and `/admin/challenges/[id]` across Server Actions: `admin-pardon.actions.ts`, `challenge-admin.actions.ts`, `enroll-participant.actions.ts`, `admin-override.actions.ts`, `log-study-time.actions.ts`, and `task.actions.ts`.
+      - Updated test assertions in `log-study-time.actions.test.ts`. Commit: `5b11b5e`.
+   - **Phase 3 — Auth Dev-Bypass Hardening:**
+      - Hardened `isDevBypass` in `app/admin/layout.tsx` and `app/devboard/layout.tsx` to strictly require `process.env.NODE_ENV === "development"`, closing accidental exposure if `AUTH_DISCORD_ID` is omitted in staging or preview deployments.
+      - Added unit test suites `app/admin/layout.test.tsx` and `app/devboard/layout.test.tsx`. Commit: `d04ac07`.
+   - **Phase 4 — Navigation Discoverability & Fallback Sanitization:**
+      - Added Changelog navigation link in `features/auth/presentation/auth-nav.tsx` `<AppHeader>` alongside Challenges.
+      - Sanitized hardcoded `"seed-honey-bees-vs-lavender-butterflies"` cockpit challenge fallback in `app/page.tsx` and `home-cockpit-view.tsx`.
+      - Updated tests in `auth-nav.test.tsx`. Commit: `6809675`.
+   - **Phase 5 — Lightweight Edge Guard Middleware:**
+      - Created `middleware.ts` running at Edge runtime to intercept `/admin/:path*` and `/devboard/:path*`.
+      - Evaluates session token presence (`authjs.session-token`, `__Secure-authjs.session-token`) to deflect unauthenticated traffic to `/` before Server Components run.
+      - Preserves database session model without triggering `@prisma/client` edge runtime incompatibility.
+      - Added test suite `middleware.test.ts` (6 tests). Commit: `b05393b`.
+- **Quality Gates Verified:**
+   - `npx tsc --noEmit` passed (0 errors).
+   - `npm run test` passed (112 test files, 1164/1164 tests green).
+   - `npx next build` passed (all 12 routes + Edge Middleware compiled cleanly).
+
+### Session 116 — 2026-10-18 (Punishment Wall Restoration & Solo Challenge Lifecycle E2E Suite on `krish`)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Admin Operations Agent.
+- **Scope & Objectives:**
+   1. Restore and integrate the Punishment Wall (`FEAT-PUN-02`) into the challenge Overview tab (`ChallengeOverviewTab`), completing the final missing P0 user interface component.
+   2. Implement an automated end-to-end Solo Challenge Lifecycle verification suite (`features/e2e/solo-challenge-lifecycle.test.ts`), completing Phase 4 of `solo-blockers.md`.
+- **Implementation & Resolution:**
+   - **`PunishmentWall` Component (`features/accountability/presentation/punishment-wall.tsx`):**
+      - Built using Obsidian Dark design tokens (`#141414`, `#1c1c1c`, `#262626`, `#ff5757`, `#85ff93`).
+      - Pre-lock mode: Previews scholars in live deficit / catch-up mode, remaining deficit hours, and weekly goals progress, with an accessible zero-state alert when all participants are on track.
+      - Post-lock mode: Renders the final accountability roster displaying punished scholars and excused scholars (host pardons).
+      - Preserves 1-click direct Forfeit Avatar download button (`FEAT-PUN-03`).
+      - Integrated directly into `features/challenges/presentation/challenge-overview-tab.tsx`.
+   - **Automated Solo Challenge Lifecycle E2E Suite (`features/e2e/solo-challenge-lifecycle.test.ts`):**
+      - Tests full end-to-end Solo Free-For-All challenge lifecycle:
+         1. Admin creates `SOLOS` challenge with uncapped solo team (`maxMembers: null`).
+         2. Multiple scholars enroll without hitting capacity limits; declarations lock upon kickoff transition (`UPCOMING` -> `ACTIVE`).
+         3. Dynamic daily study logging and catch-up deficit pace calculation without grace passes (Law L3).
+         4. Results lock evaluation (Law L6): verifies participants meeting hours and goals are saved (bypassing losing_team penalty for `SOLOS`), participants with deficits are punished with `hours_deficit`, and participants with incomplete tasks are punished with `incomplete_weekly_tasks`.
+         5. Wrapped story generation (`buildChallengeWrappedViewModel`): verifies `verdict: "saved"` for compliant scholars, `verdict: "punished"` for deficit scholars, and `teamResult: "winner"` across all solo participants.
+- **Test Coverage:**
+   - `features/accountability/presentation/punishment-wall.test.tsx`: 4 unit tests covering header rendering, zero-state active, live deficit members, and completed roster.
+   - `features/challenges/presentation/challenge-overview-tab.test.tsx`: Updated tests verifying integrated PunishmentWall rendering.
+   - `features/e2e/solo-challenge-lifecycle.test.ts`: 1 comprehensive E2E journey test passing.
+- **Quality Gates Verified:**
+   - `npx tsc --noEmit` passed (0 errors).
+   - `npm run test` passed (108 test files, 1149/1149 tests green).
+   - `npx next build` passed (all 12 routes compiled cleanly).
+- **NEXT STEP (Monday Kickoff Operations):**
+   1. Confirm Supabase storage environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+   2. Confirm Discord OAuth configuration (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, redirect URI) and admin credentials (`DISCORD_ADMIN_ROLE_IDS` or `DEV_DISCORD_IDS`).
+   3. Run `npx prisma migrate status` on the production database.
+   4. Host creates the Solo Free-For-All challenge on Monday, participants enroll, and host triggers "Start Event Now".

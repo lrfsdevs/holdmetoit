@@ -71,7 +71,6 @@ export async function enrollInChallengeAction(
       invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);
 
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
       revalidatePath("/");
       revalidatePath("/admin");
 

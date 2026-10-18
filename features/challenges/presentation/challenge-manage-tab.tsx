@@ -21,6 +21,7 @@ import {
    X,
    RotateCcw,
    Target,
+   HeartHandshake,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,10 @@ import {
    AdminTargetOverrideModal,
    type AdminTargetOverrideParticipant,
 } from "@/features/challenges/presentation/admin-target-override-modal";
+import {
+   AdminPardonModal,
+   type AdminPardonParticipant,
+} from "@/features/accountability/presentation/admin-pardon-modal";
 import {
    getChallengeDayOptions,
    type ChallengeDayOption,
@@ -118,6 +123,25 @@ export function ChallengeManageTab({
          targetClock: participant.targetClock,
       });
       setIsTargetOverrideModalOpen(true);
+   };
+
+   // Admin Pardon State (FEAT-PUN-04)
+   const [pardonParticipant, setPardonParticipant] =
+      useState<AdminPardonParticipant | null>(null);
+   const [isPardonModalOpen, setIsPardonModalOpen] = useState(false);
+
+   const handleOpenPardon = (participant: ScoreboardStandingEntry) => {
+      setPardonParticipant({
+         participantId: participant.participantId,
+         userId: participant.userId,
+         displayName: participant.displayName,
+         username: participant.username,
+         image: participant.image,
+         teamName: participant.teamName,
+         teamColor: participant.teamColor,
+         status: participant.paceStatus.toUpperCase(),
+      });
+      setIsPardonModalOpen(true);
    };
 
    // Participant Roster & Hours Management Pagination State
@@ -1063,7 +1087,9 @@ export function ChallengeManageTab({
                               </option>
                            ))}
                            <option value="UNASSIGNED">
-                              Unassigned Scholars
+                              {challenge.format === "SOLOS"
+                                 ? "Solo Scholars"
+                                 : "Unassigned Scholars"}
                            </option>
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686] pointer-events-none" />
@@ -1179,7 +1205,9 @@ export function ChallengeManageTab({
                                              value="no-assigned"
                                              className="bg-[#1c1c1c] text-[#868686]"
                                           >
-                                             ⏳ Not Assigned
+                                             {challenge.format === "SOLOS"
+                                                ? "⚡ Solo Scholar"
+                                                : "⏳ Not Assigned"}
                                           </option>
                                           {teams.map((t) => (
                                              <option
@@ -1229,6 +1257,31 @@ export function ChallengeManageTab({
                                     >
                                        <Target className="h-3.5 w-3.5 text-[#a855f7]" />
                                        <span>Edit target</span>
+                                    </Button>
+
+                                    {/* Pardon Button (FEAT-PUN-04) */}
+                                    <Button
+                                       type="button"
+                                       variant="outline"
+                                       onClick={() =>
+                                          handleOpenPardon(participant)
+                                       }
+                                       disabled={
+                                          participant.paceStatus === "excused"
+                                       }
+                                       className="h-9 px-3 rounded-xl border-[#383838] bg-[#292929] hover:bg-[#333333] text-white text-xs font-semibold gap-1.5 shrink-0 hover:border-[#22c55e]/50 hover:text-[#22c55e] transition-colors disabled:opacity-50"
+                                       title={
+                                          participant.paceStatus === "excused"
+                                             ? "Participant is already excused/pardoned"
+                                             : "Admin: Grant Pardon / Excuse Member"
+                                       }
+                                    >
+                                       <HeartHandshake className="h-3.5 w-3.5 text-[#22c55e]" />
+                                       <span>
+                                          {participant.paceStatus === "excused"
+                                             ? "Excused"
+                                             : "Pardon"}
+                                       </span>
                                     </Button>
 
                                     {isReassigning && (
@@ -1531,6 +1584,22 @@ export function ChallengeManageTab({
             }}
             challengeId={challenge.id}
             participant={targetOverrideParticipant}
+            onSuccess={() => {
+               startTransition(() => {
+                  router.refresh();
+               });
+            }}
+         />
+
+         {/* Admin Pardon Modal (FEAT-PUN-04) */}
+         <AdminPardonModal
+            isOpen={isPardonModalOpen}
+            onClose={() => {
+               setIsPardonModalOpen(false);
+               setPardonParticipant(null);
+            }}
+            challengeId={challenge.id}
+            participant={pardonParticipant}
             onSuccess={() => {
                startTransition(() => {
                   router.refresh();
