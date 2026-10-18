@@ -4,19 +4,19 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-17 (Session 114 — Fallback Profile Page for Unenrolled & Post-Event Registered Users on `krish`)  
+> **Last Updated:** 2026-10-18 (Session 117 — Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)  
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
 
 ## 1. Current State at a Glance
 
-| Gate                                         | Result (2026-10-18, Session 116 — Punishment Wall Restoration & Solo Lifecycle E2E Verification on `krish`)                                                                                                                                                                                                                                                     |
+| Gate                                         | Result (2026-10-18, Session 117 — Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)                                                                                                                                                                                                                                              |
 | :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                          | ✅ 0 errors (`npx tsc --noEmit`)                                                                                                                                                                                                                                                                                                                                |
-| `npm run test`                               | ✅ 108 files green (1149/1149 tests passing)                                                                                                                                                                                                                                                                                                                    |
-| `npm run build`                              | ✅ 12 routes compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                                            |
-| Phase 0 feature parity (vs `FEATURES.md`)    | ✅ **100%** — All P0 MVP features implemented and verified: Solo Free-For-All auto-punishment math resolved; unlimited solo team capacity unlocked; "⚡ Solo Scholar" branding unified; `FEAT-PUN-04` Host Pardon Modal live; `FEAT-PUN-02` Punishment Wall restored in Overview tab; automated Solo Challenge Lifecycle E2E test suite green (1149/1149 tests) |
+| `npm run test`                               | ✅ 112 files green (1164/1164 tests passing)                                                                                                                                                                                                                                                                                                                    |
+| `npm run build`                              | ✅ 12 routes + Edge Middleware compiled (production build clean including `/devboard`)                                                                                                                                                                                                                                                                          |
+| Phase 0 feature parity (vs `FEATURES.md`)    | ✅ **100%** — All P0 MVP features implemented and verified: Solo Free-For-All auto-punishment math resolved; unlimited solo team capacity unlocked; "⚡ Solo Scholar" branding unified; `FEAT-PUN-04` Host Pardon Modal live; `FEAT-PUN-02` Punishment Wall restored in Overview tab; automated Solo Challenge Lifecycle E2E test suite green (1164/1164 tests) |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4) | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                      |
 | Phase 1 (P1)                                 | ⏸️ Not started                                                                                                                                                                                                                                                                                                                                                  |
 
@@ -26,7 +26,7 @@
 | :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------- |
 | `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board; wrapped popup + Shy Card when `challenge_wrapped_v1` is on | Guest (local tasks only) / Participant |
 | `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)                                                               | Public spectator / Participant / Admin |
-| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
+| `/changelog`                                  | Public date-grouped product changelog (linked in navigation header alongside Challenges)                                                                   | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Server redirect to `/challenges`                                                                                                                           | `ADMIN` / `DEV`                        |
@@ -36,7 +36,7 @@
 | `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                                                 | Anyone                                 |
 | `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                                              | Authenticated                          |
 
-> **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
+> **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Stale `revalidatePath("/dashboard")` and `/admin/challenges/*` calls were completely purged in Session 117.
 
 ### 1.2 RBAC Model
 
@@ -504,6 +504,37 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `admin-pardon-modal.test.tsx`: Added 4 unit tests covering modal rendering, reason validation, action submission, and close handlers.
    - `challenge-manage-tab.test.tsx` and `challenge-images.test.tsx`: Verified all tests pass.
 - **NEXT STEP (completed in Session 116):** Restore Punishment Wall UI (`FEAT-PUN-02`) and build automated Solo Challenge lifecycle E2E verification suite.
+
+### Session 117 — 2026-10-18 (Safe Routing, Canonical Path Normalization & Edge Guard Optimization on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.
+- **Scope & Objectives:**
+   - Audit paths, guards, and routes across the application for security, discoverability, and zero regression.
+   - Implement URL normalization, dead revalidation cleanup, auth dev-bypass hardening, changelog navigation, and lightweight edge guard middleware.
+- **Implementation & Resolution:**
+   - **Phase 1 — Canonical Redirects (`next.config.mjs`):**
+      - Added HTTP 308 permanent redirects: `/challenges/:id` -> `/challenge/:id`, `/challenge` -> `/challenges`, `/challenges/new` -> `/admin/challenges/new`, `/dashboard` -> `/`.
+      - Preserved negative lookahead `(?!new$)` to ensure admin challenge creation is never misdirected.
+      - Verified with `next.config.test.ts`. Commit: `c469028`.
+   - **Phase 2 — Ghost Route & Revalidation Purge:**
+      - Purged dead `revalidatePath("/dashboard")` and `/admin/challenges/[id]` across Server Actions: `admin-pardon.actions.ts`, `challenge-admin.actions.ts`, `enroll-participant.actions.ts`, `admin-override.actions.ts`, `log-study-time.actions.ts`, and `task.actions.ts`.
+      - Updated test assertions in `log-study-time.actions.test.ts`. Commit: `5b11b5e`.
+   - **Phase 3 — Auth Dev-Bypass Hardening:**
+      - Hardened `isDevBypass` in `app/admin/layout.tsx` and `app/devboard/layout.tsx` to strictly require `process.env.NODE_ENV === "development"`, closing accidental exposure if `AUTH_DISCORD_ID` is omitted in staging or preview deployments.
+      - Added unit test suites `app/admin/layout.test.tsx` and `app/devboard/layout.test.tsx`. Commit: `d04ac07`.
+   - **Phase 4 — Navigation Discoverability & Fallback Sanitization:**
+      - Added Changelog navigation link in `features/auth/presentation/auth-nav.tsx` `<AppHeader>` alongside Challenges.
+      - Sanitized hardcoded `"seed-honey-bees-vs-lavender-butterflies"` cockpit challenge fallback in `app/page.tsx` and `home-cockpit-view.tsx`.
+      - Updated tests in `auth-nav.test.tsx`. Commit: `6809675`.
+   - **Phase 5 — Lightweight Edge Guard Middleware:**
+      - Created `middleware.ts` running at Edge runtime to intercept `/admin/:path*` and `/devboard/:path*`.
+      - Evaluates session token presence (`authjs.session-token`, `__Secure-authjs.session-token`) to deflect unauthenticated traffic to `/` before Server Components run.
+      - Preserves database session model without triggering `@prisma/client` edge runtime incompatibility.
+      - Added test suite `middleware.test.ts` (6 tests). Commit: `b05393b`.
+- **Quality Gates Verified:**
+   - `npx tsc --noEmit` passed (0 errors).
+   - `npm run test` passed (112 test files, 1164/1164 tests green).
+   - `npx next build` passed (all 12 routes + Edge Middleware compiled cleanly).
 
 ### Session 116 — 2026-10-18 (Punishment Wall Restoration & Solo Challenge Lifecycle E2E Suite on `krish`)
 
