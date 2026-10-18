@@ -1,0 +1,272 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import {
+   ChevronDown,
+   User as UserIcon,
+   CheckCircle2,
+   Lock,
+   Clock,
+   Loader2,
+   BookOpen,
+} from "lucide-react";
+import {
+   Popover,
+   PopoverContent,
+   PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+   Command,
+   CommandInput,
+   CommandItem,
+   CommandList,
+} from "@/components/ui/command";
+import { getRealYptGroupMembersAction } from "../api/ypt-connection.actions";
+import type { YptRealGroupMemberItem } from "../data/ypt-connection.repository";
+
+interface YptMemberSelectorProps {
+   selectedMember: YptRealGroupMemberItem | null;
+   onSelectMember: (member: YptRealGroupMemberItem) => void;
+   disabled?: boolean;
+}
+
+export function YptMemberSelector({
+   selectedMember,
+   onSelectMember,
+   disabled = false,
+}: YptMemberSelectorProps) {
+   const [isOpen, setIsOpen] = useState(false);
+   const [searchQuery, setSearchQuery] = useState("");
+   const [members, setMembers] = useState<YptRealGroupMemberItem[]>([]);
+   const [isLoading, setIsLoading] = useState(false);
+
+   const loadMembers = React.useCallback(async () => {
+      setIsLoading(true);
+      try {
+         const res = await getRealYptGroupMembersAction();
+         if (res.ok && res.data) {
+            setMembers(res.data);
+         }
+      } finally {
+         setIsLoading(false);
+      }
+   }, []);
+
+   useEffect(() => {
+      void loadMembers();
+   }, [loadMembers]);
+
+   const filteredMembers = members.filter((m) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+         m.nickname.toLowerCase().includes(q) ||
+         m.yptUserId.includes(q) ||
+         (m.currentSubject && m.currentSubject.toLowerCase().includes(q))
+      );
+   });
+
+   const handleSelect = (member: YptRealGroupMemberItem) => {
+      if (member.claimStatus === "LINKED") return; // cannot select already verified by another
+      onSelectMember(member);
+      setIsOpen(false);
+   };
+
+   return (
+      <div className="w-full">
+         <label className="text-xs font-semibold text-text-secondary block mb-1.5">
+            Select your YPT identity
+         </label>
+
+         <Popover
+            open={isOpen}
+            onOpenChange={(open) => {
+               setIsOpen(open);
+               if (!open) setSearchQuery("");
+            }}
+         >
+            {/* Trigger Button */}
+            <PopoverTrigger asChild>
+               <button
+                  type="button"
+                  disabled={disabled}
+                  className="w-full flex items-center justify-between rounded-xl border border-border-default bg-surface-elevated px-3 py-2.5 text-xs text-left text-text-primary hover:border-border-strong transition-colors disabled:opacity-50"
+                  data-testid="ypt-member-select-trigger"
+               >
+                  {selectedMember ? (
+                     <div className="flex items-center gap-2.5 truncate">
+                        <div className="relative h-6 w-6 rounded-full overflow-hidden bg-surface-primary border border-border-subtle shrink-0">
+                           {selectedMember.avatarUrl ? (
+                              <Image
+                                 src={selectedMember.avatarUrl}
+                                 alt={selectedMember.nickname}
+                                 fill
+                                 sizes="24px"
+                                 className="object-cover"
+                              />
+                           ) : (
+                              <UserIcon className="h-3.5 w-3.5 m-auto text-text-tertiary" />
+                           )}
+                        </div>
+                        <div className="truncate">
+                           <span className="font-semibold text-white">
+                              {selectedMember.nickname}
+                           </span>
+                           <span className="text-meta text-brand-1 font-mono pl-2">
+                              YPT ID: {selectedMember.yptUserId}
+                           </span>
+                           {selectedMember.isStudying && (
+                              <span className="text-label text-emerald-400 pl-2">
+                                 ● Studying{" "}
+                                 {selectedMember.currentSubject || ""}
+                              </span>
+                           )}
+                        </div>
+                     </div>
+                  ) : (
+                     <span className="text-text-tertiary">
+                        Choose your account from the YPT member list...
+                     </span>
+                  )}
+                  <ChevronDown
+                     className={`h-4 w-4 text-text-tertiary transition-transform ${
+                        isOpen ? "rotate-180" : ""
+                     }`}
+                  />
+               </button>
+            </PopoverTrigger>
+
+            {/* Searchable Dropdown */}
+            <PopoverContent
+               align="start"
+               className="w-[var(--radix-popover-trigger-width)] p-0"
+            >
+               <Command shouldFilter={false}>
+                  <CommandInput
+                     value={searchQuery}
+                     onValueChange={setSearchQuery}
+                     placeholder="Search members by nickname or YPT ID..."
+                     autoFocus
+                  />
+                  <CommandList>
+                     {isLoading && members.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-text-tertiary flex items-center justify-center gap-2">
+                           <Loader2 className="h-4 w-4 animate-spin text-brand-1" />
+                           <span>Loading Yeolpumta group members...</span>
+                        </div>
+                     ) : filteredMembers.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-text-tertiary">
+                           {members.length === 0
+                              ? "No joined YPT study groups or members found for this account."
+                              : "No matching members found."}
+                        </div>
+                     ) : (
+                        filteredMembers.map((m) => {
+                           const isSelected =
+                              selectedMember?.yptUserId === m.yptUserId;
+                           const isLinked = m.claimStatus === "LINKED";
+                           const isPending = m.claimStatus === "PENDING";
+                           const isVerified = m.claimStatus === "VERIFIED";
+
+                           return (
+                              <CommandItem
+                                 key={m.yptUserId}
+                                 value={m.yptUserId}
+                                 disabled={isLinked}
+                                 onSelect={() => handleSelect(m)}
+                                 className={`items-center justify-between p-2 ${
+                                    isSelected
+                                       ? "bg-brand-1/15 text-white"
+                                       : isLinked
+                                         ? "opacity-50"
+                                         : undefined
+                                 }`}
+                              >
+                                 {/* Left: Avatar + Identity */}
+                                 <div className="flex items-center gap-2.5 truncate">
+                                    <div className="relative h-7 w-7 rounded-full overflow-hidden bg-surface-elevated border border-border-subtle shrink-0">
+                                       {m.avatarUrl ? (
+                                          <Image
+                                             src={m.avatarUrl}
+                                             alt={m.nickname}
+                                             fill
+                                             sizes="28px"
+                                             className="object-cover"
+                                          />
+                                       ) : (
+                                          <UserIcon className="h-4 w-4 m-auto text-text-tertiary" />
+                                       )}
+                                    </div>
+                                    <div className="text-left truncate">
+                                       <div className="font-semibold text-white flex items-center gap-1.5 truncate">
+                                          <span className="truncate">
+                                             {m.nickname}
+                                          </span>
+                                          {m.isSelf && (
+                                             <span className="text-label bg-brand-1/15 text-brand-1 border border-brand-1/30 px-1.5 py-0.2 rounded font-mono">
+                                                You
+                                             </span>
+                                          )}
+                                          {m.isStudying && (
+                                             <span className="text-label text-emerald-400 bg-emerald-500/10 px-1 rounded flex items-center gap-1">
+                                                <BookOpen className="h-2.5 w-2.5" />
+                                                {m.currentSubject || "Studying"}
+                                             </span>
+                                          )}
+                                       </div>
+                                       <div className="text-meta text-text-tertiary flex items-center gap-2 font-mono">
+                                          <span>ID: {m.yptUserId}</span>
+                                          {m.todayStudySeconds > 0 && (
+                                             <span className="text-emerald-400">
+                                                Today:{" "}
+                                                {Math.floor(
+                                                   m.todayStudySeconds / 3600
+                                                )}
+                                                h{" "}
+                                                {Math.floor(
+                                                   (m.todayStudySeconds %
+                                                      3600) /
+                                                      60
+                                                )}
+                                                m
+                                             </span>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {/* Right: Status Tag */}
+                                 <div className="shrink-0 pl-2">
+                                    {isLinked ? (
+                                       <span className="inline-flex items-center gap-1 text-label text-zinc-500 font-medium px-2 py-0.5 rounded-md bg-zinc-800/60 border border-zinc-700/40">
+                                          <Lock className="h-2.5 w-2.5" />
+                                          Already linked
+                                       </span>
+                                    ) : isPending ? (
+                                       <span className="inline-flex items-center gap-1 text-label text-amber-400 font-medium px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30">
+                                          <Clock className="h-2.5 w-2.5" />
+                                          Pending
+                                       </span>
+                                    ) : isVerified ? (
+                                       <span className="inline-flex items-center gap-1 text-label text-emerald-400 font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+                                          <CheckCircle2 className="h-2.5 w-2.5" />
+                                          Verified
+                                       </span>
+                                    ) : (
+                                       <span className="inline-flex items-center gap-1 text-label text-emerald-400/90 font-medium px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/20">
+                                          ✓ Available
+                                       </span>
+                                    )}
+                                 </div>
+                              </CommandItem>
+                           );
+                        })
+                     )}
+                  </CommandList>
+               </Command>
+            </PopoverContent>
+         </Popover>
+      </div>
+   );
+}

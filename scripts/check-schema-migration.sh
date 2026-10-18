@@ -7,12 +7,12 @@ set -euo pipefail
 
 BASE="${1:-origin/main}"
 
-schema_changed=$(git diff --name-only "$BASE...HEAD" -- prisma/schema.prisma | wc -l)
-migrations_changed=$(git diff --name-only "$BASE...HEAD" -- prisma/migrations | wc -l)
+schema_changed=$(git diff --name-only "$BASE...HEAD" -- packages/database/prisma/schema.prisma | wc -l)
+migrations_changed=$(git diff --name-only "$BASE...HEAD" -- packages/database/prisma/migrations | wc -l)
 
 if [ "$schema_changed" -gt 0 ] && [ "$migrations_changed" -eq 0 ]; then
-  echo "::error::prisma/schema.prisma changed without a migration."
-  echo "::error::Add prisma/migrations/<timestamp>_<name>/migration.sql and record the DB apply step (prisma db execute / db push) in HANDOFF.md."
+  echo "::error::packages/database/prisma/schema.prisma changed without a migration."
+  echo "::error::Add packages/database/prisma/migrations/<timestamp>_<name>/migration.sql and record the DB apply step (prisma db execute / db push) in HANDOFF.md."
   exit 1
 fi
 
