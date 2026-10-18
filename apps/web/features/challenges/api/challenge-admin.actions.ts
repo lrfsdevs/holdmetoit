@@ -133,7 +133,6 @@ export async function createChallengeAction(
 
       revalidatePath("/challenges");
       revalidatePath("/admin");
-      revalidatePath("/admin/challenges");
 
       logger.info(logEvents.challengeCreated, {
          context: {
@@ -176,10 +175,8 @@ export async function kickoffChallengeAction(
       ]);
 
       revalidatePath(`/challenge/${challengeId}`);
-      revalidatePath(`/admin/challenges/${challengeId}`);
       revalidatePath("/challenges");
       revalidatePath("/admin");
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.challengeKickoff, {
@@ -217,10 +214,8 @@ export async function lockChallengeResultsAction(
       ]);
 
       revalidatePath(`/challenge/${challengeId}`);
-      revalidatePath(`/admin/challenges/${challengeId}`);
       revalidatePath("/challenges");
       revalidatePath("/admin");
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.challengeLocked, {
@@ -260,10 +255,8 @@ export async function unlockChallengeResultsAction(
       ]);
 
       revalidatePath(`/challenge/${challengeId}`);
-      revalidatePath(`/admin/challenges/${challengeId}`);
       revalidatePath("/challenges");
       revalidatePath("/admin");
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.challengeUnlocked, {
@@ -331,10 +324,8 @@ export async function adminEnrollParticipantAction(
          ),
       ]);
 
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}`);
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}/roster`);
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
+      revalidatePath("/challenges");
       revalidatePath("/");
 
       logger.info(logEvents.challengeEnrolled, {
@@ -768,7 +759,6 @@ export async function adminUpdateParticipantTargetAction(
       );
       revalidatePath("/challenges");
       revalidatePath("/admin");
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.challengeTargetOverridden, {

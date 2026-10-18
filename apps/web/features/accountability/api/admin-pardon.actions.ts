@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireAdminUser } from "@/features/auth/api/require-admin";
 import { adminPardonParticipant } from "@/features/accountability/data/admin-pardon.repository";
+import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("accountability.pardon");
@@ -43,9 +44,9 @@ export async function adminPardonAction(
          },
       });
 
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}`);
+      invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);
+
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.accountabilityPardoned, {

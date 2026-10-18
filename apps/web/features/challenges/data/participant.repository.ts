@@ -138,7 +138,11 @@ export async function enrollParticipantInChallenge(params: {
          throw new Error("Selected team does not belong to this challenge.");
       }
 
-      if (team.maxMembers && team._count.participants >= team.maxMembers) {
+      if (
+         challenge.format !== "SOLOS" &&
+         team.maxMembers &&
+         team._count.participants >= team.maxMembers
+      ) {
          throw new Error(
             `Team ${team.name} is full (max ${team.maxMembers} member${team.maxMembers === 1 ? "" : "s"}).`
          );

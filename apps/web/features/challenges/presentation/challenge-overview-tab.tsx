@@ -35,6 +35,7 @@ import type {
    ScoreboardStandingEntry,
 } from "@/features/leaderboard/domain/leaderboard.types";
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
+import { PunishmentWall } from "@/features/accountability/presentation/punishment-wall";
 import { ChallengeBettingCard } from "./challenge-betting-card";
 
 interface ChallengeOverviewTabProps {
@@ -248,70 +249,8 @@ export function ChallengeOverviewTab({
             {/* Tournament Economy & Betting Card (Phase 2) */}
             <ChallengeBettingCard challenge={challenge} />
 
-            {/* 2. Forfeit Avatar & Punishment Disclosure Card (FEAT-PUN-02 / FEAT-PUN-03) */}
-            <div className="rounded-3xl border border-border-default bg-surface-primary p-6 sm:p-7 shadow-lg space-y-4">
-               <div>
-                  <h3 className="text-lg font-bold text-white">
-                     Forfeit Avatar & Accountability
-                  </h3>
-               </div>
-
-               <div className="p-4 rounded-2xl bg-surface-secondary border border-border-default flex flex-col sm:flex-row items-center gap-4">
-                  {challenge.punishmentPfpUrl ? (
-                     <>
-                        <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-2xl overflow-hidden border-2 border-feedback-error/40 shadow-md bg-surface-elevated group">
-                           <Image
-                              src={challenge.punishmentPfpUrl}
-                              alt="Challenge Forfeit Avatar"
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              unoptimized
-                           />
-                        </div>
-                        <div className="space-y-2.5 text-center sm:text-left min-w-0 flex-1">
-                           <div className="space-y-1">
-                              <p className="text-xs font-semibold text-white">
-                                 Assigned Forfeit Picture
-                              </p>
-                              <p className="text-xs text-text-secondary leading-relaxed">
-                                 Scholars who fail either their declared target
-                                 hours or incomplete weekly milestone goals must
-                                 equip this Discord avatar for 7 days
-                                 post-event.
-                              </p>
-                           </div>
-                           <div>
-                              <a
-                                 href={challenge.punishmentPfpUrl}
-                                 download="forfeit-avatar.png"
-                                 target="_blank"
-                                 rel="noreferrer"
-                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-strong bg-surface-nested hover:bg-surface-nested text-white hover:text-white transition-colors"
-                              >
-                                 <Download className="h-3.5 w-3.5 text-feedback-error-text" />
-                                 <span>Download Forfeit PFP</span>
-                              </a>
-                           </div>
-                        </div>
-                     </>
-                  ) : (
-                     <div className="flex items-center gap-3 py-2 text-center sm:text-left">
-                        <div className="h-12 w-12 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center shrink-0">
-                           <Shield className="h-6 w-6 text-text-tertiary" />
-                        </div>
-                        <div>
-                           <p className="text-xs font-semibold text-white">
-                              No Custom Forfeit Avatar Set
-                           </p>
-                           <p className="text-xs text-text-tertiary">
-                              Accountability rules still apply. Hosts can upload
-                              an avatar via the Challenge Manage tab.
-                           </p>
-                        </div>
-                     </div>
-                  )}
-               </div>
-            </div>
+            {/* 2. Forfeits & Accountability Wall (FEAT-PUN-02 / FEAT-PUN-03) */}
+            <PunishmentWall challenge={challenge} />
          </div>
 
          {/* 2. Right Column: Participants List (Challenge/Default 64:1806) */}
@@ -360,18 +299,16 @@ export function ChallengeOverviewTab({
                         <div className="relative">
                            <Select
                               value={selectedTeamId}
-                              onValueChange={(value) => {
-                                 setSelectedTeamId(value);
+                              onValueChange={(val) => {
+                                 setSelectedTeamId(val);
                                  setParticipantPage(1);
                               }}
                            >
                               <SelectTrigger
                                  data-testid="overview-team-select"
-                                 className="h-8 rounded-xl border-border-strong bg-surface-elevated text-xs text-white"
+                                 className="h-8 w-full rounded-xl border-border-strong bg-surface-elevated text-xs text-white"
                               >
-                                 <SelectValue
-                                    placeholder={`All Teams (${standings.length})`}
-                                 />
+                                 <SelectValue placeholder="All Teams" />
                               </SelectTrigger>
                               <SelectContent>
                                  <SelectItem value="ALL">

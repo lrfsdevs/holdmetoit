@@ -28,10 +28,90 @@ export async function getChallengeParticipantStats(
    const { currentUserId, isAdmin = false, isPreviewActive = false } = options;
 
    // 1. Fetch participant record with relations, strictly scoped to challengeId
-   const participant = await prisma.challengeParticipant.findUnique({
+   const includeRelations = {
+      user: {
+         select: {
+            id: true,
+            displayName: true,
+            username: true,
+            name: true,
+            image: true,
+            trophyBalance: true,
+         },
+      },
+      team: {
+         select: {
+            id: true,
+            name: true,
+            color: true,
+            iconEmoji: true,
+         },
+      },
+      challenge: {
+         select: {
+            id: true,
+            title: true,
+            format: true,
+            startAt: true,
+            endAt: true,
+            hostId: true,
+         },
+      },
+      dailyStudyLogs: {
+         orderBy: { logDate: "asc" as const },
+         select: {
+            id: true,
+            logDate: true,
+            durationSeconds: true,
+            isOverride: true,
+            isLeave: true,
+         },
+      },
+      punishmentRecords: {
+         select: {
+            isPardoned: true,
+            pardonReason: true,
+         },
+         take: 1,
+      },
+   };
+
+   let participant = await prisma.challengeParticipant.findUnique({
       where: { id: participantId },
-      include: {
-         user: {
+      include: includeRelations,
+   });
+
+   // 1b. If not found by participantId, check if participantId was a userId in this challenge (or 'me' alias)
+   if (!participant) {
+      const lookupUserId =
+         participantId === "me" && currentUserId
+            ? currentUserId
+            : participantId;
+      participant = await prisma.challengeParticipant.findFirst({
+         where: {
+            userId: lookupUserId,
+            challengeId,
+            challenge: { isDeleted: false },
+         },
+         include: includeRelations,
+      });
+   }
+
+   // 2. Strict Cross-Challenge Isolation: reject if participant belongs to another challenge
+   if (participant && participant.challengeId !== challengeId) {
+      return null;
+   }
+
+   // 3. Fallback Profile Resolution: if not enrolled in challenge, check if user exists
+   if (!participant) {
+      const targetUserId =
+         participantId === "me" && currentUserId
+            ? currentUserId
+            : participantId;
+
+      const [user, challenge, scoreboard] = await Promise.all([
+         prisma.user.findUnique({
+            where: { id: targetUserId },
             select: {
                id: true,
                displayName: true,
@@ -40,16 +120,9 @@ export async function getChallengeParticipantStats(
                image: true,
                trophyBalance: true,
             },
-         },
-         team: {
-            select: {
-               id: true,
-               name: true,
-               color: true,
-               iconEmoji: true,
-            },
-         },
-         challenge: {
+         }),
+         prisma.challenge.findUnique({
+            where: { id: challengeId, isDeleted: false },
             select: {
                id: true,
                title: true,
@@ -58,40 +131,105 @@ export async function getChallengeParticipantStats(
                endAt: true,
                hostId: true,
             },
-         },
-         dailyStudyLogs: {
-            orderBy: { logDate: "asc" },
-            select: {
-               id: true,
-               logDate: true,
-               durationSeconds: true,
-               isOverride: true,
-               isLeave: true,
-            },
-         },
-         punishmentRecords: {
-            select: {
-               isPardoned: true,
-               pardonReason: true,
-            },
-            take: 1,
-         },
-      },
-   });
+         }),
+         getChallengeScoreboard(challengeId, currentUserId),
+      ]);
 
-   // 2. Strict Cross-Challenge Isolation: reject if participant doesn't belong to challengeId
-   if (!participant || participant.challengeId !== challengeId) {
-      return null;
+      if (!user || !challenge || !scoreboard) {
+         return null;
+      }
+
+      const displayName =
+         user.displayName || user.name || user.username || "Scholar";
+      const totalParticipants = scoreboard.standings.length;
+      const isHost = Boolean(
+         currentUserId && challenge.hostId === currentUserId
+      );
+      const isEffectiveAdmin = isAdmin || (isHost && !isPreviewActive);
+      const isOwner = Boolean(currentUserId && currentUserId === user.id);
+
+      return {
+         isFallback: true,
+         profile: {
+            participantId: `fallback-${user.id}`,
+            userId: user.id,
+            displayName,
+            username: user.username,
+            image: user.image,
+            teamId: null,
+            teamName: null,
+            teamColor: null,
+            teamIcon: null,
+            rank: 0,
+            totalParticipants,
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+            challengeId: challenge.id,
+            challengeTitle: challenge.title,
+            challengeFormat: challenge.format,
+            challengeStatus: scoreboard.status,
+         },
+         summary: {
+            totalLoggedSeconds: 0,
+            totalLoggedClock: "00:00:00",
+            totalLoggedHuman: "0s",
+            todayLoggedSeconds: 0,
+            todayLoggedClock: "00:00:00",
+            todayLoggedHuman: "0s",
+            targetSeconds: 0,
+            targetClock: "00:00:00",
+            targetHuman: "0s",
+            completionPercentage: 0,
+            rank: 0,
+            totalParticipants,
+            remainingSeconds: 0,
+            remainingClock: "00:00:00",
+            remainingHuman: "0s",
+            isTargetMet: false,
+            excessSeconds: 0,
+            excessClock: "00:00:00",
+            excessHuman: "0s",
+            paceStatus: "on-track",
+            paceLabel: "Not Enrolled",
+            todayIsLeave: false,
+            leavesCount: 0,
+         },
+         dailyHistory: calculateParticipantDailyTimeline(
+            challenge.startAt,
+            scoreboard.totalDays,
+            [],
+            new Date()
+         ),
+         teamStats: null,
+         accountability: {
+            deficitSeconds: 0,
+            deficitClock: "00:00:00",
+            deficitHuman: "0s",
+            requiredDailyPaceSeconds: 0,
+            requiredDailyPaceClock: "00:00:00",
+            requiredDailyPaceHuman: "0s",
+            daysRemaining: scoreboard.daysRemaining,
+            isPunished: false,
+            isPardoned: false,
+            pardonReason: null,
+            statusBadge:
+               scoreboard.status === "COMPLETED" ? "Completed" : "On-Track",
+         },
+         viewer: {
+            isAdmin: isEffectiveAdmin,
+            isOwner,
+         },
+      };
    }
 
-   // 3. Fetch authoritative scoreboard to reuse exact ranking, tie-breaking, and team totals
+   // 4. Fetch authoritative scoreboard to reuse exact ranking, tie-breaking, and team totals
    const scoreboard = await getChallengeScoreboard(challengeId, currentUserId);
    if (!scoreboard) {
       return null;
    }
 
    const standing = scoreboard.standings.find(
-      (s) => s.participantId === participantId
+      (s) => s.participantId === participant.id
    );
 
    const rank = standing?.rank ?? 1;
@@ -235,9 +373,15 @@ export async function getChallengeParticipantStats(
          username: participant.user.username,
          image: participant.user.image,
          teamId: participant.team?.id ?? null,
-         teamName: participant.team?.name ?? null,
-         teamColor: participant.team?.color ?? null,
-         teamIcon: participant.team?.iconEmoji ?? null,
+         teamName:
+            participant.team?.name ??
+            (participant.challenge.format === "SOLOS" ? "Solo Scholar" : null),
+         teamColor:
+            participant.team?.color ??
+            (participant.challenge.format === "SOLOS" ? "#3b82f6" : null),
+         teamIcon:
+            participant.team?.iconEmoji ??
+            (participant.challenge.format === "SOLOS" ? "⚡" : null),
          rank,
          totalParticipants,
          paceStatus,

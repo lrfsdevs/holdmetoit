@@ -178,7 +178,6 @@ export async function logStudyTimeAction(
       ]);
 
       revalidatePath("/");
-      revalidatePath("/dashboard");
       revalidatePath("/wallet");
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
       revalidatePath(

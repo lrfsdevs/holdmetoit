@@ -12,12 +12,14 @@ interface ParticipantSummaryCardsProps {
    summary: ParticipantSummaryStats;
    isAdmin?: boolean;
    onEditTarget?: () => void;
+   isFallback?: boolean;
 }
 
 export function ParticipantSummaryCards({
    summary,
    isAdmin = false,
    onEditTarget,
+   isFallback = false,
 }: ParticipantSummaryCardsProps) {
    return (
       <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-4">
@@ -86,7 +88,7 @@ export function ParticipantSummaryCards({
                   Declared Target
                </span>
                <div className="flex items-center gap-1.5">
-                  {isAdmin && onEditTarget && (
+                  {!isFallback && isAdmin && onEditTarget && (
                      <button
                         type="button"
                         onClick={onEditTarget}
@@ -102,10 +104,12 @@ export function ParticipantSummaryCards({
             </div>
             <div>
                <p className="text-2xl sm:text-3xl font-extrabold text-text-primary font-sans font-sans-tabular">
-                  {summary.targetClock}
+                  {isFallback ? "—" : summary.targetClock}
                </p>
                <p className="text-xs text-text-tertiary mt-0.5">
-                  {summary.targetHuman} goal
+                  {isFallback
+                     ? "No target declared"
+                     : `${summary.targetHuman} goal`}
                </p>
             </div>
          </div>
@@ -117,26 +121,30 @@ export function ParticipantSummaryCards({
                   Goal Progress
                </span>
                <span className="text-xs font-bold text-text-primary">
-                  {summary.completionPercentage}%
+                  {isFallback ? "0%" : `${summary.completionPercentage}%`}
                </span>
             </div>
             <div>
                <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-elevated border border-border-default">
                   <div
                      className={`h-full rounded-full transition-all duration-500 ${
-                        summary.isTargetMet
+                        !isFallback && summary.isTargetMet
                            ? "bg-feedback-success"
                            : "bg-feedback-info"
                      }`}
                      style={{
-                        width: `${Math.min(100, summary.completionPercentage)}%`,
+                        width: isFallback
+                           ? "0%"
+                           : `${Math.min(100, summary.completionPercentage)}%`,
                      }}
                   />
                </div>
                <p className="text-xs text-text-tertiary mt-2">
-                  {summary.isTargetMet
-                     ? "Weekly commitment fulfilled"
-                     : `${summary.remainingHuman} to reach goal`}
+                  {isFallback
+                     ? "Not enrolled in challenge"
+                     : summary.isTargetMet
+                       ? "Weekly commitment fulfilled"
+                       : `${summary.remainingHuman} to reach goal`}
                </p>
             </div>
          </div>
@@ -151,10 +159,14 @@ export function ParticipantSummaryCards({
             </div>
             <div>
                <p className="text-2xl sm:text-3xl font-extrabold text-text-primary font-sans">
-                  #{summary.rank}
+                  {isFallback || summary.rank === 0
+                     ? "Unranked"
+                     : `#${summary.rank}`}
                </p>
                <p className="text-xs text-text-tertiary mt-0.5">
-                  of {summary.totalParticipants} enrolled scholars
+                  {isFallback || summary.rank === 0
+                     ? "Not on leaderboard"
+                     : `of ${summary.totalParticipants} enrolled scholars`}
                </p>
             </div>
          </div>
@@ -165,14 +177,25 @@ export function ParticipantSummaryCards({
                <span className="text-xs font-semibold uppercase tracking-wider">
                   Target Status
                </span>
-               {summary.isTargetMet ? (
+               {isFallback ? (
+                  <Hourglass className="h-4 w-4 text-text-tertiary" />
+               ) : summary.isTargetMet ? (
                   <CheckCircle2 className="h-4 w-4 text-feedback-success" />
                ) : (
                   <Hourglass className="h-4 w-4 text-brand-1" />
                )}
             </div>
             <div>
-               {summary.isTargetMet ? (
+               {isFallback ? (
+                  <>
+                     <p className="text-xl sm:text-2xl font-bold text-text-tertiary truncate">
+                        Not Enrolled
+                     </p>
+                     <p className="text-xs text-text-tertiary mt-0.5">
+                        No challenge commitment
+                     </p>
+                  </>
+               ) : summary.isTargetMet ? (
                   <>
                      <p className="text-xl sm:text-2xl font-bold text-feedback-success truncate">
                         Target Met!

@@ -74,7 +74,6 @@ describe("logStudyTimeAction", () => {
          })
       );
       expect(revalidatePath).toHaveBeenCalledWith("/");
-      expect(revalidatePath).toHaveBeenCalledWith("/dashboard");
       expect(revalidatePath).toHaveBeenCalledWith("/challenge/chal_1");
       expect(revalidateTag).toHaveBeenCalledWith("challenge:chal_1:scoreboard");
       expect(revalidateTag).toHaveBeenCalledWith(

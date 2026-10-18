@@ -97,11 +97,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          <main className="w-full">
             <HomeCockpitView
                displayName={displayName}
-               challengeId={
-                  cockpit?.challengeId ??
-                  upcomingChallenge?.id ??
-                  "seed-honey-bees-vs-lavender-butterflies"
-               }
+               challengeId={cockpit?.challengeId ?? upcomingChallenge?.id ?? ""}
                todayLoggedSeconds={cockpit?.todayLoggedSeconds ?? 0}
                todayLoggedClock={cockpit?.todayLoggedClock ?? "00:00:00"}
                user={effectiveUser}

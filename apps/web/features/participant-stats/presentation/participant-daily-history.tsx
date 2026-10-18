@@ -1,20 +1,14 @@
 import { Calendar, Clock, AlertCircle } from "lucide-react";
-import {
-   Table,
-   TableBody,
-   TableCell,
-   TableHead,
-   TableHeader,
-   TableRow,
-} from "@/components/ui/table";
 import type { ParticipantDailyHistoryEntry } from "../domain/participant-stats.types";
 
 interface ParticipantDailyHistoryProps {
    dailyHistory: ParticipantDailyHistoryEntry[];
+   isFallback?: boolean;
 }
 
 export function ParticipantDailyHistory({
    dailyHistory,
+   isFallback = false,
 }: ParticipantDailyHistoryProps) {
    return (
       <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-xl space-y-4">
@@ -26,11 +20,25 @@ export function ParticipantDailyHistory({
                </h2>
             </div>
             <span className="text-xs text-text-tertiary">
-               {dailyHistory.length} Days Recorded
+               {isFallback
+                  ? "0 Days Logged"
+                  : `${dailyHistory.length} Days Recorded`}
             </span>
          </div>
 
-         {dailyHistory.length === 0 ? (
+         {isFallback ? (
+            <div className="rounded-2xl border border-dashed border-border-default bg-surface-tertiary/40 p-8 text-center space-y-2 my-2">
+               <Clock className="h-8 w-8 mx-auto text-text-tertiary" />
+               <p className="text-sm font-semibold text-text-secondary">
+                  No Study Sessions Recorded
+               </p>
+               <p className="text-xs text-text-tertiary max-w-md mx-auto">
+                  This scholar was not enrolled in this challenge. Daily study
+                  hours, leave days, and audit trails only appear for enrolled
+                  participants.
+               </p>
+            </div>
+         ) : dailyHistory.length === 0 ? (
             <p className="text-center py-8 text-xs text-text-tertiary">
                No challenge days recorded yet.
             </p>
@@ -123,26 +131,20 @@ export function ParticipantDailyHistory({
 
                {/* Desktop View: Table */}
                <div className="hidden sm:block overflow-x-auto">
-                  <Table className="w-full text-left text-xs">
-                     <TableHeader>
-                        <TableRow className="border-b border-border-default text-meta font-bold text-text-tertiary uppercase tracking-wider">
-                           <TableHead className="py-3 px-3">Day</TableHead>
-                           <TableHead className="py-3 px-3">Date</TableHead>
-                           <TableHead className="py-3 px-3">Status</TableHead>
-                           <TableHead className="py-3 px-3">
-                              Logged Duration
-                           </TableHead>
-                           <TableHead className="py-3 px-3">
-                              Cumulative
-                           </TableHead>
-                           <TableHead className="py-3 px-3 text-right">
-                              Notes
-                           </TableHead>
-                        </TableRow>
-                     </TableHeader>
-                     <TableBody className="divide-y divide-border-subtle">
+                  <table className="w-full text-left text-xs">
+                     <thead>
+                        <tr className="border-b border-border-default text-meta font-bold text-text-tertiary uppercase tracking-wider">
+                           <th className="py-3 px-3">Day</th>
+                           <th className="py-3 px-3">Date</th>
+                           <th className="py-3 px-3">Status</th>
+                           <th className="py-3 px-3">Logged Duration</th>
+                           <th className="py-3 px-3">Cumulative</th>
+                           <th className="py-3 px-3 text-right">Notes</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-border-subtle">
                         {dailyHistory.map((day) => (
-                           <TableRow
+                           <tr
                               key={day.dayNumber}
                               className={`transition-colors ${
                                  day.isLeave
@@ -152,16 +154,16 @@ export function ParticipantDailyHistory({
                                       : "hover:bg-surface-tertiary"
                               }`}
                            >
-                              <TableCell className="py-3 px-3 font-bold text-white">
+                              <td className="py-3 px-3 font-bold text-white">
                                  Day {day.dayNumber}
-                              </TableCell>
-                              <TableCell className="py-3 px-3 text-text-secondary">
+                              </td>
+                              <td className="py-3 px-3 text-text-secondary">
                                  {day.dateFormatted}{" "}
                                  <span className="text-text-tertiary">
                                     ({day.weekday})
                                  </span>
-                              </TableCell>
-                              <TableCell className="py-3 px-3">
+                              </td>
+                              <td className="py-3 px-3">
                                  {day.isLeave ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-1/15 border border-brand-1/40 text-brand-1 text-label font-semibold">
                                        <span>🌴</span>
@@ -184,8 +186,8 @@ export function ParticipantDailyHistory({
                                        Past
                                     </span>
                                  )}
-                              </TableCell>
-                              <TableCell className="py-3 px-3 font-sans font-sans-tabular">
+                              </td>
+                              <td className="py-3 px-3 font-sans font-sans-tabular">
                                  <div className="flex items-center gap-1.5">
                                     <Clock
                                        className={`h-3.5 w-3.5 ${
@@ -209,11 +211,11 @@ export function ParticipantDailyHistory({
                                           : `(${day.durationHuman})`}
                                     </span>
                                  </div>
-                              </TableCell>
-                              <TableCell className="py-3 px-3 font-sans font-sans-tabular text-text-secondary">
+                              </td>
+                              <td className="py-3 px-3 font-sans font-sans-tabular text-text-secondary">
                                  {day.isFuture ? "—" : day.cumulativeClock}
-                              </TableCell>
-                              <TableCell className="py-3 px-3 text-right">
+                              </td>
+                              <td className="py-3 px-3 text-right">
                                  {day.isOverride ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-1/15 border border-brand-1/40 text-brand-1 text-label font-semibold">
                                        <AlertCircle className="h-2.5 w-2.5" />
@@ -229,11 +231,11 @@ export function ParticipantDailyHistory({
                                        —
                                     </span>
                                  )}
-                              </TableCell>
-                           </TableRow>
+                              </td>
+                           </tr>
                         ))}
-                     </TableBody>
-                  </Table>
+                     </tbody>
+                  </table>
                </div>
             </>
          )}

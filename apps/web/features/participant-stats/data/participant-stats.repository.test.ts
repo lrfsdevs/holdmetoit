@@ -7,6 +7,13 @@ vi.mock("@/core/db", () => ({
    prisma: {
       challengeParticipant: {
          findUnique: vi.fn(),
+         findFirst: vi.fn(),
+      },
+      user: {
+         findUnique: vi.fn(),
+      },
+      challenge: {
+         findUnique: vi.fn(),
       },
    },
 }));
@@ -99,14 +106,100 @@ describe("getChallengeParticipantStats repository", () => {
       ],
    };
 
-   it("returns null if participant does not exist", async () => {
+   it("returns null if neither participant nor user exists", async () => {
       vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
 
       const result = await getChallengeParticipantStats(
          "chal_1",
          "part_nonexistent"
       );
       expect(result).toBeNull();
+   });
+
+   it("resolves participant by userId when participantId is a userId in that challenge", async () => {
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+         mockParticipant as any
+      );
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+
+      const result = await getChallengeParticipantStats("chal_1", "user_1");
+      expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith(
+         expect.objectContaining({
+            where: {
+               userId: "user_1",
+               challengeId: "chal_1",
+               challenge: { isDeleted: false },
+            },
+         })
+      );
+      expect(result?.profile.displayName).toBe("Alice");
+   });
+
+   it("resolves participant when participantId is 'me' and viewer is logged in and enrolled", async () => {
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+         mockParticipant as any
+      );
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+
+      const result = await getChallengeParticipantStats("chal_1", "me", {
+         currentUserId: "user_1",
+      });
+      expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith(
+         expect.objectContaining({
+            where: {
+               userId: "user_1",
+               challengeId: "chal_1",
+               challenge: { isDeleted: false },
+            },
+         })
+      );
+      expect(result?.profile.displayName).toBe("Alice");
+   });
+
+   it("returns fallback profile view model when user exists but is not enrolled in challenge", async () => {
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+         id: "user_new",
+         displayName: "New Scholar",
+         username: "newbie",
+         name: "New Scholar",
+         image: null,
+      } as any);
+      vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+         id: "chal_1",
+         title: "Battle of the Bees",
+         format: "TEAM_VS_TEAM",
+         startAt: new Date("2026-10-01T00:00:00.000Z"),
+         endAt: new Date("2026-10-08T00:00:00.000Z"),
+         hostId: "admin_user",
+      } as any);
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+
+      const result = await getChallengeParticipantStats("chal_1", "user_new", {
+         currentUserId: "user_new",
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.isFallback).toBe(true);
+      expect(result?.profile.displayName).toBe("New Scholar");
+      expect(result?.profile.paceLabel).toBe("Not Enrolled");
+      expect(result?.profile.rank).toBe(0);
+      expect(result?.summary.targetSeconds).toBe(0);
+      expect(result?.summary.totalLoggedSeconds).toBe(0);
+      expect(result?.teamStats).toBeNull();
+      expect(result?.viewer.isOwner).toBe(true);
+      expect(result?.viewer.isAdmin).toBe(false);
    });
 
    it("enforces cross-challenge isolation: returns null if participant belongs to another challenge", async () => {

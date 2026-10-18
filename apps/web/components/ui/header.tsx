@@ -204,6 +204,13 @@ export function AppHeader({
                </Link>
 
                <Link
+                  href="/changelog"
+                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+               >
+                  Changelog
+               </Link>
+
+               <Link
                   href="/wallet"
                   data-testid="wallet-nav-link"
                   className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"

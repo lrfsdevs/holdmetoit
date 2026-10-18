@@ -9,20 +9,21 @@ import {
 } from "lucide-react";
 import type { ParticipantProfileHeader as ProfileHeaderType } from "../domain/participant-stats.types";
 import { getTeamBadgeStyle } from "@/features/challenges/domain/team-colors";
-import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
 
 interface ParticipantProfileHeaderProps {
    profile: ProfileHeaderType;
    isAdmin?: boolean;
    viewParam?: string;
+   isFallback?: boolean;
 }
 
 export function ParticipantProfileHeader({
    profile,
    isAdmin = false,
    viewParam,
+   isFallback = false,
 }: ParticipantProfileHeaderProps) {
-   const isRankOne = profile.rank === 1;
+   const isRankOne = !isFallback && profile.rank === 1;
 
    const paceColors = {
       serene:
@@ -125,19 +126,15 @@ export function ParticipantProfileHeader({
                            </span>
                         )}
 
-                        {/* Trophy Rank Role Badge */}
-                        {typeof profile.trophies === "number" && (
-                           <TrophyRoleBadge
-                              trophies={profile.trophies}
-                              size="sm"
-                           />
-                        )}
-
                         {/* Pace Status Badge */}
                         <span
-                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${paceClass}`}
+                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                              isFallback
+                                 ? "bg-surface-elevated border-border-strong text-text-tertiary"
+                                 : paceClass
+                           }`}
                         >
-                           {profile.paceLabel}
+                           {isFallback ? "Not Enrolled" : profile.paceLabel}
                         </span>
                      </div>
 
@@ -150,7 +147,7 @@ export function ParticipantProfileHeader({
                      <p className="text-xs text-text-tertiary flex items-center gap-1 pt-0.5">
                         <Shield className="h-3.5 w-3.5 text-text-tertiary" />
                         <span>
-                           Competing in{" "}
+                           {isFallback ? "Spectating in " : "Competing in "}
                            <Link
                               href={`/challenge/${profile.challengeId}`}
                               className="text-text-primary font-medium hover:underline"
@@ -169,22 +166,30 @@ export function ParticipantProfileHeader({
                         Leaderboard Rank
                      </span>
                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-elevated border border-border-strong text-sm font-extrabold text-white font-sans">
-                        <span
-                           className={
-                              isRankOne
-                                 ? "text-feedback-success"
-                                 : "text-text-primary"
-                           }
-                        >
-                           #{profile.rank}
-                        </span>
-                        <span className="text-xs text-text-tertiary font-normal">
-                           / {profile.totalParticipants}
-                        </span>
+                        {isFallback || profile.rank === 0 ? (
+                           <span className="text-xs font-medium text-text-tertiary">
+                              Unranked
+                           </span>
+                        ) : (
+                           <>
+                              <span
+                                 className={
+                                    isRankOne
+                                       ? "text-feedback-success"
+                                       : "text-text-primary"
+                                 }
+                              >
+                                 #{profile.rank}
+                              </span>
+                              <span className="text-xs text-text-tertiary font-normal">
+                                 / {profile.totalParticipants}
+                              </span>
+                           </>
+                        )}
                      </div>
                   </div>
 
-                  {isAdmin && (
+                  {isAdmin && !isFallback && (
                      <Link
                         href={`/challenge/${profile.challengeId}?tab=manage`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-nested hover:bg-surface-nested border border-border-strong text-xs font-semibold text-text-secondary hover:text-white transition-colors"

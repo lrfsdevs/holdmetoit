@@ -128,4 +128,5 @@ export interface ParticipantStatsViewModel {
       isAdmin: boolean;
       isOwner: boolean;
    };
+   isFallback?: boolean;
 }

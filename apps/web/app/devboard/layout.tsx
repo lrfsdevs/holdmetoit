@@ -23,7 +23,8 @@ export default async function DevBoardLayout({
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
    const isDevBypass =
-      process.env.NODE_ENV === "development" || !process.env.AUTH_DISCORD_ID;
+      process.env.NODE_ENV === "development" &&
+      (process.env.ALLOW_DEV_BYPASS === "true" || !process.env.AUTH_DISCORD_ID);
 
    // Strict DEV role check: Non-authenticated and non-DEV users (even ADMINs) are rejected
    if (!session?.user?.id && !isDevBypass) {
