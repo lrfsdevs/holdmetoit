@@ -5,7 +5,6 @@ import {
    deleteFeatureFlagAction,
    removeTesterAction,
    setRolloutModeAction,
-   toggleMasterSwitchAction,
 } from "./feature-flags.actions";
 import { requireDevUser } from "@/features/auth/api/require-dev";
 import * as repo from "../data/feature-flags.repository";
@@ -24,7 +23,6 @@ vi.mock("next/cache", () => ({
 vi.mock("../data/feature-flags.repository", () => ({
    createFeatureFlagTx: vi.fn(),
    updateFeatureFlagTx: vi.fn(),
-   toggleMasterSwitchTx: vi.fn(),
    setRolloutModeTx: vi.fn(),
    assignTesterTx: vi.fn(),
    removeTesterTx: vi.fn(),
@@ -83,7 +81,6 @@ describe("feature-flags.actions (DevBoard Role Guard)", () => {
          id: "flag_1",
          key: "voice_log",
          name: "Voice Log",
-         isEnabled: false,
          rolloutMode: "DISABLED",
       } as never);
 
@@ -96,32 +93,6 @@ describe("feature-flags.actions (DevBoard Role Guard)", () => {
       expect(result.ok).toBe(true);
       expect(repo.createFeatureFlagTx).toHaveBeenCalledWith(
          expect.objectContaining({ key: "voice_log", name: "Voice Log" }),
-         "dev_1"
-      );
-   });
-
-   it("allows DEV user to toggle master switch", async () => {
-      vi.mocked(requireDevUser).mockResolvedValueOnce({
-         id: "dev_1",
-         username: "hyperdev",
-         displayName: "Hyper Dev",
-         role: "DEV",
-      });
-
-      vi.mocked(repo.toggleMasterSwitchTx).mockResolvedValueOnce({
-         id: "flag_1",
-         isEnabled: true,
-      } as never);
-
-      const result = await toggleMasterSwitchAction({
-         flagId: "flag_1",
-         isEnabled: true,
-      });
-
-      expect(result.ok).toBe(true);
-      expect(repo.toggleMasterSwitchTx).toHaveBeenCalledWith(
-         "flag_1",
-         true,
          "dev_1"
       );
    });

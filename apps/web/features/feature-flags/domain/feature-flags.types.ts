@@ -41,7 +41,6 @@ export interface FeatureFlagEntity {
    key: string;
    name: string;
    description?: string | null;
-   isEnabled: boolean;
    rolloutMode: RolloutModeType;
    createdBy: string;
    isDeleted: boolean;

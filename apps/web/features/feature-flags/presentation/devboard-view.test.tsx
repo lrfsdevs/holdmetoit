@@ -7,7 +7,6 @@ import type { FeatureFlagEntity } from "../domain/feature-flags.types";
 vi.mock("../api/feature-flags.actions", () => ({
    createFeatureFlagAction: vi.fn(),
    updateFeatureFlagAction: vi.fn(),
-   toggleMasterSwitchAction: vi.fn(),
    setRolloutModeAction: vi.fn(),
    assignTesterAction: vi.fn(),
    removeTesterAction: vi.fn(),
@@ -38,7 +37,6 @@ describe("DevBoardView Presentation", () => {
             key: "voice_logging",
             name: "Voice Logging Feature",
             description: "Enables voice duration input",
-            isEnabled: true,
             rolloutMode: "GLOBAL",
             createdBy: "user_1",
             isDeleted: false,
@@ -51,7 +49,6 @@ describe("DevBoardView Presentation", () => {
             key: "beta_dashboard",
             name: "Beta Dashboard V2",
             description: "Targeted rollout to alpha testers",
-            isEnabled: true,
             rolloutMode: "TARGETED",
             createdBy: "user_1",
             isDeleted: false,
@@ -80,7 +77,6 @@ describe("DevBoardView Presentation", () => {
       expect(html).toContain("DevBoard");
       // Column headers
       expect(html).toContain("Key &amp; Description");
-      expect(html).toContain("Environment Status");
       expect(html).toContain("Rollout");
       expect(html).toContain("Targeting");
       expect(html).toContain("Last Modified");

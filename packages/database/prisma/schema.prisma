@@ -462,7 +462,6 @@ model FeatureFlag {
   key         String       @unique
   name        String       @db.VarChar(128)
   description String?      @db.Text
-  isEnabled   Boolean      @default(false)
   rolloutMode RolloutMode  @default(DISABLED)
   createdBy   String
   isDeleted   Boolean      @default(false)
@@ -475,7 +474,7 @@ model FeatureFlag {
   auditLogs   FeatureFlagAuditLog[]
 
   @@index([key])
-  @@index([isDeleted, isEnabled])
+  @@index([isDeleted, rolloutMode])
 }
 
 model FeatureFlagTarget {

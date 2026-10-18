@@ -18,7 +18,6 @@ export const createFeatureFlagSchema = z.object({
       .min(2, "Name must be at least 2 characters")
       .max(128, "Name cannot exceed 128 characters"),
    description: z.string().trim().max(1000).optional().nullable(),
-   isEnabled: z.boolean().default(false),
    rolloutMode: rolloutModeEnum.default("DISABLED"),
 });
 
@@ -30,11 +29,6 @@ export const updateFeatureFlagSchema = z.object({
       .min(2, "Name must be at least 2 characters")
       .max(128, "Name cannot exceed 128 characters"),
    description: z.string().trim().max(1000).optional().nullable(),
-});
-
-export const toggleMasterSwitchSchema = z.object({
-   flagId: z.string().min(1, "Flag ID is required"),
-   isEnabled: z.boolean(),
 });
 
 export const setRolloutModeSchema = z.object({
@@ -49,6 +43,5 @@ export const manageTesterSchema = z.object({
 
 export type CreateFeatureFlagInput = z.infer<typeof createFeatureFlagSchema>;
 export type UpdateFeatureFlagInput = z.infer<typeof updateFeatureFlagSchema>;
-export type ToggleMasterSwitchInput = z.infer<typeof toggleMasterSwitchSchema>;
 export type SetRolloutModeInput = z.infer<typeof setRolloutModeSchema>;
 export type ManageTesterInput = z.infer<typeof manageTesterSchema>;

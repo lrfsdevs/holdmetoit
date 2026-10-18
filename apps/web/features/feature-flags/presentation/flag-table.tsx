@@ -7,7 +7,6 @@ import {
    Edit2,
    FileText,
    MoreHorizontal,
-   Power,
    Trash2,
    Users,
 } from "lucide-react";
@@ -38,7 +37,6 @@ interface FlagTableProps {
    selectedFlagIds: Set<string>;
    onToggleSelectAll: () => void;
    onToggleSelectRow: (flagId: string) => void;
-   onToggleMaster: (flagId: string, isEnabled: boolean) => Promise<void>;
    onSetRolloutMode: (flagId: string, mode: RolloutModeType) => Promise<void>;
    onManageTesters: (flag: FeatureFlagEntity) => void;
    onViewAuditLogs: (flag: FeatureFlagEntity) => void;
@@ -52,7 +50,6 @@ export function FlagTable({
    selectedFlagIds,
    onToggleSelectAll,
    onToggleSelectRow,
-   onToggleMaster,
    onSetRolloutMode,
    onManageTesters,
    onViewAuditLogs,
@@ -107,9 +104,6 @@ export function FlagTable({
                      </TableHead>
                      <TableHead scope="col" className="px-4 py-3">
                         Key & Description
-                     </TableHead>
-                     <TableHead scope="col" className="px-4 py-3 text-center">
-                        Environment Status
                      </TableHead>
                      <TableHead scope="col" className="px-4 py-3 text-center">
                         Rollout
@@ -180,19 +174,6 @@ export function FlagTable({
                               </p>
                            </TableCell>
 
-                           {/* Environment Status */}
-                           <TableCell className="px-4 py-3.5 text-center align-middle whitespace-nowrap">
-                              <span className="text-xs font-medium text-text-secondary">
-                                 {!flag.isEnabled
-                                    ? "Off"
-                                    : flag.rolloutMode === "GLOBAL"
-                                      ? "Global"
-                                      : flag.rolloutMode === "TARGETED"
-                                        ? "Targeted"
-                                        : "Off"}
-                              </span>
-                           </TableCell>
-
                            {/* Rollout Segmented Control */}
                            <TableCell className="px-4 py-3.5 text-center align-middle whitespace-nowrap">
                               <div className="inline-flex items-center rounded-lg bg-surface-secondary p-0.5 border border-border-default text-xs font-medium">
@@ -261,25 +242,6 @@ export function FlagTable({
                                     align="end"
                                     className="w-48 rounded-xl border-border-strong bg-surface-primary text-text-primary"
                                  >
-                                    <DropdownMenuItem
-                                       onSelect={() =>
-                                          onToggleMaster(
-                                             flag.id,
-                                             !flag.isEnabled
-                                          )
-                                       }
-                                       className="text-xs focus:bg-surface-nested focus:text-text-primary"
-                                    >
-                                       <Power
-                                          className="text-text-tertiary"
-                                          aria-hidden="true"
-                                       />
-                                       <span>
-                                          {flag.isEnabled
-                                             ? "Turn Off (Kill Switch)"
-                                             : "Turn On (Enable Switch)"}
-                                       </span>
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                        onSelect={() => onManageTesters(flag)}
                                        className="text-xs focus:bg-surface-nested focus:text-text-primary"

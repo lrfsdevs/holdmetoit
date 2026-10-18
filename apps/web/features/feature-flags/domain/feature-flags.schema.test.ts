@@ -3,7 +3,6 @@ import {
    createFeatureFlagSchema,
    manageTesterSchema,
    setRolloutModeSchema,
-   toggleMasterSwitchSchema,
    updateFeatureFlagSchema,
 } from "./feature-flags.schema";
 
@@ -14,7 +13,6 @@ describe("Feature Flags Zod Schemas", () => {
             key: "modern_leaderboard_v2",
             name: "Modern Leaderboard V2",
             description: "Replaces legacy table",
-            isEnabled: false,
             rolloutMode: "DISABLED",
          };
          const result = createFeatureFlagSchema.safeParse(valid);
@@ -44,7 +42,7 @@ describe("Feature Flags Zod Schemas", () => {
          ).toBe(false);
       });
 
-      it("applies defaults for isEnabled and rolloutMode", () => {
+      it("applies the default rolloutMode", () => {
          const minimal = {
             key: "quick_study_log",
             name: "Quick Study Log",
@@ -52,7 +50,6 @@ describe("Feature Flags Zod Schemas", () => {
          const result = createFeatureFlagSchema.safeParse(minimal);
          expect(result.success).toBe(true);
          if (result.success) {
-            expect(result.data.isEnabled).toBe(false);
             expect(result.data.rolloutMode).toBe("DISABLED");
          }
       });
@@ -82,24 +79,6 @@ describe("Feature Flags Zod Schemas", () => {
                name: " ",
             }).success
          ).toBe(false);
-      });
-   });
-
-   describe("toggleMasterSwitchSchema", () => {
-      it("validates toggle payload", () => {
-         expect(
-            toggleMasterSwitchSchema.safeParse({
-               flagId: "flag_1",
-               isEnabled: true,
-            }).success
-         ).toBe(true);
-
-         expect(
-            toggleMasterSwitchSchema.safeParse({
-               flagId: "flag_1",
-               isEnabled: false,
-            }).success
-         ).toBe(true);
       });
    });
 

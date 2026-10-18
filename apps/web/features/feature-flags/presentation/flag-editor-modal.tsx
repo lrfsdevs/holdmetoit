@@ -26,7 +26,6 @@ interface FlagEditorModalProps {
       key: string;
       name: string;
       description?: string;
-      isEnabled: boolean;
       rolloutMode: RolloutModeType;
    }) => Promise<void>;
    editingFlag?: FeatureFlagEntity | null;
@@ -43,7 +42,6 @@ export function FlagEditorModal({
    const [key, setKey] = useState("");
    const [name, setName] = useState("");
    const [description, setDescription] = useState("");
-   const [isEnabled, setIsEnabled] = useState(false);
    const [rolloutMode, setRolloutMode] = useState<RolloutModeType>("DISABLED");
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,13 +51,11 @@ export function FlagEditorModal({
          setKey(editingFlag.key);
          setName(editingFlag.name);
          setDescription(editingFlag.description || "");
-         setIsEnabled(editingFlag.isEnabled);
          setRolloutMode(editingFlag.rolloutMode);
       } else {
          setKey("");
          setName("");
          setDescription("");
-         setIsEnabled(false);
          setRolloutMode("DISABLED");
       }
       setErrorMessage(null);
@@ -100,7 +96,6 @@ export function FlagEditorModal({
             key: key.trim().toLowerCase(),
             name: name.trim(),
             description: description.trim() || undefined,
-            isEnabled,
             rolloutMode,
          });
          onClose();
@@ -189,44 +184,25 @@ export function FlagEditorModal({
                </div>
 
                {!isEditing && (
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                     <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
-                           Initial Master Switch
-                        </label>
-                        <button
-                           type="button"
-                           onClick={() => setIsEnabled(!isEnabled)}
-                           className={`w-full rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong focus-visible:ring-offset-0 ${
-                              isEnabled
-                                 ? "border-emerald-600 bg-emerald-950/40 text-emerald-400"
-                                 : "border-border-strong bg-surface-tertiary text-text-tertiary"
-                           }`}
-                        >
-                           {isEnabled ? "ON (Active)" : "OFF (Safe Initial)"}
-                        </button>
-                     </div>
-
-                     <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
-                           Initial Mode
-                        </label>
-                        <Select
-                           value={rolloutMode}
-                           onValueChange={(v) =>
-                              setRolloutMode(v as RolloutModeType)
-                           }
-                        >
-                           <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-primary text-xs text-text-primary">
-                              <SelectValue placeholder="Disabled" />
-                           </SelectTrigger>
-                           <SelectContent>
-                              <SelectItem value="DISABLED">Disabled</SelectItem>
-                              <SelectItem value="TARGETED">Targeted</SelectItem>
-                              <SelectItem value="GLOBAL">Global</SelectItem>
-                           </SelectContent>
-                        </Select>
-                     </div>
+                  <div className="pt-2">
+                     <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+                        Initial Rollout
+                     </label>
+                     <Select
+                        value={rolloutMode}
+                        onValueChange={(v) =>
+                           setRolloutMode(v as RolloutModeType)
+                        }
+                     >
+                        <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-primary text-xs text-text-primary">
+                           <SelectValue placeholder="Disabled" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="DISABLED">Disabled</SelectItem>
+                           <SelectItem value="TARGETED">Targeted</SelectItem>
+                           <SelectItem value="GLOBAL">Global</SelectItem>
+                        </SelectContent>
+                     </Select>
                   </div>
                )}
 

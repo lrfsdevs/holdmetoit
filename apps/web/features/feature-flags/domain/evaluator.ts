@@ -5,7 +5,6 @@ import type {
 
 export interface EvaluatableFeatureFlag {
    key: string;
-   isEnabled: boolean;
    rolloutMode: RolloutModeType;
    isDeleted?: boolean;
    targets?: { userId: string }[];
@@ -18,10 +17,9 @@ export interface EvaluatableFeatureFlag {
  *
  * Rules:
  * 1. Missing or soft-deleted flag returns safe fallback (default false).
- * 2. isEnabled === false (Master Switch Off) unconditionally returns false.
- * 3. rolloutMode === "DISABLED" returns false.
- * 4. rolloutMode === "GLOBAL" returns true.
- * 5. rolloutMode === "TARGETED" returns true only if context.userId is assigned in targets.
+ * 2. rolloutMode === "DISABLED" returns false.
+ * 3. rolloutMode === "GLOBAL" returns true.
+ * 4. rolloutMode === "TARGETED" returns true only if context.userId is assigned in targets.
  */
 export function evaluateFeatureFlag(
    flag: EvaluatableFeatureFlag | null | undefined,
@@ -30,11 +28,6 @@ export function evaluateFeatureFlag(
 ): boolean {
    if (!flag || flag.isDeleted) {
       return fallback;
-   }
-
-   // Master kill switch takes absolute priority
-   if (!flag.isEnabled) {
-      return false;
    }
 
    switch (flag.rolloutMode) {

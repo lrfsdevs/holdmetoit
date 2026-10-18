@@ -8,7 +8,6 @@ import {
    removeTesterTx,
    setRolloutModeTx,
    softDeleteFeatureFlagTx,
-   toggleMasterSwitchTx,
    updateFeatureFlagTx,
 } from "./feature-flags.repository";
 
@@ -62,7 +61,6 @@ describe("feature-flags.repository", () => {
       vi.mocked(prisma.featureFlag.findUnique).mockResolvedValueOnce({
          id: "flag_1",
          key: "search_v2",
-         isEnabled: true,
          rolloutMode: "GLOBAL",
          targets: [],
       } as never);
@@ -80,7 +78,6 @@ describe("feature-flags.repository", () => {
          id: "flag_new",
          key: "new_flag",
          name: "New Flag",
-         isEnabled: false,
          rolloutMode: "DISABLED",
       } as never);
 
@@ -88,7 +85,6 @@ describe("feature-flags.repository", () => {
          {
             key: "new_flag",
             name: "New Flag",
-            isEnabled: false,
             rolloutMode: "DISABLED",
          },
          "dev_user_1"
@@ -130,33 +126,6 @@ describe("feature-flags.repository", () => {
 
       expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
          where: { id: "flag_1", isDeleted: false },
-      });
-   });
-
-   it("toggles the master switch and writes audit log", async () => {
-      vi.mocked(prisma.featureFlag.findUniqueOrThrow).mockResolvedValueOnce({
-         id: "flag_1",
-         isEnabled: false,
-      } as never);
-
-      vi.mocked(prisma.featureFlag.update).mockResolvedValueOnce({
-         id: "flag_1",
-         isEnabled: true,
-      } as never);
-
-      const result = await toggleMasterSwitchTx("flag_1", true, "dev_user_1");
-      expect(result.isEnabled).toBe(true);
-      expect(prisma.featureFlag.findUniqueOrThrow).toHaveBeenCalledWith({
-         where: { id: "flag_1", isDeleted: false },
-      });
-      expect(prisma.featureFlagAuditLog.create).toHaveBeenCalledWith({
-         data: {
-            flagId: "flag_1",
-            actorId: "dev_user_1",
-            action: "TOGGLED_MASTER",
-            oldValue: { isEnabled: false },
-            newValue: { isEnabled: true },
-         },
       });
    });
 
@@ -226,7 +195,7 @@ describe("feature-flags.repository", () => {
       });
    });
 
-   it("soft deletes a flag and turns it off", async () => {
+   it("soft deletes a flag", async () => {
       vi.mocked(prisma.featureFlag.findUniqueOrThrow).mockResolvedValueOnce({
          id: "flag_1",
          key: "obsolete_feature",
@@ -236,14 +205,13 @@ describe("feature-flags.repository", () => {
       vi.mocked(prisma.featureFlag.update).mockResolvedValueOnce({
          id: "flag_1",
          isDeleted: true,
-         isEnabled: false,
       } as never);
 
       const result = await softDeleteFeatureFlagTx("flag_1", "dev_user_1");
       expect(result.isDeleted).toBe(true);
       expect(prisma.featureFlag.update).toHaveBeenCalledWith({
          where: { id: "flag_1" },
-         data: expect.objectContaining({ isDeleted: true, isEnabled: false }),
+         data: expect.objectContaining({ isDeleted: true }),
       });
       expect(prisma.featureFlagAuditLog.create).toHaveBeenCalledWith({
          data: {

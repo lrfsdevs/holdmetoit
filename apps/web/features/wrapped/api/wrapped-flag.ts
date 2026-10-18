@@ -4,8 +4,8 @@ import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 export const WRAPPED_FEATURE_FLAG_KEY = "challenge_wrapped_v1";
 
 /**
- * Server-only. Fails closed: a missing flag row, `isEnabled = false`, or
- * `rolloutMode = DISABLED` all resolve to `false`.
+ * Server-only. Fails closed: a missing flag row or `rolloutMode = DISABLED`
+ * both resolve to `false`.
  */
 export function isWrappedFeatureEnabled(): Promise<boolean> {
    return isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);

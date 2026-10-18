@@ -55,7 +55,6 @@ export async function seedSystemFeatureFlags(prisma: PrismaClient) {
                key: flag.key,
                name: flag.name,
                description: flag.description,
-               isEnabled: false,
                rolloutMode: RolloutMode.DISABLED,
                createdBy: creator.id,
             },

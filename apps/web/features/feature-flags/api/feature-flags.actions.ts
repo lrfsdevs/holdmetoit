@@ -10,14 +10,12 @@ import {
    searchAssignableDiscordUsers,
    setRolloutModeTx,
    softDeleteFeatureFlagTx,
-   toggleMasterSwitchTx,
    updateFeatureFlagTx,
 } from "../data/feature-flags.repository";
 import {
    createFeatureFlagSchema,
    manageTesterSchema,
    setRolloutModeSchema,
-   toggleMasterSwitchSchema,
    updateFeatureFlagSchema,
 } from "../domain/feature-flags.schema";
 
@@ -83,39 +81,6 @@ export async function updateFeatureFlagAction(
          ok: false,
          error:
             error instanceof Error ? error.message : "Failed to update flag.",
-      };
-   }
-}
-
-/**
- * Toggles the master switch (isEnabled) as an emergency kill-switch.
- */
-export async function toggleMasterSwitchAction(
-   rawInput: unknown
-): Promise<ActionResult> {
-   try {
-      const dev = await requireDevUser();
-      const parsed = toggleMasterSwitchSchema.safeParse(rawInput);
-
-      if (!parsed.success) {
-         return {
-            ok: false,
-            error: parsed.error.issues[0]?.message ?? "Invalid toggle data.",
-         };
-      }
-
-      const updated = await toggleMasterSwitchTx(
-         parsed.data.flagId,
-         parsed.data.isEnabled,
-         dev.id
-      );
-      revalidatePath("/devboard");
-      return { ok: true, data: updated };
-   } catch (error) {
-      return {
-         ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to toggle switch.",
       };
    }
 }

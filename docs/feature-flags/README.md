@@ -15,8 +15,8 @@ The HoldMeToIt Feature Flag system is a lightweight, zero-dependency, self-hoste
 ### Core Tenets
 
 1. **Zero External Overhead:** No LaunchDarkly, Statsig, Redis, or Supabase Realtime daemons. All state lives in Postgres.
-2. **Deterministic 3-State Model:** Rollout is strictly partitioned into `DISABLED`, `TARGETED`, and `GLOBAL`.
-3. **Master Kill Switch:** Immediate emergency circuit breaker that overrides all rollout modes.
+2. **Deterministic 3-State Model:** Rollout is strictly partitioned into `DISABLED`, `TARGETED`, and `GLOBAL` — the single control for each flag.
+3. **Kill by Rollout:** Setting a flag back to `DISABLED` is the emergency circuit breaker.
 4. **Law L7 Pure Domain Isolation:** Evaluation math and decision logic are pure functions with zero framework or ORM imports, fully testable in Vitest.
 5. **Atomic Audit Integrity:** Every configuration change, rollout switch, and tester assignment is recorded in an immutable audit trail inside the same Postgres transaction.
 6. **Ephemeral Lifecycle:** Feature flags are temporary release conduits, not permanent configuration stores. Once a feature is stabilized, its flag is decommissioned.
@@ -25,55 +25,47 @@ The HoldMeToIt Feature Flag system is a lightweight, zero-dependency, self-hoste
 
 ## 2. State Machine & Evaluation Flow
 
-Every flag is defined by its master switch (`isEnabled`) and its `rolloutMode`.
+Every flag is defined solely by its `rolloutMode`.
 
-### 2.1 The Two-Dimensional Control Grid
+### 2.1 The Rollout Control Grid
 
-| Master Switch (`isEnabled`) | Rollout Mode (`rolloutMode`) | Target Assignment Match | Effective Result | Behavior                                                          |
-| :-------------------------: | :--------------------------: | :---------------------: | :--------------: | :---------------------------------------------------------------- |
-|      **`false`** (Off)      |          _Any mode_          |       Irrelevant        |   **`false`**    | Emergency kill switch active; completely disabled for all users.  |
-|       **`true`** (On)       |        **`DISABLED`**        |       Irrelevant        |   **`false`**    | Dormant state (e.g. prepared in DB before beta test starts).      |
-|       **`true`** (On)       |        **`TARGETED`**        |    **Matched User**     |    **`true`**    | Enabled **only** for users assigned in `FeatureFlagTarget`.       |
-|       **`true`** (On)       |        **`TARGETED`**        |  **Unmatched / Guest**  |   **`false`**    | Concealed from general participants and unauthenticated visitors. |
-|       **`true`** (On)       |         **`GLOBAL`**         |       Irrelevant        |    **`true`**    | Enabled for all visitors (both authenticated and spectators).     |
+| Rollout Mode (`rolloutMode`) | Target Assignment Match | Effective Result | Behavior                                                          |
+| :--------------------------: | :---------------------: | :--------------: | :---------------------------------------------------------------- |
+|        **`DISABLED`**        |       Irrelevant        |   **`false`**    | Dormant/killed state (also the emergency brake).                  |
+|        **`TARGETED`**        |    **Matched User**     |    **`true`**    | Enabled **only** for users assigned in `FeatureFlagTarget`.       |
+|        **`TARGETED`**        |  **Unmatched / Guest**  |   **`false`**    | Concealed from general participants and unauthenticated visitors. |
+|         **`GLOBAL`**         |       Irrelevant        |    **`true`**    | Enabled for all visitors (both authenticated and spectators).     |
 
 ### 2.2 Decision Flow Diagram
 
 ```text
                ┌──────────────────────────────┐
-               │  Evaluate Flag: isEnabled?   │
+               │  Evaluate Flag: rolloutMode? │
                └──────────────┬───────────────┘
                               │
-                    ┌─────────┴─────────┐
-             No / false              Yes / true
-                    │                   │
-                    ▼                   ▼
-           ┌─────────────────┐ ┌─────────────────┐
-           │  Return FALSE   │ │ Check           │
-           │ (Kill Switch)   │ │ rolloutMode     │
-           └─────────────────┘ └────────┬────────┘
-                                        │
-           ┌────────────────────────────┼───────────────────────────┐
-           │                            │                           │
-           ▼                            ▼                           ▼
-      [DISABLED]                   [TARGETED]                   [GLOBAL]
-           │                            │                           │
-           ▼                            ▼                           ▼
-     Return FALSE                 Has context.userId?          Return TRUE
-                                        │
-                                  ┌─────┴─────┐
-                                 No          Yes
-                                  │           │
-                                  ▼           ▼
-                             Return FALSE  Is userId in
-                                           targets list?
-                                              │
-                                        ┌─────┴─────┐
-                                       No          Yes
-                                        │           │
-                                        ▼           ▼
-                                   Return FALSE  Return TRUE
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+   [DISABLED]            [TARGETED]             [GLOBAL]
+        │                     │                     │
+        ▼                     ▼                     ▼
+  Return FALSE        Has context.userId?      Return TRUE
+                              │
+                        ┌─────┴─────┐
+                       No          Yes
+                        │           │
+                        ▼           ▼
+                   Return FALSE  Is userId in
+                                 targets list?
+                                    │
+                              ┌─────┴─────┐
+                             No          Yes
+                              │           │
+                              ▼           ▼
+                         Return FALSE  Return TRUE
 ```
+
+A missing or soft-deleted flag always returns the fallback (`false`) before this flow.
 
 ---
 
@@ -93,7 +85,6 @@ model FeatureFlag {
   key         String       @unique
   name        String       @db.VarChar(128)
   description String?      @db.Text
-  isEnabled   Boolean      @default(false)
   rolloutMode RolloutMode  @default(DISABLED)
   createdBy   String
   isDeleted   Boolean      @default(false)
@@ -106,7 +97,7 @@ model FeatureFlag {
   auditLogs   FeatureFlagAuditLog[]
 
   @@index([key])
-  @@index([isDeleted, isEnabled])
+  @@index([isDeleted, rolloutMode])
 }
 
 model FeatureFlagTarget {
@@ -200,7 +191,7 @@ If evaluating for a specific user ID outside a normal user session:
 ```typescript
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
-const isEnabled = await isFeatureEnabled("enhanced_leaderboard", {
+const enabled = await isFeatureEnabled("enhanced_leaderboard", {
    userId: targetUser.id,
    userRole: targetUser.role,
 });
@@ -250,8 +241,8 @@ To keep the application free of technical debt, every flag follows a 5-step life
 ```
 
 1. **Declare Key:** Add the key to `feature-flags.constants.ts` with a description.
-2. **Dormant Deploy:** Deploy the code with the flag initially set to `isEnabled = false` and `rolloutMode = DISABLED`.
-3. **Targeted Beta:** Turn `isEnabled = true` and `rolloutMode = TARGETED`. Assign 3–5 Discord community members to verify behavior in production.
+2. **Dormant Deploy:** Deploy the code with the flag set to `rolloutMode = DISABLED`.
+3. **Targeted Beta:** Switch `rolloutMode = TARGETED`. Assign 3–5 Discord community members to verify behavior in production.
 4. **Global Rollout:** Switch `rolloutMode = GLOBAL`. The feature is now visible to all scholars and visitors.
 5. **Decommission & Prune:** Once the feature is permanently adopted:
    - Remove the `isFeatureEnabled` check and keep the new code path.
@@ -269,7 +260,7 @@ Live keys wired into production code, with the surfaces each one gates:
 **`challenge_wrapped_v1` operator notes**
 
 - Source of truth: `WRAPPED_FEATURE_FLAG_KEY` in `features/wrapped/api/wrapped-flag.ts`; evaluated server-side only via `isWrappedFeatureEnabled()`.
-- Enable from `/devboard`: `isEnabled = true` + `rolloutMode = GLOBAL` for everyone, or `TARGETED` with assigned Discord testers for a beta.
+- Enable from `/devboard`: set `rolloutMode = GLOBAL` for everyone, or `TARGETED` with assigned Discord testers for a beta.
 - While off, `?tab=summary` clamps to Overview and the wrapped Server Actions no-op / return `FEATURE_DISABLED`, so the feature stays unreachable even from stale clients.
 - Decommission: once wrapped is permanent, remove the `isWrappedFeatureEnabled()` checks and delete the flag row (soft deletion keeps the audit trail).
 
@@ -279,7 +270,7 @@ Live keys wired into production code, with the surfaces each one gates:
 
 1. **Authentication & RBAC:**
    - Hiding UI buttons is never treated as security.
-   - Every mutation Server Action (`toggleMasterSwitch`, `setRolloutMode`, `assignTester`, `deleteFlag`) invokes:
+   - Every mutation Server Action (`setRolloutMode`, `assignTester`, `deleteFlag`) invokes:
       ```typescript
       const session = await auth();
       if (!session?.user?.id || !hasAdminPrivileges(session.user.role)) {
@@ -325,7 +316,7 @@ until explicitly enabled.
 
 The seed creates them as **DISABLED** (`npm run db:seed:flags`, also run by
 `prisma db seed`). Verify the locked UX, then roll out **TARGETED** (testers) →
-**GLOBAL**. The master `isEnabled` switch remains the emergency kill for each.
+**GLOBAL**. `rolloutMode` is the single control; setting `DISABLED` is the kill switch.
 
 The upsert uses an empty `update: {}`, so re-running the seed never overwrites operator
 rollout changes. `createdBy` is the earliest `DEV`/`ADMIN` user, falling back to any user;

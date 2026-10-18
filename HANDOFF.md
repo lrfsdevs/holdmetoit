@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-18 (Session 133 — System Kill Switches: Pokémon, Betting, Global Leaderboard on `afnan`)
+> **Last Updated:** 2026-10-18 (Session 134 — Feature Flags: rollout-only control, master switch removed, on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -965,3 +965,14 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **163 files / 1503 tests** green; `next build` clean (17 routes + middleware).
 - **Docs:** `docs/feature-flags/README.md` §9.
 - **NEXT STEP:** Create the three flags in the DevBoard as **DISABLED**, verify the locked UX, then roll out **TARGETED → GLOBAL**.
+
+### Session 134 — 2026-10-18 (Feature Flags: Master Switch Removed — Rollout Is the Only Control)
+
+- **Problem:** The DevBoard exposed two controls — the `isEnabled` master switch ("Environment Status") and `rolloutMode`. The evaluator checked `isEnabled` first, so selecting **Global** alone left a flag `false` (screenshot: Global + Off, "Active Global 0"). Selecting Global now enables the feature.
+- **Decision (user):** Remove the master switch entirely; `rolloutMode` is the single control. `DISABLED` = off (kill switch), `TARGETED` = assigned testers, `GLOBAL` = everyone.
+- **DB:** dropped `FeatureFlag.isEnabled`; index `[isDeleted, isEnabled]` → `[isDeleted, rolloutMode]` (migration `20261023000000_remove_feature_flag_master_switch`). Existing `GLOBAL`/`TARGETED` rows that were master-killed become active by design (the three system flags turn on; `challenge_wrapped_v1` stays off).
+- **Code:** evaluator/type/zod no longer carry `isEnabled`; `toggleMasterSwitchTx` / `toggleMasterSwitchAction` / `toggleMasterSwitchSchema` deleted; repo create/audit/soft-delete updated; DevBoard counters/filters derive from `rolloutMode`; "Environment Status" column and the kill-switch dropdown item removed; editor form shows only Initial Rollout; unused `flag-card.tsx` deleted. Historical `TOGGLED_MASTER` audit rows still render in the audit drawer.
+- **Seed:** `packages/database/prisma/seed-feature-flags.ts` (+ `run-seed-feature-flags.ts`); NEW script `npm run db:seed:flags` (also run by `prisma db seed`) upserts `pokemon_system_v1` / `betting_system_v1` / `global_leaderboard_v1` as **DISABLED** with `update: {}`, so operator rollout changes survive re-runs.
+- **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **163 files / 1500 tests** green; `next build` clean. Migration applied to local `holdmetoit3`.
+- **Docs:** `docs/feature-flags/README.md` §1–§3, §5–§7, §9 rewritten to the rollout-only model.
+- **NEXT STEP:** In `/devboard`, set `pokemon_system_v1` to **Global** and confirm `/pokemon` + the Pokédex nav appear immediately; repeat for betting and the global leaderboard. Then commit.

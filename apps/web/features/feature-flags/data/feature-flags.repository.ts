@@ -89,7 +89,6 @@ export async function createFeatureFlagTx(
             key: input.key,
             name: input.name,
             description: input.description,
-            isEnabled: input.isEnabled,
             rolloutMode: input.rolloutMode,
             createdBy: actorId,
          },
@@ -103,7 +102,6 @@ export async function createFeatureFlagTx(
             newValue: {
                key: flag.key,
                name: flag.name,
-               isEnabled: flag.isEnabled,
                rolloutMode: flag.rolloutMode,
             },
          },
@@ -147,38 +145,6 @@ export async function updateFeatureFlagTx(
                name: updated.name,
                description: updated.description,
             },
-         },
-      });
-
-      return updated;
-   });
-}
-
-/**
- * Toggles the master switch (isEnabled) atomically with audit logging.
- */
-export async function toggleMasterSwitchTx(
-   flagId: string,
-   isEnabled: boolean,
-   actorId: string
-) {
-   return prisma.$transaction(async (tx) => {
-      const existing = await tx.featureFlag.findUniqueOrThrow({
-         where: { id: flagId, isDeleted: false },
-      });
-
-      const updated = await tx.featureFlag.update({
-         where: { id: flagId },
-         data: { isEnabled },
-      });
-
-      await tx.featureFlagAuditLog.create({
-         data: {
-            flagId,
-            actorId,
-            action: "TOGGLED_MASTER",
-            oldValue: { isEnabled: existing.isEnabled },
-            newValue: { isEnabled: updated.isEnabled },
          },
       });
 
@@ -324,7 +290,6 @@ export async function softDeleteFeatureFlagTx(flagId: string, actorId: string) {
          data: {
             isDeleted: true,
             deletedAt: new Date(),
-            isEnabled: false,
          },
       });
 

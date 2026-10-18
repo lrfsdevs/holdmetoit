@@ -8,9 +8,7 @@ async function main() {
    const flags = await seedSystemFeatureFlags(prisma);
 
    for (const flag of flags) {
-      console.log(
-         `- ${flag.key}: ${flag.rolloutMode} (enabled=${flag.isEnabled})`
-      );
+      console.log(`- ${flag.key}: ${flag.rolloutMode}`);
    }
 }
 

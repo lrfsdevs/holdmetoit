@@ -8,7 +8,6 @@ describe("evaluateFeatureFlag (Law L7 Domain Evaluator)", () => {
       key: "modern_podium",
       name: "Modern Podium",
       description: "New leaderboard UI",
-      isEnabled: true,
       rolloutMode: "GLOBAL",
       createdBy: "user_admin",
       isDeleted: false,
@@ -32,38 +31,9 @@ describe("evaluateFeatureFlag (Law L7 Domain Evaluator)", () => {
       expect(evaluateFeatureFlag(deletedFlag, undefined, true)).toBe(true);
    });
 
-   it("unconditionally returns false when Master Switch (isEnabled) is false", () => {
-      // Even if GLOBAL
-      const killedGlobal: FeatureFlagEntity = {
-         ...baseFlag,
-         isEnabled: false,
-         rolloutMode: "GLOBAL",
-      };
-      expect(evaluateFeatureFlag(killedGlobal)).toBe(false);
-
-      // Even if TARGETED and user matches
-      const killedTargeted: FeatureFlagEntity = {
-         ...baseFlag,
-         isEnabled: false,
-         rolloutMode: "TARGETED",
-         targets: [
-            {
-               flagId: "flag_1",
-               userId: "user_123",
-               createdBy: "admin",
-               createdAt: new Date(),
-            },
-         ],
-      };
-      expect(evaluateFeatureFlag(killedTargeted, { userId: "user_123" })).toBe(
-         false
-      );
-   });
-
-   it("returns false for DISABLED mode even when isEnabled is true", () => {
+   it("returns false for DISABLED mode for everyone", () => {
       const disabledFlag: FeatureFlagEntity = {
          ...baseFlag,
-         isEnabled: true,
          rolloutMode: "DISABLED",
       };
       expect(evaluateFeatureFlag(disabledFlag)).toBe(false);
@@ -75,7 +45,6 @@ describe("evaluateFeatureFlag (Law L7 Domain Evaluator)", () => {
    it("returns true for GLOBAL mode for any user or spectator", () => {
       const globalFlag: FeatureFlagEntity = {
          ...baseFlag,
-         isEnabled: true,
          rolloutMode: "GLOBAL",
       };
       expect(evaluateFeatureFlag(globalFlag)).toBe(true);
@@ -85,10 +54,15 @@ describe("evaluateFeatureFlag (Law L7 Domain Evaluator)", () => {
       expect(evaluateFeatureFlag(globalFlag, { isSpectator: true })).toBe(true);
    });
 
+   it("enables a GLOBAL flag with no other fields (rollout is the only control)", () => {
+      expect(evaluateFeatureFlag({ key: "x", rolloutMode: "GLOBAL" })).toBe(
+         true
+      );
+   });
+
    it("returns true for TARGETED mode only when context.userId matches target", () => {
       const targetedFlag: FeatureFlagEntity = {
          ...baseFlag,
-         isEnabled: true,
          rolloutMode: "TARGETED",
          targets: [
             {
@@ -129,7 +103,6 @@ describe("evaluateFeatureFlag (Law L7 Domain Evaluator)", () => {
    it("supports targetUserIds array directly on flag", () => {
       const targetedFlag = {
          key: "fast_cache",
-         isEnabled: true,
          rolloutMode: "TARGETED" as const,
          targetUserIds: ["usr_1", "usr_2"],
       };

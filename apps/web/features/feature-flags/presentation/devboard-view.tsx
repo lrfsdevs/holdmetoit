@@ -20,7 +20,6 @@ import {
    deleteFeatureFlagAction,
    removeTesterAction,
    setRolloutModeAction,
-   toggleMasterSwitchAction,
    updateFeatureFlagAction,
 } from "../api/feature-flags.actions";
 import type {
@@ -69,14 +68,12 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
    // Counters
    const totalCount = flags.length;
-   const globalCount = flags.filter(
-      (f) => f.isEnabled && f.rolloutMode === "GLOBAL"
-   ).length;
+   const globalCount = flags.filter((f) => f.rolloutMode === "GLOBAL").length;
    const targetedCount = flags.filter(
-      (f) => f.isEnabled && f.rolloutMode === "TARGETED"
+      (f) => f.rolloutMode === "TARGETED"
    ).length;
    const killedOrDisabledCount = flags.filter(
-      (f) => !f.isEnabled || f.rolloutMode === "DISABLED"
+      (f) => f.rolloutMode === "DISABLED"
    ).length;
 
    // Filtered and sorted list
@@ -94,13 +91,13 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
          // Filter status pill
          if (activeFilter === "GLOBAL") {
-            return f.isEnabled && f.rolloutMode === "GLOBAL";
+            return f.rolloutMode === "GLOBAL";
          }
          if (activeFilter === "TARGETED") {
-            return f.isEnabled && f.rolloutMode === "TARGETED";
+            return f.rolloutMode === "TARGETED";
          }
          if (activeFilter === "KILLED") {
-            return !f.isEnabled || f.rolloutMode === "DISABLED";
+            return f.rolloutMode === "DISABLED";
          }
 
          return true;
@@ -127,25 +124,6 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
          }
       });
    }, [flags, searchQuery, activeFilter, sortBy]);
-
-   // Master switch handler
-   const handleToggleMaster = async (flagId: string, isEnabled: boolean) => {
-      // Optimistic update
-      setFlags((prev) =>
-         prev.map((f) => (f.id === flagId ? { ...f, isEnabled } : f))
-      );
-
-      const res = await toggleMasterSwitchAction({ flagId, isEnabled });
-      if (!res.ok) {
-         // Rollback on failure
-         setFlags((prev) =>
-            prev.map((f) =>
-               f.id === flagId ? { ...f, isEnabled: !isEnabled } : f
-            )
-         );
-         toast.error(res.error || "Failed to toggle switch.");
-      }
-   };
 
    // Rollout mode handler
    const handleSetRolloutMode = async (
@@ -179,7 +157,6 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
       key: string;
       name: string;
       description?: string;
-      isEnabled: boolean;
       rolloutMode: RolloutModeType;
    }) => {
       if (data.flagId) {
@@ -202,7 +179,6 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
             key: data.key,
             name: data.name,
             description: data.description,
-            isEnabled: data.isEnabled,
             rolloutMode: data.rolloutMode,
          });
          if (!res.ok) throw new Error(res.error);
@@ -440,7 +416,6 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                      selectedFlagIds={selectedFlagIds}
                      onToggleSelectAll={handleToggleSelectAll}
                      onToggleSelectRow={handleToggleSelectRow}
-                     onToggleMaster={handleToggleMaster}
                      onSetRolloutMode={handleSetRolloutMode}
                      onManageTesters={(f) => setTesterFlag(f)}
                      onViewAuditLogs={(f) => setAuditFlag(f)}
