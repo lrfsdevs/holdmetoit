@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 import LeaderboardPage from "./page";
 import { getTrophyLeaderboard } from "@/features/trophies/data/trophy.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn().mockResolvedValue(true),
+}));
 
 vi.mock("@/core/auth", () => ({
    auth: vi.fn().mockResolvedValue({
@@ -59,9 +65,23 @@ vi.mock("@/features/trophies/presentation/trophy-leaderboard-view", () => ({
 }));
 
 describe("LeaderboardPage", () => {
+   beforeEach(() => {
+      vi.clearAllMocks();
+   });
+
    it("fetches the full leaderboard set and renders the view", async () => {
       const page = await LeaderboardPage();
       expect(getTrophyLeaderboard).toHaveBeenCalledWith({ all: true });
       expect(page).toBeDefined();
+   });
+
+   it("renders the locked state when the leaderboard flag is off", async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+      const page = await LeaderboardPage();
+      const html = renderToStaticMarkup(page as any);
+
+      expect(html).toContain("Global leaderboard is currently unavailable");
+      expect(getTrophyLeaderboard).not.toHaveBeenCalled();
    });
 });

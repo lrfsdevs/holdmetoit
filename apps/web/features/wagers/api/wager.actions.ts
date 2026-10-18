@@ -1,6 +1,8 @@
 "use server";
 
 import { requireSessionUser } from "@/features/auth/api/require-session";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -30,6 +32,16 @@ export type PlaceWagerInput = z.infer<typeof placeWagerSchema>;
 export async function placeWagerAction(input: PlaceWagerInput) {
    try {
       const user = await requireSessionUser();
+
+      const bettingEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.betting);
+      if (!bettingEnabled) {
+         return {
+            ok: false,
+            code: "FEATURE_DISABLED",
+            message: "Betting is currently unavailable.",
+         };
+      }
+
       const parsed = placeWagerSchema.safeParse(input);
 
       if (!parsed.success) {

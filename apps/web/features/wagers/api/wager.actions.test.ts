@@ -6,6 +6,7 @@ import {
 } from "./wager.actions";
 import * as wagerRepo from "../data/wager.repository";
 import * as authSession from "@/features/auth/api/require-session";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 vi.mock("../data/wager.repository", () => ({
    placeWager: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock("../data/wager.repository", () => ({
 
 vi.mock("@/features/auth/api/require-session", () => ({
    requireSessionUser: vi.fn(),
+}));
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("next/cache", () => ({
@@ -33,6 +38,22 @@ describe("wager.actions", () => {
    });
 
    describe("placeWagerAction", () => {
+      it("returns FEATURE_DISABLED when the betting system is off", async () => {
+         vi.mocked(authSession.requireSessionUser).mockResolvedValue(
+            mockUser as any
+         );
+         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+         const result = await placeWagerAction({
+            challengeId: "chal_1",
+            targetTeamId: "team_1",
+            stake: 100,
+         });
+
+         expect(result).toMatchObject({ ok: false, code: "FEATURE_DISABLED" });
+         expect(wagerRepo.placeWager).not.toHaveBeenCalled();
+      });
+
       it("rejects stake below minimum constraint (10 coins)", async () => {
          vi.mocked(authSession.requireSessionUser).mockResolvedValue(
             mockUser as any

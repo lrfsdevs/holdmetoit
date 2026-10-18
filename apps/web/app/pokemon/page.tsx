@@ -15,6 +15,9 @@ import { listBanners } from "@/features/pokemon/data/acquisition.repository";
 import { getOrCreateWallet } from "@/features/economy/data/wallet.repository";
 import { PokemonView } from "@/features/pokemon/presentation/pokemon-view";
 import { PityState } from "@/features/pokemon/domain/acquisition/pity-engine";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
+import { EmptyState } from "@/components/state/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,21 @@ interface PokemonPageProps {
 }
 
 export default async function PokemonPage({ searchParams }: PokemonPageProps) {
+   const pokemonEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.pokemon);
+
+   if (!pokemonEnabled) {
+      return (
+         <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
+            <main className="mx-auto max-w-6xl px-3 sm:px-6 py-8">
+               <EmptyState
+                  title="Pokémon system is currently unavailable"
+                  description="The Pokédex, summoning, and collection features are temporarily locked. Please check back later."
+               />
+            </main>
+         </div>
+      );
+   }
+
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;

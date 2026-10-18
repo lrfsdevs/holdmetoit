@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
+import { seedSystemFeatureFlags } from "./seed-feature-flags";
+
 const prisma = new PrismaClient();
 
 /** Deterministic seed identifier for idempotent upserts. */
@@ -108,6 +110,8 @@ async function main() {
          });
       }
    }
+
+   await seedSystemFeatureFlags(prisma);
 
    console.log(
       `Seed complete: challenge "${challenge.title}" (${challenge.id}) with Honey Bees vs Lavender Butterflies and sample user tasks.`

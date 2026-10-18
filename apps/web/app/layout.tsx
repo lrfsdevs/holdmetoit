@@ -13,6 +13,8 @@ import {
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
 import { FeedbackTriggerButton } from "@/features/feedback/presentation/feedback-trigger-button";
+import { getFeatureFlags } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 
 import "./globals.css";
 
@@ -53,6 +55,11 @@ export default async function RootLayout({
       ? { ...session.user, role: effectiveRole ?? session.user.role }
       : session?.user;
 
+   const flags = await getFeatureFlags([
+      FEATURE_FLAG_KEYS.pokemon,
+      FEATURE_FLAG_KEYS.globalLeaderboard,
+   ]);
+
    return (
       <html
          lang="en"
@@ -70,6 +77,10 @@ export default async function RootLayout({
                      user={effectiveUser}
                      isActualAdmin={isActualAdmin}
                      isPreviewActive={isPreviewActive}
+                     showPokemonNav={flags[FEATURE_FLAG_KEYS.pokemon]}
+                     showLeaderboardNav={
+                        flags[FEATURE_FLAG_KEYS.globalLeaderboard]
+                     }
                   />
                </Suspense>
                {children}

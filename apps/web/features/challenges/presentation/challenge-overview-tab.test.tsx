@@ -11,6 +11,10 @@ vi.mock("next/navigation", () => ({
    }),
 }));
 
+vi.mock("./challenge-betting-card", () => ({
+   ChallengeBettingCard: () => <div data-testid="betting-card" />,
+}));
+
 vi.mock("@/features/wagers/api/wager.actions", () => ({
    placeWagerAction: vi.fn(),
    getUserChallengeWagersAction: vi
@@ -264,5 +268,24 @@ describe("ChallengeOverviewTab", () => {
       expect(html).not.toContain("Dual-Failure Invariant (Law L6)");
       expect(html).not.toContain("Forfeit Discord PFP");
       expect(html).not.toContain("Accountability Rule:");
+   });
+
+   it("renders the betting card when enabled", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, { challenge: mockChallenge })
+      );
+
+      expect(html).toContain('data-testid="betting-card"');
+   });
+
+   it("hides the betting card when the betting flag is off", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, {
+            challenge: mockChallenge,
+            isBettingEnabled: false,
+         })
+      );
+
+      expect(html).not.toContain('data-testid="betting-card"');
    });
 });

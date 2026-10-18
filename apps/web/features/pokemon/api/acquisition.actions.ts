@@ -8,6 +8,8 @@
 
 import { auth } from "@/core/auth";
 import { requireAdminUser } from "@/features/auth/api/require-admin";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -133,6 +135,15 @@ export async function pullPokemonAction(input: {
          ok: false,
          error: "Please log in to summon Pokémon companions.",
          code: "UNAUTHORIZED",
+      };
+   }
+
+   const pokemonEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.pokemon);
+   if (!pokemonEnabled) {
+      return {
+         ok: false,
+         error: "Pokémon summoning is currently unavailable.",
+         code: "FEATURE_DISABLED",
       };
    }
 

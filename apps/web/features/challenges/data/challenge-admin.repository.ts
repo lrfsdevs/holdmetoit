@@ -192,7 +192,8 @@ export async function kickoffChallenge(
 
 export async function lockChallengeResults(
    challengeId: string,
-   actor: { id: string; username: string }
+   actor: { id: string; username: string },
+   options?: { settleTrophies?: boolean }
 ) {
    const challenge = await prisma.challenge.findUnique({
       where: { id: challengeId },
@@ -384,17 +385,19 @@ export async function lockChallengeResults(
       await settleChallengeWagers(challengeId, winningTeamIds, tx);
 
       // 5. Trophy settlement (Phase 5)
-      await settleChallengeTrophies(
-         {
-            challengeId,
-            challengeTitle: challenge.title,
-            winningTeamIds,
-            totalTeamsCount: challenge.teams.length,
-            participants: challenge.participants,
-            savedParticipantIds,
-         },
-         tx
-      );
+      if (options?.settleTrophies !== false) {
+         await settleChallengeTrophies(
+            {
+               challengeId,
+               challengeTitle: challenge.title,
+               winningTeamIds,
+               totalTeamsCount: challenge.teams.length,
+               participants: challenge.participants,
+               savedParticipantIds,
+            },
+            tx
+         );
+      }
 
       await recordAuditEvent({
          actorId: actor.id,

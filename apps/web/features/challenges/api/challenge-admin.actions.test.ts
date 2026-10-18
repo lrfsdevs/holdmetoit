@@ -18,6 +18,7 @@ import * as requireAdminModule from "@/features/auth/api/require-admin";
 import * as challengeAdminRepo from "@/features/challenges/data/challenge-admin.repository";
 import * as storage from "@/core/storage/supabase-storage";
 import * as pfpRepo from "@/features/challenges/data/punishment-pfp.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 const PUBLIC_BASE =
    "https://abc.supabase.co/storage/v1/object/public/holdmetoit";
@@ -59,6 +60,10 @@ vi.mock("@/features/auth/api/require-admin", () => ({
    requireAdminUser: vi.fn(),
 }));
 
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("@/features/challenges/data/challenge-admin.repository", () => ({
    createAdminChallenge: vi.fn(),
    kickoffChallenge: vi.fn(),
@@ -75,6 +80,7 @@ vi.mock("@/features/challenges/data/challenge-admin.repository", () => ({
 describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
    beforeEach(() => {
       vi.resetAllMocks();
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
       vi.mocked(requireAdminModule.requireAdminUser).mockResolvedValue(
          ADMIN as never
       );
@@ -295,7 +301,28 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
             {
                id: "admin_1",
                username: "HostAdmin",
-            }
+            },
+            { settleTrophies: true }
+         );
+      });
+
+      it("skips trophy settlement when the leaderboard flag is off", async () => {
+         vi.mocked(requireAdminModule.requireAdminUser).mockResolvedValue({
+            id: "admin_1",
+            username: "HostAdmin",
+         } as never);
+         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+         vi.mocked(challengeAdminRepo.lockChallengeResults).mockResolvedValue({
+            id: "c_1",
+            status: "COMPLETED",
+         } as never);
+
+         await lockChallengeResultsAction("c_1");
+
+         expect(challengeAdminRepo.lockChallengeResults).toHaveBeenCalledWith(
+            "c_1",
+            { id: "admin_1", username: "HostAdmin" },
+            { settleTrophies: false }
          );
       });
    });

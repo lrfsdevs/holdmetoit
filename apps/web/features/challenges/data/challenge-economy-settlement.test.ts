@@ -174,6 +174,79 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       );
    });
 
+   it("skips trophy settlement when settleTrophies is false but still settles wagers", async () => {
+      const mockChallenge = {
+         id: "chal_bonus_1",
+         title: "Autumn League",
+         format: "TEAM_VS_TEAM",
+         status: "ACTIVE",
+         startAt: new Date("2026-10-01"),
+         endAt: new Date("2026-10-07"),
+         resultsLockedAt: null,
+         rewardCoins: 500,
+         isRewardSettled: false,
+         teams: [
+            { id: "team_alpha", name: "Alpha", isDeleted: false },
+            { id: "team_beta", name: "Beta", isDeleted: false },
+         ],
+         participants: [
+            {
+               id: "part_winner",
+               userId: "usr_winner",
+               teamId: "team_alpha",
+               targetSeconds: 3600,
+               status: "NORMAL",
+               dailyStudyLogs: [{ durationSeconds: 7200 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "part_loser",
+               userId: "usr_loser",
+               teamId: "team_beta",
+               targetSeconds: 3600,
+               status: "NORMAL",
+               dailyStudyLogs: [{ durationSeconds: 1800 }],
+               punishmentRecords: [],
+            },
+         ],
+      };
+
+      vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+         mockChallenge as any
+      );
+      vi.mocked(prisma.task.findMany).mockResolvedValue([]);
+
+      const mockTx = {
+         challenge: {
+            update: vi.fn().mockResolvedValue({
+               ...mockChallenge,
+               resultsLockedAt: new Date(),
+            }),
+         },
+         challengeParticipant: { updateMany: vi.fn() },
+         punishmentRecord: { deleteMany: vi.fn(), createMany: vi.fn() },
+         wallet: { update: vi.fn() },
+         ledgerTransaction: { create: vi.fn() },
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) =>
+         cb(mockTx)
+      );
+      vi.mocked(walletRepo.getOrCreateWallet).mockResolvedValue({
+         id: "wal_winner",
+         totalBalance: 1000,
+         reservedBalance: 0,
+         lifetimeEarned: 1000,
+      } as any);
+
+      await lockChallengeResults("chal_bonus_1", mockActor, {
+         settleTrophies: false,
+      });
+
+      expect(wagerRepo.settleChallengeWagers).toHaveBeenCalled();
+      expect(trophyRepo.settleChallengeTrophies).not.toHaveBeenCalled();
+   });
+
    it("refunds accepted wagers and reverses trophies when challenge results are unlocked", async () => {
       const lockedChallenge = {
          id: "chal_locked",

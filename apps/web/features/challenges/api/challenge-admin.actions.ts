@@ -7,6 +7,8 @@ import {
    AdminAccessError,
    requireAdminUser,
 } from "@/features/auth/api/require-admin";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import {
    adminEnrollParticipant,
    adminUpdateParticipantTarget,
@@ -203,10 +205,14 @@ export async function lockChallengeResultsAction(
 ): Promise<AdminActionResult> {
    try {
       const admin = await requireAdminUser();
-      await lockChallengeResults(challengeId, {
-         id: admin.id,
-         username: admin.username,
-      });
+      const settleTrophies = await isFeatureEnabled(
+         FEATURE_FLAG_KEYS.globalLeaderboard
+      );
+      await lockChallengeResults(
+         challengeId,
+         { id: admin.id, username: admin.username },
+         { settleTrophies }
+      );
 
       invalidateTags([
          cacheTags.challengeScoreboard(challengeId),

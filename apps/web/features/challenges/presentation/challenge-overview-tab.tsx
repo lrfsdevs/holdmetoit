@@ -41,12 +41,15 @@ import { ChallengeBettingCard } from "./challenge-betting-card";
 interface ChallengeOverviewTabProps {
    challenge: ChallengeScoreboardViewModel;
    isAdmin?: boolean;
+   /** Server-evaluated `betting_system_v1`. */
+   isBettingEnabled?: boolean;
 }
 
 /** Renders challenge overview details and participant actions. */
 export function ChallengeOverviewTab({
    challenge,
    isAdmin = false,
+   isBettingEnabled = true,
 }: ChallengeOverviewTabProps) {
    const [searchQuery, setSearchQuery] = useState("");
    const [selectedTeamId, setSelectedTeamId] = useState("ALL");
@@ -247,7 +250,7 @@ export function ChallengeOverviewTab({
             </div>
 
             {/* Tournament Economy & Betting Card (Phase 2) */}
-            <ChallengeBettingCard challenge={challenge} />
+            {isBettingEnabled && <ChallengeBettingCard challenge={challenge} />}
 
             {/* 2. Forfeits & Accountability Wall (FEAT-PUN-02 / FEAT-PUN-03) */}
             <PunishmentWall challenge={challenge} />

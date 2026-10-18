@@ -27,6 +27,8 @@ interface ChallengeViewProps {
    initialRosterPage?: number;
    /** Server-evaluated `challenge_wrapped_v1`. Gates the Summary tab and the wrapped story popup. */
    isWrappedEnabled?: boolean;
+   /** Server-evaluated `betting_system_v1`. Gates the overview betting card. */
+   isBettingEnabled?: boolean;
 }
 
 /** Renders the challenge shell and coordinates its active tab. */
@@ -39,6 +41,7 @@ export function ChallengeView({
    initialRosterTeamFilter = "ALL",
    initialRosterPage = 1,
    isWrappedEnabled = true,
+   isBettingEnabled = true,
 }: ChallengeViewProps) {
    const isSummaryVisible =
       isWrappedEnabled && Boolean(challenge.resultsLockedAt);
@@ -153,7 +156,11 @@ export function ChallengeView({
          </div>
 
          {activeTab === "overview" && (
-            <ChallengeOverviewTab challenge={challenge} isAdmin={isAdmin} />
+            <ChallengeOverviewTab
+               challenge={challenge}
+               isAdmin={isAdmin}
+               isBettingEnabled={isBettingEnabled}
+            />
          )}
 
          {activeTab === "leaderboard" && (

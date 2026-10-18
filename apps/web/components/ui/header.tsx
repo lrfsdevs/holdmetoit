@@ -165,10 +165,14 @@ export function AppHeader({
    user,
    isActualAdmin,
    isPreviewActive,
+   showPokemonNav = true,
+   showLeaderboardNav = true,
 }: {
    user?: UserNavProps["user"];
    isActualAdmin?: boolean;
    isPreviewActive?: boolean;
+   showPokemonNav?: boolean;
+   showLeaderboardNav?: boolean;
 }) {
    const searchParams = useSearchParams();
 
@@ -218,21 +222,25 @@ export function AppHeader({
                   Wallet
                </Link>
 
-               <Link
-                  href="/leaderboard"
-                  data-testid="trophy-leaderboard-nav-link"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
-               >
-                  Leaderboard
-               </Link>
+               {showLeaderboardNav && (
+                  <Link
+                     href="/leaderboard"
+                     data-testid="trophy-leaderboard-nav-link"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                  >
+                     Leaderboard
+                  </Link>
+               )}
 
-               <Link
-                  href="/pokemon"
-                  data-testid="pokemon-nav-link"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
-               >
-                  Pokédex
-               </Link>
+               {showPokemonNav && (
+                  <Link
+                     href="/pokemon"
+                     data-testid="pokemon-nav-link"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                  >
+                     Pokédex
+                  </Link>
+               )}
 
                {isDevRole(effectiveUser?.role) && (
                   <Link

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-18 (Session 132 — Missing UI Primitives Added; merged `dev` @ `e257d2d` on `afnan`)
+> **Last Updated:** 2026-10-18 (Session 133 — System Kill Switches: Pokémon, Betting, Global Leaderboard on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -952,3 +952,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    2. Confirm Discord OAuth configuration (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `AUTH_SECRET`, redirect URI) and admin credentials (`DISCORD_ADMIN_ROLE_IDS` or `DEV_DISCORD_IDS`).
    3. Run `npx prisma migrate status` on the production database.
    4. Host creates the Solo Free-For-All challenge on Monday, participants enroll, and host triggers "Start Event Now".
+
+### Session 133 — 2026-10-18 (System Kill Switches: Pokémon, Betting, Global Leaderboard)
+
+- **Scope:** Three DB-driven, **default-off** feature flags gate the public and mutation surface of each system. Missing/disabled flags evaluate `false`, so the systems are locked until enabled.
+- **Keys (`features/feature-flags/domain/feature-flag-keys.ts`):** `pokemon_system_v1`, `betting_system_v1`, `global_leaderboard_v1`.
+- **Pokémon:** `/pokemon` returns a locked `EmptyState` and skips all data loading; the header Pokédex link is hidden; `pullPokemonAction` returns `FEATURE_DISABLED`. Admin banner/species CRUD stays available for preparation.
+- **Betting:** the overview card is not rendered; `placeWagerAction` returns `FEATURE_DISABLED`. **Wager settlement at lock remains unconditional** so placed stakes always resolve.
+- **Leaderboard:** `/leaderboard` locked state + hidden nav; `getTrophyLeaderboardAction` and `adminAdjustTrophiesAction` return `FEATURE_DISABLED`; `lockChallengeResults(..., { settleTrophies })` skips trophy settlement when off; unlock reversal stays unconditional. Stored trophies/rank badges remain visible.
+- **Plumbing:** `app/layout.tsx` bulk-evaluates the two nav flags (`getFeatureFlags`) and passes `showPokemonNav` / `showLeaderboardNav` to `AppHeader` (optional props, default `true`); `app/challenge/[id]/page.tsx` passes `isBettingEnabled` → `ChallengeView` → `ChallengeOverviewTab`.
+- **Tests (+11):** disabled guards for pull/wager/leaderboard/trophy actions; locked Pokémon + leaderboard pages; hidden betting card and nav links; `settleTrophies:false` skips trophies but still settles wagers.
+- **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **163 files / 1503 tests** green; `next build` clean (17 routes + middleware).
+- **Docs:** `docs/feature-flags/README.md` §9.
+- **NEXT STEP:** Create the three flags in the DevBoard as **DISABLED**, verify the locked UX, then roll out **TARGETED → GLOBAL**.

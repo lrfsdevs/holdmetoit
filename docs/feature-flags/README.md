@@ -308,3 +308,25 @@ Notes:
 - The YPT verification actions (`features/ypt/api/ypt-claim.actions.ts`: `getAdminClaimsListAction`, `adminApproveClaimAction`, `adminRejectClaimAction`, `adminRevokeClaimAction`) are guarded by `requireDevUser()` and return `FORBIDDEN_NOT_DEV` for non-DEV callers. The participant-facing YPT actions are unchanged.
 - The panel lives in `features/ypt/presentation/ypt-verification-panel.tsx` and renders under the **YPT Verification** tab; it does not affect flag evaluation.
 - The `/admin` host console now only carries trophy management + the challenges entry point.
+
+---
+
+## 9. System Kill Switches (Pokémon · Betting · Global Leaderboard)
+
+Canonical keys live in `features/feature-flags/domain/feature-flag-keys.ts`. All three
+default to **off** (a missing/disabled flag evaluates `false`), so the systems are locked
+until explicitly enabled.
+
+| Key                     | Gates                                                                                                                                                                                                                                                                                                                                 |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pokemon_system_v1`     | `/pokemon` (and the `/pokedex` redirect) renders a locked state and skips data loading; the header Pokédex link is hidden; `pullPokemonAction` returns `FEATURE_DISABLED`. Admin banner/species CRUD stays available for content preparation.                                                                                         |
+| `betting_system_v1`     | The overview betting card is not rendered; `placeWagerAction` returns `FEATURE_DISABLED`. **Wager settlement at lock is never gated** — already-placed stakes must resolve so reserved coins cannot get stuck.                                                                                                                        |
+| `global_leaderboard_v1` | `/leaderboard` renders a locked state; the header Leaderboard link is hidden; `getTrophyLeaderboardAction` and `adminAdjustTrophiesAction` return `FEATURE_DISABLED`; trophy settlement is skipped at lock. Trophy **reversal at unlock stays unconditional** (safe no-op), and stored trophies / profile rank badges remain visible. |
+
+The seed creates them as **DISABLED** (`npm run db:seed:flags`, also run by
+`prisma db seed`). Verify the locked UX, then roll out **TARGETED** (testers) →
+**GLOBAL**. The master `isEnabled` switch remains the emergency kill for each.
+
+The upsert uses an empty `update: {}`, so re-running the seed never overwrites operator
+rollout changes. `createdBy` is the earliest `DEV`/`ADMIN` user, falling back to any user;
+only on a completely empty DB does it create a `seed-system-user`.

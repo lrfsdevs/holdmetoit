@@ -8,6 +8,7 @@ import {
 import { auth } from "@/core/auth";
 import { executePokemonAcquisition } from "../data/acquisition.repository";
 import { requireAdminUser } from "@/features/auth/api/require-admin";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { prisma } from "@/core/db";
 
 vi.mock("@/core/auth", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/core/auth", () => ({
 
 vi.mock("@/features/auth/api/require-admin", () => ({
    requireAdminUser: vi.fn(),
+}));
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("next/cache", () => ({
@@ -49,6 +54,19 @@ describe("Pokemon Acquisition Server Actions", () => {
    });
 
    describe("pullPokemonAction", () => {
+      it("returns FEATURE_DISABLED when the Pokémon system is off", async () => {
+         vi.mocked(auth).mockResolvedValue({ user: { id: "user_1" } } as any);
+         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+         const result = await pullPokemonAction({
+            bannerId: "banner_1",
+            idempotencyKey: "idem_1",
+         });
+
+         expect(result).toMatchObject({ ok: false, code: "FEATURE_DISABLED" });
+         expect(executePokemonAcquisition).not.toHaveBeenCalled();
+      });
+
       it("rejects unauthenticated requests with UNAUTHORIZED", async () => {
          vi.mocked(auth).mockResolvedValue(null as any);
 

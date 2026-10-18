@@ -16,6 +16,7 @@ import {
 import { resolveLeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
 import { logError, logEvents } from "@/core/observability/logger";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 interface ChallengePageProps {
@@ -48,6 +49,7 @@ export default async function ChallengePage({
    });
 
    const isWrappedEnabled = await isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);
+   const isBettingEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.betting);
 
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
@@ -98,6 +100,7 @@ export default async function ChallengePage({
          initialRosterTeamFilter={initialRosterTeamFilter}
          initialRosterPage={initialRosterPage}
          isWrappedEnabled={isWrappedEnabled}
+         isBettingEnabled={isBettingEnabled}
       />
    );
 }

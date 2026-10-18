@@ -169,4 +169,28 @@ describe("AppHeader", () => {
       expect(html).not.toContain("/devboard");
       expect(html).not.toContain('data-testid="exit-preview-button"');
    });
+
+   it("shows leaderboard and Pokédex nav links by default", async () => {
+      const { AppHeader } = await import("./header");
+      const html = renderToStaticMarkup(
+         createElement(AppHeader, { user: null })
+      );
+
+      expect(html).toContain('data-testid="trophy-leaderboard-nav-link"');
+      expect(html).toContain('data-testid="pokemon-nav-link"');
+   });
+
+   it("hides leaderboard and Pokédex nav links when their flags are off", async () => {
+      const { AppHeader } = await import("./header");
+      const html = renderToStaticMarkup(
+         createElement(AppHeader, {
+            user: null,
+            showPokemonNav: false,
+            showLeaderboardNav: false,
+         })
+      );
+
+      expect(html).not.toContain('data-testid="trophy-leaderboard-nav-link"');
+      expect(html).not.toContain('data-testid="pokemon-nav-link"');
+   });
 });
