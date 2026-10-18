@@ -1,0 +1,38 @@
+{
+   "name": "@holdmetoit/database",
+   "version": "0.0.0",
+   "private": true,
+   "type": "module",
+   "main": "./dist/index.js",
+   "types": "./dist/index.d.ts",
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "import": "./dist/index.js",
+         "default": "./dist/index.js"
+      }
+   },
+   "scripts": {
+      "build": "tsc -p tsconfig.json",
+      "prepare": "npm run db:generate && npm run build",
+      "db:generate": "prisma generate",
+      "db:validate": "prisma validate",
+      "db:migrate": "prisma migrate deploy",
+      "db:migrate:dev": "prisma migrate dev",
+      "db:migrate:status": "prisma migrate status",
+      "db:seed": "prisma db seed",
+      "db:seed:flags": "tsx --env-file=.env prisma/run-seed-feature-flags.ts"
+   },
+   "prisma": {
+      "schema": "prisma/schema.prisma",
+      "seed": "tsx prisma/seed.ts"
+   },
+   "dependencies": {
+      "@prisma/client": "^6.8.2"
+   },
+   "devDependencies": {
+      "prisma": "^6.8.2",
+      "tsx": "^4.19.4",
+      "typescript": "^5.8.3"
+   }
+}

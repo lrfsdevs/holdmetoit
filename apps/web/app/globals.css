@@ -1,0 +1,620 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — 1. Primitive · 2. Semantic · 3. Component
+   Only SEMANTIC and COMPONENT tokens may be used by UI code. Primitives are plain
+   CSS vars (no Tailwind utilities are generated for them), so they cannot leak into
+   `app/`, `components/` or `features/`. See DESIGN.md §2.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1 · PRIMITIVE TOKENS ─────────────────────── raw values, no UI-specific meaning ── */
+:root {
+   /* Color · neutral */
+   --primitive-color-neutral-50: #f4f3f6;
+   --primitive-color-neutral-100: #e0e0e0;
+   --primitive-color-neutral-200: #d1d1d1;
+   --primitive-color-neutral-300: #a3a3a3;
+   --primitive-color-neutral-400: #868686;
+   --primitive-color-neutral-500: #545454;
+   --primitive-color-neutral-600: #484848;
+   --primitive-color-neutral-700: #434343;
+   --primitive-color-neutral-750: #333333;
+   --primitive-color-neutral-800: #292929;
+   --primitive-color-neutral-850: #242424;
+   --primitive-color-neutral-875: #1c1c1c;
+   --primitive-color-neutral-900: #141414;
+   --primitive-color-neutral-910: #1a1a1a;
+   --primitive-color-neutral-925: #181818;
+   --primitive-color-neutral-950: #0d0d0d;
+   --primitive-color-white: #ffffff;
+   --primitive-color-black: #000000;
+   --primitive-color-transparent: transparent;
+
+   /* Color · brand-1 (gold) */
+   --primitive-color-brand-1-50: #fbf7f1;
+   --primitive-color-brand-1-100: #f6eedf;
+   --primitive-color-brand-1-200: #f0ddbc;
+   --primitive-color-brand-1-300: #edcb92;
+   --primitive-color-brand-1-400: #fbbf24;
+   --primitive-color-brand-1-500: #f59e0b;
+   --primitive-color-brand-1-600: #d97706;
+   --primitive-color-brand-1-700: #b07511;
+   --primitive-color-brand-1-800: #865b13;
+   --primitive-color-brand-1-900: #634512;
+   --primitive-color-brand-1-950: #3e2c0e;
+
+   /* Color · brand-2 (admin amber) */
+   --primitive-color-brand-2-50: #faf6f2;
+   --primitive-color-brand-2-100: #f4ebe1;
+   --primitive-color-brand-2-200: #ecd6c0;
+   --primitive-color-brand-2-300: #e5c099;
+   --primitive-color-brand-2-400: #f59a3c;
+   --primitive-color-brand-2-500: #e08a32;
+   --primitive-color-brand-2-600: #c67625;
+   --primitive-color-brand-2-700: #9e6224;
+   --primitive-color-brand-2-800: #794d20;
+   --primitive-color-brand-2-900: #5a3b1b;
+   --primitive-color-brand-2-950: #392614;
+
+   /* Color · brand-3 (rose) */
+   --primitive-color-brand-3-50: #fbf1f3;
+   --primitive-color-brand-3-100: #f8dee2;
+   --primitive-color-brand-3-200: #f3bac3;
+   --primitive-color-brand-3-300: #f18e9f;
+   --primitive-color-brand-3-400: #f25a74;
+   --primitive-color-brand-3-500: #f43f5e;
+   --primitive-color-brand-3-600: #d11a39;
+   --primitive-color-brand-3-700: #a61c33;
+   --primitive-color-brand-3-800: #7e1b2c;
+   --primitive-color-brand-3-900: #5d1824;
+   --primitive-color-brand-3-950: #3a1219;
+
+   /* Color · palette green */
+   --primitive-color-green-50: #f3f9f5;
+   --primitive-color-green-100: #e2f3e8;
+   --primitive-color-green-200: #c3e9d1;
+   --primitive-color-green-300: #85ff93;
+   --primitive-color-green-400: #72da98;
+   --primitive-color-green-500: #22c55e;
+   --primitive-color-green-600: #23c860;
+   --primitive-color-green-700: #21a150;
+   --primitive-color-green-800: #1e7b40;
+   --primitive-color-green-900: #1a5c32;
+   --primitive-color-green-950: #144520;
+
+   /* Color · palette blue */
+   --primitive-color-blue-50: #f1f5fc;
+   --primitive-color-blue-100: #dde7f8;
+   --primitive-color-blue-200: #b9cff3;
+   --primitive-color-blue-300: #85d6ff;
+   --primitive-color-blue-400: #5893f3;
+   --primitive-color-blue-500: #3b82f6;
+   --primitive-color-blue-600: #185fd3;
+   --primitive-color-blue-700: #1a50a8;
+   --primitive-color-blue-800: #194080;
+   --primitive-color-blue-900: #17325e;
+   --primitive-color-blue-950: #102d40;
+
+   /* Color · palette red */
+   --primitive-color-red-50: #fbf1f1;
+   --primitive-color-red-100: #f7dede;
+   --primitive-color-red-200: #f1bbbb;
+   --primitive-color-red-300: #ff5757;
+   --primitive-color-red-400: #ee5e5e;
+   --primitive-color-red-500: #ef4444;
+   --primitive-color-red-600: #cb1f1f;
+   --primitive-color-red-700: #a22020;
+   --primitive-color-red-800: #7b1e1e;
+   --primitive-color-red-900: #5c1a1a;
+   --primitive-color-red-950: #401010;
+
+   /* Color · palette violet */
+   --primitive-color-violet-50: #f4f0fc;
+   --primitive-color-violet-100: #e5ddf9;
+   --primitive-color-violet-200: #cab7f5;
+   --primitive-color-violet-300: #a29dae;
+   --primitive-color-violet-400: #8757f5;
+   --primitive-color-violet-500: #8b5cf6;
+   --primitive-color-violet-600: #541fcb;
+   --primitive-color-violet-700: #4820a2;
+   --primitive-color-violet-800: #3b1e7b;
+   --primitive-color-violet-900: #2e1b5b;
+   --primitive-color-violet-950: #230e40;
+
+   /* Typography */
+   --primitive-font-family-sans: var(--font-sans), Inter, system-ui, sans-serif;
+   --primitive-font-family-display:
+      var(--font-display), Outfit, Inter, sans-serif;
+   --primitive-font-size-8: 8px;
+   --primitive-font-size-9: 9px;
+   --primitive-font-size-10: 10px;
+   --primitive-font-size-11: 11px;
+   --primitive-font-size-12: 0.75rem;
+   --primitive-font-size-14: 0.875rem;
+   --primitive-font-size-15: 15px;
+   --primitive-font-size-16: 1rem;
+   --primitive-font-size-18: 1.125rem;
+   --primitive-font-size-20: 1.25rem;
+   --primitive-font-size-24: 1.5rem;
+   --primitive-font-size-32: 2rem;
+   --primitive-font-size-36: 36px;
+   --primitive-font-size-38: 38px;
+   --primitive-font-size-40: 2.5rem;
+   --primitive-font-size-48: 3rem;
+   --primitive-font-size-60: 60px;
+   --primitive-font-size-80: 80px;
+   --primitive-font-weight-regular: 400;
+   --primitive-font-weight-medium: 500;
+   --primitive-font-weight-semibold: 600;
+   --primitive-font-weight-bold: 700;
+   --primitive-line-height-tight: 1.25;
+   --primitive-line-height-normal: 1.5;
+   --primitive-line-height-relaxed: 1.65;
+   --primitive-letter-spacing-tight: -0.02em;
+   --primitive-letter-spacing-normal: 0em;
+   --primitive-letter-spacing-wide: 0.02em;
+
+   /* Size · spacing */
+   --primitive-space-0: 0px;
+   --primitive-space-4: 0.25rem;
+   --primitive-space-8: 0.5rem;
+   --primitive-space-12: 0.75rem;
+   --primitive-space-16: 1rem;
+   --primitive-space-24: 1.5rem;
+   --primitive-space-32: 2rem;
+   --primitive-space-40: 2.5rem;
+   --primitive-space-48: 3rem;
+   --primitive-space-64: 4rem;
+   /* Size · icon & container */
+   --primitive-size-icon-sm: 1rem;
+   --primitive-size-icon-md: 1.25rem;
+   --primitive-size-icon-lg: 1.5rem;
+   --primitive-size-container-sm: 20rem;
+   --primitive-size-container-md: 28rem;
+   --primitive-size-container-lg: 32rem;
+   --primitive-size-container-xl: 42rem;
+
+   /* Border radius */
+   --primitive-radius-none: 0px;
+   --primitive-radius-sm: 0.375rem;
+   --primitive-radius-md: 0.5rem;
+   --primitive-radius-lg: 0.75rem;
+   --primitive-radius-xl: 1rem;
+   --primitive-radius-2xl: 1.5rem;
+   --primitive-radius-full: 9999px;
+
+   /* Border width */
+   --primitive-border-width-none: 0px;
+   --primitive-border-width-thin: 1px;
+   --primitive-border-width-thick: 2px;
+
+   /* Elevation */
+   --primitive-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+   --primitive-shadow-2:
+      0 8px 30px -4px rgba(0, 0, 0, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+   --primitive-shadow-3: 0 24px 60px -12px rgba(0, 0, 0, 0.85);
+
+   /* Opacity */
+   --primitive-opacity-0: 0;
+   --primitive-opacity-25: 0.25;
+   --primitive-opacity-50: 0.5;
+   --primitive-opacity-75: 0.75;
+   --primitive-opacity-100: 1;
+
+   /* Motion */
+   --primitive-duration-fast: 120ms;
+   --primitive-duration-normal: 200ms;
+   --primitive-duration-slow: 320ms;
+   --primitive-easing-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+   --primitive-easing-decelerate: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── 2 · SEMANTIC TOKENS ─────────────── meaning-based aliases over primitives ── */
+@theme inline {
+   /* Color · text */
+   --color-text-primary: var(--primitive-color-neutral-50);
+   --color-text-secondary: var(--primitive-color-neutral-200);
+   --color-text-tertiary: var(--primitive-color-neutral-400);
+   --color-text-inverse: var(--primitive-color-neutral-950);
+   --color-text-disabled: var(--primitive-color-neutral-500);
+   --color-text-link: var(--primitive-color-blue-500);
+   --color-text-brand: var(--primitive-color-brand-1-500);
+
+   /* Color · surface */
+   --color-surface-page: var(--primitive-color-neutral-950);
+   --color-surface-primary: var(--primitive-color-neutral-900);
+   --color-surface-secondary: var(--primitive-color-neutral-925);
+   --color-surface-tertiary: var(--primitive-color-neutral-910);
+   --color-surface-elevated: var(--primitive-color-neutral-875);
+   --color-surface-nested: var(--primitive-color-neutral-800);
+   --color-surface-inverse: var(--primitive-color-neutral-50);
+   --color-surface-disabled: var(--primitive-color-neutral-875);
+   --color-surface-brand-1: var(--primitive-color-brand-1-500);
+   --color-surface-brand-2: var(--primitive-color-brand-2-500);
+   --color-surface-brand-3: var(--primitive-color-brand-3-500);
+
+   /* Color · border */
+   --color-border-default: var(--primitive-color-neutral-800);
+   --color-border-subtle: var(--primitive-color-neutral-850);
+   --color-border-strong: var(--primitive-color-neutral-750);
+   --color-border-focus: var(--primitive-color-neutral-50);
+   --color-border-disabled: var(--primitive-color-neutral-850);
+   --color-border-brand: var(--primitive-color-brand-1-500);
+
+   /* Color · icon */
+   --color-icon-primary: var(--primitive-color-neutral-50);
+   --color-icon-secondary: var(--primitive-color-neutral-200);
+   --color-icon-inverse: var(--primitive-color-neutral-950);
+   --color-icon-disabled: var(--primitive-color-neutral-500);
+   --color-icon-brand: var(--primitive-color-brand-1-500);
+
+   /* Color · action */
+   --color-action-primary: var(--primitive-color-white);
+   --color-action-primary-hover: var(--primitive-color-neutral-100);
+   --color-action-primary-pressed: var(--primitive-color-neutral-200);
+   --color-action-primary-text: var(--primitive-color-neutral-950);
+   --color-action-primary-disabled: var(--primitive-color-neutral-700);
+   --color-action-secondary: var(--primitive-color-neutral-800);
+   --color-action-secondary-hover: var(--primitive-color-neutral-750);
+   --color-action-secondary-text: var(--primitive-color-neutral-50);
+   --color-action-tertiary-text: var(--primitive-color-neutral-200);
+   --color-action-destructive: var(--primitive-color-red-950);
+   --color-action-destructive-border: var(--primitive-color-red-500);
+   --color-action-destructive-text: var(--primitive-color-red-300);
+   --color-action-link: var(--primitive-color-blue-500);
+   --color-action-brand: var(--primitive-color-brand-1-500);
+   --color-action-brand-hover: var(--primitive-color-brand-1-400);
+   --color-action-brand-text: var(--primitive-color-neutral-950);
+
+   /* Color · feedback */
+   --color-feedback-success: var(--primitive-color-green-500);
+   --color-feedback-success-bg: var(--primitive-color-green-950);
+   --color-feedback-success-text: var(--primitive-color-green-300);
+   --color-feedback-warning: var(--primitive-color-brand-1-500);
+   --color-feedback-warning-bg: var(--primitive-color-brand-1-950);
+   --color-feedback-warning-text: var(--primitive-color-brand-1-300);
+   --color-feedback-error: var(--primitive-color-red-500);
+   --color-feedback-error-bg: var(--primitive-color-red-950);
+   --color-feedback-error-text: var(--primitive-color-red-300);
+   --color-feedback-info: var(--primitive-color-blue-500);
+   --color-feedback-info-bg: var(--primitive-color-blue-950);
+   --color-feedback-info-text: var(--primitive-color-blue-300);
+   --color-accent: var(--primitive-color-violet-500);
+   --color-accent-bg: var(--primitive-color-violet-950);
+   --color-accent-text: var(--primitive-color-violet-300);
+
+   /* Color · input */
+   --color-input-bg: var(--primitive-color-neutral-500);
+   --color-input-border: var(--primitive-color-neutral-600);
+   --color-input-text: var(--primitive-color-neutral-50);
+   --color-input-placeholder: var(--primitive-color-neutral-400);
+   --color-input-focus: var(--primitive-color-neutral-50);
+
+   /* Color · overlay */
+   --color-overlay-scrim: rgba(0, 0, 0, 0.8);
+   --color-overlay-backdrop: rgba(0, 0, 0, 0.7);
+
+   /* Color · brand aliases */
+   --color-brand-1: var(--primitive-color-brand-1-500);
+   --color-brand-1-light: var(--primitive-color-brand-1-400);
+   --color-brand-1-dark: var(--primitive-color-brand-1-600);
+   --color-brand-2: var(--primitive-color-brand-2-500);
+   --color-brand-2-hover: var(--primitive-color-brand-2-400);
+   --color-brand-3: var(--primitive-color-brand-3-500);
+
+   /* Typography scale */
+   --text-micro: var(--primitive-font-size-8);
+   --text-caption: var(--primitive-font-size-9);
+   --text-label: var(--primitive-font-size-10);
+   --text-meta: var(--primitive-font-size-11);
+   --text-body: var(--primitive-font-size-15);
+   --text-body-lg: var(--primitive-font-size-16);
+   --text-display-sm: var(--primitive-font-size-32);
+   --text-display-md: var(--primitive-font-size-36);
+   --text-display-lg: var(--primitive-font-size-38);
+   --text-display-xl: var(--primitive-font-size-60);
+   --text-display-2xl: var(--primitive-font-size-80);
+
+   /* Sizing — recurring control / panel / artwork dimensions */
+   --spacing-control-sm: 44px;
+   --spacing-control-md: 50px;
+   --spacing-control-lg: 74px;
+   --spacing-dropdown-min: 170px;
+   --spacing-panel-sm: 400px;
+   --container-artwork-sm: 200px;
+   --container-artwork-md: 240px;
+   --container-panel-sm: 400px;
+   --container-panel-md: 620px;
+   --container-panel-lg: 840px;
+
+   /* Radius */
+   --radius-control: var(--primitive-radius-md);
+   --radius-card: var(--primitive-radius-lg);
+   --radius-dialog: var(--primitive-radius-2xl);
+   --radius-pill: var(--primitive-radius-full);
+
+   /* Elevation */
+   --shadow-card: var(--primitive-shadow-2);
+   --shadow-dropdown: var(--primitive-shadow-2);
+   --shadow-popover: var(--primitive-shadow-2);
+   --shadow-modal: var(--primitive-shadow-3);
+
+   /* Motion */
+   --ease-standard: var(--primitive-easing-standard);
+   --ease-decelerate: var(--primitive-easing-decelerate);
+}
+
+/* ── 3 · COMPONENT TOKENS ────────────── component aliases over semantic tokens ── */
+@theme inline {
+   /* button */
+   --color-button-primary-bg: var(--color-action-primary);
+   --color-button-primary-text: var(--color-action-primary-text);
+   --color-button-primary-hover: var(--color-action-primary-hover);
+   --color-button-primary-pressed: var(--color-action-primary-pressed);
+   --color-button-primary-disabled: var(--color-action-primary-disabled);
+   --color-button-secondary-bg: var(--color-action-secondary);
+   --color-button-secondary-text: var(--primitive-color-white);
+   --color-button-secondary-border: var(--color-border-strong);
+   --color-button-secondary-hover: var(--color-input-bg);
+   --color-button-outline-text: var(--primitive-color-white);
+   --color-button-outline-border: var(--color-border-strong);
+   --color-button-outline-hover: var(--color-surface-elevated);
+   --color-button-ghost-text: var(--color-text-secondary);
+   --color-button-ghost-text-hover: var(--primitive-color-white);
+   --color-button-ghost-hover: var(--color-surface-elevated);
+   --color-button-destructive-bg: var(--color-action-destructive);
+   --color-button-destructive-text: var(--color-action-destructive-text);
+   --color-button-destructive-border: var(--color-action-destructive-border);
+   --color-button-brand-bg: var(--color-action-brand);
+   --color-button-brand-hover: var(--color-action-brand-hover);
+   --color-button-brand-text: var(--color-surface-page);
+   --color-button-brand-border: var(--color-brand-1);
+   --color-button-admin-bg: var(--color-brand-2);
+   --color-button-admin-hover: var(--color-brand-2-hover);
+   --color-button-admin-text: var(--color-surface-page);
+   --color-button-admin-border: var(--color-brand-2);
+
+   /* input field (components/ui Input · Textarea · Select trigger) */
+   --color-input-field-bg: var(--color-surface-elevated);
+   --color-input-field-border: var(--color-border-default);
+   --color-input-field-text: var(--primitive-color-white);
+   --color-input-field-placeholder: var(--color-text-tertiary);
+   --color-input-field-focus: var(--color-border-focus);
+
+   /* card */
+   --color-card-bg: var(--color-surface-primary);
+   --color-card-border: var(--color-border-default);
+
+   /* modal */
+   --color-modal-bg: var(--color-surface-primary);
+   --color-modal-overlay: var(--color-overlay-scrim);
+
+   /* dropdown */
+   --color-dropdown-bg: var(--color-surface-elevated);
+   --color-dropdown-text: var(--color-text-primary);
+   --color-dropdown-border: var(--color-border-strong);
+   --color-dropdown-hover: var(--color-surface-nested);
+
+   /* navigation */
+   --color-nav-bg: var(--color-surface-page);
+   --color-nav-text: var(--color-text-tertiary);
+   --color-nav-active: var(--color-text-primary);
+   --color-nav-hover: var(--color-surface-elevated);
+
+   /* badge */
+   --color-badge-bg: var(--color-surface-elevated);
+   --color-badge-text: var(--color-text-primary);
+   --color-badge-border: var(--color-border-default);
+   --color-badge-brand-bg: var(--color-brand-1);
+   --color-badge-brand-text: var(--color-brand-1);
+   --color-badge-brand-border: var(--color-brand-1);
+   --color-badge-success-bg: var(--color-feedback-success);
+   --color-badge-success-text: var(--color-feedback-success);
+   --color-badge-success-border: var(--color-feedback-success);
+   --color-badge-rose-bg: var(--color-brand-3);
+   --color-badge-rose-text: var(--color-brand-3);
+   --color-badge-rose-border: var(--color-brand-3);
+   --color-badge-info-bg: var(--color-feedback-info);
+   --color-badge-info-text: var(--color-feedback-info);
+   --color-badge-info-border: var(--color-feedback-info);
+   --color-badge-accent-bg: var(--color-accent);
+   --color-badge-accent-text: var(--color-accent);
+   --color-badge-accent-border: var(--color-accent);
+   --color-badge-admin-bg: var(--color-brand-2);
+   --color-badge-admin-text: var(--color-brand-2);
+   --color-badge-admin-border: var(--color-brand-2);
+   --color-badge-error-bg: var(--color-feedback-error-bg);
+   --color-badge-error-text: var(--color-feedback-error-text);
+   --color-badge-error-border: var(--color-feedback-error);
+
+   /* radio */
+   --color-radio-bg: var(--color-surface-elevated);
+   --color-radio-border: var(--color-border-strong);
+   --color-radio-selected: var(--color-brand-1);
+
+   /* switch */
+   --color-switch-track: var(--color-surface-nested);
+   --color-switch-track-active: var(--color-brand-1);
+   --color-switch-thumb: var(--color-surface-inverse);
+
+   /* checkbox */
+   --color-checkbox-bg: var(--color-surface-elevated);
+   --color-checkbox-border: var(--color-border-strong);
+   --color-checkbox-check: var(--color-action-primary);
+}
+
+@layer base {
+   /* shadcn compatibility vars — semantic layer for the shadcn primitives. */
+   :root {
+      --background: 0 0% 5%;
+      --foreground: 270 5% 96%;
+
+      --card: 0 0% 8%;
+      --card-foreground: 0 0% 100%;
+
+      --popover: 0 0% 11%;
+      --popover-foreground: 0 0% 100%;
+
+      --primary: 0 0% 100%;
+      --primary-foreground: 0 0% 5%;
+
+      --secondary: 0 0% 16%;
+      --secondary-foreground: 0 0% 100%;
+
+      --muted: 0 0% 16%;
+      --muted-foreground: 0 0% 53%;
+
+      --accent: 0 0% 16%;
+      --accent-foreground: 0 0% 100%;
+
+      --destructive: 0 84% 60%;
+      --destructive-foreground: 0 0% 100%;
+
+      --border: 0 0% 16%;
+      --input: 0 0% 33%;
+      --ring: 0 0% 100%;
+
+      --radius: 0.75rem;
+   }
+
+   * {
+      @apply border-border-default;
+   }
+
+   body {
+      @apply bg-surface-page text-text-primary font-sans antialiased;
+      background-color: var(--color-surface-page);
+   }
+
+   .font-sans-tabular {
+      font-feature-settings:
+         "tnum" 1,
+         "zero" 1;
+      font-variant-numeric: tabular-nums;
+   }
+}
+
+@layer utilities {
+   .no-scrollbar::-webkit-scrollbar,
+   .scrollbar-none::-webkit-scrollbar {
+      display: none;
+   }
+   .no-scrollbar,
+   .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+   }
+
+   @keyframes wrapped-slam {
+      0% {
+         transform: rotate(-22deg) scale(2.8);
+         opacity: 0;
+      }
+      60% {
+         opacity: 1;
+      }
+      100% {
+         transform: rotate(-9deg) scale(1);
+         opacity: 1;
+      }
+   }
+
+   @keyframes wrapped-hit {
+      0%,
+      100% {
+         translate: 0 0;
+      }
+      25% {
+         translate: -5px 3px;
+      }
+      50% {
+         translate: 5px -3px;
+      }
+      75% {
+         translate: -3px 2px;
+      }
+   }
+
+   @keyframes wrapped-nudge {
+      0%,
+      100% {
+         translate: 0 0;
+      }
+      25% {
+         translate: -7px 0;
+      }
+      75% {
+         translate: 7px 0;
+      }
+   }
+
+   @keyframes wrapped-draw {
+      to {
+         stroke-dashoffset: 0;
+      }
+   }
+
+   @keyframes wrapped-fadein {
+      from {
+         opacity: 0;
+      }
+      to {
+         opacity: 1;
+      }
+   }
+
+   .animate-wrapped-slam {
+      animation: wrapped-slam 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+   }
+   .animate-wrapped-hit {
+      animation: wrapped-hit 0.34s 0.18s;
+   }
+   .animate-wrapped-nudge {
+      animation: wrapped-nudge 0.4s;
+   }
+   .animate-wrapped-draw {
+      animation: wrapped-draw 1.1s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s forwards;
+   }
+   .animate-wrapped-fadein {
+      animation: wrapped-fadein 0.6s 0.8s both;
+   }
+
+   @keyframes shy-nudge {
+      0%,
+      86%,
+      100% {
+         transform: translateX(0);
+      }
+      92% {
+         transform: translateX(-9px);
+      }
+   }
+
+   @keyframes shy-blink {
+      0%,
+      94%,
+      100% {
+         transform: scaleY(1);
+      }
+      97% {
+         transform: scaleY(0.1);
+      }
+   }
+
+   .animate-shy-nudge {
+      animation: shy-nudge 5s ease-in-out 2s infinite;
+   }
+
+   .animate-shy-blink {
+      animation: shy-blink 5s infinite 3s;
+   }
+
+   @media (prefers-reduced-motion: reduce) {
+      .animate-shy-nudge,
+      .animate-shy-blink {
+         animation: none !important;
+      }
+   }
+}

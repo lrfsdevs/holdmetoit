@@ -2,13 +2,19 @@ name: CI
 
 on:
    push:
-      branches: [main, dev]
+      branches:
+         - "**"
    pull_request:
       branches: [main, dev]
 
 jobs:
    quality-gates:
       runs-on: ubuntu-latest
+      env:
+         # Placeholder URLs: tests mock the DB / skip DB-backed suites.
+         DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+         DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+         CI_SKIP_DB: "true"
       steps:
          - uses: actions/checkout@v4
            with:
@@ -25,11 +31,20 @@ jobs:
          - name: Schema migration guard
            run: bash scripts/check-schema-migration.sh origin/main
 
-         - name: Typecheck
-           run: npm run typecheck
+         - name: Build shared database package
+           run: npm run build -w @holdmetoit/database
 
-         - name: Unit tests
-           run: npm run test
+         - name: Web typecheck
+           run: npm run typecheck -w @holdmetoit/web
 
-         - name: Production build
-           run: npm run build
+         - name: Web lint
+           run: npm run lint -w @holdmetoit/web
+
+         - name: Web tests
+           run: npm run test -w @holdmetoit/web
+
+         - name: Web build
+           run: npm run build -w @holdmetoit/web
+
+         - name: YPT bot tests
+           run: npm test -w @holdmetoit/ypt-bot
