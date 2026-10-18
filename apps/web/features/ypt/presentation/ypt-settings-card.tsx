@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
    AlertDialog,
    AlertDialogAction,
@@ -652,10 +653,14 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
                   <form onSubmit={handleConnectAccount} className="space-y-3">
                      <div>
-                        <label className="text-meta font-semibold text-text-secondary block mb-1">
+                        <Label
+                           htmlFor="ypt-email"
+                           className="text-meta font-semibold text-text-secondary block mb-1"
+                        >
                            Yeolpumta Email
-                        </label>
+                        </Label>
                         <Input
+                           id="ypt-email"
                            type="email"
                            value={email}
                            onChange={(e) => setEmail(e.target.value)}
@@ -666,10 +671,14 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                      </div>
 
                      <div>
-                        <label className="text-meta font-semibold text-text-secondary block mb-1">
+                        <Label
+                           htmlFor="ypt-password"
+                           className="text-meta font-semibold text-text-secondary block mb-1"
+                        >
                            Yeolpumta Password
-                        </label>
+                        </Label>
                         <Input
+                           id="ypt-password"
                            type="password"
                            value={password}
                            onChange={(e) => setPassword(e.target.value)}

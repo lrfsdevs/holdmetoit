@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
@@ -605,10 +606,17 @@ export function AdminHoursOverrideModal({
             <form onSubmit={handleSubmit} className="space-y-5">
                {/* Time Inputs */}
                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-text-tertiary">
+                  <Label
+                     id="admin-override-duration"
+                     className="block text-xs font-semibold text-text-tertiary"
+                  >
                      Corrected Study Duration (HH:MM:SS)
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
+                  </Label>
+                  <div
+                     role="group"
+                     aria-labelledby="admin-override-duration"
+                     className="grid grid-cols-3 gap-3"
+                  >
                      <div>
                         <span className="block text-meta text-text-tertiary mb-1">
                            Hours (0–24)
@@ -688,11 +696,15 @@ export function AdminHoursOverrideModal({
 
                {/* Mandatory Audit Reason */}
                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-text-tertiary">
+                  <Label
+                     htmlFor="admin-override-reason"
+                     className="block text-xs font-semibold text-text-tertiary"
+                  >
                      Mandatory Technical Correction Reason{" "}
                      <span className="text-red-400">*</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="admin-override-reason"
                      type="text"
                      placeholder="Detail technical glitch or error (min 10 characters, e.g. YPT sync offset correction)"
                      value={reason}

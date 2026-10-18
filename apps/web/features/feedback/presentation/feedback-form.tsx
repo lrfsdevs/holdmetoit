@@ -10,6 +10,7 @@ import {
    Sparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getLogRocketSessionURL } from "@/core/observability/logrocket";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
@@ -110,10 +111,17 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
          {/* Type Selector Tabs */}
          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+            <Label
+               id="feedback-type"
+               className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+            >
                Feedback Type
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            </Label>
+            <div
+               role="group"
+               aria-labelledby="feedback-type"
+               className="grid grid-cols-2 gap-2"
+            >
                <button
                   type="button"
                   onClick={() => setType("bug")}
@@ -144,12 +152,12 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
 
          {/* Title Input */}
          <div className="space-y-1.5">
-            <label
+            <Label
                htmlFor="feedback-title"
                className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
             >
                Title
-            </label>
+            </Label>
             <Input
                id="feedback-title"
                type="text"
@@ -168,14 +176,14 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
 
          {/* Description Textarea */}
          <div className="space-y-1.5">
-            <label
+            <Label
                htmlFor="feedback-description"
                className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
             >
                {type === "bug"
                   ? "What happened?"
                   : "What would you like to see?"}
-            </label>
+            </Label>
             <Textarea
                id="feedback-description"
                value={description}

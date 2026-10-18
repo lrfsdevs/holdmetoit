@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-18 (Session 134 — Feature Flags: rollout-only control, master switch removed, on `afnan`)
+> **Last Updated:** 2026-10-18 (Session 136 — Design System Phase D: D1 DevBoard Tabs + D2 Label adoption, on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -165,6 +165,12 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > 5. Apply the Pokémon catalogue normalization migration on the hosted DB (**backup first** — it is a one-time, non-reversible backfill that drops `PokemonSpecies.metadata`), then seed the catalogue:
 >    - `npx prisma migrate deploy`
 >    - `npm run db:seed:pokemon`
+>
+> **DS PROGRAM TRACK (separate from the product gate above):**
+> Continue design-system Phase D/E — see `docs/design-system/README.md` §6.1–6.2.
+> Order: ✅ DevBoard `Tabs` · ✅ `Label` (67) → **next:** `Skeleton` (~20) →
+> `ScrollArea` (9) / `Avatar` (31, decide `next/image`) / `Separator` (3) / `Progress` (1)
+> → per-page 9-state coverage → a11y/360px/motion sweeps → DevBoard "Design" styleguide.
 
 ---
 
@@ -976,3 +982,22 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **163 files / 1500 tests** green; `next build` clean. Migration applied to local `holdmetoit3`.
 - **Docs:** `docs/feature-flags/README.md` §1–§3, §5–§7, §9 rewritten to the rollout-only model.
 - **NEXT STEP:** In `/devboard`, set `pokemon_system_v1` to **Global** and confirm `/pokemon` + the Pokédex nav appear immediately; repeat for betting and the global leaderboard. Then commit.
+
+### Session 135 — 2026-10-18 (Design System Phase 0 — Doc Drift Corrected & Phase D/E Scoped)
+
+- **Scope:** Pre-flight for the design-system Phase D/E program. No UI/token changes.
+- **`docs/design-system/README.md`:** enforcement count corrected **4 → 6** (added `text-[Npx]` and tokenised size literals); migration table gained **row 7** for the Session 132 primitive kit (11 added → 29); the stale "Deferred: missing primitives …" paragraph replaced with **§6.1 Phase D adoption targets** (verified counts) and **§6.2 Phase E sweeps**.
+- **`DESIGN.md` §2.4:** "Legacy alias layer (temporary)" → "Legacy aliases (removed)" — the `obsidian-*` block was deleted in slice 4.
+- **`components/ui/card.tsx`:** retained (not dead code — reserved for upcoming surfaces) and marked; inventory stays **29**.
+- **Branch status recorded:** `a48bd8f` is in `dev`/`origin/dev` (`dev == afnan-jr == c8f9447`); `main` trails. Header branch line refreshed.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` green.
+- **NEXT STEP:** Phase D — adopt `Tabs` in `devboard-view.tsx:321` first, then ship `Label` + `Skeleton`.
+
+### Session 136 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
+
+- **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
+- **D1 — Tabs:** `devboard-view.tsx` hand-rolled switcher (2 buttons + manual `role`/`aria-selected` + ternary panels) → controlled Radix `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` bound to the existing `section` state; the exact look is preserved via `rounded-2xl!`/`rounded-xl!` overrides (−23 lines). The two `role="tablist"`/`aria-selected` test assertions are unchanged.
+- **D2 — Label (67 sites / 19 files):** `label.tsx` default neutralised (dropped `text-meta` + `leading-none`, kept `font-medium`/`text-text-secondary`) so adoption is visually neutral; every raw `<label>` → `<Label>`; **43** single-control `htmlFor`+`id` pairs added; **3** non-native controls wired (2 Radix `Select` triggers + 1 Popover trigger button); **16** group labels associated via `id` + `role="group" aria-labelledby` (button grids / HH:MM:SS input rows). The 5 pre-existing `htmlFor` sites are preserved.
+- **Finding:** `cn` (tailwind-merge) does not recognise this project's custom `rounded-*` scale, so a primitive's radius default survives a plain override — D1 therefore needed the first `/important` utilities in the repo. Candidate follow-up: an `extendTailwindMerge` config teaching it the custom scales, which would remove the need for `!`.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` **163 files / 1500 tests** green; raw `<label>` outside `components/ui` = **0**.
+- **NEXT STEP:** Phase D — `Skeleton` (~20 `animate-pulse`), then `ScrollArea` (9) / `Avatar` (31) / `Separator` (3) / `Progress` (1), then per-page 9-state coverage + Phase E sweeps.

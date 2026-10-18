@@ -3,6 +3,7 @@
 import React, { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { adminAdjustBalanceAction } from "../api/wallet.actions";
 import { ShieldAlert, Loader2, X } from "lucide-react";
@@ -108,10 +109,14 @@ export function AdminAdjustmentDialog({
                )}
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-secondary">
+                  <Label
+                     htmlFor="adjustment-target-user-id"
+                     className="text-xs font-medium text-text-secondary"
+                  >
                      Target User ID
-                  </label>
+                  </Label>
                   <Input
+                     id="adjustment-target-user-id"
                      value={targetUserId}
                      onChange={(e) => setTargetUserId(e.target.value)}
                      placeholder="e.g. usr_cl..."
@@ -121,10 +126,14 @@ export function AdminAdjustmentDialog({
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-secondary">
+                  <Label
+                     htmlFor="adjustment-amount"
+                     className="text-xs font-medium text-text-secondary"
+                  >
                      Amount (Positive to credit, Negative to debit)
-                  </label>
+                  </Label>
                   <Input
+                     id="adjustment-amount"
                      type="number"
                      step="1"
                      value={amount}
@@ -139,10 +148,14 @@ export function AdminAdjustmentDialog({
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-secondary">
+                  <Label
+                     htmlFor="adjustment-reason"
+                     className="text-xs font-medium text-text-secondary"
+                  >
                      Audit Reason
-                  </label>
+                  </Label>
                   <Input
+                     id="adjustment-reason"
                      value={reason}
                      onChange={(e) => setReason(e.target.value)}
                      placeholder="e.g. Compensation for crashed YPT sync"

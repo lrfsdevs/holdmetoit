@@ -16,6 +16,7 @@ import {
    PopoverContent,
    PopoverTrigger,
 } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import {
    Command,
    CommandInput,
@@ -75,9 +76,12 @@ export function YptMemberSelector({
 
    return (
       <div className="w-full">
-         <label className="text-xs font-semibold text-text-secondary block mb-1.5">
+         <Label
+            htmlFor="ypt-member-select"
+            className="text-xs font-semibold text-text-secondary block mb-1.5"
+         >
             Select your YPT identity
-         </label>
+         </Label>
 
          <Popover
             open={isOpen}
@@ -89,6 +93,7 @@ export function YptMemberSelector({
             {/* Trigger Button */}
             <PopoverTrigger asChild>
                <button
+                  id="ypt-member-select"
                   type="button"
                   disabled={disabled}
                   className="w-full flex items-center justify-between rounded-xl border border-border-default bg-surface-elevated px-3 py-2.5 text-xs text-left text-text-primary hover:border-border-strong transition-colors disabled:opacity-50"
