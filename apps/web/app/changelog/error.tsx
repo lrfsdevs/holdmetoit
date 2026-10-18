@@ -31,7 +31,7 @@ export default function ChangelogError({
          <Button
             type="button"
             variant="secondary"
-            className="min-h-[44px]"
+            className="min-h-control-sm"
             onClick={reset}
          >
             Try again

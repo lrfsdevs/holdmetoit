@@ -17,12 +17,12 @@ export function ChallengeCardImage({
    const [attempt, setAttempt] = useState(0);
 
    return (
-      <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-[#292929] to-[#1c1c1c]">
+      <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-surface-nested to-surface-elevated">
          {src && status === "loading" && (
             <div
                role="status"
                aria-label={`Loading image for ${title}`}
-               className="absolute inset-0 animate-pulse bg-[#292929] motion-reduce:animate-none"
+               className="absolute inset-0 animate-pulse bg-surface-nested motion-reduce:animate-none"
             />
          )}
          {src && status !== "error" && (
@@ -38,11 +38,11 @@ export function ChallengeCardImage({
                className={`object-cover object-center group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none ${status === "loaded" ? "opacity-80" : "opacity-0"}`}
             />
          )}
-         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1d1d1d] via-transparent to-transparent" />
+         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface-elevated via-transparent to-transparent" />
          {src && status === "error" && (
             <div
                role="status"
-               className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-3 text-xs text-[#d1d1d1]"
+               className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-3 text-xs text-text-secondary"
             >
                <span>Image unavailable.</span>
                <button
@@ -51,7 +51,7 @@ export function ChallengeCardImage({
                      setAttempt((previous) => previous + 1);
                      setStatus("loading");
                   }}
-                  className="min-h-[44px] rounded-md px-3 font-medium underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                  className="min-h-control-sm rounded-md px-3 font-medium underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                >
                   Retry image
                </button>

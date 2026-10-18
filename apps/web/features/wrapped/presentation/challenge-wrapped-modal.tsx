@@ -595,32 +595,32 @@ export function ChallengeWrappedModal({
 
    const verdictToneColors = {
       saved: {
-         ring: "#22c55e",
-         stampBorder: "border-[#22c55e]",
-         stampText: "text-[#22c55e]",
-         stampBg: "bg-[#144520]/80",
-         highlight: "text-[#22c55e]",
+         ring: "var(--color-feedback-success)",
+         stampBorder: "border-feedback-success",
+         stampText: "text-feedback-success",
+         stampBg: "bg-feedback-success-bg/80",
+         highlight: "text-feedback-success",
       },
       punished: {
-         ring: "#ef4444",
-         stampBorder: "border-[#ef4444]",
-         stampText: "text-[#ef4444]",
-         stampBg: "bg-[#401010]/80",
-         highlight: "text-[#ef4444]",
+         ring: "var(--color-feedback-error)",
+         stampBorder: "border-feedback-error",
+         stampText: "text-feedback-error",
+         stampBg: "bg-feedback-error-bg/80",
+         highlight: "text-feedback-error",
       },
       excused: {
-         ring: "#3b82f6",
-         stampBorder: "border-[#3b82f6]",
-         stampText: "text-[#3b82f6]",
-         stampBg: "bg-[#102d40]/80",
-         highlight: "text-[#3b82f6]",
+         ring: "var(--color-feedback-info)",
+         stampBorder: "border-feedback-info",
+         stampText: "text-feedback-info",
+         stampBg: "bg-feedback-info-bg/80",
+         highlight: "text-feedback-info",
       },
    }[verdict.tone] ?? {
-      ring: "#22c55e",
-      stampBorder: "border-[#22c55e]",
-      stampText: "text-[#22c55e]",
-      stampBg: "bg-[#144520]/80",
-      highlight: "text-[#22c55e]",
+      ring: "var(--color-feedback-success)",
+      stampBorder: "border-feedback-success",
+      stampText: "text-feedback-success",
+      stampBg: "bg-feedback-success-bg/80",
+      highlight: "text-feedback-success",
    };
 
    const slideClass = (index: number) =>
@@ -685,38 +685,44 @@ export function ChallengeWrappedModal({
                   width="40"
                   height="13"
                   rx="4"
-                  fill="#434343"
+                  fill="var(--color-border-strong)"
                />
-               <rect x="73" y="16" width="14" height="16" fill="#434343" />
+               <rect
+                  x="73"
+                  y="16"
+                  width="14"
+                  height="16"
+                  fill="var(--color-border-strong)"
+               />
                <circle
                   cx="80"
                   cy="95"
                   r="58"
-                  fill="#1c1c1c"
-                  stroke="#434343"
+                  fill="var(--color-surface-elevated)"
+                  stroke="var(--color-border-strong)"
                   strokeWidth="6"
                />
                <path
                   d="M80 95 L80 45 A50 50 0 0 1 123.3 120 Z"
-                  fill="#22c55e"
+                  fill="var(--color-feedback-success)"
                   fillOpacity="0.25"
-                  stroke="#22c55e"
+                  stroke="var(--color-feedback-success)"
                   strokeWidth="4"
                   strokeLinejoin="round"
                />
                <path
                   d="M80 45 V57 M80 133 V145 M30 95 H42 M118 95 H130"
-                  stroke="#868686"
+                  stroke="var(--color-text-tertiary)"
                   strokeWidth="5"
                   strokeLinecap="round"
                />
-               <circle cx="80" cy="95" r="7" fill="#f4f3f6" />
+               <circle cx="80" cy="95" r="7" fill="var(--color-text-primary)" />
             </symbol>
          </svg>
 
          <div
             ref={cardRef}
-            className="relative w-full max-w-[400px] h-[min(calc(100vh-32px),700px)] h-[min(calc(100dvh-32px),700px)] rounded-[30px] overflow-hidden bg-[#141414] border border-[#292929] text-[#f4f3f6] shadow-2xl touch-pan-y [&_button:focus-visible]:outline-[2px] [&_button:focus-visible]:outline-[#22c55e] [&_button:focus-visible]:outline-offset-[2px] md:max-w-[840px] md:w-full md:aspect-[16/9] md:h-auto md:max-h-[min(520px,calc(100dvh-48px))] md:rounded-[32px]"
+            className="relative w-full max-w-panel-sm h-[min(calc(100vh-32px),700px)] h-[min(calc(100dvh-32px),700px)] rounded-[30px] overflow-hidden bg-surface-primary border border-border-default text-text-primary shadow-2xl touch-pan-y [&_button:focus-visible]:outline-[2px] [&_button:focus-visible]:outline-feedback-success [&_button:focus-visible]:outline-offset-[2px] md:max-w-panel-lg md:w-full md:aspect-[16/9] md:h-auto md:max-h-[min(520px,calc(100dvh-48px))] md:rounded-[32px]"
             data-i={slideIndex}
             onPointerDown={onCardPointerDown}
             onPointerUp={onCardPointerUp}
@@ -724,7 +730,7 @@ export function ChallengeWrappedModal({
             <div className="absolute z-10 top-0 inset-x-0 flex items-center gap-3 pt-4 px-4 md:pt-4 md:px-6">
                <button
                   type="button"
-                  className="w-[38px] h-[38px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] cursor-pointer grid place-items-center p-0 shrink-0 transition-colors"
+                  className="w-[38px] h-[38px] rounded-xl border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong cursor-pointer grid place-items-center p-0 shrink-0 transition-colors"
                   onClick={close}
                   aria-label="Close wrapped"
                >
@@ -747,8 +753,8 @@ export function ChallengeWrappedModal({
                         type="button"
                         className={`relative h-2 p-0 rounded-full border cursor-pointer transition-all duration-250 before:content-[''] before:absolute before:-inset-y-2.5 before:-inset-x-1 ${
                            slideIndex === index
-                              ? "w-6 bg-[#22c55e] border-[#22c55e]"
-                              : "w-2 bg-[#292929] border-[#434343] hover:border-[#868686]"
+                              ? "w-6 bg-feedback-success border-feedback-success"
+                              : "w-2 bg-surface-nested border-border-strong hover:border-border-strong"
                         }`}
                         aria-label={`Go to slide ${index + 1} of ${
                            LAST_SLIDE_INDEX + 1
@@ -768,24 +774,24 @@ export function ChallengeWrappedModal({
                className={slideClass(0)}
                aria-label="Intro"
             >
-               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-[200px] md:[&>svg]:max-w-[240px] [&>svg]:max-h-full">
+               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-artwork-sm md:[&>svg]:max-w-artwork-md [&>svg]:max-h-full">
                   <svg viewBox="0 0 160 160" aria-hidden="true">
                      <use href="#wrapped-stopwatch" />
                   </svg>
                </div>
                <div className="flex flex-col justify-between gap-4 md:h-full md:py-3">
                   <div className="grid gap-2.5">
-                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-[#868686] m-0">
+                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-text-tertiary m-0">
                         {story.periodLabel}
                      </p>
-                     <h2 className="font-display font-extrabold text-[clamp(30px,8vw,40px)] md:text-[38px] leading-[1.05] tracking-tight text-[#f4f3f6] m-0 text-balance max-h-[720px]:text-[clamp(26px,7vw,34px)]">
+                     <h2 className="font-display font-extrabold text-[clamp(30px,8vw,40px)] md:text-display-lg leading-[1.05] tracking-tight text-text-primary m-0 text-balance max-h-[720px]:text-[clamp(26px,7vw,34px)]">
                         Your challenge wrapped is here!
                      </h2>
                   </div>
                   <div className="flex gap-2.5 mt-auto">
                      <button
                         type="button"
-                        className="flex-1 h-[50px] rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-[#16a34a] hover:-translate-y-0.5 shadow-md shadow-[#22c55e]/10 whitespace-nowrap"
+                        className="flex-1 h-control-md rounded-xl bg-feedback-success text-text-inverse font-bold text-body cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-feedback-success hover:-translate-y-0.5 shadow-md shadow-feedback-success/10 whitespace-nowrap"
                         data-focus-target
                         onClick={() => go(1)}
                      >
@@ -804,7 +810,7 @@ export function ChallengeWrappedModal({
                className={slideClass(1)}
                aria-label="Time studied"
             >
-               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-[200px] md:[&>svg]:max-w-[240px] [&>svg]:max-h-full">
+               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-artwork-sm md:[&>svg]:max-w-artwork-md [&>svg]:max-h-full">
                   <svg viewBox="0 0 160 160" fill="none" aria-hidden="true">
                      <rect
                         x="14"
@@ -812,13 +818,13 @@ export function ChallengeWrappedModal({
                         width="132"
                         height="30"
                         rx="6"
-                        fill="#1c1c1c"
-                        stroke="#434343"
+                        fill="var(--color-surface-elevated)"
+                        stroke="var(--color-border-strong)"
                         strokeWidth="4"
                      />
                      <path
                         d="M36 108v30M124 108v30"
-                        stroke="#292929"
+                        stroke="var(--color-border-default)"
                         strokeWidth="4"
                      />
                      <rect
@@ -827,27 +833,35 @@ export function ChallengeWrappedModal({
                         width="104"
                         height="30"
                         rx="6"
-                        fill="#3b82f6"
+                        fill="var(--color-feedback-info)"
                         fillOpacity="0.2"
-                        stroke="#3b82f6"
+                        stroke="var(--color-feedback-info)"
                         strokeWidth="4"
                      />
-                     <path d="M52 76v30" stroke="#3b82f6" strokeWidth="4" />
+                     <path
+                        d="M52 76v30"
+                        stroke="var(--color-feedback-info)"
+                        strokeWidth="4"
+                     />
                      <rect
                         x="22"
                         y="44"
                         width="116"
                         height="30"
                         rx="6"
-                        fill="#22c55e"
+                        fill="var(--color-feedback-success)"
                         fillOpacity="0.2"
-                        stroke="#22c55e"
+                        stroke="var(--color-feedback-success)"
                         strokeWidth="4"
                      />
-                     <path d="M120 44v30" stroke="#22c55e" strokeWidth="4" />
+                     <path
+                        d="M120 44v30"
+                        stroke="var(--color-feedback-success)"
+                        strokeWidth="4"
+                     />
                      <path
                         d="M54 22c10-8 20 8 30 0s20 8 30 0"
-                        stroke="#868686"
+                        stroke="var(--color-text-tertiary)"
                         strokeWidth="4"
                         strokeLinecap="round"
                      />
@@ -855,18 +869,18 @@ export function ChallengeWrappedModal({
                </div>
                <div className="flex flex-col justify-between gap-4 md:h-full md:py-3">
                   <div className="grid gap-2.5">
-                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-[#868686] m-0">
+                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-text-tertiary m-0">
                         Time studied
                      </p>
-                     <p className="font-display font-extrabold text-[clamp(64px,19vw,92px)] md:text-[80px] leading-[0.88] tracking-tight text-[#f4f3f6] m-0 font-sans font-sans-tabular flex items-baseline max-h-[640px]:text-[60px]">
+                     <p className="font-display font-extrabold text-[clamp(64px,19vw,92px)] md:text-display-2xl leading-[0.88] tracking-tight text-text-primary m-0 font-sans font-sans-tabular flex items-baseline max-h-[640px]:text-display-xl">
                         <span>{displayedMinutes.toLocaleString("en-US")}</span>
-                        <small className="text-[0.3em] font-medium tracking-normal text-[#868686] ml-[0.15em]">
+                        <small className="text-[0.3em] font-medium tracking-normal text-text-tertiary ml-[0.15em]">
                            mins
                         </small>
                      </p>
-                     <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#f4f3f6] m-0 text-pretty">
+                     <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-primary m-0 text-pretty">
                         Over this challenge, you studied for{" "}
-                        <span className="font-bold text-[#22c55e]">
+                        <span className="font-bold text-feedback-success">
                            {story.time.totalHuman}
                         </span>
                         . That&apos;s a lot of showing up.
@@ -875,7 +889,7 @@ export function ChallengeWrappedModal({
                   <div className="flex gap-2.5 mt-auto">
                      <button
                         type="button"
-                        className="flex-none w-[50px] h-[50px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] cursor-pointer inline-flex items-center justify-center transition-colors"
+                        className="flex-none w-control-md h-control-md rounded-xl border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong cursor-pointer inline-flex items-center justify-center transition-colors"
                         aria-label="Previous"
                         onClick={() => go(slideIndex - 1)}
                      >
@@ -883,7 +897,7 @@ export function ChallengeWrappedModal({
                      </button>
                      <button
                         type="button"
-                        className="flex-1 h-[50px] rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-[#16a34a] hover:-translate-y-0.5 shadow-md shadow-[#22c55e]/10 whitespace-nowrap"
+                        className="flex-1 h-control-md rounded-xl bg-feedback-success text-text-inverse font-bold text-body cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-feedback-success hover:-translate-y-0.5 shadow-md shadow-feedback-success/10 whitespace-nowrap"
                         data-focus-target
                         onClick={() => go(slideIndex + 1)}
                      >
@@ -906,22 +920,22 @@ export function ChallengeWrappedModal({
                   <div style={{ width: "100%" }}>
                      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2.5 font-sans font-medium text-xs">
                         <ul className="flex gap-4 list-none m-0 p-0">
-                           <li className="inline-flex items-center gap-1.5 text-[#f4f3f6]">
+                           <li className="inline-flex items-center gap-1.5 text-text-primary">
                               <i
-                                 className="inline-block w-[18px] h-0 border-t-[3px] border-[#22c55e] rounded-xs"
+                                 className="inline-block w-[18px] h-0 border-t-[3px] border-feedback-success rounded-xs"
                                  aria-hidden="true"
                               />
                               You
                            </li>
-                           <li className="inline-flex items-center gap-1.5 text-[#868686]">
+                           <li className="inline-flex items-center gap-1.5 text-text-tertiary">
                               <i
-                                 className="inline-block w-[18px] h-0 border-t-2 border-[#868686] rounded-xs"
+                                 className="inline-block w-[18px] h-0 border-t-2 border-border-strong rounded-xs"
                                  aria-hidden="true"
                               />
                               Average person
                            </li>
                         </ul>
-                        <span className="font-sans text-[11px] uppercase tracking-wider text-[#868686] font-medium">
+                        <span className="font-sans text-meta uppercase tracking-wider text-text-tertiary font-medium">
                            hours per day
                         </span>
                      </div>
@@ -944,14 +958,14 @@ export function ChallengeWrappedModal({
                                  return (
                                     <g key={value}>
                                        <line
-                                          className="stroke-[#292929] stroke-[1]"
+                                          className="stroke-border-default stroke-[1]"
                                           x1={chart.x0}
                                           x2={chart.x1}
                                           y1={y}
                                           y2={y}
                                        />
                                        <text
-                                          className="font-sans text-[10px] fill-[#868686] font-medium"
+                                          className="font-sans text-label fill-text-tertiary font-medium"
                                           x={chart.x0 - 6}
                                           y={y + 3}
                                           textAnchor="end"
@@ -963,14 +977,14 @@ export function ChallengeWrappedModal({
                               }
                            )}
                            <line
-                              className="stroke-[#434343] stroke-[1]"
+                              className="stroke-border-strong stroke-[1]"
                               x1={chart.x0}
                               x2={chart.x1}
                               y1={chart.base}
                               y2={chart.base}
                            />
                            <text
-                              className="font-sans text-[10px] fill-[#868686] font-medium"
+                              className="font-sans text-label fill-text-tertiary font-medium"
                               x={chart.x0 - 6}
                               y={chart.base + 3}
                               textAnchor="end"
@@ -980,7 +994,7 @@ export function ChallengeWrappedModal({
                            {chart.ticks.map((dayIndex) => (
                               <text
                                  key={dayIndex}
-                                 className="font-sans text-[10px] fill-[#868686] font-medium"
+                                 className="font-sans text-label fill-text-tertiary font-medium"
                                  x={chart.x[dayIndex]}
                                  y={chart.base + 17}
                                  textAnchor="middle"
@@ -991,16 +1005,16 @@ export function ChallengeWrappedModal({
                               </text>
                            ))}
                            <path
-                              className={`fill-[#22c55e] fill-opacity-10 stroke-none ${slideIndex === 2 ? "animate-wrapped-fadein" : ""}`}
+                              className={`fill-feedback-success fill-opacity-10 stroke-none ${slideIndex === 2 ? "animate-wrapped-fadein" : ""}`}
                               d={chart.areaPath}
                            />
                            <path
-                              className={`fill-none stroke-[#868686] stroke-linecap-round stroke-linejoin-round stroke-[2] ${slideIndex === 2 ? "animate-wrapped-draw" : ""}`}
+                              className={`fill-none stroke-text-tertiary stroke-linecap-round stroke-linejoin-round stroke-[2] ${slideIndex === 2 ? "animate-wrapped-draw" : ""}`}
                               pathLength={1}
                               d={chart.avgPath}
                            />
                            <path
-                              className={`fill-none stroke-[#22c55e] stroke-linecap-round stroke-linejoin-round stroke-[3] ${slideIndex === 2 ? "animate-wrapped-draw" : ""}`}
+                              className={`fill-none stroke-feedback-success stroke-linecap-round stroke-linejoin-round stroke-[3] ${slideIndex === 2 ? "animate-wrapped-draw" : ""}`}
                               pathLength={1}
                               d={chart.youPath}
                            />
@@ -1013,13 +1027,13 @@ export function ChallengeWrappedModal({
                                  }
                               >
                                  <circle
-                                    className="stroke-[#141414] stroke-2 fill-[#22c55e]"
+                                    className="stroke-border-subtle stroke-2 fill-feedback-success"
                                     cx={chart.x[chart.bestIndex]}
                                     cy={chart.yYou[chart.bestIndex]}
                                     r={4}
                                  />
                                  <text
-                                    className="font-sans text-[10px] fill-[#22c55e] font-semibold"
+                                    className="font-sans text-label fill-feedback-success font-semibold"
                                     x={bestTextX}
                                     y={chart.yYou[chart.bestIndex] + 3}
                                     textAnchor={bestTextAnchor}
@@ -1031,7 +1045,7 @@ export function ChallengeWrappedModal({
                            )}
                            {hoverIndex !== null && (
                               <line
-                                 className="stroke-[#434343] stroke-[1] stroke-dasharray-[2_2]"
+                                 className="stroke-border-strong stroke-[1] stroke-dasharray-[2_2]"
                                  x1={chart.x[hoverIndex]}
                                  x2={chart.x[hoverIndex]}
                                  y1={chart.top}
@@ -1041,13 +1055,13 @@ export function ChallengeWrappedModal({
                            {hoverIndex !== null && (
                               <>
                                  <circle
-                                    className="stroke-[#141414] stroke-2 fill-[#22c55e]"
+                                    className="stroke-border-subtle stroke-2 fill-feedback-success"
                                     cx={chart.x[hoverIndex]}
                                     cy={chart.yYou[hoverIndex]}
                                     r={4}
                                  />
                                  <circle
-                                    className="stroke-[#141414] stroke-2 fill-[#868686]"
+                                    className="stroke-border-subtle stroke-2 fill-text-tertiary"
                                     cx={chart.x[hoverIndex]}
                                     cy={chart.yAvg[hoverIndex]}
                                     r={4}
@@ -1069,7 +1083,7 @@ export function ChallengeWrappedModal({
                         </svg>
                         {hoverDay && (
                            <div
-                              className={`absolute z-10 pointer-events-none -translate-y-full whitespace-nowrap bg-[#1c1c1c] border border-[#292929] text-[#f4f3f6] shadow-xl rounded-xl py-2 px-3 font-sans text-xs leading-snug font-medium ${
+                              className={`absolute z-10 pointer-events-none -translate-y-full whitespace-nowrap bg-surface-elevated border border-border-default text-text-primary shadow-xl rounded-xl py-2 px-3 font-sans text-xs leading-snug font-medium ${
                                  chart.days.length > 1 && hoverDay.index === 0
                                     ? "translate-x-0"
                                     : chart.days.length > 1 &&
@@ -1085,24 +1099,24 @@ export function ChallengeWrappedModal({
                                  top: "-6px",
                               }}
                            >
-                              <div className="font-sans text-[10px] tracking-wider uppercase text-[#868686] font-semibold mb-1">
+                              <div className="font-sans text-label tracking-wider uppercase text-text-tertiary font-semibold mb-1">
                                  {hoverDay.label}
                               </div>
                               <div className="flex items-center gap-1.5">
-                                 <i className="inline-block w-3 border-t-[3px] border-[#22c55e] rounded-xs" />
-                                 <b className="text-[#f4f3f6]">
+                                 <i className="inline-block w-3 border-t-[3px] border-feedback-success rounded-xs" />
+                                 <b className="text-text-primary">
                                     {formatMinutes(hoverDay.minutesYou) ||
                                        "No study"}
                                  </b>
-                                 <span className="text-[#868686]">You</span>
+                                 <span className="text-text-tertiary">You</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                 <i className="inline-block w-3 border-t-2 border-[#868686] rounded-xs" />
-                                 <b className="text-[#868686]">
+                                 <i className="inline-block w-3 border-t-2 border-border-strong rounded-xs" />
+                                 <b className="text-text-tertiary">
                                     {formatMinutes(hoverDay.minutesAvg) ||
                                        "No study"}
                                  </b>
-                                 <span className="text-[#5a5a5a]">
+                                 <span className="text-text-tertiary">
                                     Average person
                                  </span>
                               </div>
@@ -1138,33 +1152,33 @@ export function ChallengeWrappedModal({
                </div>
                <div className="flex flex-col justify-between gap-4 md:h-full md:py-3">
                   <div className="grid gap-2.5">
-                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-[#868686] m-0">
+                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-text-tertiary m-0">
                         You vs the average person
                      </p>
                      {story.chartCopy.timesVsAverage !== null ? (
-                        <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#f4f3f6] m-0 text-pretty">
+                        <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-primary m-0 text-pretty">
                            You studied{" "}
-                           <span className="font-bold text-[#22c55e]">
+                           <span className="font-bold text-feedback-success">
                               {story.chartCopy.timesVsAverage}× as much
                            </span>{" "}
                            as the average person. Seriously good work,{" "}
                            {wrapped?.viewer?.displayName ?? "friend"}.
                         </p>
                      ) : (
-                        <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#868686] m-0 text-pretty">
+                        <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-tertiary m-0 text-pretty">
                            The average-person comparison unlocks once more study
                            time is logged.
                         </p>
                      )}
-                     <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#f4f3f6] m-0 text-pretty">
+                     <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-primary m-0 text-pretty">
                         {chart.bestIndex >= 0 ? (
                            <>
                               Your best day was{" "}
-                              <span className="font-bold text-[#22c55e]">
+                              <span className="font-bold text-feedback-success">
                                  {chart.bestLabel}
                               </span>
                               , and you carried{" "}
-                              <span className="font-bold text-[#22c55e]">
+                              <span className="font-bold text-feedback-success">
                                  {story.chartCopy.contributionPercent}%
                               </span>{" "}
                               of {story.chartCopy.teamName}&apos;s growth.
@@ -1174,11 +1188,11 @@ export function ChallengeWrappedModal({
                         )}
                      </p>
                      <div
-                        className="h-2.5 rounded-full bg-[#1c1c1c] border border-[#292929] overflow-hidden mt-1"
+                        className="h-2.5 rounded-full bg-surface-elevated border border-border-default overflow-hidden mt-1"
                         aria-hidden="true"
                      >
                         <i
-                           className="block h-full bg-[#22c55e] rounded-full transition-[width] duration-900 delay-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+                           className="block h-full bg-feedback-success rounded-full transition-[width] duration-900 delay-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
                            style={{
                               width:
                                  slideIndex === 2
@@ -1191,7 +1205,7 @@ export function ChallengeWrappedModal({
                   <div className="flex gap-2.5 mt-auto">
                      <button
                         type="button"
-                        className="flex-none w-[50px] h-[50px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] cursor-pointer inline-flex items-center justify-center transition-colors"
+                        className="flex-none w-control-md h-control-md rounded-xl border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong cursor-pointer inline-flex items-center justify-center transition-colors"
                         aria-label="Previous"
                         onClick={() => go(slideIndex - 1)}
                      >
@@ -1199,7 +1213,7 @@ export function ChallengeWrappedModal({
                      </button>
                      <button
                         type="button"
-                        className="flex-1 h-[50px] rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-[#16a34a] hover:-translate-y-0.5 shadow-md shadow-[#22c55e]/10 whitespace-nowrap"
+                        className="flex-1 h-control-md rounded-xl bg-feedback-success text-text-inverse font-bold text-body cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-feedback-success hover:-translate-y-0.5 shadow-md shadow-feedback-success/10 whitespace-nowrap"
                         data-focus-target
                         onClick={() => go(slideIndex + 1)}
                      >
@@ -1225,7 +1239,7 @@ export function ChallengeWrappedModal({
                   <button
                      ref={holdRef}
                      type="button"
-                     className={`relative w-full max-w-[210px] md:max-w-[240px] aspect-square rounded-[32px] border-2 border-dashed border-[#434343] bg-[#1c1c1c]/50 text-[#f4f3f6] cursor-pointer p-0 grid place-items-center select-none touch-none transition-colors hover:border-[#868686] ${
+                     className={`relative w-full max-w-[210px] md:max-w-artwork-md aspect-square rounded-[32px] border-2 border-dashed border-border-strong bg-surface-elevated/50 text-text-primary cursor-pointer p-0 grid place-items-center select-none touch-none transition-colors hover:border-border-strong ${
                         revealed
                            ? "border-solid !border-transparent bg-transparent animate-wrapped-hit"
                            : ""
@@ -1275,7 +1289,7 @@ export function ChallengeWrappedModal({
                         aria-hidden="true"
                      >
                         <circle
-                           className="fill-none stroke-[#292929] stroke-[8]"
+                           className="fill-none stroke-border-default stroke-[8]"
                            cx="100"
                            cy="100"
                            r="88"
@@ -1294,7 +1308,7 @@ export function ChallengeWrappedModal({
                         />
                      </svg>
                      <span
-                        className={`relative grid gap-1.5 justify-items-center text-center font-sans text-xs leading-tight tracking-wider uppercase font-semibold text-[#868686] ${
+                        className={`relative grid gap-1.5 justify-items-center text-center font-sans text-xs leading-tight tracking-wider uppercase font-semibold text-text-tertiary ${
                            revealed
                               ? "opacity-0 transition-opacity duration-200"
                               : ""
@@ -1308,7 +1322,7 @@ export function ChallengeWrappedModal({
                            strokeWidth="3"
                            strokeLinecap="round"
                            strokeLinejoin="round"
-                           className="w-10 h-10 md:w-11 md:h-11 text-[#868686]"
+                           className="w-10 h-10 md:w-11 md:h-11 text-text-tertiary"
                         >
                            <path d="M17 26V12a3 3 0 0 1 6 0v10M23 20v-3a3 3 0 0 1 6 0v5M29 22a3 3 0 0 1 6 0v8c0 7-5 12-12 12-5 0-8-2-11-6l-5-8a3 3 0 0 1 5-3l3 4" />
                         </svg>
@@ -1319,7 +1333,7 @@ export function ChallengeWrappedModal({
                         aria-hidden="true"
                      >
                         <span
-                           className={`block font-display font-black text-[clamp(26px,7.5vw,34px)] md:text-[32px] leading-none tracking-wider uppercase py-2 px-3.5 border-[5px] rounded-xl -rotate-6 shadow-xl backdrop-blur-xs opacity-0 filter-[url(#wrapped-rough)] ${verdictToneColors.stampBorder} ${verdictToneColors.stampText} ${verdictToneColors.stampBg} ${revealed ? "animate-wrapped-slam opacity-100" : ""}`}
+                           className={`block font-display font-black text-[clamp(26px,7.5vw,34px)] md:text-display-sm leading-none tracking-wider uppercase py-2 px-3.5 border-[5px] rounded-xl -rotate-6 shadow-xl backdrop-blur-xs opacity-0 filter-[url(#wrapped-rough)] ${verdictToneColors.stampBorder} ${verdictToneColors.stampText} ${verdictToneColors.stampBg} ${revealed ? "animate-wrapped-slam opacity-100" : ""}`}
                         >
                            {revealed ? verdict.stamp : ""}
                         </span>
@@ -1328,15 +1342,15 @@ export function ChallengeWrappedModal({
                </div>
                <div className="flex flex-col justify-between gap-4 md:h-full md:py-3">
                   <div className="grid gap-2" aria-live="polite">
-                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-[#868686] m-0">
+                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-text-tertiary m-0">
                         The verdict
                      </p>
-                     <h2 className="font-display font-extrabold text-[clamp(28px,8vw,38px)] md:text-[36px] leading-[1.05] tracking-tight text-[#f4f3f6] m-0 text-balance">
+                     <h2 className="font-display font-extrabold text-[clamp(28px,8vw,38px)] md:text-display-md leading-[1.05] tracking-tight text-text-primary m-0 text-balance">
                         {revealed
                            ? verdict.headline
                            : "Did you hit the target?"}
                      </h2>
-                     <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#f4f3f6] m-0 text-pretty">
+                     <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-primary m-0 text-pretty">
                         {revealed ? (
                            <>
                               <span
@@ -1350,13 +1364,13 @@ export function ChallengeWrappedModal({
                            "Press and hold the card until the ring closes."
                         )}
                      </p>
-                     <p className="font-sans text-sm text-[#868686] m-0 text-pretty font-medium empty:hidden">
+                     <p className="font-sans text-sm text-text-tertiary m-0 text-pretty font-medium empty:hidden">
                         {revealed ? verdict.note : ""}
                      </p>
                      {!revealed && (
                         <button
                            type="button"
-                           className="self-start bg-transparent border-0 py-1 px-0 cursor-pointer font-sans text-xs text-[#868686] underline underline-offset-[3px] hover:text-[#f4f3f6] transition-colors"
+                           className="self-start bg-transparent border-0 py-1 px-0 cursor-pointer font-sans text-xs text-text-tertiary underline underline-offset-[3px] hover:text-text-primary transition-colors"
                            onClick={reveal}
                         >
                            Can&apos;t hold? Tap to reveal
@@ -1366,7 +1380,7 @@ export function ChallengeWrappedModal({
                   <div className="flex gap-2.5 mt-auto">
                      <button
                         type="button"
-                        className="flex-none w-[50px] h-[50px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] cursor-pointer inline-flex items-center justify-center transition-colors"
+                        className="flex-none w-control-md h-control-md rounded-xl border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong cursor-pointer inline-flex items-center justify-center transition-colors"
                         aria-label="Previous"
                         onClick={() => go(slideIndex - 1)}
                      >
@@ -1374,7 +1388,7 @@ export function ChallengeWrappedModal({
                      </button>
                      <button
                         type="button"
-                        className="flex-1 h-[50px] rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-[#16a34a] hover:-translate-y-0.5 shadow-md shadow-[#22c55e]/10 disabled:opacity-30 disabled:pointer-events-none whitespace-nowrap"
+                        className="flex-1 h-control-md rounded-xl bg-feedback-success text-text-inverse font-bold text-body cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-feedback-success hover:-translate-y-0.5 shadow-md shadow-feedback-success/10 disabled:opacity-30 disabled:pointer-events-none whitespace-nowrap"
                         data-verdict-next
                         disabled={!revealed}
                         onClick={() => go(slideIndex + 1)}
@@ -1394,25 +1408,25 @@ export function ChallengeWrappedModal({
                className={slideClass(4)}
                aria-label="Feedback"
             >
-               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-[200px] md:[&>svg]:max-w-[240px] [&>svg]:max-h-full">
+               <div className="flex-1 min-h-0 grid place-items-center md:h-full [&>svg]:w-full [&>svg]:max-w-artwork-sm md:[&>svg]:max-w-artwork-md [&>svg]:max-h-full">
                   <svg viewBox="0 0 160 160" fill="none" aria-hidden="true">
                      <circle
                         cx="116"
                         cy="40"
                         r="26"
-                        fill="#3b82f6"
+                        fill="var(--color-feedback-info)"
                         fillOpacity="0.25"
                      />
                      <path
                         d="M26 30h108a10 10 0 0 1 10 10v62a10 10 0 0 1-10 10H78l-28 24v-24H26a10 10 0 0 1-10-10V40a10 10 0 0 1 10-10Z"
-                        fill="#1c1c1c"
-                        stroke="#434343"
+                        fill="var(--color-surface-elevated)"
+                        stroke="var(--color-border-strong)"
                         strokeWidth="4"
                         strokeLinejoin="round"
                      />
                      <path
                         d="M40 58h80M40 74h60M40 90h42"
-                        stroke="#868686"
+                        stroke="var(--color-text-tertiary)"
                         strokeWidth="4"
                         strokeLinecap="round"
                      />
@@ -1420,13 +1434,13 @@ export function ChallengeWrappedModal({
                </div>
                <div className="flex flex-col justify-between gap-4 md:h-full md:py-3">
                   <div className="grid gap-2.5">
-                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-[#868686] m-0">
+                     <p className="font-sans text-xs font-semibold uppercase tracking-wider text-text-tertiary m-0">
                         Anonymous · 2 minutes
                      </p>
-                     <h2 className="font-display font-extrabold text-[clamp(30px,8vw,40px)] md:text-[38px] leading-[1.05] tracking-tight text-[#f4f3f6] m-0 text-balance">
+                     <h2 className="font-display font-extrabold text-[clamp(30px,8vw,40px)] md:text-display-lg leading-[1.05] tracking-tight text-text-primary m-0 text-balance">
                         How was this challenge?
                      </h2>
-                     <p className="font-sans font-medium text-[15px] md:text-[16px] leading-[1.4] text-[#868686] m-0 text-pretty">
+                     <p className="font-sans font-medium text-body md:text-body-lg leading-[1.4] text-text-tertiary m-0 text-pretty">
                         Tell us what worked and what didn&apos;t. Your answers
                         aren&apos;t tied to your name.
                      </p>
@@ -1434,7 +1448,7 @@ export function ChallengeWrappedModal({
                   <div className="flex gap-2.5 mt-auto">
                      <button
                         type="button"
-                        className="flex-none w-[50px] h-[50px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] cursor-pointer inline-flex items-center justify-center transition-colors"
+                        className="flex-none w-control-md h-control-md rounded-xl border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong cursor-pointer inline-flex items-center justify-center transition-colors"
                         aria-label="Previous"
                         onClick={() => go(slideIndex - 1)}
                      >
@@ -1442,7 +1456,7 @@ export function ChallengeWrappedModal({
                      </button>
                      <button
                         type="button"
-                        className="flex-1 h-[50px] rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#f4f3f6] hover:border-[#434343] font-semibold text-[15px] cursor-pointer inline-flex items-center justify-center transition-colors whitespace-nowrap"
+                        className="flex-1 h-control-md rounded-xl border border-border-default bg-surface-elevated text-text-primary hover:border-border-strong font-semibold text-body cursor-pointer inline-flex items-center justify-center transition-colors whitespace-nowrap"
                         data-focus-target
                         onClick={close}
                      >
@@ -1450,7 +1464,7 @@ export function ChallengeWrappedModal({
                      </button>
                      <button
                         type="button"
-                        className="flex-[1.4] h-[50px] rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-[15px] cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-[#16a34a] hover:-translate-y-0.5 shadow-md shadow-[#22c55e]/10 whitespace-nowrap"
+                        className="flex-[1.4] h-control-md rounded-xl bg-feedback-success text-text-inverse font-bold text-body cursor-pointer inline-flex items-center justify-center gap-2 transition-all hover:bg-feedback-success hover:-translate-y-0.5 shadow-md shadow-feedback-success/10 whitespace-nowrap"
                         onClick={() => setIsFeedbackDialogOpen(true)}
                      >
                         Give feedback
@@ -1461,7 +1475,7 @@ export function ChallengeWrappedModal({
          </div>
 
          <div
-            className={`fixed left-1/2 bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-70 max-w-[calc(100%-32px)] bg-[#1c1c1c] border border-[#292929] text-[#f4f3f6] shadow-xl py-2.5 px-4 rounded-xl font-sans font-medium text-sm -translate-x-1/2 pointer-events-none transition-all duration-250 ${
+            className={`fixed left-1/2 bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-70 max-w-[calc(100%-32px)] bg-surface-elevated border border-border-default text-text-primary shadow-xl py-2.5 px-4 rounded-xl font-sans font-medium text-sm -translate-x-1/2 pointer-events-none transition-all duration-250 ${
                toast ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
             role="status"

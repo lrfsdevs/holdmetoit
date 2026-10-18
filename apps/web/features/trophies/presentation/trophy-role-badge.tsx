@@ -103,7 +103,7 @@ export function TrophyRoleBadge({
 
    // Size styles
    const sizeStyles = {
-      sm: "text-[10px] px-2 py-0.5 gap-1 font-semibold",
+      sm: "text-label px-2 py-0.5 gap-1 font-semibold",
       md: "text-xs px-2.5 py-1 gap-1.5 font-semibold",
       lg: "text-sm px-3.5 py-1.5 gap-2 font-bold",
    };

@@ -6,25 +6,25 @@ export default function ParticipantNotFound() {
    return (
       <main className="mx-auto flex min-h-[calc(100vh-140px)] max-w-lg flex-col items-center justify-center p-4">
          <div
-            className="w-full rounded-3xl border border-[#262626] bg-[#141414] p-8 text-center shadow-lg"
+            className="w-full rounded-3xl border border-border-default bg-surface-primary p-8 text-center shadow-lg"
             role="status"
          >
-            <p className="font-mono text-xs font-semibold uppercase tracking-widest text-[#22c55e]">
+            <p className="font-mono text-xs font-semibold uppercase tracking-widest text-feedback-success">
                404 Not Found
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#ffffff]">
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-white">
                Participant Record Not Found
             </h1>
-            <p className="mt-3 text-sm leading-relaxed text-[#868686]">
+            <p className="mt-3 text-sm leading-relaxed text-text-tertiary">
                We couldn&apos;t locate this participant in the specified
                challenge. The participant may not be enrolled or may have been
                unassigned.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-               <Button asChild variant="default" className="min-h-[44px]">
+               <Button asChild variant="default" className="min-h-control-sm">
                   <Link href="/challenges">Browse Challenges</Link>
                </Button>
-               <Button asChild variant="secondary" className="min-h-[44px]">
+               <Button asChild variant="secondary" className="min-h-control-sm">
                   <Link href="/">Return to Lounge</Link>
                </Button>
             </div>

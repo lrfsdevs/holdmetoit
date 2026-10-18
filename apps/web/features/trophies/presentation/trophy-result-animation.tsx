@@ -64,7 +64,7 @@ export function TrophyResultAnimation({
          role="dialog"
          aria-modal="true"
       >
-         <div className="relative w-full max-w-sm rounded-3xl border border-obsidian-borderHighlight bg-obsidian-card p-6 text-center shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+         <div className="relative w-full max-w-sm rounded-3xl border border-border-strong bg-surface-primary p-6 text-center shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             {/* Ambient Background Glow */}
             <div
                className={`absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-48 rounded-full blur-3xl opacity-30 ${
@@ -117,7 +117,7 @@ export function TrophyResultAnimation({
             )}
 
             {/* Delta Banner */}
-            <div className="my-4 py-2 px-4 rounded-xl bg-obsidian-elevated border border-obsidian-borderSubtle inline-flex items-center gap-2">
+            <div className="my-4 py-2 px-4 rounded-xl bg-surface-elevated border border-border-subtle inline-flex items-center gap-2">
                {isWin ? (
                   <ArrowUp className="h-5 w-5 text-emerald-400" />
                ) : (
@@ -133,9 +133,9 @@ export function TrophyResultAnimation({
             </div>
 
             {/* Transition: previous -> new */}
-            <div className="text-xs text-obsidian-textDim font-mono">
+            <div className="text-xs text-text-tertiary font-mono">
                <span>{previousBalance.toLocaleString()}</span>
-               <span className="mx-2 text-obsidian-text">→</span>
+               <span className="mx-2 text-text-primary">→</span>
                <span className="font-bold text-white text-sm">
                   {displayBalance.toLocaleString()}
                </span>
@@ -145,7 +145,7 @@ export function TrophyResultAnimation({
                <button
                   type="button"
                   onClick={onClose}
-                  className="mt-6 w-full rounded-xl bg-obsidian-elevated border border-obsidian-borderHighlight py-2.5 text-xs font-semibold text-white hover:bg-obsidian-card transition-colors"
+                  className="mt-6 w-full rounded-xl bg-surface-elevated border border-border-strong py-2.5 text-xs font-semibold text-white hover:bg-surface-primary transition-colors"
                >
                   Continue
                </button>

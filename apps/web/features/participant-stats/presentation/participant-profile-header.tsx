@@ -25,16 +25,19 @@ export function ParticipantProfileHeader({
    const isRankOne = profile.rank === 1;
 
    const paceColors = {
-      serene: "bg-[#144520] border-[#22c55e]/40 text-[#85ff93]",
-      "on-track": "bg-[#144520] border-[#22c55e]/40 text-[#85ff93]",
-      "catch-up": "bg-[#402010] border-[#f59e0b]/40 text-[#fcd34d]",
-      punished: "bg-[#401010] border-[#ef4444]/40 text-[#ff8080]",
-      excused: "bg-[#230e40] border-[#8b5cf6]/40 text-[#c4b5fd]",
+      serene:
+         "bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text",
+      "on-track":
+         "bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text",
+      "catch-up": "bg-brand-1/15 border-brand-1/40 text-brand-1",
+      punished:
+         "bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text",
+      excused: "bg-accent-bg border-accent/40 text-accent-text",
    };
 
    const paceClass =
       paceColors[profile.paceStatus] ||
-      "bg-[#1c1c1c] border-[#383838] text-[#d1d1d1]";
+      "bg-surface-elevated border-border-strong text-text-secondary";
 
    const leaderboardUrl = `/challenge/${profile.challengeId}?tab=leaderboard${
       viewParam ? `&view=${encodeURIComponent(viewParam)}` : ""
@@ -45,7 +48,7 @@ export function ParticipantProfileHeader({
          {/* Breadcrumb Navigation */}
          <nav
             aria-label="Breadcrumb"
-            className="flex items-center gap-1.5 text-xs text-[#868686] flex-wrap"
+            className="flex items-center gap-1.5 text-xs text-text-tertiary flex-wrap"
          >
             <Link
                href="/challenges"
@@ -53,34 +56,34 @@ export function ParticipantProfileHeader({
             >
                Challenges
             </Link>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#434343]" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
             <Link
                href={`/challenge/${profile.challengeId}`}
-               className="hover:text-white transition-colors truncate max-w-[150px] sm:max-w-[200px]"
+               className="hover:text-white transition-colors truncate max-w-[150px] sm:max-w-artwork-sm"
             >
                {profile.challengeTitle}
             </Link>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#434343]" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
             <Link
                href={leaderboardUrl}
                className="hover:text-white transition-colors"
             >
                Leaderboard
             </Link>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#434343]" />
-            <span className="text-[#f4f3f6] font-medium truncate max-w-[150px] sm:max-w-[200px]">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+            <span className="text-text-primary font-medium truncate max-w-[150px] sm:max-w-artwork-sm">
                {profile.displayName}
             </span>
          </nav>
 
          {/* Main Profile Header Card */}
-         <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-7 shadow-xl">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                {/* Left: Avatar & Identity Details */}
                <div className="flex items-center gap-4 min-w-0">
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                     <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-[#1c1c1c] border-2 border-[#383838] overflow-hidden flex items-center justify-center text-xl font-bold text-white shadow-md">
+                     <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-surface-elevated border-2 border-border-strong overflow-hidden flex items-center justify-center text-xl font-bold text-white shadow-md">
                         {profile.image ? (
                            <Image
                               src={profile.image}
@@ -91,12 +94,12 @@ export function ParticipantProfileHeader({
                               unoptimized
                            />
                         ) : (
-                           <UserIcon className="h-8 w-8 text-[#868686]" />
+                           <UserIcon className="h-8 w-8 text-text-tertiary" />
                         )}
                      </div>
                      {isRankOne && (
                         <div
-                           className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-[#22c55e] text-[#0d0d0d] flex items-center justify-center shadow-lg border border-black/40"
+                           className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-feedback-success text-text-inverse flex items-center justify-center shadow-lg border border-black/40"
                            title="Rank 1 MVP"
                         >
                            <Crown className="h-4 w-4 fill-current" />
@@ -107,7 +110,7 @@ export function ParticipantProfileHeader({
                   {/* Names & Badges */}
                   <div className="min-w-0 space-y-1.5">
                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-[#f4f3f6] tracking-tight truncate">
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight truncate">
                            {profile.displayName}
                         </h1>
 
@@ -139,18 +142,18 @@ export function ParticipantProfileHeader({
                      </div>
 
                      {profile.username && (
-                        <p className="text-xs text-[#868686]">
+                        <p className="text-xs text-text-tertiary">
                            @{profile.username}
                         </p>
                      )}
 
-                     <p className="text-xs text-[#a3a3a3] flex items-center gap-1 pt-0.5">
-                        <Shield className="h-3.5 w-3.5 text-[#868686]" />
+                     <p className="text-xs text-text-tertiary flex items-center gap-1 pt-0.5">
+                        <Shield className="h-3.5 w-3.5 text-text-tertiary" />
                         <span>
                            Competing in{" "}
                            <Link
                               href={`/challenge/${profile.challengeId}`}
-                              className="text-[#f4f3f6] font-medium hover:underline"
+                              className="text-text-primary font-medium hover:underline"
                            >
                               {profile.challengeTitle}
                            </Link>
@@ -160,20 +163,22 @@ export function ParticipantProfileHeader({
                </div>
 
                {/* Right: Challenge Ranking Badge & Admin Link */}
-               <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#262626]">
+               <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-border-default">
                   <div className="flex items-center gap-2">
-                     <span className="text-xs text-[#868686]">
+                     <span className="text-xs text-text-tertiary">
                         Leaderboard Rank
                      </span>
-                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#1c1c1c] border border-[#383838] text-sm font-extrabold text-[#ffffff] font-sans">
+                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-elevated border border-border-strong text-sm font-extrabold text-white font-sans">
                         <span
                            className={
-                              isRankOne ? "text-[#22c55e]" : "text-[#f4f3f6]"
+                              isRankOne
+                                 ? "text-feedback-success"
+                                 : "text-text-primary"
                            }
                         >
                            #{profile.rank}
                         </span>
-                        <span className="text-xs text-[#868686] font-normal">
+                        <span className="text-xs text-text-tertiary font-normal">
                            / {profile.totalParticipants}
                         </span>
                      </div>
@@ -182,10 +187,10 @@ export function ParticipantProfileHeader({
                   {isAdmin && (
                      <Link
                         href={`/challenge/${profile.challengeId}?tab=manage`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242424] hover:bg-[#333333] border border-[#383838] text-xs font-semibold text-[#d1d1d1] hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-nested hover:bg-surface-nested border border-border-strong text-xs font-semibold text-text-secondary hover:text-white transition-colors"
                         title="Manage participant in challenge admin tab"
                      >
-                        <Clock className="h-3.5 w-3.5 text-[#3b82f6]" />
+                        <Clock className="h-3.5 w-3.5 text-feedback-info" />
                         <span>Admin Controls</span>
                      </Link>
                   )}

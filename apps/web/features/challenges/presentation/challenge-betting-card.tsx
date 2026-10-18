@@ -102,10 +102,10 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
    };
 
    return (
-      <div className="rounded-xl border border-economy-gold/20 bg-gradient-to-br from-economy-gold/[0.04] via-obsidian-card to-obsidian-bg p-5 shadow-lg backdrop-blur-md">
+      <div className="rounded-xl border border-brand-1/20 bg-gradient-to-br from-brand-1/[0.04] via-surface-primary to-surface-page p-5 shadow-lg backdrop-blur-md">
          {/* Reward Header */}
          {hasReward && (
-            <div className="mb-4 flex items-center justify-between rounded-lg border border-economy-gold/30 bg-economy-gold/10 px-4 py-2.5 text-xs text-economy-goldLight">
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-brand-1/30 bg-brand-1/10 px-4 py-2.5 text-xs text-brand-1-light">
                <div className="flex items-center gap-2">
                   <span className="text-base">🏆</span>
                   <span>
@@ -115,7 +115,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                   </span>
                </div>
                {challenge.isRewardSettled && (
-                  <span className="rounded bg-economy-credit/20 px-2 py-0.5 text-[10px] font-semibold text-economy-credit">
+                  <span className="rounded bg-feedback-success/20 px-2 py-0.5 text-label font-semibold text-feedback-success">
                      Settled
                   </span>
                )}
@@ -125,18 +125,18 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
          {/* Betting Section */}
          {isBettingEnabled && (
             <div>
-               <div className="flex items-center justify-between pb-3 border-b border-obsidian-borderSubtle">
+               <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
                   <div className="flex items-center gap-2">
-                     <CoinsIcon className="h-5 w-5 text-economy-gold" />
-                     <h3 className="text-sm font-semibold text-obsidian-text">
+                     <CoinsIcon className="h-5 w-5 text-brand-1" />
+                     <h3 className="text-sm font-semibold text-text-primary">
                         Virtual Coin Wagers
                      </h3>
                   </div>
                   <span
-                     className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                     className={`rounded-full px-2.5 py-0.5 text-meta font-medium ${
                         isUpcoming
-                           ? "bg-economy-gold/20 text-economy-goldLight border border-economy-gold/30"
-                           : "bg-obsidian-elevated text-obsidian-textDim"
+                           ? "bg-brand-1/20 text-brand-1-light border border-brand-1/30"
+                           : "bg-surface-elevated text-text-tertiary"
                      }`}
                   >
                      {isUpcoming ? "Betting Open" : "Betting Locked (Kickoff)"}
@@ -147,7 +147,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                   <form onSubmit={handlePlaceBet} className="mt-4 space-y-4">
                      {/* Team Picker */}
                      <div>
-                        <label className="block text-xs font-medium text-obsidian-textMuted mb-2">
+                        <label className="block text-xs font-medium text-text-secondary mb-2">
                            Back a Team to Win
                         </label>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -160,8 +160,8 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     onClick={() => setSelectedTeamId(team.id)}
                                     className={`flex items-center gap-2 rounded-lg border p-2.5 text-left text-xs transition-all ${
                                        isSelected
-                                          ? "border-economy-gold bg-economy-gold/15 text-obsidian-text shadow-sm"
-                                          : "border-obsidian-border bg-obsidian-elevated/60 text-obsidian-textDim hover:border-obsidian-borderHighlight hover:text-obsidian-textMuted"
+                                          ? "border-brand-1 bg-brand-1/15 text-text-primary shadow-sm"
+                                          : "border-border-default bg-surface-elevated/60 text-text-tertiary hover:border-border-strong hover:text-text-secondary"
                                     }`}
                                  >
                                     <span className="text-sm">
@@ -180,11 +180,11 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
 
                      {/* Stake Input */}
                      <div>
-                        <div className="flex justify-between text-xs font-medium text-obsidian-textMuted mb-1.5">
+                        <div className="flex justify-between text-xs font-medium text-text-secondary mb-1.5">
                            <span>Stake (Coins)</span>
-                           <span className="text-obsidian-textDim">
+                           <span className="text-text-tertiary">
                               Potential Payout:{" "}
-                              <strong className="text-economy-goldLight">
+                              <strong className="text-brand-1-light">
                                  {stake * 2} Coins
                               </strong>{" "}
                               (1:1 Odds)
@@ -202,7 +202,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     Math.max(0, parseInt(e.target.value) || 0)
                                  )
                               }
-                              className="w-32 h-9 rounded-lg border-obsidian-border bg-obsidian-elevated px-3 py-1.5 text-sm text-obsidian-text focus:border-economy-gold"
+                              className="w-32 h-9 rounded-lg border-border-default bg-surface-elevated px-3 py-1.5 text-sm text-text-primary focus:border-brand-1"
                            />
                            <div className="flex flex-wrap gap-1">
                               {[10, 50, 100, 250, 500].map((preset) => (
@@ -210,10 +210,10 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                     key={preset}
                                     type="button"
                                     onClick={() => setStake(preset)}
-                                    className={`rounded px-2 py-1 text-[11px] font-medium transition ${
+                                    className={`rounded px-2 py-1 text-meta font-medium transition ${
                                        stake === preset
-                                          ? "bg-economy-gold text-obsidian-bg font-semibold"
-                                          : "bg-obsidian-elevated text-obsidian-textDim hover:bg-obsidian-nested"
+                                          ? "bg-brand-1 text-surface-page font-semibold"
+                                          : "bg-surface-elevated text-text-tertiary hover:bg-surface-nested"
                                     }`}
                                  >
                                     {preset}
@@ -227,7 +227,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                         <div
                            className={`rounded-lg p-2.5 text-xs ${
                               message.type === "success"
-                                 ? "bg-economy-credit/10 border border-economy-credit/30 text-economy-credit"
+                                 ? "bg-feedback-success/10 border border-feedback-success/30 text-feedback-success"
                                  : "bg-destructive/10 border border-destructive/30 text-destructive"
                            }`}
                         >
@@ -252,7 +252,7 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                      </Button>
                   </form>
                ) : (
-                  <p className="mt-3 text-xs text-obsidian-textDim">
+                  <p className="mt-3 text-xs text-text-tertiary">
                      Betting is closed for this tournament. Wagers were locked
                      when the challenge started.
                   </p>
@@ -260,23 +260,23 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
 
                {/* Existing user bets */}
                {userWagers.length > 0 && (
-                  <div className="mt-5 border-t border-obsidian-borderSubtle pt-4">
-                     <h4 className="text-xs font-semibold uppercase tracking-wider text-obsidian-textDim mb-2.5">
+                  <div className="mt-5 border-t border-border-subtle pt-4">
+                     <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2.5">
                         Your Tournament Wagers ({userWagers.length})
                      </h4>
                      <div className="space-y-2">
                         {userWagers.map((w) => (
                            <div
                               key={w.id}
-                              className="flex items-center justify-between rounded-lg border border-obsidian-border bg-obsidian-elevated/50 p-2.5 text-xs"
+                              className="flex items-center justify-between rounded-lg border border-border-default bg-surface-elevated/50 p-2.5 text-xs"
                            >
                               <div>
-                                 <span className="font-semibold text-obsidian-text">
+                                 <span className="font-semibold text-text-primary">
                                     {w.team?.name ||
                                        w.targetTeam?.name ||
                                        "Team"}
                                  </span>
-                                 <p className="text-[11px] text-obsidian-textDim">
+                                 <p className="text-meta text-text-tertiary">
                                     Stake: {w.stake} coins → Payout:{" "}
                                     {w.payout ??
                                        w.potentialPayout ??
@@ -285,14 +285,14 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                                  </p>
                               </div>
                               <span
-                                 className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                                 className={`rounded px-2 py-0.5 text-label font-semibold uppercase ${
                                     w.status === "ACCEPTED"
-                                       ? "bg-economy-gold/20 text-economy-goldLight"
+                                       ? "bg-brand-1/20 text-brand-1-light"
                                        : w.status === "WON"
-                                         ? "bg-economy-credit/20 text-economy-credit"
+                                         ? "bg-feedback-success/20 text-feedback-success"
                                          : w.status === "LOST"
                                            ? "bg-destructive/20 text-destructive"
-                                           : "bg-economy-refund/20 text-economy-refund"
+                                           : "bg-feedback-info/20 text-feedback-info"
                                  }`}
                               >
                                  {w.status === "ACCEPTED"

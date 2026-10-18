@@ -1,7 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement, type ReactElement } from "react";
+import { cleanup, render } from "@testing-library/react";
 import { AdminHoursOverrideModal } from "./admin-hours-override-modal";
+
+afterEach(cleanup);
+
+function renderToHtml(el: ReactElement): string {
+   const { container } = render(el);
+   return document.body.innerHTML.replace(container.outerHTML, "");
+}
 
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
@@ -27,7 +35,7 @@ describe("AdminHoursOverrideModal", () => {
    };
 
    it("returns null when isOpen is false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: false,
             onClose: vi.fn(),
@@ -41,7 +49,7 @@ describe("AdminHoursOverrideModal", () => {
    });
 
    it("renders participant details, all 7 challenge week days, and audit notice", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -73,7 +81,7 @@ describe("AdminHoursOverrideModal", () => {
 
    it("pre-populates inputs for initialDayNumber when existing logs are present", () => {
       // Day 1 has 7200 seconds = 2h 0m 0s
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -93,7 +101,7 @@ describe("AdminHoursOverrideModal", () => {
 
    it("pre-populates Day 2 hours when initialDayNumber is 2", () => {
       // Day 2 has 14400 seconds = 4h 0m 0s
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -111,7 +119,7 @@ describe("AdminHoursOverrideModal", () => {
    });
 
    it("enables all 7 day buttons for mods/devs without disabled attribute on past days", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -130,7 +138,7 @@ describe("AdminHoursOverrideModal", () => {
    });
 
    it("disables future day buttons in the 7-day selector with disabled attribute and Locked status", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -151,7 +159,7 @@ describe("AdminHoursOverrideModal", () => {
 
    it("disables input fields and displays warning banner when all challenge days are in the future", () => {
       const futureDate = "2099-01-01";
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -170,7 +178,7 @@ describe("AdminHoursOverrideModal", () => {
    });
 
    it("does NOT render arbitrary overall reset controls", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -188,7 +196,7 @@ describe("AdminHoursOverrideModal", () => {
 
    it("shows warning and disables inputs when no study session exists for selected day", () => {
       // Participant with no logs on Day 3 (2026-10-03)
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),

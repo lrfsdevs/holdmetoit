@@ -5,6 +5,7 @@ import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    Select,
    SelectContent,
@@ -113,28 +114,21 @@ export function FlagEditorModal({
    };
 
    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in-0 duration-150">
-         <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="flag-editor-title"
-            className="w-full max-w-lg rounded-2xl border border-[#2e2e2e] bg-[#161616] p-6 shadow-2xl relative text-[#f4f3f6]"
-         >
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
+      >
+         <DialogContent className="max-w-lg rounded-2xl border-border-strong bg-surface-primary p-6 text-text-primary">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
-               <h2
+            <div className="flex items-center justify-between pb-4 border-b border-border-default">
+               <DialogTitle
                   id="flag-editor-title"
-                  className="text-xl font-semibold font-display leading-tight tracking-tight text-[#f4f3f6]"
+                  className="text-xl font-semibold font-display leading-tight tracking-tight text-text-primary"
                >
                   {isEditing ? "Edit Feature Flag" : "Create Feature Flag"}
-               </h2>
-               <button
-                  onClick={onClose}
-                  aria-label="Close dialog"
-                  className="rounded-lg p-1 text-[#868686] hover:bg-[#262626] hover:text-white transition-colors active:scale-[0.96]"
-               >
-                  <X className="h-5 w-5" />
-               </button>
+               </DialogTitle>
             </div>
 
             {/* Error message */}
@@ -148,7 +142,7 @@ export function FlagEditorModal({
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
                      Flag Key {isEditing && "(Immutable)"}
                   </label>
                   <Input
@@ -156,13 +150,13 @@ export function FlagEditorModal({
                      onChange={(e) => setKey(e.target.value)}
                      disabled={isEditing}
                      placeholder="e.g. voice_study_logging"
-                     className={`text-xs rounded-xl bg-[#111111] border-[#292929] ${
+                     className={`text-xs rounded-xl bg-surface-primary border-border-default ${
                         isEditing
-                           ? "text-[#868686] cursor-not-allowed opacity-80"
-                           : "text-[#f4f3f6]"
+                           ? "text-text-tertiary cursor-not-allowed opacity-80"
+                           : "text-text-primary"
                      }`}
                   />
-                  <p className="mt-1 text-[11px] text-[#868686]">
+                  <p className="mt-1 text-meta text-text-tertiary">
                      {isEditing
                         ? "Flag keys are immutable to protect code contracts in production."
                         : "Unique identifier referenced in codebase (snake_case recommended)."}
@@ -170,19 +164,19 @@ export function FlagEditorModal({
                </div>
 
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
                      Display Name
                   </label>
                   <Input
                      value={name}
                      onChange={(e) => setName(e.target.value)}
                      placeholder="e.g. Voice Study Hours Input"
-                     className="rounded-xl bg-[#111111] border-[#292929] text-[#f4f3f6] text-sm"
+                     className="rounded-xl bg-surface-primary border-border-default text-text-primary text-sm"
                   />
                </div>
 
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
                      Description
                   </label>
                   <Textarea
@@ -190,23 +184,23 @@ export function FlagEditorModal({
                      onChange={(e) => setDescription(e.target.value)}
                      placeholder="Explain what this feature controls and rollout intentions..."
                      rows={3}
-                     className="rounded-xl bg-[#111111] border-[#292929] p-3 text-xs text-[#f4f3f6] placeholder:text-[#666666] focus:border-emerald-500/50 focus:bg-[#111111]"
+                     className="rounded-xl bg-surface-primary border-border-default p-3 text-xs text-text-primary placeholder:text-text-tertiary focus:border-emerald-500/50 focus:bg-surface-primary"
                   />
                </div>
 
                {!isEditing && (
                   <div className="grid grid-cols-2 gap-3 pt-2">
                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
                            Initial Master Switch
                         </label>
                         <button
                            type="button"
                            onClick={() => setIsEnabled(!isEnabled)}
-                           className={`w-full rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#868686] focus-visible:ring-offset-0 ${
+                           className={`w-full rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong focus-visible:ring-offset-0 ${
                               isEnabled
                                  ? "border-emerald-600 bg-emerald-950/40 text-emerald-400"
-                                 : "border-[#333333] bg-[#1a1a1a] text-[#868686]"
+                                 : "border-border-strong bg-surface-tertiary text-text-tertiary"
                            }`}
                         >
                            {isEnabled ? "ON (Active)" : "OFF (Safe Initial)"}
@@ -214,7 +208,7 @@ export function FlagEditorModal({
                      </div>
 
                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#868686] mb-1.5">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
                            Initial Mode
                         </label>
                         <Select
@@ -223,7 +217,7 @@ export function FlagEditorModal({
                               setRolloutMode(v as RolloutModeType)
                            }
                         >
-                           <SelectTrigger className="h-9 rounded-xl border-[#292929] bg-[#111111] text-xs text-[#f4f3f6]">
+                           <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-primary text-xs text-text-primary">
                               <SelectValue placeholder="Disabled" />
                            </SelectTrigger>
                            <SelectContent>
@@ -237,13 +231,13 @@ export function FlagEditorModal({
                )}
 
                {/* Footer actions */}
-               <div className="mt-6 pt-4 border-t border-[#262626] flex items-center justify-end gap-2.5">
+               <div className="mt-6 pt-4 border-t border-border-default flex items-center justify-end gap-2.5">
                   <Button
                      type="button"
                      variant="ghost"
                      onClick={onClose}
                      disabled={isSubmitting}
-                     className="text-[#868686] hover:text-white rounded-xl text-xs active:scale-[0.96]"
+                     className="text-text-tertiary hover:text-white rounded-xl text-xs active:scale-[0.96]"
                   >
                      Cancel
                   </Button>
@@ -260,7 +254,7 @@ export function FlagEditorModal({
                   </Button>
                </div>
             </form>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

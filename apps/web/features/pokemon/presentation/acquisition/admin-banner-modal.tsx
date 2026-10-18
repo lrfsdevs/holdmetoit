@@ -11,6 +11,7 @@ import { BannerStatus } from "../../domain/acquisition/banner-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    Select,
    SelectContent,
@@ -167,36 +168,29 @@ export function AdminBannerModal({
    if (!isOpen) return null;
 
    return (
-      <div
-         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
-         role="dialog"
-         aria-modal="true"
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
       >
-         <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-3xl border border-obsidian-border bg-gradient-to-b from-obsidian-elevated to-obsidian-bg p-5 sm:p-6 shadow-2xl text-white">
+         <DialogContent className="max-w-2xl flex flex-col rounded-3xl border border-border-default bg-gradient-to-b from-surface-elevated to-surface-page text-white">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-obsidian-borderSubtle">
+            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
                <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
                      <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                     <h3 className="text-base font-bold text-white">
+                     <DialogTitle className="text-base font-bold text-white">
                         Banner Management Console
-                     </h3>
-                     <p className="text-xs text-obsidian-textDim">
+                     </DialogTitle>
+                     <p className="text-xs text-text-tertiary">
                         Host / Developer authority for summon banner
                         configuration
                      </p>
                   </div>
                </div>
-
-               <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-2 rounded-xl bg-obsidian-cardSubtle text-obsidian-textMuted hover:text-white hover:bg-obsidian-border transition-colors"
-               >
-                  <X className="w-4 h-4" />
-               </button>
             </div>
 
             {/* Feedback alerts */}
@@ -219,7 +213,7 @@ export function AdminBannerModal({
                {!showCreateForm ? (
                   <div className="space-y-3">
                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-obsidian-textDim">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            All Configured Banners ({banners.length})
                         </span>
                         <Button
@@ -235,7 +229,7 @@ export function AdminBannerModal({
                      </div>
 
                      {banners.length === 0 && !isLoading ? (
-                        <div className="py-8 text-center text-xs text-obsidian-textDim border border-dashed border-obsidian-border rounded-2xl">
+                        <div className="py-8 text-center text-xs text-text-tertiary border border-dashed border-border-default rounded-2xl">
                            No banners configured yet. Create a new draft banner
                            to begin.
                         </div>
@@ -243,7 +237,7 @@ export function AdminBannerModal({
                         banners.map((b) => (
                            <div
                               key={b.id}
-                              className="p-3.5 rounded-2xl bg-obsidian-card border border-obsidian-border flex items-center justify-between gap-3 text-xs"
+                              className="p-3.5 rounded-2xl bg-surface-primary border border-border-default flex items-center justify-between gap-3 text-xs"
                            >
                               <div className="space-y-1 min-w-0">
                                  <div className="flex items-center gap-2">
@@ -251,16 +245,16 @@ export function AdminBannerModal({
                                        {b.name}
                                     </span>
                                     <span
-                                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                       className={`px-2 py-0.5 rounded-full text-label font-bold uppercase ${
                                           b.status === "ACTIVE"
                                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                                             : "bg-obsidian-elevated text-obsidian-textDim border border-obsidian-border"
+                                             : "bg-surface-elevated text-text-tertiary border border-border-default"
                                        }`}
                                     >
                                        {b.status}
                                     </span>
                                  </div>
-                                 <p className="text-[11px] text-obsidian-textDim truncate">
+                                 <p className="text-meta text-text-tertiary truncate">
                                     Slug: {b.slug} • Pull Cost: {b.pullCost}c •
                                     Pity: {b.pityConfig?.hardPityThreshold ?? 0}
                                  </p>
@@ -298,7 +292,7 @@ export function AdminBannerModal({
                ) : (
                   /* Create Banner Form */
                   <form onSubmit={handleCreate} className="space-y-4">
-                     <div className="flex items-center justify-between pb-2 border-b border-obsidian-borderSubtle">
+                     <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
                         <h4 className="text-sm font-bold text-white">
                            Create New Banner Configuration
                         </h4>
@@ -307,7 +301,7 @@ export function AdminBannerModal({
                            variant="ghost"
                            size="sm"
                            onClick={() => setShowCreateForm(false)}
-                           className="text-xs text-obsidian-textDim"
+                           className="text-xs text-text-tertiary"
                         >
                            Cancel
                         </Button>
@@ -315,7 +309,7 @@ export function AdminBannerModal({
 
                      <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                           <label className="block text-obsidian-textDim mb-1 font-medium">
+                           <label className="block text-text-tertiary mb-1 font-medium">
                               Banner Name
                            </label>
                            <Input
@@ -331,11 +325,11 @@ export function AdminBannerModal({
                                     );
                               }}
                               placeholder="e.g. Kanto Legends"
-                              className="bg-obsidian-elevated text-white border-obsidian-border h-9"
+                              className="bg-surface-elevated text-white border-border-default h-9"
                            />
                         </div>
                         <div>
-                           <label className="block text-obsidian-textDim mb-1 font-medium">
+                           <label className="block text-text-tertiary mb-1 font-medium">
                               Slug (URL)
                            </label>
                            <Input
@@ -349,13 +343,13 @@ export function AdminBannerModal({
                                  )
                               }
                               placeholder="kanto-legends"
-                              className="bg-obsidian-elevated text-white border-obsidian-border h-9 font-mono"
+                              className="bg-surface-elevated text-white border-border-default h-9 font-mono"
                            />
                         </div>
                      </div>
 
                      <div>
-                        <label className="block text-obsidian-textDim mb-1 font-medium text-xs">
+                        <label className="block text-text-tertiary mb-1 font-medium text-xs">
                            Description
                         </label>
                         <Textarea
@@ -364,13 +358,13 @@ export function AdminBannerModal({
                            value={description}
                            onChange={(e) => setDescription(e.target.value)}
                            placeholder="Summon description and companion highlights..."
-                           className="rounded-xl border-obsidian-border bg-obsidian-elevated p-2 text-xs text-white placeholder:text-obsidian-textDim focus:bg-obsidian-elevated"
+                           className="rounded-xl border-border-default bg-surface-elevated p-2 text-xs text-white placeholder:text-text-tertiary focus:bg-surface-elevated"
                         />
                      </div>
 
                      <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
-                           <label className="block text-obsidian-textDim mb-1 font-medium">
+                           <label className="block text-text-tertiary mb-1 font-medium">
                               Pull Cost (Coins)
                            </label>
                            <Input
@@ -380,11 +374,11 @@ export function AdminBannerModal({
                               onChange={(e) =>
                                  setPullCost(parseInt(e.target.value) || 0)
                               }
-                              className="bg-obsidian-elevated text-white border-obsidian-border h-9"
+                              className="bg-surface-elevated text-white border-border-default h-9"
                            />
                         </div>
                         <div>
-                           <label className="block text-obsidian-textDim mb-1 font-medium">
+                           <label className="block text-text-tertiary mb-1 font-medium">
                               Hard Pity Pulls
                            </label>
                            <Input
@@ -394,18 +388,18 @@ export function AdminBannerModal({
                               onChange={(e) =>
                                  setHardPity(parseInt(e.target.value) || 0)
                               }
-                              className="bg-obsidian-elevated text-white border-obsidian-border h-9"
+                              className="bg-surface-elevated text-white border-border-default h-9"
                            />
                         </div>
                         <div>
-                           <label className="block text-obsidian-textDim mb-1 font-medium">
+                           <label className="block text-text-tertiary mb-1 font-medium">
                               Pity Target Rarity
                            </label>
                            <Select
                               value={targetRarity}
                               onValueChange={setTargetRarity}
                            >
-                              <SelectTrigger className="h-9 rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white">
+                              <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-elevated text-xs text-white">
                                  <SelectValue placeholder="LEGENDARY" />
                               </SelectTrigger>
                               <SelectContent>
@@ -423,7 +417,7 @@ export function AdminBannerModal({
                      </div>
 
                      {/* Rarity Rates in Basis Points */}
-                     <div className="p-3 rounded-2xl bg-obsidian-cardSubtle border border-obsidian-border space-y-2 text-xs">
+                     <div className="p-3 rounded-2xl bg-surface-secondary border border-border-default space-y-2 text-xs">
                         <div className="flex items-center justify-between font-semibold">
                            <span>
                               Rarity Probability Table (Basis Points: 100 bp =
@@ -440,9 +434,9 @@ export function AdminBannerModal({
                            </span>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+                        <div className="grid grid-cols-3 gap-2 pt-1 text-meta">
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Normal ({(normalRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -451,11 +445,11 @@ export function AdminBannerModal({
                                  onChange={(e) =>
                                     setNormalRate(parseInt(e.target.value) || 0)
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Uncommon ({(uncommonRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -466,11 +460,11 @@ export function AdminBannerModal({
                                        parseInt(e.target.value) || 0
                                     )
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Rare ({(rareRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -479,11 +473,11 @@ export function AdminBannerModal({
                                  onChange={(e) =>
                                     setRareRate(parseInt(e.target.value) || 0)
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Epic ({(epicRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -492,11 +486,11 @@ export function AdminBannerModal({
                                  onChange={(e) =>
                                     setEpicRate(parseInt(e.target.value) || 0)
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Legendary ({(legendaryRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -507,11 +501,11 @@ export function AdminBannerModal({
                                        parseInt(e.target.value) || 0
                                     )
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                            <div>
-                              <label className="text-obsidian-textDim">
+                              <label className="text-text-tertiary">
                                  Mythical ({(mythicalRate / 100).toFixed(1)}%)
                               </label>
                               <Input
@@ -522,7 +516,7 @@ export function AdminBannerModal({
                                        parseInt(e.target.value) || 0
                                     )
                                  }
-                                 className="bg-obsidian-elevated text-white h-7 text-xs"
+                                 className="bg-surface-elevated text-white h-7 text-xs"
                               />
                            </div>
                         </div>
@@ -549,7 +543,7 @@ export function AdminBannerModal({
                   </form>
                )}
             </div>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

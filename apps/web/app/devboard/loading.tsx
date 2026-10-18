@@ -6,10 +6,10 @@ export default function DevBoardLoading() {
          <div className="space-y-4">
             <div className="flex items-center justify-between">
                <div className="space-y-2">
-                  <div className="h-8 w-44 rounded-xl bg-[#1c1c1c]" />
-                  <div className="h-4 w-72 rounded-lg bg-[#181818]" />
+                  <div className="h-8 w-44 rounded-xl bg-surface-elevated" />
+                  <div className="h-4 w-72 rounded-lg bg-surface-secondary" />
                </div>
-               <div className="h-10 w-40 rounded-xl bg-[#1c1c1c]" />
+               <div className="h-10 w-40 rounded-xl bg-surface-elevated" />
             </div>
 
             {/* Metric cards */}
@@ -17,13 +17,13 @@ export default function DevBoardLoading() {
                {[1, 2, 3, 4].map((i) => (
                   <div
                      key={i}
-                     className="h-20 rounded-xl border border-[#222222] bg-[#141414] p-4"
+                     className="h-20 rounded-xl border border-border-subtle bg-surface-primary p-4"
                   />
                ))}
             </div>
 
             {/* Search bar */}
-            <div className="h-10 rounded-xl bg-[#141414] border border-[#222222]" />
+            <div className="h-10 rounded-xl bg-surface-primary border border-border-subtle" />
          </div>
 
          {/* Cards Skeleton */}
@@ -31,7 +31,7 @@ export default function DevBoardLoading() {
             {[1, 2, 3].map((i) => (
                <div
                   key={i}
-                  className="h-36 rounded-xl border border-[#222222] bg-[#141414] p-5"
+                  className="h-36 rounded-xl border border-border-subtle bg-surface-primary p-5"
                />
             ))}
          </div>

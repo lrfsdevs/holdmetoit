@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -430,33 +431,31 @@ export function AdminHoursOverrideModal({
    };
 
    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-         <div className="w-full max-w-lg rounded-3xl border border-[#383838] bg-[#141414] p-6 sm:p-7 shadow-2xl space-y-6">
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
+      >
+         <DialogContent className="max-w-lg rounded-3xl border-border-strong bg-surface-primary p-6 sm:p-7 space-y-6">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#3b82f6]/20 text-[#60a5fa] border border-[#3b82f6]/30">
+                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-label font-bold uppercase tracking-wider bg-feedback-info/20 text-feedback-info border border-feedback-info/30">
                         Session Correction
                      </span>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
+                  <DialogTitle className="text-lg sm:text-xl font-bold text-white">
                      Correct Participant Study Session
-                  </h3>
+                  </DialogTitle>
                </div>
-               <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-[#868686] hover:text-white transition-colors p-1 rounded-lg hover:bg-[#292929]"
-               >
-                  <X className="h-5 w-5" />
-               </button>
             </div>
 
             {/* Participant Identification Card */}
-            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#1c1c1c] border border-[#2e2e2e]">
+            <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-surface-elevated border border-border-strong">
                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-full bg-[#292929] border border-[#434343] overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0">
                      {participant.image ? (
                         <Image
                            src={participant.image}
@@ -467,14 +466,14 @@ export function AdminHoursOverrideModal({
                            unoptimized
                         />
                      ) : (
-                        <UserIcon className="h-5 w-5 text-[#868686]" />
+                        <UserIcon className="h-5 w-5 text-text-tertiary" />
                      )}
                   </div>
                   <div className="min-w-0">
                      <p className="text-sm font-bold text-white truncate">
                         {participant.displayName}
                      </p>
-                     <p className="text-xs text-[#868686] truncate">
+                     <p className="text-xs text-text-tertiary truncate">
                         @{participant.username || "scholar"}
                      </p>
                   </div>
@@ -482,7 +481,7 @@ export function AdminHoursOverrideModal({
                <div className="flex items-center gap-2 shrink-0">
                   {participant.teamName && (
                      <span
-                        className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0"
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-meta font-semibold border shrink-0"
                         style={getTeamBadgeStyle(participant.teamColor)}
                      >
                         {participant.teamName}
@@ -495,10 +494,10 @@ export function AdminHoursOverrideModal({
                            onClose();
                            onOpenTargetOverride();
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#2a1b3d] hover:bg-[#3b2456] border border-[#a855f7]/40 text-[11px] font-semibold text-[#c084fc] hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-accent-bg hover:bg-accent-bg border border-accent/40 text-meta font-semibold text-accent-text hover:text-white transition-colors"
                         title="Switch to editing weekly target hours"
                      >
-                        <Target className="h-3 w-3 text-[#c084fc]" />
+                        <Target className="h-3 w-3 text-accent-text" />
                         <span>Edit Target</span>
                      </button>
                   )}
@@ -507,9 +506,9 @@ export function AdminHoursOverrideModal({
 
             {/* 7-Day Week Selector (Full Week D1..D7) */}
             <div className="space-y-2">
-               <div className="flex items-center justify-between text-xs font-semibold text-[#868686]">
+               <div className="flex items-center justify-between text-xs font-semibold text-text-tertiary">
                   <span>Select Challenge Day (Full Week D1–D7)</span>
-                  <span className="text-[#d1d1d1] font-sans-tabular">
+                  <span className="text-text-secondary font-sans-tabular">
                      {selectedDayOption.dateKey}
                   </span>
                </div>
@@ -531,8 +530,8 @@ export function AdminHoursOverrideModal({
                               isSelected
                                  ? "bg-white text-black font-bold shadow-md ring-2 ring-white/20"
                                  : isFuture
-                                   ? "bg-[#1c1c1c]/40 text-[#545454] cursor-not-allowed border border-transparent opacity-50"
-                                   : "bg-[#1c1c1c] text-[#d1d1d1] hover:bg-[#292929] hover:text-white border border-[#2e2e2e]"
+                                   ? "bg-surface-elevated/40 text-text-tertiary cursor-not-allowed border border-transparent opacity-50"
+                                   : "bg-surface-elevated text-text-secondary hover:bg-surface-nested hover:text-white border border-border-strong"
                            }`}
                            title={
                               isFuture
@@ -540,21 +539,21 @@ export function AdminHoursOverrideModal({
                                  : `${opt.label} (${opt.dateKey}) - ${formatSecondsToClock(loggedSec)} logged`
                            }
                         >
-                           <span className="text-[10px] uppercase tracking-wider opacity-75 leading-none">
+                           <span className="text-label uppercase tracking-wider opacity-75 leading-none">
                               {opt.weekday}
                            </span>
                            <span className="text-xs font-semibold mt-1 leading-none">
                               D{opt.dayNumber}
                            </span>
                            <span
-                              className={`text-[9px] mt-1 font-mono leading-none ${
+                              className={`text-caption mt-1 font-mono leading-none ${
                                  isSelected
                                     ? "text-black font-semibold"
                                     : isFuture
-                                      ? "text-[#404040]"
+                                      ? "text-text-tertiary"
                                       : hasHours
-                                        ? "text-[#4ade80]"
-                                        : "text-[#666666]"
+                                        ? "text-feedback-success"
+                                        : "text-text-tertiary"
                               }`}
                            >
                               {isFuture
@@ -568,7 +567,7 @@ export function AdminHoursOverrideModal({
                   })}
                </div>
 
-               <div className="flex items-center justify-between text-[11px] text-[#868686] px-1 pt-0.5">
+               <div className="flex items-center justify-between text-meta text-text-tertiary px-1 pt-0.5">
                   <span>
                      Currently Logged on {selectedDayOption.shortLabel}:
                   </span>
@@ -580,7 +579,7 @@ export function AdminHoursOverrideModal({
 
             {/* Ineligible day notice: No existing study session record */}
             {!hasExistingSession && !selectedDayOption.isFuture && (
-               <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-medium bg-[#382b10]/40 border border-[#eab308]/40 text-[#facc15]">
+               <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-medium bg-brand-1/15/40 border border-brand-1/40 text-brand-1">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <span>
                      No study session recorded on {selectedDayOption.shortLabel}{" "}
@@ -593,7 +592,7 @@ export function AdminHoursOverrideModal({
 
             {/* Future date lock warning */}
             {selectedDayOption.isFuture && (
-               <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-medium bg-[#450a0a]/40 border border-[#ef4444]/40 text-[#f87171]">
+               <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-medium bg-feedback-error-bg/40 border border-feedback-error/40 text-feedback-error-text">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <span>
                      Future date ({selectedDayOption.dateKey}): moderators
@@ -606,12 +605,12 @@ export function AdminHoursOverrideModal({
             <form onSubmit={handleSubmit} className="space-y-5">
                {/* Time Inputs */}
                <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-[#a3a3a3]">
+                  <label className="block text-xs font-semibold text-text-tertiary">
                      Corrected Study Duration (HH:MM:SS)
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                      <div>
-                        <span className="block text-[11px] text-[#868686] mb-1">
+                        <span className="block text-meta text-text-tertiary mb-1">
                            Hours (0–24)
                         </span>
                         <Input
@@ -626,11 +625,11 @@ export function AdminHoursOverrideModal({
                               !hasExistingSession
                            }
                            onChange={(e) => setHours(e.target.value)}
-                           className="h-11 rounded-xl bg-[#222222] border-[#383838] focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
+                           className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
                      <div>
-                        <span className="block text-[11px] text-[#868686] mb-1">
+                        <span className="block text-meta text-text-tertiary mb-1">
                            Minutes (0–59)
                         </span>
                         <Input
@@ -645,11 +644,11 @@ export function AdminHoursOverrideModal({
                               !hasExistingSession
                            }
                            onChange={(e) => setMinutes(e.target.value)}
-                           className="h-11 rounded-xl bg-[#222222] border-[#383838] focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
+                           className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
                      <div>
-                        <span className="block text-[11px] text-[#868686] mb-1">
+                        <span className="block text-meta text-text-tertiary mb-1">
                            Seconds (0–59)
                         </span>
                         <Input
@@ -664,7 +663,7 @@ export function AdminHoursOverrideModal({
                               !hasExistingSession
                            }
                            onChange={(e) => setSeconds(e.target.value)}
-                           className="h-11 rounded-xl bg-[#222222] border-[#383838] focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
+                           className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
                   </div>
@@ -679,7 +678,7 @@ export function AdminHoursOverrideModal({
                            selectedDayOption.isFuture ||
                            !hasExistingSession
                         }
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#222222] hover:bg-[#2e2e2e] text-[#ef4444] hover:text-[#f87171] border border-[#383838] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-meta font-semibold bg-surface-elevated hover:bg-surface-nested text-feedback-error hover:text-feedback-error-text border border-border-strong transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                      >
                         <RotateCcw className="h-3 w-3" />
                         Clear Time
@@ -689,7 +688,7 @@ export function AdminHoursOverrideModal({
 
                {/* Mandatory Audit Reason */}
                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#a3a3a3]">
+                  <label className="block text-xs font-semibold text-text-tertiary">
                      Mandatory Technical Correction Reason{" "}
                      <span className="text-red-400">*</span>
                   </label>
@@ -703,10 +702,10 @@ export function AdminHoursOverrideModal({
                         !hasExistingSession
                      }
                      onChange={(e) => setReason(e.target.value)}
-                     className="h-11 rounded-xl bg-[#222222] border-[#383838] focus:border-white text-white text-xs px-3.5 disabled:opacity-40"
+                     className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-xs px-3.5 disabled:opacity-40"
                   />
-                  <p className="text-[11px] text-[#868686] flex items-center gap-1.5 pt-0.5">
-                     <ShieldAlert className="h-3.5 w-3.5 text-[#3b82f6] shrink-0" />
+                  <p className="text-meta text-text-tertiary flex items-center gap-1.5 pt-0.5">
+                     <ShieldAlert className="h-3.5 w-3.5 text-feedback-info shrink-0" />
                      <span>
                         Permanent audit log: recorded with your moderator ID and
                         reason.
@@ -719,8 +718,8 @@ export function AdminHoursOverrideModal({
                   <div
                      className={`flex items-center gap-2.5 p-3 rounded-xl text-xs font-medium border ${
                         feedback.type === "success"
-                           ? "bg-[#144520]/40 border-[#22c55e]/40 text-[#4ade80]"
-                           : "bg-[#450a0a]/40 border-[#ef4444]/40 text-[#f87171]"
+                           ? "bg-feedback-success-bg/40 border-feedback-success/40 text-feedback-success"
+                           : "bg-feedback-error-bg/40 border-feedback-error/40 text-feedback-error-text"
                      }`}
                   >
                      {feedback.type === "success" ? (
@@ -739,7 +738,7 @@ export function AdminHoursOverrideModal({
                      variant="outline"
                      onClick={onClose}
                      disabled={isPending}
-                     className="h-10 px-5 rounded-xl border-[#383838] bg-[#1c1c1c] text-white hover:bg-[#292929] text-xs font-semibold"
+                     className="h-10 px-5 rounded-xl border-border-strong bg-surface-elevated text-white hover:bg-surface-nested text-xs font-semibold"
                   >
                      Cancel
                   </Button>
@@ -751,7 +750,7 @@ export function AdminHoursOverrideModal({
                         !hasExistingSession ||
                         reason.trim().length < 10
                      }
-                     className="h-10 px-5 rounded-xl bg-white text-black hover:bg-[#e0e0e0] text-xs font-bold gap-2 shadow-sm disabled:opacity-50"
+                     className="h-10 px-5 rounded-xl bg-white text-black hover:bg-white/90 text-xs font-bold gap-2 shadow-sm disabled:opacity-50"
                   >
                      {isPending && (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -760,7 +759,7 @@ export function AdminHoursOverrideModal({
                   </Button>
                </div>
             </form>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

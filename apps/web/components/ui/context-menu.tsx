@@ -27,7 +27,7 @@ const ContextMenuSubTrigger = React.forwardRef<
    <ContextMenuPrimitive.SubTrigger
       ref={ref}
       className={cn(
-         "flex cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#d1d1d1] outline-none transition-colors focus:bg-[#333333] focus:text-[#ffffff] data-[state=open]:bg-[#333333] data-[state=open]:text-[#ffffff] [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
+         "flex cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-secondary outline-none transition-colors focus:bg-surface-nested focus:text-white data-[state=open]:bg-surface-nested data-[state=open]:text-white [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
          inset && "pl-8",
          className
       )}
@@ -46,7 +46,7 @@ const ContextMenuSubContent = React.forwardRef<
    <ContextMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-         "z-50 min-w-[8rem] overflow-hidden rounded-xl border border-[#383838] bg-[#222222] p-1.5 text-[#f4f3f6] shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
+         "z-50 min-w-32 overflow-hidden rounded-xl border border-border-strong bg-surface-elevated p-1.5 text-text-primary shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
          className
       )}
       {...props}
@@ -128,7 +128,7 @@ const ContextMenuContent = React.forwardRef<
             }}
             collisionPadding={8}
             className={cn(
-               "z-50 min-w-[170px] overflow-y-auto overflow-x-hidden rounded-xl border border-[#383838] bg-[#222222] p-1.5 text-[#f4f3f6] shadow-2xl",
+               "z-50 min-w-dropdown-min overflow-y-auto overflow-x-hidden rounded-xl border border-border-strong bg-surface-elevated p-1.5 text-text-primary shadow-2xl",
                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
                className
             )}
@@ -148,7 +148,7 @@ const ContextMenuItem = React.forwardRef<
    <ContextMenuPrimitive.Item
       ref={ref}
       className={cn(
-         "relative flex cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#d1d1d1] outline-none transition-colors focus:bg-[#333333] focus:text-[#ffffff] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-3.5 [&>svg]:shrink-0",
+         "relative flex cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-text-secondary outline-none transition-colors focus:bg-surface-nested focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-3.5 [&>svg]:shrink-0",
          inset && "pl-8",
          className
       )}
@@ -164,7 +164,7 @@ const ContextMenuCheckboxItem = React.forwardRef<
    <ContextMenuPrimitive.CheckboxItem
       ref={ref}
       className={cn(
-         "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-xs font-medium text-[#d1d1d1] outline-none transition-colors focus:bg-[#333333] focus:text-[#ffffff] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+         "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-xs font-medium text-text-secondary outline-none transition-colors focus:bg-surface-nested focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
          className
       )}
       checked={checked}
@@ -188,7 +188,7 @@ const ContextMenuRadioItem = React.forwardRef<
    <ContextMenuPrimitive.RadioItem
       ref={ref}
       className={cn(
-         "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-xs font-medium text-[#d1d1d1] outline-none transition-colors focus:bg-[#333333] focus:text-[#ffffff] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+         "relative flex cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-xs font-medium text-text-secondary outline-none transition-colors focus:bg-surface-nested focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
          className
       )}
       {...props}
@@ -212,7 +212,7 @@ const ContextMenuLabel = React.forwardRef<
    <ContextMenuPrimitive.Label
       ref={ref}
       className={cn(
-         "px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#777777]",
+         "px-3 py-1 text-label font-semibold uppercase tracking-wider text-text-tertiary",
          inset && "pl-8",
          className
       )}
@@ -227,7 +227,7 @@ const ContextMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
    <ContextMenuPrimitive.Separator
       ref={ref}
-      className={cn("-mx-1 my-1 h-px bg-[#333333]", className)}
+      className={cn("-mx-1 my-1 h-px bg-surface-nested", className)}
       {...props}
    />
 ));
@@ -240,7 +240,7 @@ const ContextMenuShortcut = ({
    return (
       <span
          className={cn(
-            "ml-auto text-xs tracking-widest text-[#777777]",
+            "ml-auto text-xs tracking-widest text-text-tertiary",
             className
          )}
          {...props}

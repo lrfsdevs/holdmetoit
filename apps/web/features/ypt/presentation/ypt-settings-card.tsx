@@ -4,6 +4,16 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
    CheckCircle2,
    AlertCircle,
    Clock,
@@ -63,6 +73,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
       type: "success" | "error";
       text: string;
    } | null>(null);
+   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
    const loadStatus = async () => {
       setIsLoadingStatus(true);
@@ -200,14 +211,12 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
    };
 
    // 4. Disconnect Handler
-   const handleDisconnect = async () => {
-      if (
-         !confirm(
-            "Are you sure you want to disconnect your Yeolpumta integration?"
-         )
-      ) {
-         return;
-      }
+   const handleDisconnect = () => {
+      setConfirmDisconnect(true);
+   };
+
+   const performDisconnect = async () => {
+      setConfirmDisconnect(false);
       try {
          await disconnectYptAccountAction();
          setActionMessage({
@@ -236,19 +245,19 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
    return (
       <div
-         className="rounded-2xl border border-obsidian-border bg-obsidian-card p-5 shadow-lg backdrop-blur-md"
+         className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-lg backdrop-blur-md"
          data-testid="ypt-settings-card"
       >
          {/* Card Header */}
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-obsidian-borderSubtle">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-border-subtle">
             <div>
-               <h3 className="text-sm font-semibold text-obsidian-text flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-economy-gold/10 text-economy-gold font-bold text-xs">
+               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-1/10 text-brand-1 font-bold text-xs">
                      Y
                   </span>
                   Yeolpumta (YPT) Study Integration
                </h3>
-               <p className="text-xs text-obsidian-textDim mt-1">
+               <p className="text-xs text-text-tertiary mt-1">
                   Connect your Yeolpumta ID for companion bot synchronization
                   and automated coin rewards.
                </p>
@@ -257,8 +266,8 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
             {/* Current Status Badge */}
             <div className="shrink-0">
                {isLoadingStatus ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-obsidian-textDim px-2.5 py-1 rounded-full bg-obsidian-elevated border border-obsidian-borderSubtle">
-                     <Loader2 className="h-3 w-3 animate-spin text-economy-gold" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary px-2.5 py-1 rounded-full bg-surface-elevated border border-border-subtle">
+                     <Loader2 className="h-3 w-3 animate-spin text-brand-1" />
                      Checking status...
                   </span>
                ) : isVerified ? (
@@ -309,7 +318,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                ) : (
                   <span
                      data-testid="ypt-unconnected-badge"
-                     className="inline-flex items-center gap-1.5 text-xs font-medium text-obsidian-textDim px-3 py-1 rounded-full bg-obsidian-elevated border border-obsidian-borderSubtle"
+                     className="inline-flex items-center gap-1.5 text-xs font-medium text-text-tertiary px-3 py-1 rounded-full bg-surface-elevated border border-border-subtle"
                   >
                      Not connected
                   </span>
@@ -350,7 +359,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                                     "Verified Participant"}
                               </span>
                               <span
-                                 className={`text-[11px] font-mono font-medium ${
+                                 className={`text-meta font-mono font-medium ${
                                     connection?.hasSavedSession
                                        ? "text-emerald-400"
                                        : "text-amber-400"
@@ -372,7 +381,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                            </p>
                            {connection?.lastSyncedAt &&
                               connection?.hasSavedSession && (
-                                 <p className="text-[11px] text-obsidian-textDim mt-1 flex items-center gap-1">
+                                 <p className="text-meta text-text-tertiary mt-1 flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
                                     Last synchronized:{" "}
                                     {new Date(
@@ -411,7 +420,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                                  variant="outline"
                                  size="sm"
                                  onClick={() => setIsConnectModalOpen(true)}
-                                 className="rounded-xl text-xs border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-white"
+                                 className="rounded-xl text-xs border-border-strong bg-surface-elevated text-text-secondary hover:text-white"
                               >
                                  Manage Connection
                               </Button>
@@ -441,7 +450,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                         }`}
                      >
                         {syncFeedback.type === "success" ? (
-                           <Sparkles className="h-4 w-4 shrink-0 text-economy-gold" />
+                           <Sparkles className="h-4 w-4 shrink-0 text-brand-1" />
                         ) : (
                            <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
                         )}
@@ -468,7 +477,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                         </p>
                         <div className="mt-2.5 rounded-lg border border-amber-500/20 bg-black/40 p-2.5 flex items-center justify-between text-xs">
                            <div>
-                              <span className="text-[10px] text-obsidian-textDim block">
+                              <span className="text-label text-text-tertiary block">
                                  Selected Identity
                               </span>
                               <strong className="text-white">
@@ -478,10 +487,10 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                               </strong>
                            </div>
                            <div className="text-right">
-                              <span className="text-[10px] text-obsidian-textDim block">
+                              <span className="text-label text-text-tertiary block">
                                  YPT ID
                               </span>
-                              <span className="font-mono font-bold text-economy-gold">
+                              <span className="font-mono font-bold text-brand-1">
                                  {connection?.activeClaim?.yptId ||
                                     connection?.yptUserId}
                               </span>
@@ -509,7 +518,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                               ? `: "${connection.activeClaim.rejectionReason}"`
                               : "."}
                         </p>
-                        <p className="text-xs text-obsidian-textDim mt-1">
+                        <p className="text-xs text-text-tertiary mt-1">
                            Please select your correct identity from the group
                            member list below.
                         </p>
@@ -527,7 +536,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                         <h4 className="text-xs font-bold text-white">
                            Session Reauthentication Required
                         </h4>
-                        <p className="text-[11px] text-amber-200/80">
+                        <p className="text-meta text-amber-200/80">
                            Your Yeolpumta session has expired. Re-authenticate
                            to resume study-hour synchronization.
                         </p>
@@ -547,14 +556,14 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
             {/* 5. STATE: NOT CONNECTED (Phase 3 Clean Interface) */}
             {!isVerified && !isPending && !isConnected && !isRejected && (
-               <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated/40 p-6 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-economy-gold/10 border border-economy-gold/20 text-economy-gold mb-3">
+               <div className="rounded-xl border border-border-subtle bg-surface-elevated/40 p-6 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-1/10 border border-brand-1/20 text-brand-1 mb-3">
                      <KeyRound className="h-6 w-6" />
                   </div>
                   <h4 className="text-sm font-bold text-white">
                      Connect Yeolpumta Account
                   </h4>
-                  <p className="text-xs text-obsidian-textDim max-w-md mx-auto mt-1.5">
+                  <p className="text-xs text-text-tertiary max-w-md mx-auto mt-1.5">
                      Connect your personal YPT account to automatically
                      synchronize verified study time with HoldMeToIt and earn
                      virtual coins.
@@ -577,7 +586,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                <div className="space-y-4 pt-2">
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5 flex items-center justify-between text-xs">
                      <div>
-                        <span className="text-[10px] text-blue-300/70 block">
+                        <span className="text-label text-blue-300/70 block">
                            Authenticated YPT Account
                         </span>
                         <strong className="text-white">
@@ -587,7 +596,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                            (ID: {connection?.yptUserId})
                         </span>
                      </div>
-                     <span className="text-[11px] text-blue-400 font-medium">
+                     <span className="text-meta text-blue-400 font-medium">
                         ✓ Connected via ypt-js
                      </span>
                   </div>
@@ -624,10 +633,10 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
             {/* 7. CONNECT MODAL / POPUP FORM */}
             {isConnectModalOpen && (
-               <div className="rounded-xl border border-economy-gold/30 bg-[#161616] p-4.5 mt-3 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-3 border-b border-obsidian-borderSubtle mb-3">
+               <div className="rounded-xl border border-brand-1/30 bg-surface-primary p-4.5 mt-3 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-3 border-b border-border-subtle mb-3">
                      <div className="flex items-center gap-2">
-                        <KeyRound className="h-4 w-4 text-economy-gold" />
+                        <KeyRound className="h-4 w-4 text-brand-1" />
                         <h4 className="text-xs font-bold text-white">
                            Connect to Yeolpumta (via ypt-js)
                         </h4>
@@ -635,7 +644,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                      <button
                         type="button"
                         onClick={() => setIsConnectModalOpen(false)}
-                        className="text-xs text-obsidian-textDim hover:text-white"
+                        className="text-xs text-text-tertiary hover:text-white"
                      >
                         ✕
                      </button>
@@ -643,7 +652,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
 
                   <form onSubmit={handleConnectAccount} className="space-y-3">
                      <div>
-                        <label className="text-[11px] font-semibold text-obsidian-textMuted block mb-1">
+                        <label className="text-meta font-semibold text-text-secondary block mb-1">
                            Yeolpumta Email
                         </label>
                         <Input
@@ -652,12 +661,12 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                            onChange={(e) => setEmail(e.target.value)}
                            placeholder="your-ypt-email@example.com"
                            required
-                           className="rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white placeholder:text-obsidian-textDim"
+                           className="rounded-xl border-border-default bg-surface-elevated text-xs text-white placeholder:text-text-tertiary"
                         />
                      </div>
 
                      <div>
-                        <label className="text-[11px] font-semibold text-obsidian-textMuted block mb-1">
+                        <label className="text-meta font-semibold text-text-secondary block mb-1">
                            Yeolpumta Password
                         </label>
                         <Input
@@ -666,11 +675,11 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                            onChange={(e) => setPassword(e.target.value)}
                            placeholder="••••••••"
                            required
-                           className="rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white placeholder:text-obsidian-textDim"
+                           className="rounded-xl border-border-default bg-surface-elevated text-xs text-white placeholder:text-text-tertiary"
                         />
                      </div>
 
-                     <div className="rounded-lg bg-obsidian-card/60 p-2 text-[10px] text-obsidian-textDim border border-obsidian-borderSubtle">
+                     <div className="rounded-lg bg-surface-primary/60 p-2 text-label text-text-tertiary border border-border-subtle">
                         🛡️ <strong>Security Guarantee:</strong> Your credentials
                         are processed securely on the server exclusively to
                         authenticate with Yeolpumta&apos;s official API and are
@@ -696,7 +705,7 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                               variant="outline"
                               size="sm"
                               onClick={() => setIsConnectModalOpen(false)}
-                              className="rounded-xl text-xs border-obsidian-borderHighlight"
+                              className="rounded-xl text-xs border-border-strong"
                            >
                               Cancel
                            </Button>
@@ -738,6 +747,29 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
                </div>
             )}
          </div>
+
+         <AlertDialog
+            open={confirmDisconnect}
+            onOpenChange={setConfirmDisconnect}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>
+                     Disconnect Yeolpumta account?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                     Your YPT link will be removed and automatic study
+                     synchronization will stop.
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void performDisconnect()}>
+                     Disconnect
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
       </div>
    );
 }

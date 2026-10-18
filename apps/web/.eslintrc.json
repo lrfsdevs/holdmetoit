@@ -1,3 +1,32 @@
 {
-   "extends": ["next/core-web-vitals", "prettier"]
+   "extends": ["next/core-web-vitals", "prettier"],
+   "rules": {
+      "no-restricted-syntax": [
+         "error",
+         {
+            "selector": "Literal[value=/\\b(?:bg|text|border|from|to|via|ring|shadow|fill|stroke|divide|outline|decoration|placeholder|caret|accent)-\\[#[0-9a-fA-F]{3,8}\\]/]",
+            "message": "Raw hex colour: use a semantic/component token (DESIGN.md §2)."
+         },
+         {
+            "selector": "JSXAttribute[name.name=/^(?:fill|stroke|color)$/] Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
+            "message": "Raw hex in an SVG/style attribute: use var(--color-*) or currentColor."
+         },
+         {
+            "selector": "Literal[value=/var\\(--primitive-/]",
+            "message": "Primitive tokens are private: use a semantic/component token."
+         },
+         {
+            "selector": "Literal[value=/\\bobsidian-[a-zA-Z0-9-]+/]",
+            "message": "Legacy obsidian-* token removed: use a semantic token."
+         },
+         {
+            "selector": "Literal[value=/\\btext-\\[[0-9.]+px\\]/]",
+            "message": "Arbitrary font size: use a typography token (text-meta, text-label, text-caption, text-body, text-display-*)."
+         },
+         {
+            "selector": "Literal[value=/(?:min-h|h|min-w|max-w)-\\[(?:44|50|74|170|200|240|400|620|840)px\\]/]",
+            "message": "Arbitrary size: use a sizing token (control-sm/md/lg, dropdown-min, artwork-*, panel-*)."
+         }
+      ]
+   }
 }

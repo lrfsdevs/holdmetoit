@@ -148,22 +148,22 @@ describe("ChallengeWrappedModal design token migration & responsive layout", () 
       // Scrim
       expect(markup).toContain("bg-black/80 backdrop-blur-md");
       // Mobile portrait + Desktop 16:9 card surface
-      expect(markup).toContain("max-w-[400px]");
-      expect(markup).toContain("md:max-w-[840px]");
+      expect(markup).toContain("max-w-panel-sm");
+      expect(markup).toContain("md:max-w-panel-lg");
       expect(markup).toContain("md:aspect-[16/9]");
       expect(markup).toContain(
-         "bg-[#141414] border border-[#292929] text-[#f4f3f6]"
+         "bg-surface-primary border border-border-default text-text-primary"
       );
       // Desktop 2-column grid
       expect(markup).toContain("md:grid md:grid-cols-2");
       // Header close button & step dots
-      expect(markup).toContain("bg-[#1c1c1c] text-[#868686]");
+      expect(markup).toContain("bg-surface-elevated text-text-tertiary");
       // Action button has whitespace-nowrap and sized arrow icon
       expect(markup).toContain("whitespace-nowrap");
       expect(markup).toContain("w-4 h-4 shrink-0");
-      expect(markup).toContain("bg-[#22c55e] text-[#0d0d0d]");
+      expect(markup).toContain("bg-feedback-success text-text-inverse");
       // No prototype styles or variables
-      expect(markup).not.toContain("var(--");
+      expect(markup).not.toContain("var(--hl-");
       expect(markup).not.toContain("grayscale");
       expect(markup).not.toContain("#e5e5e5");
       expect(markup).not.toContain("#d4d4d4");
@@ -183,11 +183,11 @@ describe("ChallengeWrappedModal design token migration & responsive layout", () 
       );
 
       // Emerald ring stroke
-      expect(markup).toContain('stroke="#22c55e"');
+      expect(markup).toContain('stroke="var(--color-feedback-success)"');
       // Dynamic saved stamp classes
-      expect(markup).toContain("border-[#22c55e]");
-      expect(markup).toContain("text-[#22c55e]");
-      expect(markup).toContain("bg-[#144520]/80");
+      expect(markup).toContain("border-feedback-success");
+      expect(markup).toContain("text-feedback-success");
+      expect(markup).toContain("bg-feedback-success-bg/80");
    });
 
    it("renders slide 3 verdict ring with Crimson tone when user is punished", () => {
@@ -206,11 +206,11 @@ describe("ChallengeWrappedModal design token migration & responsive layout", () 
       );
 
       // Crimson ring stroke
-      expect(markup).toContain('stroke="#ef4444"');
+      expect(markup).toContain('stroke="var(--color-feedback-error)"');
       // Dynamic punished stamp classes
-      expect(markup).toContain("border-[#ef4444]");
-      expect(markup).toContain("text-[#ef4444]");
-      expect(markup).toContain("bg-[#401010]/80");
+      expect(markup).toContain("border-feedback-error");
+      expect(markup).toContain("text-feedback-error");
+      expect(markup).toContain("bg-feedback-error-bg/80");
    });
 
    it("renders slide 3 verdict ring with Azure tone when user is excused", () => {
@@ -225,11 +225,11 @@ describe("ChallengeWrappedModal design token migration & responsive layout", () 
       );
 
       // Azure ring stroke
-      expect(markup).toContain('stroke="#3b82f6"');
+      expect(markup).toContain('stroke="var(--color-feedback-info)"');
       // Dynamic excused stamp classes
-      expect(markup).toContain("border-[#3b82f6]");
-      expect(markup).toContain("text-[#3b82f6]");
-      expect(markup).toContain("bg-[#102d40]/80");
+      expect(markup).toContain("border-feedback-info");
+      expect(markup).toContain("text-feedback-info");
+      expect(markup).toContain("bg-feedback-info-bg/80");
    });
 
    it("positions best day label to the left with text-anchor end when best day is on right side of chart", () => {

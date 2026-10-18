@@ -97,7 +97,7 @@ export function TrophyLeaderboardView({
          );
       }
       return (
-         <span className="font-mono text-xs font-bold text-obsidian-textDim">
+         <span className="font-mono text-xs font-bold text-text-tertiary">
             #{rank}
          </span>
       );
@@ -106,7 +106,7 @@ export function TrophyLeaderboardView({
    return (
       <div className="space-y-6 max-w-5xl mx-auto">
          {/* Hero Header */}
-         <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-6 sm:p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-6 sm:p-8 shadow-xl backdrop-blur-md relative overflow-hidden">
             <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-500/10 blur-3xl" />
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                <div>
@@ -117,7 +117,7 @@ export function TrophyLeaderboardView({
                   <h1 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-white">
                      Group Trophy Leaderboard
                   </h1>
-                  <p className="text-xs text-obsidian-textDim mt-1 max-w-xl">
+                  <p className="text-xs text-text-tertiary mt-1 max-w-xl">
                      Competitive standings and player ratings across HoldMeToIt.
                      Challenge victories yield +25 trophies, defeats incur -15
                      trophies.
@@ -143,18 +143,18 @@ export function TrophyLeaderboardView({
          {/* Filtering & Sorting Controls */}
          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-obsidian-textDim" />
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-tertiary" />
                <Input
                   type="text"
                   placeholder="Search participants by name or @username..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="rounded-xl border-obsidian-border bg-obsidian-elevated pl-8 text-xs text-white placeholder:text-obsidian-textDim"
+                  className="rounded-xl border-border-default bg-surface-elevated pl-8 text-xs text-white placeholder:text-text-tertiary"
                />
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-obsidian-elevated border border-obsidian-borderSubtle text-xs self-start sm:self-auto">
-               <span className="text-[11px] text-obsidian-textDim px-2 font-medium">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-surface-elevated border border-border-subtle text-xs self-start sm:self-auto">
+               <span className="text-meta text-text-tertiary px-2 font-medium">
                   Sort:
                </span>
                <button
@@ -162,8 +162,8 @@ export function TrophyLeaderboardView({
                   onClick={() => handleSelectSort("trophies")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "trophies"
-                        ? "bg-economy-gold text-black shadow-sm"
-                        : "text-obsidian-textMuted hover:text-white"
+                        ? "bg-brand-1 text-black shadow-sm"
+                        : "text-text-secondary hover:text-white"
                   }`}
                >
                   Trophies
@@ -173,8 +173,8 @@ export function TrophyLeaderboardView({
                   onClick={() => handleSelectSort("winRate")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "winRate"
-                        ? "bg-economy-gold text-black shadow-sm"
-                        : "text-obsidian-textMuted hover:text-white"
+                        ? "bg-brand-1 text-black shadow-sm"
+                        : "text-text-secondary hover:text-white"
                   }`}
                >
                   Win Rate
@@ -184,8 +184,8 @@ export function TrophyLeaderboardView({
                   onClick={() => handleSelectSort("wins")}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "wins"
-                        ? "bg-economy-gold text-black shadow-sm"
-                        : "text-obsidian-textMuted hover:text-white"
+                        ? "bg-brand-1 text-black shadow-sm"
+                        : "text-text-secondary hover:text-white"
                   }`}
                >
                   Total Wins
@@ -200,8 +200,8 @@ export function TrophyLeaderboardView({
                   }
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                      sortBy === "name"
-                        ? "bg-economy-gold text-black shadow-sm"
-                        : "text-obsidian-textMuted hover:text-white"
+                        ? "bg-brand-1 text-black shadow-sm"
+                        : "text-text-secondary hover:text-white"
                   }`}
                >
                   <ArrowUpDown className="h-3 w-3" />
@@ -211,10 +211,10 @@ export function TrophyLeaderboardView({
          </div>
 
          {/* Standings Table Card */}
-         <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-4 sm:p-6 shadow-xl overflow-hidden">
-            <div className="divide-y divide-obsidian-borderSubtle">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-4 sm:p-6 shadow-xl overflow-hidden">
+            <div className="divide-y divide-border-subtle">
                {paginated.items.length === 0 ? (
-                  <div className="py-16 text-center text-xs text-obsidian-textDim">
+                  <div className="py-16 text-center text-xs text-text-tertiary">
                      No competitive players found matching your search.
                   </div>
                ) : (
@@ -227,8 +227,8 @@ export function TrophyLeaderboardView({
                            key={entry.userId}
                            className={`py-3.5 px-3 flex items-center justify-between gap-3 text-xs rounded-2xl transition-colors ${
                               isSelf
-                                 ? "bg-economy-gold/10 border border-economy-gold/30"
-                                 : "hover:bg-obsidian-elevated/40"
+                                 ? "bg-brand-1/10 border border-brand-1/30"
+                                 : "hover:bg-surface-elevated/40"
                            }`}
                         >
                            {/* Left: Rank + Avatar + Name */}
@@ -237,7 +237,7 @@ export function TrophyLeaderboardView({
                                  {getTopRankDecor(displayRank)}
                               </div>
 
-                              <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-obsidian-elevated border border-obsidian-border shrink-0">
+                              <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-surface-elevated border border-border-default shrink-0">
                                  {entry.image ? (
                                     <Image
                                        src={entry.image}
@@ -247,7 +247,7 @@ export function TrophyLeaderboardView({
                                        className="object-cover"
                                     />
                                  ) : (
-                                    <UserIcon className="h-5 w-5 m-auto text-obsidian-textDim" />
+                                    <UserIcon className="h-5 w-5 m-auto text-text-tertiary" />
                                  )}
                               </div>
 
@@ -257,15 +257,15 @@ export function TrophyLeaderboardView({
                                        {entry.displayName}
                                     </span>
                                     {isSelf && (
-                                       <span className="text-[10px] bg-economy-gold/20 text-economy-gold border border-economy-gold/40 px-1.5 py-0.2 rounded font-bold">
+                                       <span className="text-label bg-brand-1/20 text-brand-1 border border-brand-1/40 px-1.5 py-0.2 rounded font-bold">
                                           YOU
                                        </span>
                                     )}
                                  </div>
-                                 <div className="text-[11px] text-obsidian-textDim flex items-center gap-2 mt-0.5">
+                                 <div className="text-meta text-text-tertiary flex items-center gap-2 mt-0.5">
                                     <span>@{entry.username}</span>
                                     <span>•</span>
-                                    <span className="font-mono text-obsidian-textMuted">
+                                    <span className="font-mono text-text-secondary">
                                        {entry.wins}W / {entry.losses}L (
                                        {entry.winRate}%)
                                     </span>

@@ -44,15 +44,15 @@ export function TrophyHistoryList({
    if (transactions.length === 0) {
       return (
          <div
-            className={`rounded-2xl border border-obsidian-border bg-obsidian-card p-8 text-center shadow-lg ${className}`}
+            className={`rounded-2xl border border-border-default bg-surface-primary p-8 text-center shadow-lg ${className}`}
          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-obsidian-elevated border border-obsidian-borderSubtle text-obsidian-textDim mx-auto mb-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-elevated border border-border-subtle text-text-tertiary mx-auto mb-3">
                <Trophy className="h-6 w-6" />
             </div>
-            <h4 className="text-sm font-semibold text-obsidian-text">
+            <h4 className="text-sm font-semibold text-text-primary">
                No Trophy History Yet
             </h4>
-            <p className="text-xs text-obsidian-textDim mt-1 max-w-sm mx-auto">
+            <p className="text-xs text-text-tertiary mt-1 max-w-sm mx-auto">
                Complete challenges and secure team victories to earn trophies,
                climb competitive tiers, and unlock prestigous roles.
             </p>
@@ -71,30 +71,30 @@ export function TrophyHistoryList({
 
    return (
       <div
-         className={`rounded-2xl border border-obsidian-border bg-obsidian-card p-5 shadow-lg backdrop-blur-md ${className}`}
+         className={`rounded-2xl border border-border-default bg-surface-primary p-5 shadow-lg backdrop-blur-md ${className}`}
          data-testid="trophy-history-card"
       >
-         <div className="flex items-center justify-between pb-3 border-b border-obsidian-borderSubtle mb-3">
+         <div className="flex items-center justify-between pb-3 border-b border-border-subtle mb-3">
             <div>
-               <h3 className="text-sm font-semibold text-obsidian-text flex items-center gap-2">
+               <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-yellow-400/10 text-yellow-400 font-bold text-xs">
                      🏆
                   </span>
                   Trophy History & Competitive Ledger
                </h3>
-               <p className="text-xs text-obsidian-textDim mt-0.5">
+               <p className="text-xs text-text-tertiary mt-0.5">
                   Auditable record of all rating changes from competitive
                   outcomes.
                </p>
             </div>
             {pagination && (
-               <span className="text-xs text-obsidian-textDim font-mono">
+               <span className="text-xs text-text-tertiary font-mono">
                   {pagination.totalCount} entries
                </span>
             )}
          </div>
 
-         <div className="divide-y divide-obsidian-borderSubtle">
+         <div className="divide-y divide-border-subtle">
             {transactions.map((tx) => {
                const isWin = tx.amount > 0;
                const isLoss = tx.amount < 0;
@@ -109,7 +109,7 @@ export function TrophyHistoryList({
                return (
                   <div
                      key={tx.id}
-                     className="py-3 flex items-center justify-between gap-3 text-xs group transition-colors hover:bg-obsidian-elevated/40 px-2 rounded-lg"
+                     className="py-3 flex items-center justify-between gap-3 text-xs group transition-colors hover:bg-surface-elevated/40 px-2 rounded-lg"
                   >
                      {/* Left: Indicator Icon & Description */}
                      <div className="flex items-center gap-3 min-w-0">
@@ -140,19 +140,19 @@ export function TrophyHistoryList({
                         </div>
 
                         <div className="min-w-0">
-                           <div className="font-medium text-obsidian-text truncate flex items-center gap-1.5">
+                           <div className="font-medium text-text-primary truncate flex items-center gap-1.5">
                               <span>{tx.description}</span>
                               {challengeUrl && (
                                  <Link
                                     href={challengeUrl}
-                                    className="text-[11px] text-economy-gold hover:underline inline-flex items-center gap-0.5"
+                                    className="text-meta text-brand-1 hover:underline inline-flex items-center gap-0.5"
                                  >
                                     <span>View Match</span>
                                     <ChevronRight className="h-2.5 w-2.5" />
                                  </Link>
                               )}
                            </div>
-                           <div className="text-[11px] text-obsidian-textDim flex items-center gap-2 mt-0.5">
+                           <div className="text-meta text-text-tertiary flex items-center gap-2 mt-0.5">
                               <span className="flex items-center gap-1">
                                  <Calendar className="h-3 w-3" />
                                  {formatTimestamp(tx.createdAt)}
@@ -160,7 +160,7 @@ export function TrophyHistoryList({
                               <span>•</span>
                               <span>
                                  Balance after:{" "}
-                                 <strong className="text-obsidian-text font-mono">
+                                 <strong className="text-text-primary font-mono">
                                     {tx.balanceAfter.toLocaleString()}
                                  </strong>
                               </span>
@@ -176,7 +176,7 @@ export function TrophyHistoryList({
                                  ? "text-emerald-400"
                                  : isLoss
                                    ? "text-rose-400"
-                                   : "text-obsidian-textMuted"
+                                   : "text-text-secondary"
                            }`}
                         >
                            {tx.amount > 0 ? `+${tx.amount}` : tx.amount} 🏆
@@ -189,8 +189,8 @@ export function TrophyHistoryList({
 
          {/* Pagination Footer */}
          {pagination && pagination.totalPages > 1 && onPageChange && (
-            <div className="mt-4 pt-3 border-t border-obsidian-borderSubtle flex items-center justify-between text-xs">
-               <span className="text-obsidian-textDim">
+            <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs">
+               <span className="text-text-tertiary">
                   Page {pagination.page} of {pagination.totalPages}
                </span>
                <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export function TrophyHistoryList({
                      size="sm"
                      disabled={pagination.page <= 1}
                      onClick={() => onPageChange(pagination.page - 1)}
-                     className="text-xs h-7 px-2.5 border-obsidian-borderSubtle bg-obsidian-elevated text-obsidian-textMuted"
+                     className="text-xs h-7 px-2.5 border-border-subtle bg-surface-elevated text-text-secondary"
                   >
                      Previous
                   </Button>
@@ -210,7 +210,7 @@ export function TrophyHistoryList({
                      size="sm"
                      disabled={pagination.page >= pagination.totalPages}
                      onClick={() => onPageChange(pagination.page + 1)}
-                     className="text-xs h-7 px-2.5 border-obsidian-borderSubtle bg-obsidian-elevated text-obsidian-textMuted"
+                     className="text-xs h-7 px-2.5 border-border-subtle bg-surface-elevated text-text-secondary"
                   >
                      Next
                   </Button>

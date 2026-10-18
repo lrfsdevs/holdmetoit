@@ -1,15 +1,23 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
+import { createElement, type ReactElement } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/react";
 import { FeedbackDialog } from "./feedback-dialog";
 
 vi.mock("next/navigation", () => ({
    usePathname: () => "/active-challenge",
 }));
 
+afterEach(cleanup);
+
+function renderToHtml(el: ReactElement): string {
+   const { container } = render(el);
+   return document.body.innerHTML.replace(container.outerHTML, "");
+}
+
 describe("FeedbackDialog", () => {
    it("renders nothing when isOpen is false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(FeedbackDialog, { isOpen: false, onClose: vi.fn() })
       );
 
@@ -17,7 +25,7 @@ describe("FeedbackDialog", () => {
    });
 
    it("renders modal header, close button, and form when isOpen is true", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(FeedbackDialog, { isOpen: true, onClose: vi.fn() })
       );
 

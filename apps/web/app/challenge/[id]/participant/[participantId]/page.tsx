@@ -110,7 +110,7 @@ export default async function ParticipantStatsPage({
                message="Something went wrong while fetching this participant's data. Please try again shortly."
             />
             <div className="mt-6 flex justify-center">
-               <Button asChild variant="secondary" className="min-h-[44px]">
+               <Button asChild variant="secondary" className="min-h-control-sm">
                   <Link href={returnLeaderboardUrl}>Return to Leaderboard</Link>
                </Button>
             </div>

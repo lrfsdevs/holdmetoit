@@ -50,28 +50,31 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
       viewer?.verdict === "saved"
          ? {
               label: "Saved",
-              className: "bg-[#144520] text-[#85ff93] border-[#22c55e]/40",
+              className:
+                 "bg-feedback-success-bg text-feedback-success-text border-feedback-success/40",
            }
          : viewer?.verdict === "excused"
            ? {
                 label: "Excused",
-                className: "bg-[#102d40] text-[#85d6ff] border-[#3b82f6]/40",
+                className:
+                   "bg-feedback-info-bg text-feedback-info-text border-feedback-info/40",
              }
            : {
                 label: "Punished",
-                className: "bg-[#401010] text-[#ff5757] border-[#ef4444]/40",
+                className:
+                   "bg-feedback-error-bg text-feedback-error-text border-feedback-error/40",
              };
 
    return (
       <div className="space-y-6">
-         <section className="rounded-2xl border border-[#292929] bg-[#141414] p-5 sm:p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+         <section className="rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                Challenge Wrapped
             </p>
-            <h2 className="mt-1 text-xl sm:text-2xl font-bold font-display text-[#f4f3f6] tracking-tight">
+            <h2 className="mt-1 text-xl sm:text-2xl font-bold font-display text-text-primary tracking-tight">
                {wrapped.title}
             </h2>
-            <p className="mt-1 text-xs sm:text-sm text-[#868686]">
+            <p className="mt-1 text-xs sm:text-sm text-text-tertiary">
                {formatPeriod(wrapped.startAt, wrapped.endAt)} ·{" "}
                <span>
                   {wrapped.participantsCount}{" "}
@@ -80,15 +83,15 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                      : "participants"}
                </span>{" "}
                ·{" "}
-               <span className="font-sans font-sans-tabular font-semibold text-[#f4f3f6]">
+               <span className="font-sans font-sans-tabular font-semibold text-text-primary">
                   {wrapped.challengeTotalClock}
                </span>{" "}
                studied in total
             </p>
          </section>
 
-         <section className="rounded-2xl border border-[#292929] bg-[#141414] p-5 sm:p-6 shadow-sm">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+         <section className="rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-sm">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                Final team results
             </h3>
             <ul className="mt-3 space-y-2">
@@ -97,9 +100,9 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                   return (
                      <li
                         key={team.id}
-                        className="flex items-center justify-between rounded-xl border border-[#292929] bg-[#1c1c1c] px-4 py-2.5 transition-colors"
+                        className="flex items-center justify-between rounded-xl border border-border-default bg-surface-elevated px-4 py-2.5 transition-colors"
                      >
-                        <span className="flex items-center gap-2.5 text-sm font-semibold text-[#f4f3f6]">
+                        <span className="flex items-center gap-2.5 text-sm font-semibold text-text-primary">
                            <span
                               className="h-2.5 w-2.5 rounded-full shrink-0"
                               style={{ backgroundColor: teamPalette.solid }}
@@ -112,7 +115,7 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                         </span>
                         <span className="flex items-center gap-3">
                            {team.isWinner && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-amber-300">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-0.5 text-meta font-bold tracking-wide text-amber-300">
                                  <Trophy
                                     className="h-3 w-3"
                                     aria-hidden="true"
@@ -120,7 +123,7 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                                  Winner
                               </span>
                            )}
-                           <span className="text-sm font-bold font-sans font-sans-tabular text-[#f4f3f6]">
+                           <span className="text-sm font-bold font-sans font-sans-tabular text-text-primary">
                               {team.totalLoggedClock}
                            </span>
                         </span>
@@ -132,13 +135,13 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
 
          {viewer && (
             <>
-               <section className="rounded-2xl border border-[#292929] bg-[#141414] p-5 sm:p-6 shadow-sm">
+               <section className="rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                      <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Your wrapped
                         </h3>
-                        <p className="mt-1 text-lg sm:text-xl font-bold font-sans text-[#f4f3f6]">
+                        <p className="mt-1 text-lg sm:text-xl font-bold font-sans text-text-primary">
                            {viewer.displayName} ·{" "}
                            <span className="font-sans-tabular">
                               Rank #{viewer.rank}
@@ -158,7 +161,7 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
 
                   {viewer.verdict === "punished" &&
                      viewer.reasons.length > 0 && (
-                        <p className="mt-3 text-xs sm:text-sm text-[#ff5757] font-medium leading-relaxed">
+                        <p className="mt-3 text-xs sm:text-sm text-feedback-error-text font-medium leading-relaxed">
                            {viewer.reasons
                               .map((reason) =>
                                  reason === "hours_deficit"
@@ -172,55 +175,55 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                      )}
 
                   <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Time studied
                         </dt>
-                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-[#f4f3f6]">
+                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-text-primary">
                            {viewer.totalClock}
                         </dd>
                      </div>
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Declared target
                         </dt>
-                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-[#f4f3f6]">
+                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-text-primary">
                            {viewer.targetClock}
                         </dd>
                      </div>
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Best day
                         </dt>
-                        <dd className="text-base sm:text-lg font-bold font-sans text-[#f4f3f6]">
+                        <dd className="text-base sm:text-lg font-bold font-sans text-text-primary">
                            {viewer.bestDay
                               ? `${viewer.bestDay.label} · ${viewer.bestDay.durationHuman}`
                               : "—"}
                         </dd>
                      </div>
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            vs average
                         </dt>
-                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-[#f4f3f6]">
+                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-text-primary">
                            {viewer.timesVsAverage !== null
                               ? `${viewer.timesVsAverage}×`
                               : "—"}
                         </dd>
                      </div>
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Team share
                         </dt>
-                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-[#f4f3f6]">
+                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-text-primary">
                            {viewer.contributionPercentage}%
                         </dd>
                      </div>
-                     <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 sm:p-3.5 space-y-1">
-                        <dt className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+                     <div className="rounded-xl border border-border-default bg-surface-elevated p-3 sm:p-3.5 space-y-1">
+                        <dt className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                            Weekly tasks
                         </dt>
-                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-[#f4f3f6]">
+                        <dd className="text-xl sm:text-2xl font-extrabold font-sans font-sans-tabular text-text-primary">
                            {viewer.weeklyTasksCompletedCount}/
                            {viewer.weeklyTasksTotalCount}
                         </dd>
@@ -228,22 +231,22 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                   </dl>
                </section>
 
-               <section className="rounded-2xl border border-[#292929] bg-[#141414] p-5 sm:p-6 shadow-sm">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#868686]">
+               <section className="rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-sm">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                      Study days
                   </h3>
                   <ul className="mt-3 space-y-2">
                      {viewer.daily.map((day) => (
                         <li
                            key={day.dateKey}
-                           className="flex items-center gap-3 text-xs text-[#d1d1d1]"
+                           className="flex items-center gap-3 text-xs text-text-secondary"
                         >
-                           <span className="w-16 shrink-0 font-sans text-xs font-medium text-[#868686]">
+                           <span className="w-16 shrink-0 font-sans text-xs font-medium text-text-tertiary">
                               {day.label}
                            </span>
-                           <span className="h-2 flex-1 overflow-hidden rounded-full bg-[#292929]">
+                           <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface-nested">
                               <span
-                                 className="block h-full rounded-full bg-[#22c55e] transition-all duration-300"
+                                 className="block h-full rounded-full bg-feedback-success transition-all duration-300"
                                  style={{
                                     width:
                                        maxDaySeconds > 0
@@ -256,7 +259,7 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
                                  }}
                               />
                            </span>
-                           <span className="w-24 shrink-0 text-right font-sans font-sans-tabular text-xs font-bold text-[#f4f3f6]">
+                           <span className="w-24 shrink-0 text-right font-sans font-sans-tabular text-xs font-bold text-text-primary">
                               {day.durationHuman}
                            </span>
                         </li>
@@ -267,11 +270,11 @@ export function ChallengeSummaryTab({ challenge }: ChallengeSummaryTabProps) {
          )}
 
          {!viewer && (
-            <section className="rounded-2xl border border-[#292929] bg-[#141414] p-5 sm:p-6 space-y-1">
-               <h3 className="text-sm font-semibold text-[#f4f3f6]">
+            <section className="rounded-2xl border border-border-default bg-surface-primary p-5 sm:p-6 space-y-1">
+               <h3 className="text-sm font-semibold text-text-primary">
                   Personal Wrapped
                </h3>
-               <p className="text-xs text-[#868686] leading-relaxed">
+               <p className="text-xs text-text-tertiary leading-relaxed">
                   Sign in and join a challenge to unlock your personal wrapped
                   here after the host locks the results.
                </p>

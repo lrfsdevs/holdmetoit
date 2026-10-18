@@ -37,6 +37,14 @@ import {
 } from "@/features/challenges/presentation/admin-target-override-modal";
 import { DataPagination } from "@/components/ui/data-pagination";
 import {
+   Table,
+   TableBody,
+   TableCell,
+   TableHead,
+   TableHeader,
+   TableRow,
+} from "@/components/ui/table";
+import {
    getTeamColorPalette,
    getTeamBadgeStyle,
 } from "@/features/challenges/domain/team-colors";
@@ -59,11 +67,13 @@ function getYptStatusBadge(status?: string | null): {
    return isStudying
       ? {
            label: "Studying",
-           className: "bg-[#132717] border-[#225028] text-[#86efac]",
+           className:
+              "bg-feedback-success-bg border-feedback-success-bg text-feedback-success-text",
         }
       : {
            label: "Offline",
-           className: "bg-[#1a1a1a] border-[#2e2e2e] text-[#a3a3a3]",
+           className:
+              "bg-surface-tertiary border-border-strong text-text-tertiary",
         };
 }
 
@@ -72,7 +82,7 @@ function YptStatusPill({ status }: { status?: string | null }) {
    if (!badge) return null;
    return (
       <span
-         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${badge.className}`}
+         className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badge.className}`}
       >
          {badge.label}
       </span>
@@ -287,7 +297,7 @@ export function ChallengeLeaderboardTab({
       <div className="space-y-8">
          {/* 1. Head-to-Head Battle Progress Matchup (Leaderboard 142:2183) */}
          {teamA && teamB ? (
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-7 shadow-lg space-y-6">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-lg space-y-6">
                <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center">
                   {/* Team A Card */}
                   <div
@@ -299,7 +309,7 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-[#ffffff] flex items-center gap-2 truncate">
+                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
                               {teamA.iconEmoji && (
                                  <span className="shrink-0">
                                     {teamA.iconEmoji}
@@ -307,31 +317,31 @@ export function ChallengeLeaderboardTab({
                               )}
                               <span className="truncate">{teamA.name}</span>
                            </h3>
-                           <p className="text-xs text-[#d1d1d1] mt-0.5">
+                           <p className="text-xs text-text-secondary mt-0.5">
                               {teamA.companionCount} Participants
                            </p>
                         </div>
-                        <span className="text-[11px] sm:text-xs text-[#868686] shrink-0 text-right whitespace-nowrap pl-2 pt-0.5">
+                        <span className="text-meta sm:text-xs text-text-tertiary shrink-0 text-right whitespace-nowrap pl-2 pt-0.5">
                            Weekly Target: {teamA.targetHours}h
                         </span>
                      </div>
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-[#ffffff] font-sans font-sans-tabular">
+                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
                               {teamA.totalLoggedClock}
                            </span>
-                           <span className="text-[11px] sm:text-xs text-[#bcbcbc] shrink-0 text-right whitespace-nowrap pl-2">
+                           <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursA} hrs / Person
                            </span>
                         </div>
-                        <p className="text-[11px] text-[#868686] mt-0.5">
+                        <p className="text-meta text-text-tertiary mt-0.5">
                            Total hours logged
                         </p>
                      </div>
 
                      {/* Progress bar */}
-                     <div className="h-2 w-full overflow-hidden rounded-full bg-[#1c1c1c]">
+                     <div className="h-2 w-full overflow-hidden rounded-full bg-surface-elevated">
                         <div
                            className="h-full rounded-full transition-all duration-500"
                            style={{
@@ -344,7 +354,7 @@ export function ChallengeLeaderboardTab({
 
                   {/* Circular VS Badge */}
                   <div className="md:col-span-1 flex items-center justify-center">
-                     <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-[#434343] bg-[#292929] flex items-center justify-center font-bold text-xs sm:text-sm text-[#ffffff] shadow-md">
+                     <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border border-border-strong bg-surface-nested flex items-center justify-center font-bold text-xs sm:text-sm text-white shadow-md">
                         VS
                      </div>
                   </div>
@@ -359,7 +369,7 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-[#ffffff] flex items-center gap-2 truncate">
+                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
                               {teamB.iconEmoji && (
                                  <span className="shrink-0">
                                     {teamB.iconEmoji}
@@ -367,31 +377,31 @@ export function ChallengeLeaderboardTab({
                               )}
                               <span className="truncate">{teamB.name}</span>
                            </h3>
-                           <p className="text-xs text-[#d1d1d1] mt-0.5">
+                           <p className="text-xs text-text-secondary mt-0.5">
                               {teamB.companionCount} Participants
                            </p>
                         </div>
-                        <span className="text-[11px] sm:text-xs text-[#868686] shrink-0 text-right whitespace-nowrap pl-2 pt-0.5">
+                        <span className="text-meta sm:text-xs text-text-tertiary shrink-0 text-right whitespace-nowrap pl-2 pt-0.5">
                            Weekly Target: {teamB.targetHours}h
                         </span>
                      </div>
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-[#ffffff] font-sans font-sans-tabular">
+                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
                               {teamB.totalLoggedClock}
                            </span>
-                           <span className="text-[11px] sm:text-xs text-[#bcbcbc] shrink-0 text-right whitespace-nowrap pl-2">
+                           <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursB} hrs / Person
                            </span>
                         </div>
-                        <p className="text-[11px] text-[#868686] mt-0.5">
+                        <p className="text-meta text-text-tertiary mt-0.5">
                            Total hours logged
                         </p>
                      </div>
 
                      {/* Progress bar */}
-                     <div className="h-2 w-full overflow-hidden rounded-full bg-[#1c1c1c]">
+                     <div className="h-2 w-full overflow-hidden rounded-full bg-surface-elevated">
                         <div
                            className="h-full rounded-full transition-all duration-500"
                            style={{
@@ -404,15 +414,15 @@ export function ChallengeLeaderboardTab({
                </div>
 
                {/* Tug-of-War Split Share Bar */}
-               <div className="pt-2 space-y-2 border-t border-[#262626]">
-                  <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold text-[#ffffff] gap-1">
+               <div className="pt-2 space-y-2 border-t border-border-default">
+                  <div className="flex items-center justify-between text-meta sm:text-xs font-semibold text-white gap-1">
                      <span
                         className="whitespace-nowrap shrink-0"
                         style={{ color: paletteA.text }}
                      >
                         Share: {ratioA}%
                      </span>
-                     <span className="text-[11px] sm:text-xs text-[#d1d1d1] font-normal text-center whitespace-nowrap px-1">
+                     <span className="text-meta sm:text-xs text-text-secondary font-normal text-center whitespace-nowrap px-1">
                         <span className="sm:hidden">
                            Total: {totalHoursCombined}h
                         </span>
@@ -428,7 +438,7 @@ export function ChallengeLeaderboardTab({
                      </span>
                   </div>
 
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-[#1c1c1c] flex">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-surface-elevated flex">
                      <div
                         className="h-full transition-all duration-500"
                         style={{
@@ -451,25 +461,25 @@ export function ChallengeLeaderboardTab({
          {/* 2. Top 3 Highlight / Podium Cards */}
          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Rank 2 */}
-            <div className="rounded-2xl border border-[#262626] bg-[#141414] p-4 flex items-center gap-3.5">
-               <div className="h-10 w-10 rounded-xl bg-[#292929] border border-[#434343] flex items-center justify-center font-bold text-sm text-[#bcbcbc]">
+            <div className="rounded-2xl border border-border-default bg-surface-primary p-4 flex items-center gap-3.5">
+               <div className="h-10 w-10 rounded-xl bg-surface-nested border border-border-strong flex items-center justify-center font-bold text-sm text-text-secondary">
                   2
                </div>
                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-[#868686]">Runner-up</p>
+                  <p className="text-xs text-text-tertiary">Runner-up</p>
                   {top2 ? (
                      <Link
                         href={getParticipantProfileUrl(top2.participantId)}
-                        className="text-sm font-bold text-[#ffffff] hover:underline truncate block"
+                        className="text-sm font-bold text-white hover:underline truncate block"
                      >
                         {top2.displayName}
                      </Link>
                   ) : (
-                     <p className="text-sm font-bold text-[#ffffff] truncate">
+                     <p className="text-sm font-bold text-white truncate">
                         Awaiting...
                      </p>
                   )}
-                  <p className="text-xs font-sans font-sans-tabular text-[#d1d1d1] mt-0.5">
+                  <p className="text-xs font-sans font-sans-tabular text-text-secondary mt-0.5">
                      {top2 ? top2.totalLoggedClock : "00:00:00"}
                   </p>
                </div>
@@ -486,7 +496,7 @@ export function ChallengeLeaderboardTab({
                }}
             >
                <div
-                  className="h-10 w-10 rounded-xl flex items-center justify-center font-bold text-sm text-[#0d0d0d]"
+                  className="h-10 w-10 rounded-xl flex items-center justify-center font-bold text-sm text-text-inverse"
                   style={{
                      backgroundColor: top1 ? top1Palette.solid : "#f4f3f6",
                   }}
@@ -503,12 +513,12 @@ export function ChallengeLeaderboardTab({
                   {top1 ? (
                      <Link
                         href={getParticipantProfileUrl(top1.participantId)}
-                        className="text-sm font-bold text-[#ffffff] hover:underline truncate block"
+                        className="text-sm font-bold text-white hover:underline truncate block"
                      >
                         {top1.displayName}
                      </Link>
                   ) : (
-                     <p className="text-sm font-bold text-[#ffffff] truncate">
+                     <p className="text-sm font-bold text-white truncate">
                         Awaiting...
                      </p>
                   )}
@@ -522,25 +532,25 @@ export function ChallengeLeaderboardTab({
             </div>
 
             {/* Rank 3 */}
-            <div className="rounded-2xl border border-[#262626] bg-[#141414] p-4 flex items-center gap-3.5">
-               <div className="h-10 w-10 rounded-xl bg-[#292929] border border-[#434343] flex items-center justify-center font-bold text-sm text-[#cd7f32]">
+            <div className="rounded-2xl border border-border-default bg-surface-primary p-4 flex items-center gap-3.5">
+               <div className="h-10 w-10 rounded-xl bg-surface-nested border border-border-strong flex items-center justify-center font-bold text-sm text-brand-1">
                   3
                </div>
                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-[#868686]">Rank 3</p>
+                  <p className="text-xs text-text-tertiary">Rank 3</p>
                   {top3 ? (
                      <Link
                         href={getParticipantProfileUrl(top3.participantId)}
-                        className="text-sm font-bold text-[#ffffff] hover:text-[#22c55e] hover:underline truncate block"
+                        className="text-sm font-bold text-white hover:text-feedback-success hover:underline truncate block"
                      >
                         {top3.displayName}
                      </Link>
                   ) : (
-                     <p className="text-sm font-bold text-[#ffffff] truncate">
+                     <p className="text-sm font-bold text-white truncate">
                         Awaiting...
                      </p>
                   )}
-                  <p className="text-xs font-sans font-sans-tabular text-[#d1d1d1] mt-0.5">
+                  <p className="text-xs font-sans font-sans-tabular text-text-secondary mt-0.5">
                      {top3 ? top3.totalLoggedClock : "00:00:00"}
                   </p>
                </div>
@@ -548,14 +558,14 @@ export function ChallengeLeaderboardTab({
          </div>
 
          {/* 3. Standings Table & Search Bar (Leaderboard Column 61:1571 & Search Bar 61:1543) */}
-         <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-7 shadow-lg space-y-5">
-            <div className="flex flex-col gap-3.5 pb-3 border-b border-[#262626]">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-lg space-y-5">
+            <div className="flex flex-col gap-3.5 pb-3 border-b border-border-default">
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                     <h3 className="text-xl font-bold text-[#ffffff]">
+                     <h3 className="text-xl font-bold text-white">
                         Leaderboard Standings
                      </h3>
-                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#1c1c1c] border border-[#292929] text-[#868686]">
+                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface-elevated border border-border-default text-text-tertiary">
                         {filteredStandings.length}{" "}
                         {filteredStandings.length === 1
                            ? "scholar"
@@ -564,14 +574,14 @@ export function ChallengeLeaderboardTab({
                   </div>
 
                   {/* View Mode Toggle: Overall vs Today's LB vs View by Team */}
-                  <div className="inline-flex items-center rounded-xl bg-[#1c1c1c] border border-[#292929] p-1 self-start sm:self-auto gap-1">
+                  <div className="inline-flex items-center rounded-xl bg-surface-elevated border border-border-default p-1 self-start sm:self-auto gap-1">
                      <button
                         type="button"
                         onClick={() => handleViewModeChange("individual")}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                            viewMode === "individual"
-                              ? "bg-[#292929] text-white shadow-sm border border-[#383838]"
-                              : "text-[#868686] hover:text-white"
+                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                              : "text-text-tertiary hover:text-white"
                         }`}
                      >
                         <Trophy className="h-3.5 w-3.5" />
@@ -582,8 +592,8 @@ export function ChallengeLeaderboardTab({
                         onClick={() => handleViewModeChange("today")}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                            viewMode === "today"
-                              ? "bg-[#292929] text-white shadow-sm border border-[#383838]"
-                              : "text-[#868686] hover:text-white"
+                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                              : "text-text-tertiary hover:text-white"
                         }`}
                      >
                         <Clock className="h-3.5 w-3.5" />
@@ -594,8 +604,8 @@ export function ChallengeLeaderboardTab({
                         onClick={() => handleViewModeChange("team")}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                            viewMode === "team"
-                              ? "bg-[#292929] text-white shadow-sm border border-[#383838]"
-                              : "text-[#868686] hover:text-white"
+                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                              : "text-text-tertiary hover:text-white"
                         }`}
                      >
                         <Users className="h-3.5 w-3.5" />
@@ -608,7 +618,7 @@ export function ChallengeLeaderboardTab({
                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                   {/* Search bar */}
                   <div className="sm:col-span-5 relative">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868686]" />
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                      <Input
                         type="text"
                         placeholder="Search scholar by name, @handle..."
@@ -617,7 +627,7 @@ export function ChallengeLeaderboardTab({
                            setSearchQuery(e.target.value);
                            setCurrentPage(1);
                         }}
-                        className="h-9 pl-9 pr-8 bg-[#1c1c1c] border-[#333333] text-[#ffffff] placeholder-[#868686] text-xs rounded-xl"
+                        className="h-9 pl-9 pr-8 bg-surface-elevated border-border-strong text-white placeholder-text-tertiary text-xs rounded-xl"
                      />
                      {searchQuery && (
                         <button
@@ -626,7 +636,7 @@ export function ChallengeLeaderboardTab({
                               setSearchQuery("");
                               setCurrentPage(1);
                            }}
-                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#868686] hover:text-white p-0.5"
+                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white p-0.5"
                            title="Clear search"
                         >
                            <X className="h-3.5 w-3.5" />
@@ -645,7 +655,7 @@ export function ChallengeLeaderboardTab({
                      >
                         <SelectTrigger
                            data-testid="leaderboard-team-select"
-                           className="h-9 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                           className="h-9 rounded-xl border-border-strong bg-surface-elevated text-xs text-white"
                         >
                            <SelectValue
                               placeholder={`All Teams (${standings.length})`}
@@ -678,7 +688,7 @@ export function ChallengeLeaderboardTab({
                      >
                         <SelectTrigger
                            data-testid="leaderboard-pace-select"
-                           className="h-9 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                           className="h-9 rounded-xl border-border-strong bg-surface-elevated text-xs text-white"
                         >
                            <SelectValue placeholder="All Pace Statuses" />
                         </SelectTrigger>
@@ -701,42 +711,44 @@ export function ChallengeLeaderboardTab({
                {hasActiveFilters && (
                   <div className="flex items-center justify-between gap-2 text-xs pt-1 flex-wrap">
                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[#868686]">Active filters:</span>
+                        <span className="text-text-tertiary">
+                           Active filters:
+                        </span>
                         {searchQuery && (
-                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#292929] border border-[#383838] text-white text-[11px]">
+                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-nested border border-border-strong text-white text-meta">
                               &quot;{searchQuery}&quot;
                               <button
                                  type="button"
                                  onClick={() => setSearchQuery("")}
-                                 className="hover:text-[#ef4444]"
+                                 className="hover:text-feedback-error"
                               >
                                  <X className="h-3 w-3" />
                               </button>
                            </span>
                         )}
                         {selectedTeamId !== "ALL" && (
-                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#292929] border border-[#383838] text-white text-[11px]">
+                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-nested border border-border-strong text-white text-meta">
                               Team:{" "}
                               {teams.find((t) => t.id === selectedTeamId)
                                  ?.name || selectedTeamId}
                               <button
                                  type="button"
                                  onClick={() => setSelectedTeamId("ALL")}
-                                 className="hover:text-[#ef4444]"
+                                 className="hover:text-feedback-error"
                               >
                                  <X className="h-3 w-3" />
                               </button>
                            </span>
                         )}
                         {statusFilter !== "ALL" && (
-                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#292929] border border-[#383838] text-white text-[11px]">
+                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-nested border border-border-strong text-white text-meta">
                               {statusFilter === "on-track"
                                  ? "On Track"
                                  : "Catch-Up"}
                               <button
                                  type="button"
                                  onClick={() => setStatusFilter("ALL")}
-                                 className="hover:text-[#ef4444]"
+                                 className="hover:text-feedback-error"
                               >
                                  <X className="h-3 w-3" />
                               </button>
@@ -746,7 +758,7 @@ export function ChallengeLeaderboardTab({
                      <button
                         type="button"
                         onClick={handleResetFilters}
-                        className="text-[11px] font-semibold text-[#868686] hover:text-white underline underline-offset-2 shrink-0"
+                        className="text-meta font-semibold text-text-tertiary hover:text-white underline underline-offset-2 shrink-0"
                      >
                         Clear all filters
                      </button>
@@ -755,11 +767,11 @@ export function ChallengeLeaderboardTab({
             </div>
 
             {filteredStandings.length === 0 ? (
-               <div className="rounded-2xl border border-[#262626] bg-[#1c1c1c] p-8 text-center space-y-3">
-                  <p className="text-sm font-semibold text-[#ffffff]">
+               <div className="rounded-2xl border border-border-default bg-surface-elevated p-8 text-center space-y-3">
+                  <p className="text-sm font-semibold text-white">
                      No scholars match your search or filter criteria.
                   </p>
-                  <p className="text-xs text-[#868686]">
+                  <p className="text-xs text-text-tertiary">
                      No scholars match your search. Try adjusting your search
                      query or selecting another team.
                   </p>
@@ -769,7 +781,7 @@ export function ChallengeLeaderboardTab({
                         variant="outline"
                         size="sm"
                         onClick={handleResetFilters}
-                        className="rounded-full border-[#383838] bg-[#242424] hover:bg-[#333333] text-white text-xs"
+                        className="rounded-full border-border-strong bg-surface-nested hover:bg-surface-nested text-white text-xs"
                      >
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                         Reset all filters
@@ -800,16 +812,16 @@ export function ChallengeLeaderboardTab({
                            );
                            const isTeamA = teamA && t.name === teamA.name;
                            const badgeTint = isTeamA
-                              ? "bg-[#144520] border-[#22c55e]/40 text-[#85ff93]"
-                              : "bg-[#102d40] border-[#3b82f6]/40 text-[#85d6ff]";
+                              ? "bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text"
+                              : "bg-feedback-info-bg border-feedback-info/40 text-feedback-info-text";
 
                            return (
                               <div
                                  key={t.id}
-                                 className="rounded-2xl border border-[#262626] bg-[#181818] p-4 sm:p-5 space-y-4 shadow-sm"
+                                 className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 space-y-4 shadow-sm"
                               >
                                  {/* Team Header Summary Card */}
-                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#292929]">
+                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-default">
                                     <div className="flex items-center gap-3 min-w-0">
                                        <span className="text-2xl shrink-0">
                                           {t.iconEmoji || "🛡️"}
@@ -820,18 +832,18 @@ export function ChallengeLeaderboardTab({
                                                 {t.name}
                                              </h4>
                                              <span
-                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${badgeTint}`}
+                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badgeTint}`}
                                              >
                                                 {teamScholars.length} /{" "}
                                                 {t.companionCount} scholars
                                              </span>
                                              {t.isLeader && (
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#22c55e]/20 text-[#85ff93] border border-[#22c55e]/30 shrink-0">
+                                                <span className="px-2 py-0.5 rounded-full text-label font-bold bg-feedback-success/20 text-feedback-success-text border border-feedback-success/30 shrink-0">
                                                    Leading House
                                                 </span>
                                              )}
                                           </div>
-                                          <p className="text-xs text-[#868686] mt-0.5 truncate">
+                                          <p className="text-xs text-text-tertiary mt-0.5 truncate">
                                              Weekly Target: {t.targetHours}h •
                                              Completed: {t.completionPercentage}
                                              %
@@ -841,16 +853,16 @@ export function ChallengeLeaderboardTab({
 
                                     <div className="flex items-center gap-3 text-xs font-sans font-sans-tabular shrink-0">
                                        <div>
-                                          <span className="text-[#868686]">
+                                          <span className="text-text-tertiary">
                                              Total:{" "}
                                           </span>
                                           <span className="font-bold text-white">
                                              {t.totalLoggedClock}
                                           </span>
                                        </div>
-                                       <div className="w-20 sm:w-28 h-2 rounded-full bg-[#1c1c1c] overflow-hidden border border-[#333333]">
+                                       <div className="w-20 sm:w-28 h-2 rounded-full bg-surface-elevated overflow-hidden border border-border-strong">
                                           <div
-                                             className="h-full bg-[#22c55e] transition-all duration-500"
+                                             className="h-full bg-feedback-success transition-all duration-500"
                                              style={{
                                                 width: `${Math.min(100, t.completionPercentage)}%`,
                                              }}
@@ -861,7 +873,7 @@ export function ChallengeLeaderboardTab({
 
                                  {/* Team Scholars List */}
                                  {teamScholars.length === 0 ? (
-                                    <p className="text-center py-4 text-xs text-[#868686]">
+                                    <p className="text-center py-4 text-xs text-text-tertiary">
                                        No scholars in {t.name} match the active
                                        filters.
                                     </p>
@@ -870,7 +882,7 @@ export function ChallengeLeaderboardTab({
                                        {teamScholars.map((entry, idx) => (
                                           <div
                                              key={entry.participantId}
-                                             className="rounded-xl border border-[#262626] bg-[#141414] p-3 flex items-center justify-between gap-2.5 hover:border-[#383838] transition-colors"
+                                             className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors"
                                           >
                                              {/* Intra-team Rank & Overall Rank */}
                                              <div className="flex items-center gap-2.5 min-w-0">
@@ -878,7 +890,7 @@ export function ChallengeLeaderboardTab({
                                                    <span className="text-xs font-bold text-white font-sans">
                                                       #{idx + 1}
                                                    </span>
-                                                   <span className="text-[9px] text-[#868686]">
+                                                   <span className="text-caption text-text-tertiary">
                                                       (#{entry.rank})
                                                    </span>
                                                 </div>
@@ -888,7 +900,7 @@ export function ChallengeLeaderboardTab({
                                                    href={getParticipantProfileUrl(
                                                       entry.participantId
                                                    )}
-                                                   className="h-8 w-8 rounded-full bg-[#292929] border border-[#383838] overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-[#22c55e] transition-colors"
+                                                   className="h-8 w-8 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                                 >
                                                    {entry.image ? (
                                                       <Image
@@ -915,7 +927,7 @@ export function ChallengeLeaderboardTab({
                                                          href={getParticipantProfileUrl(
                                                             entry.participantId
                                                          )}
-                                                         className="text-xs font-bold text-[#ffffff] hover:text-[#22c55e] hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
+                                                         className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
                                                       >
                                                          {entry.displayName}
                                                       </Link>
@@ -933,20 +945,20 @@ export function ChallengeLeaderboardTab({
                                                       />
                                                       {entry.paceLabel && (
                                                          <span
-                                                            className={`px-1.5 py-0.2 rounded text-[9px] font-semibold shrink-0 ${
+                                                            className={`px-1.5 py-0.2 rounded text-caption font-semibold shrink-0 ${
                                                                entry.paceStatus ===
                                                                   "on-track" ||
                                                                entry.paceStatus ===
                                                                   "serene"
-                                                                  ? "bg-[#144520] text-[#85ff93]"
-                                                                  : "bg-[#401010] text-[#ff5757]"
+                                                                  ? "bg-feedback-success-bg text-feedback-success-text"
+                                                                  : "bg-feedback-error-bg text-feedback-error-text"
                                                             }`}
                                                          >
                                                             {entry.paceLabel}
                                                          </span>
                                                       )}
                                                    </div>
-                                                   <p className="text-[10px] text-[#868686] truncate">
+                                                   <p className="text-label text-text-tertiary truncate">
                                                       @
                                                       {entry.username ||
                                                          "scholar"}
@@ -957,13 +969,13 @@ export function ChallengeLeaderboardTab({
                                              {/* Clock & Admin edit */}
                                              <div className="shrink-0 text-right font-sans font-sans-tabular flex items-center gap-2">
                                                 <div>
-                                                   <p className="text-xs font-bold text-[#ffffff]">
+                                                   <p className="text-xs font-bold text-white">
                                                       {entry.totalLoggedClock}
-                                                      <span className="text-[10px] font-normal text-[#868686]">
+                                                      <span className="text-label font-normal text-text-tertiary">
                                                          /{entry.targetClock}
                                                       </span>
                                                    </p>
-                                                   <p className="text-[11px] font-semibold text-[#4ade80]">
+                                                   <p className="text-meta font-semibold text-feedback-success">
                                                       +{entry.todayLoggedClock}
                                                    </p>
                                                 </div>
@@ -976,10 +988,10 @@ export function ChallengeLeaderboardTab({
                                                                entry
                                                             )
                                                          }
-                                                         className="px-2 py-1 rounded-lg bg-[#242424] hover:bg-[#333333] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
                                                          title="Admin: Edit Study Hours"
                                                       >
-                                                         <Clock className="h-3 w-3 text-[#3b82f6]" />
+                                                         <Clock className="h-3 w-3 text-feedback-info" />
                                                          <span>Edit hr</span>
                                                       </button>
                                                       <button
@@ -989,10 +1001,10 @@ export function ChallengeLeaderboardTab({
                                                                entry
                                                             )
                                                          }
-                                                         className="px-2 py-1 rounded-lg bg-[#242424] hover:bg-[#333333] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
                                                          title="Admin: Edit Weekly Target Hours"
                                                       >
-                                                         <Target className="h-3 w-3 text-[#a855f7]" />
+                                                         <Target className="h-3 w-3 text-accent" />
                                                          <span>
                                                             Edit target
                                                          </span>
@@ -1015,7 +1027,7 @@ export function ChallengeLeaderboardTab({
                   {/* Mobile Leaderboard View (sm:hidden) matching wireframe */}
                   <div className="sm:hidden space-y-3">
                      {/* Header Card: rank | Participant | total hours */}
-                     <div className="rounded-2xl border border-[#262626] bg-[#1a1a1a] px-3.5 py-2.5 flex items-center justify-between text-[11px] font-bold text-[#868686] uppercase tracking-wider">
+                     <div className="rounded-2xl border border-border-default bg-surface-tertiary px-3.5 py-2.5 flex items-center justify-between text-meta font-bold text-text-tertiary uppercase tracking-wider">
                         <div className="flex items-center gap-3">
                            <span className="w-6 text-center">Rank</span>
                            <span>Participant</span>
@@ -1041,11 +1053,11 @@ export function ChallengeLeaderboardTab({
                            return (
                               <div
                                  key={entry.participantId}
-                                 className={`rounded-2xl border border-[#262626] p-3 flex items-center gap-3 transition-colors `}
+                                 className={`rounded-2xl border border-border-default p-3 flex items-center gap-3 transition-colors `}
                               >
                                  {/* Rank */}
                                  <div className="w-6 text-center shrink-0">
-                                    <span className="font-bold text-sm text-[#ffffff] font-sans">
+                                    <span className="font-bold text-sm text-white font-sans">
                                        {currentRank}
                                     </span>
                                  </div>
@@ -1055,7 +1067,7 @@ export function ChallengeLeaderboardTab({
                                     href={getParticipantProfileUrl(
                                        entry.participantId
                                     )}
-                                    className="h-9 w-9 rounded-full bg-[#292929] border border-[#383838] overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-[#22c55e] transition-colors"
+                                    className="h-9 w-9 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                  >
                                     {entry.image ? (
                                        <Image
@@ -1082,7 +1094,7 @@ export function ChallengeLeaderboardTab({
                                           href={getParticipantProfileUrl(
                                              entry.participantId
                                           )}
-                                          className="text-xs font-bold text-[#ffffff] hover:text-[#22c55e] hover:underline truncate max-w-[110px] xs:max-w-[140px] block"
+                                          className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] xs:max-w-[140px] block"
                                        >
                                           {entry.displayName}
                                        </Link>
@@ -1094,7 +1106,7 @@ export function ChallengeLeaderboardTab({
                                        )}
                                        <YptStatusPill status={entry.status} />
                                        <span
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0"
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold border shrink-0"
                                           style={{
                                              backgroundColor:
                                                 entryPalette.badgeBg,
@@ -1109,7 +1121,7 @@ export function ChallengeLeaderboardTab({
                                           <span>{entry.teamName}</span>
                                        </span>
                                     </div>
-                                    <p className="text-[11px] text-[#868686] truncate">
+                                    <p className="text-meta text-text-tertiary truncate">
                                        @{entry.username || "scholar"}
                                     </p>
                                  </div>
@@ -1118,19 +1130,19 @@ export function ChallengeLeaderboardTab({
                                  <div className="shrink-0 text-right font-sans font-sans-tabular space-y-0.5 flex items-center gap-2">
                                     {viewMode === "today" ? (
                                        <div>
-                                          <p className="text-xs font-bold text-[#ffffff]">
+                                          <p className="text-xs font-bold text-white">
                                              {entry.todayLoggedClock}
                                           </p>
                                        </div>
                                     ) : (
                                        <div>
-                                          <p className="text-xs font-bold text-[#ffffff]">
+                                          <p className="text-xs font-bold text-white">
                                              {entry.totalLoggedClock}
-                                             <span className="text-[10px] font-normal text-[#868686]">
+                                             <span className="text-label font-normal text-text-tertiary">
                                                 /{entry.targetClock}
                                              </span>
                                           </p>
-                                          <p className="text-[11px] font-semibold text-[#4ade80]">
+                                          <p className="text-meta font-semibold text-feedback-success">
                                              +{entry.todayLoggedClock}
                                           </p>
                                        </div>
@@ -1142,10 +1154,10 @@ export function ChallengeLeaderboardTab({
                                              onClick={() =>
                                                 handleOpenOverride(entry)
                                              }
-                                             className="px-2 py-1 rounded-lg bg-[#242424] hover:bg-[#333333] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                             className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
                                              title="Admin: Edit Study Hours"
                                           >
-                                             <Clock className="h-3 w-3 text-[#3b82f6]" />
+                                             <Clock className="h-3 w-3 text-feedback-info" />
                                              <span>Edit hr</span>
                                           </button>
                                           <button
@@ -1153,10 +1165,10 @@ export function ChallengeLeaderboardTab({
                                              onClick={() =>
                                                 handleOpenTargetOverride(entry)
                                              }
-                                             className="px-2 py-1 rounded-lg bg-[#242424] hover:bg-[#333333] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1 text-[10px] font-semibold"
+                                             className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
                                              title="Admin: Edit Weekly Target Hours"
                                           >
-                                             <Target className="h-3 w-3 text-[#a855f7]" />
+                                             <Target className="h-3 w-3 text-accent" />
                                              <span>Edit target</span>
                                           </button>
                                        </div>
@@ -1170,29 +1182,29 @@ export function ChallengeLeaderboardTab({
 
                   {/* Desktop Table View (hidden sm:block) */}
                   <div className="hidden sm:block overflow-x-auto">
-                     <table className="w-full text-left text-xs">
-                        <thead>
-                           <tr className="border-b border-[#292929] text-[11px] font-medium text-[#868686] uppercase tracking-wider">
-                              <th className="px-3 py-3 w-12 text-center">
+                     <Table className="w-full text-left text-xs">
+                        <TableHeader>
+                           <TableRow className="border-b border-border-default text-meta font-medium text-text-tertiary uppercase tracking-wider">
+                              <TableHead className="px-3 py-3 w-12 text-center">
                                  Rank
-                              </th>
-                              <th className="px-4 py-3">Name</th>
-                              <th className="px-4 py-3">Team</th>
-                              <th
+                              </TableHead>
+                              <TableHead className="px-4 py-3">Name</TableHead>
+                              <TableHead className="px-4 py-3">Team</TableHead>
+                              <TableHead
                                  className={`px-4 py-3 ${
                                     viewMode === "today" ? "text-right" : ""
                                  }`}
                               >
                                  Today&apos;s hours
-                              </th>
+                              </TableHead>
                               {viewMode !== "today" && (
-                                 <th className="px-4 py-3 text-right">
+                                 <TableHead className="px-4 py-3 text-right">
                                     Total hours
-                                 </th>
+                                 </TableHead>
                               )}
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#222222]">
+                           </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-border-subtle">
                            {paginatedStandings.map((entry) => {
                               const currentRank =
                                  "todayRank" in entry && viewMode === "today"
@@ -1204,7 +1216,7 @@ export function ChallengeLeaderboardTab({
                               );
 
                               return (
-                                 <tr
+                                 <TableRow
                                     key={entry.participantId}
                                     className="transition-colors group hover:bg-white/[0.04]"
                                     style={{
@@ -1212,20 +1224,20 @@ export function ChallengeLeaderboardTab({
                                     }}
                                  >
                                     {/* Rank */}
-                                    <td className="px-3 py-3 text-center">
-                                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#1c1c1c] text-xs font-bold text-[#ffffff] border border-[#333333]">
+                                    <TableCell className="px-3 py-3 text-center">
+                                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-elevated text-xs font-bold text-white border border-border-strong">
                                           {currentRank}
                                        </span>
-                                    </td>
+                                    </TableCell>
 
                                     {/* Name & Avatar */}
-                                    <td className="px-4 py-3 font-medium text-[#ffffff]">
+                                    <TableCell className="px-4 py-3 font-medium text-white">
                                        <div className="flex items-center gap-2.5">
                                           <Link
                                              href={getParticipantProfileUrl(
                                                 entry.participantId
                                              )}
-                                             className="h-7 w-7 rounded-full bg-[#292929] border border-[#434343] overflow-hidden flex items-center justify-center text-xs shrink-0 hover:border-[#22c55e] transition-colors"
+                                             className="h-7 w-7 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center text-xs shrink-0 hover:border-feedback-success transition-colors"
                                           >
                                              {entry.image ? (
                                                 <Image
@@ -1250,7 +1262,7 @@ export function ChallengeLeaderboardTab({
                                                    href={getParticipantProfileUrl(
                                                       entry.participantId
                                                    )}
-                                                   className="font-semibold text-sm text-[#ffffff] hover:text-[#22c55e] hover:underline truncate block"
+                                                   className="font-semibold text-sm text-white hover:text-feedback-success hover:underline truncate block"
                                                 >
                                                    {entry.displayName}
                                                 </Link>
@@ -1266,18 +1278,18 @@ export function ChallengeLeaderboardTab({
                                                 />
                                              </div>
                                              {entry.username && (
-                                                <p className="text-[10px] text-[#868686]">
+                                                <p className="text-label text-text-tertiary">
                                                    @{entry.username}
                                                 </p>
                                              )}
                                           </div>
                                        </div>
-                                    </td>
+                                    </TableCell>
 
                                     {/* Team */}
-                                    <td className="px-4 py-3">
+                                    <TableCell className="px-4 py-3">
                                        <span
-                                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border"
+                                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-meta font-medium border"
                                           style={{
                                              backgroundColor:
                                                 entryPalette.badgeBg,
@@ -1291,20 +1303,20 @@ export function ChallengeLeaderboardTab({
                                           )}
                                           <span>{entry.teamName}</span>
                                        </span>
-                                    </td>
+                                    </TableCell>
 
                                     {/* Today's Hours */}
-                                    <td
+                                    <TableCell
                                        className={`px-4 py-3 font-sans font-sans-tabular ${
                                           viewMode === "today"
-                                             ? "text-right text-sm font-bold text-[#ffffff]"
-                                             : "text-xs text-[#d1d1d1]"
+                                             ? "text-right text-sm font-bold text-white"
+                                             : "text-xs text-text-secondary"
                                        }`}
                                     >
                                        {viewMode === "today" ? (
                                           <div className="inline-flex items-center gap-2 justify-end">
                                              <div className="inline-flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5 text-[#868686]" />
+                                                <Clock className="h-3.5 w-3.5 text-text-tertiary" />
                                                 <span>
                                                    {entry.todayLoggedClock}
                                                 </span>
@@ -1315,34 +1327,34 @@ export function ChallengeLeaderboardTab({
                                                    onClick={() =>
                                                       handleOpenOverride(entry)
                                                    }
-                                                   className="px-2.5 py-1 rounded-lg bg-[#1c1c1c] hover:bg-[#2e2e2e] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
+                                                   className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
                                                    title="Admin: Edit Participant Study Hours"
                                                 >
-                                                   <Clock className="h-3.5 w-3.5 text-[#3b82f6]" />
+                                                   <Clock className="h-3.5 w-3.5 text-feedback-info" />
                                                    <span>Edit hr</span>
                                                 </button>
                                              )}
                                           </div>
                                        ) : (
                                           <span className="flex items-center gap-1.5">
-                                             <Clock className="h-3.5 w-3.5 text-[#868686]" />
+                                             <Clock className="h-3.5 w-3.5 text-text-tertiary" />
                                              <span>
                                                 {entry.todayLoggedClock}
                                              </span>
                                           </span>
                                        )}
-                                    </td>
+                                    </TableCell>
 
                                     {/* Total Hours */}
                                     {viewMode !== "today" && (
-                                       <td className="px-4 py-3 text-right font-sans font-sans-tabular text-sm font-bold text-[#ffffff]">
+                                       <TableCell className="px-4 py-3 text-right font-sans font-sans-tabular text-sm font-bold text-white">
                                           <div className="inline-flex items-center gap-2 justify-end">
                                              <div className="inline-flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5 text-[#22c55e]" />
+                                                <Clock className="h-3.5 w-3.5 text-feedback-success" />
                                                 <span>
                                                    {entry.totalLoggedClock}
                                                 </span>
-                                                <span className="text-xs text-[#868686] font-normal">
+                                                <span className="text-xs text-text-tertiary font-normal">
                                                    / {entry.targetClock}
                                                 </span>
                                              </div>
@@ -1355,10 +1367,10 @@ export function ChallengeLeaderboardTab({
                                                             entry
                                                          )
                                                       }
-                                                      className="px-2.5 py-1 rounded-lg bg-[#1c1c1c] hover:bg-[#2e2e2e] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold"
                                                       title="Admin: Edit Participant Study Hours"
                                                    >
-                                                      <Clock className="h-3.5 w-3.5 text-[#3b82f6]" />
+                                                      <Clock className="h-3.5 w-3.5 text-feedback-info" />
                                                       <span>Edit hr</span>
                                                    </button>
                                                    <button
@@ -1368,22 +1380,22 @@ export function ChallengeLeaderboardTab({
                                                             entry
                                                          )
                                                       }
-                                                      className="px-2.5 py-1 rounded-lg bg-[#1c1c1c] hover:bg-[#2e2e2e] text-[#d1d1d1] hover:text-white border border-[#383838] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold"
                                                       title="Admin: Edit Weekly Target Hours"
                                                    >
-                                                      <Target className="h-3.5 w-3.5 text-[#a855f7]" />
+                                                      <Target className="h-3.5 w-3.5 text-accent" />
                                                       <span>Edit target</span>
                                                    </button>
                                                 </div>
                                              )}
                                           </div>
-                                       </td>
+                                       </TableCell>
                                     )}
-                                 </tr>
+                                 </TableRow>
                               );
                            })}
-                        </tbody>
-                     </table>
+                        </TableBody>
+                     </Table>
                   </div>
 
                   {/* Pagination Controls */}

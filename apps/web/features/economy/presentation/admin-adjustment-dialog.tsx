@@ -3,6 +3,7 @@
 import React, { useState, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { adminAdjustBalanceAction } from "../api/wallet.actions";
 import { ShieldAlert, Loader2, X } from "lucide-react";
 
@@ -77,26 +78,22 @@ export function AdminAdjustmentDialog({
    };
 
    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-         <div className="relative w-full max-w-md rounded-2xl border border-obsidian-border bg-obsidian-card text-obsidian-text p-6 shadow-2xl">
-            <button
-               type="button"
-               onClick={onClose}
-               disabled={isPending}
-               className="absolute top-4 right-4 text-obsidian-textDim hover:text-obsidian-text transition-colors"
-            >
-               <X className="h-4 w-4" />
-            </button>
-
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
+      >
+         <DialogContent className="max-w-md rounded-2xl border-border-default bg-surface-primary text-text-primary p-6">
             <div className="flex items-center gap-2.5 mb-4">
-               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-economy-admin/30 bg-economy-admin/10 text-economy-admin">
+               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-brand-2/30 bg-brand-2/10 text-brand-2">
                   <ShieldAlert className="h-5 w-5" />
                </div>
                <div>
-                  <h3 className="text-base font-semibold text-obsidian-text">
+                  <h3 className="text-base font-semibold text-text-primary">
                      Administrative Balance Adjustment
                   </h3>
-                  <p className="text-xs text-obsidian-textDim">
+                  <p className="text-xs text-text-tertiary">
                      Manually credit or debit coins for moderation or glitch
                      corrections.
                   </p>
@@ -111,7 +108,7 @@ export function AdminAdjustmentDialog({
                )}
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-obsidian-textMuted">
+                  <label className="text-xs font-medium text-text-secondary">
                      Target User ID
                   </label>
                   <Input
@@ -119,12 +116,12 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setTargetUserId(e.target.value)}
                      placeholder="e.g. usr_cl..."
                      disabled={isPending}
-                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text"
+                     className="bg-surface-elevated border-border-default text-xs h-9 text-text-primary"
                   />
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-obsidian-textMuted">
+                  <label className="text-xs font-medium text-text-secondary">
                      Amount (Positive to credit, Negative to debit)
                   </label>
                   <Input
@@ -134,15 +131,15 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setAmount(e.target.value)}
                      placeholder="e.g. 50 or -25"
                      disabled={isPending}
-                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text font-mono"
+                     className="bg-surface-elevated border-border-default text-xs h-9 text-text-primary font-mono"
                   />
-                  <p className="text-[11px] text-obsidian-textDim">
+                  <p className="text-meta text-text-tertiary">
                      Example: +50 adds 50 coins; -50 deducts 50 coins.
                   </p>
                </div>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-obsidian-textMuted">
+                  <label className="text-xs font-medium text-text-secondary">
                      Audit Reason
                   </label>
                   <Input
@@ -150,18 +147,18 @@ export function AdminAdjustmentDialog({
                      onChange={(e) => setReason(e.target.value)}
                      placeholder="e.g. Compensation for crashed YPT sync"
                      disabled={isPending}
-                     className="bg-obsidian-elevated border-obsidian-border text-xs h-9 text-obsidian-text"
+                     className="bg-surface-elevated border-border-default text-xs h-9 text-text-primary"
                   />
                </div>
 
-               <div className="flex items-center justify-end gap-2 pt-2 border-t border-obsidian-borderSubtle">
+               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
                   <Button
                      type="button"
                      variant="ghost"
                      size="sm"
                      onClick={onClose}
                      disabled={isPending}
-                     className="text-xs text-obsidian-textDim hover:text-obsidian-text"
+                     className="text-xs text-text-tertiary hover:text-text-primary"
                   >
                      Cancel
                   </Button>
@@ -183,7 +180,7 @@ export function AdminAdjustmentDialog({
                   </Button>
                </div>
             </form>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

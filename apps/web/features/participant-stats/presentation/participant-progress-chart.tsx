@@ -14,29 +14,29 @@ export function ParticipantProgressChart({
    );
 
    return (
-      <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-7 shadow-xl space-y-4">
-         <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
+      <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-xl space-y-4">
+         <div className="flex items-center justify-between pb-3 border-b border-border-default">
             <div className="flex items-center gap-2">
-               <BarChart3 className="h-5 w-5 text-[#22c55e]" />
-               <h2 className="text-base sm:text-lg font-bold text-[#f4f3f6]">
+               <BarChart3 className="h-5 w-5 text-feedback-success" />
+               <h2 className="text-base sm:text-lg font-bold text-text-primary">
                   Study Progress Across Challenge Days
                </h2>
             </div>
-            <div className="flex items-center gap-4 text-xs text-[#868686]">
+            <div className="flex items-center gap-4 text-xs text-text-tertiary">
                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-feedback-success" />
                   Logged
                </span>
                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-1" />
                   Admin Override
                </span>
                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#fcd34d]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-1" />
                   Leave
                </span>
                <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#262626]" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-surface-nested" />
                   Rest / 0h
                </span>
             </div>
@@ -56,13 +56,13 @@ export function ParticipantProgressChart({
                           )
                         : 3;
 
-                  let barColor = "bg-[#262626] hover:bg-[#333333]";
+                  let barColor = "bg-surface-nested hover:bg-surface-nested";
                   if (day.isLeave) {
-                     barColor = "bg-[#e08a32] hover:bg-[#f59e0b]";
+                     barColor = "bg-brand-2 hover:bg-brand-1";
                   } else if (day.isOverride) {
-                     barColor = "bg-[#f59e0b] hover:bg-[#fbbf24]";
+                     barColor = "bg-brand-1 hover:bg-brand-1-light";
                   } else if (day.durationSeconds > 0) {
-                     barColor = "bg-[#22c55e] hover:bg-[#4ade80]";
+                     barColor = "bg-feedback-success hover:bg-feedback-success";
                   }
 
                   return (
@@ -71,14 +71,14 @@ export function ParticipantProgressChart({
                         className="flex-1 flex flex-col items-center h-full justify-end group relative"
                      >
                         {/* Floating Tooltip */}
-                        <div className="absolute -top-12 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-10 bg-[#1c1c1c] border border-[#383838] px-2.5 py-1.5 rounded-xl shadow-xl whitespace-nowrap text-center text-xs">
+                        <div className="absolute -top-12 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none z-10 bg-surface-elevated border border-border-strong px-2.5 py-1.5 rounded-xl shadow-xl whitespace-nowrap text-center text-xs">
                            <p className="font-bold text-white">
                               {day.label}:{" "}
                               {day.isLeave
                                  ? "🌴 On Leave (00:00:00)"
                                  : day.durationClock}
                            </p>
-                           <p className="text-[10px] text-[#868686]">
+                           <p className="text-label text-text-tertiary">
                               {day.isFuture
                                  ? "Upcoming Day"
                                  : `Cumulative: ${day.cumulativeClock}`}
@@ -87,10 +87,10 @@ export function ParticipantProgressChart({
 
                         {/* Duration Label above Bar (Desktop only, if > 0) */}
                         <span
-                           className={`hidden sm:block text-[10px] font-sans font-sans-tabular mb-1 group-hover:text-white transition-colors ${
+                           className={`hidden sm:block text-label font-sans font-sans-tabular mb-1 group-hover:text-white transition-colors ${
                               day.isLeave
-                                 ? "text-[#fcd34d] font-semibold"
-                                 : "text-[#868686]"
+                                 ? "text-brand-1 font-semibold"
+                                 : "text-text-tertiary"
                            }`}
                         >
                            {day.isLeave
@@ -113,15 +113,15 @@ export function ParticipantProgressChart({
                         {/* Day Label at bottom */}
                         <div className="mt-2.5 flex flex-col items-center">
                            <span
-                              className={`text-[11px] font-semibold ${
+                              className={`text-meta font-semibold ${
                                  day.isToday
-                                    ? "text-[#22c55e]"
-                                    : "text-[#868686]"
+                                    ? "text-feedback-success"
+                                    : "text-text-tertiary"
                               }`}
                            >
                               D{day.dayNumber}
                            </span>
-                           <span className="text-[9px] text-[#555555]">
+                           <span className="text-caption text-text-tertiary">
                               {day.weekday}
                            </span>
                         </div>

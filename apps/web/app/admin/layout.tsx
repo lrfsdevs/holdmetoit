@@ -44,14 +44,14 @@ export default async function AdminLayout({
    }
 
    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-obsidian-bg text-obsidian-text font-sans flex flex-col">
+      <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary font-sans flex flex-col">
          {/* Main Content Area */}
          <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
             {children}
          </main>
 
          {/* Footer */}
-         <footer className="relative z-10 border-t border-obsidian-borderSubtle bg-obsidian-bg py-6 text-center text-xs text-obsidian-textDim">
+         <footer className="relative z-10 border-t border-border-subtle bg-surface-page py-6 text-center text-xs text-text-tertiary">
             <div className="mx-auto max-w-7xl px-4">
                HoldMeToIt Host Console • Eliminate Spreadsheet Burnout &
                Automate Study Battles

@@ -120,7 +120,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                   className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-sm font-medium transition-all ${
                      type === "bug"
                         ? "bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-sm"
-                        : "bg-[#1f1e24] border-[#2c2b33] text-zinc-400 hover:text-zinc-200 hover:bg-[#25242c]"
+                        : "bg-surface-elevated border-border-strong text-zinc-400 hover:text-zinc-200 hover:bg-surface-nested"
                   }`}
                >
                   <Bug className="h-4 w-4" />
@@ -133,7 +133,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                   className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-sm font-medium transition-all ${
                      type === "enhancement"
                         ? "bg-violet-500/15 border-violet-500/40 text-violet-300 shadow-sm"
-                        : "bg-[#1f1e24] border-[#2c2b33] text-zinc-400 hover:text-zinc-200 hover:bg-[#25242c]"
+                        : "bg-surface-elevated border-border-strong text-zinc-400 hover:text-zinc-200 hover:bg-surface-nested"
                   }`}
                >
                   <Sparkles className="h-4 w-4" />
@@ -162,7 +162,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                }
                maxLength={120}
                required
-               className="h-11 min-h-0 rounded-xl bg-[#1a1920] border-[#2e2d36] text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:bg-[#1a1920]"
+               className="h-11 min-h-0 rounded-xl bg-surface-elevated border-border-strong text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:bg-surface-elevated"
             />
          </div>
 
@@ -188,7 +188,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                rows={4}
                maxLength={2000}
                required
-               className="rounded-xl bg-[#1a1920] border-[#2e2d36] text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:bg-[#1a1920] resize-none"
+               className="rounded-xl bg-surface-elevated border-border-strong text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:bg-surface-elevated resize-none"
             />
          </div>
 

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-16 (Session 119 — Pokémon Catalogue Importer Removal & Schema Normalization via DB Backfill on `afnan`)
+> **Last Updated:** 2026-10-18 (Session 132 — Missing UI Primitives Added on `afnan`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -737,3 +737,75 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck -w @holdmetoit/web` 0 errors; web Vitest **155 files / 1,455 tests** green; `next build` clean (from `apps/web`); bot tests **63/63**; `db:migrate:status` clean; `db:migrate` no-op.
 - **Known pre-existing drift (not addressed):** `prisma migrate diff` reports `YptConnection.updatedAt` DB default and `ypt_bot_logs` FKs that the schema does not model.
 - **NEXT STEP:** Point the Vercel project's **Root Directory** to `apps/web` (install at repo root); set the bot's standard-Node start command to `npm start -w @holdmetoit/ypt-bot`; add `deploy.yml` once the bot host is confirmed; optionally codemod the 59 `@/core/db` imports to `@holdmetoit/database`.
+
+### Session 127 — 2026-10-18 (Design-System Sprint: Dialog / AlertDialog / Sheet + Table Migration)
+
+- **Scope:** Completed the design-system migration for **alerts/confirms, custom dropdown/combobox, tables and dialogs**. Native/ hand-rolled overlays are gone from these surfaces in favour of Radix primitives.
+- **Primitives (NEW):** `components/ui/{dialog,alert-dialog,sheet,table,popover,command}.tsx`, hand-authored in the obsidian palette. Added `@radix-ui/react-dialog`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-popover`, `cmdk`; dev `@testing-library/react`, `@testing-library/user-event`, `jsdom`. No shadcn CLI run.
+- **Alerts/confirms:** `devboard-view` 5× `alert()` → `toast.error()`; delete-flag + YPT revoke + YPT disconnect confirms → `AlertDialog`.
+- **Dropdown/combobox:** `devboard-header` sort (hand-rolled mousedown) → `DropdownMenu` radio group; `ypt-member-selector` (search + `role="listbox"`) → `Popover` + `Command`.
+- **Tables:** `flag-table`, `challenge-leaderboard-tab`, `participant-daily-history`, `transaction-history-table` → `Table`; the two `sr-only` accessibility tables were intentionally left.
+- **Standalone dialogs → `Dialog`/`Sheet`:** `flag-audit-drawer` → `Sheet` (right); `admin-trophy-adjustment`, `admin-adjustment`, `reconciliation`, `pokemon-detail`, `acquisition-history`, `admin-banner`, `flag-editor`, `tester-selector`, `feedback`, `enrollment`, `admin-target-override`, `daily-hours`, `admin-hours-override`, `challenge-feedback` → `Dialog`. Radix now supplies overlay, focus trap, Escape, scroll lock and the close button; the per-modal backdrops, manual Escape handlers and hand-rolled X buttons were removed.
+- **Inline dialogs:** YPT reject → `AlertDialog` (reason input kept, auto-focus); `challenge-manage-tab` delete-challenge + remove-participant → `AlertDialog`; `cockpit-tasks-section` add-todo / edit-task / rename-category → `Dialog`, delete-category → `AlertDialog`.
+- **a11y:** each converted dialog's heading was promoted to `DialogTitle` / `AlertDialogTitle` so Radix gets an accessible name (the enrollment modal uses a `sr-only` title).
+- **Tests:** the five suites that used `renderToStaticMarkup` (which cannot see Radix portal content) were converted to `// @vitest-environment jsdom` + `@testing-library/react` with a small `renderToHtml` helper — `feedback-dialog`, `challenge-feedback-dialog`, `admin-target-override-modal`, `admin-hours-override-modal`, `daily-hours-modal`. NEW `challenge-manage-tab.confirm.test.tsx` covers open → confirm → action and cancel-no-op.
+- **Quality Gates:** `npm run typecheck -w @holdmetoit/web` 0 errors; web Vitest **156 files / 1,457 tests** green; `next build` clean (17 routes).
+- **NEXT STEP:** Optional — continue the design-system migration for the remaining primitives (tabs, switches, tooltips, avatars/progress already exist) and do a manual 360px pass over the migrated dialogs; otherwise none.
+
+### Session 128 — 2026-10-18 (Design-System Unification: `pokedex` + `economy` → `obsidian`)
+
+- **Scope:** Removed both parallel token systems (`pokedex-*`, `economy-*`) so `obsidian` is the single design-system namespace. Only **color tokens** moved — the economy feature (wallet/coins/ledger) and the pokemon feature are untouched.
+- **Config/CSS:** `tailwind.config.ts` gained `obsidian` accents `gold`/`goldLight`/`goldDark`/`admin`/`adminHover`/`rose` and lost the entire `economy` + `pokedex` blocks. `app/globals.css` lost all `--economy-*` (11) and `--pokedex-*` (15) vars.
+- **Economy mapping (22 files + `coins-icon`, ~172 usages):** gold family → `obsidian-gold*`; `credit → obsidian-serpents-border`; `refund → obsidian-raven-border`; `adjustment → obsidian-purple-border`; `debit`/`reversal` → `obsidian-rose`; `reserved` → `obsidian-gold`; `admin*` → `obsidian-admin*`. `Badge`/`Button` variant **names** are unchanged (values repointed), so the ~24 call sites were untouched. `coins-icon` SVG uses literal obsidian hex.
+- **Pokédex mapping (8 files, ~176 usages):** surfaces/borders/text collapse onto the obsidian neutral scale (`cardSubtle`+`inset → obsidian-subtle`; `textSecondary → obsidian-textMuted`; `textMuted`+`textDim → obsidian-textDim`); accents `accentPurple → obsidian-purple-border`, `accentRose → obsidian-rose`, `accentAmber → obsidian-gold`. Pokéball SVG fills use `#141414`.
+- **Intended visual change:** `/pokemon` shifts from a violet-tinted dark to neutral obsidian; the `adjustment` violet shifts `#a855f7 → #8b5cf6`. All other economy mappings are value-identical to the house presets they now reuse.
+- **Quality Gates:** namespace guard returns 0 (`*-pokedex-*`, `*-economy-*`, `var(--pokedex|economy)`); `npm run typecheck -w @holdmetoit/web` 0 errors; web Vitest **156 files / 1,457 tests** green; `next build` clean (17 routes); post-build CSS inspected to confirm the new utilities (incl. `/opacity` variants) are actually generated.
+- **Docs:** `DESIGN.md` §2.1 updated with the accent extensions and a single-palette note.
+- **NEXT STEP:** Add the ESLint guard banning arbitrary `*-[#…]` color utilities in `app/`/`features/` (the enforcement phase), then continue the design-system work (missing primitives: tabs, switch, tooltip, progress, avatar, separator, skeleton, label).
+
+### Session 129 — 2026-10-18 (Design-System: 3-Tier Token Architecture + Raw Hex Eliminated)
+
+- **Scope:** Slices 0–1 of the design-system program. The DS is now a **three-tier token architecture** (Primitive → Semantic → Component) and **all arbitrary hex is gone** from UI code.
+- **Tiers (all in `apps/web/app/globals.css`):** Tier 1 primitives as plain `:root` vars (`--primitive-*` — no Tailwind utilities generated, so UI cannot reach them); Tier 2 semantic as `@theme inline` (`--color-*` → `text-*`/`surface-*`/`border-*`/`action-*`/`feedback-*`/`input-*`/`overlay-*`); Tier 3 component as `@theme inline` (`--color-button-*`, `card-*`, `modal-*`, `dropdown-*`, `nav-*`, `badge-*`).
+- **Primitives:** neutral 50–950 (anchored on the old obsidian values), brand-1 gold / brand-2 admin / brand-3 rose, and green/blue/red/violet palettes (300/500/950 anchored) with full 50–950 ramps; plus typography, size/spacing, radius, border-width, elevation, opacity and motion primitives.
+- **Slice 1 codemod:** **2,703 arbitrary hex utilities across 78 files** rewritten to semantic tokens (252 prefix+value pairs; reviewed via `--report` before `--write`). Also rewrote the 24 SVG-illustration + inline-style hex in `challenge-wrapped-modal`, the pokéball fills, the coins icon and `app/global-error.tsx` to `var(--color-*)`.
+- **Legacy layer:** `obsidian-*` stays as a **deprecated alias** in `tailwind.config.ts` (hex kept so `/opacity` keeps working) — removed in slice 4. `body`/`*` now use `bg-surface-page`/`text-text-primary`/`border-border-default`.
+- **Tests:** updated `challenge-wrapped-modal.test.tsx` SVG-attribute assertions. (The 5 earlier jsdom conversions unchanged.)
+- **Quality Gates:** `npm run typecheck -w @holdmetoit/web` 0 errors; web Vitest **156 files / 1,457 tests** green; `next build` clean (17 routes); emitted CSS inspected — semantic utilities (incl. `color-mix` opacity variants) compile to `var(--primitive-…)`, and `--color-*`/`--primitive-*` vars are present in the output.
+- **Docs:** `DESIGN.md` §1.2 (new "No raw hex, no primitive access" law) and §2 rewritten into the three tiers; NEW `docs/design-system/README.md`.
+- **Known allowlists (data, not tokens):** `challenge-creator-wizard.tsx` preset team colours; test fixtures.
+- **NEXT STEP:** Slice 2 — migrate the **894 `obsidian-*` class usages (38 files)** to semantic tokens, then slice 3 (component tokens for all `components/ui`), slice 4 (delete the alias layer), slice 5 (ESLint enforcement: no hex / no `var(--primitive-*)` outside `globals.css` + CI lint step). Deferred: 332 arbitrary font sizes + 157 arbitrary spacing/size values; missing primitives (tabs/switch/tooltip/progress/avatar/separator/skeleton/label); page adoption; a11y/motion/responsive sweeps.
+
+### Session 130 — 2026-10-18 (Design System: Slices 2–5 — Alias Layer Removed & Enforced)
+
+- **Scope:** Completed the design-system program. `obsidian-*` is gone (alias layer deleted) and the token rules are now enforced by ESLint + CI.
+- **Slice 2 — `obsidian-*` → semantic:** 894 usages across 38 files remapped 1:1 (`obsidian-textDim → text-tertiary`, `obsidian-border → border-default`, `obsidian-gold → brand-1`, `serpents/raven/purple/crimson → feedback-success/info/error + accent`, etc.); opacity modifiers preserved. Fixed the stale `bg-obsidian-cardSubtle` → `bg-surface-secondary`.
+- **Slice 3 — component tokens:** `components/ui` now consume their own tier-3 tokens (button, badge, input, textarea, select, card, dialog, alert-dialog, sheet, dropdown-menu, popover, command, header). Tier 3 expanded with `button-outline/ghost/secondary-*`, `input-field-*`, badge variant borders, and aligned values so there is **no visual change** (`action-primary` = white, `modal-bg` = `surface-primary`, `dropdown-border` = `border-strong`, `overlay-backdrop` = 70%).
+- **Slice 4 — alias deletion:** removed the entire `obsidian: { … }` block from `tailwind.config.ts` after confirming 0 usages.
+- **Slice 5 — enforcement:** added four core `no-restricted-syntax` rules to `.eslintrc.json` (raw hex classes, raw hex in `fill/stroke/color` attrs, `var(--primitive-*)`, legacy `obsidian-*`); `lint` now covers `app · components · features · core · lib`; added an explicit **Web lint** step to `.github/workflows/ci.yml`. Verified with a throwaway probe: all four rules error, then removed the probe.
+- **Quality Gates:** `obsidian-*` grep = 0; hex-utility grep = 0; `var(--primitive-*)` outside `globals.css` = 0; `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **156 files / 1,457 tests** green; `next build` clean (17 routes).
+- **Docs:** `docs/design-system/README.md` migration table marked complete + enforcement section.
+- **NEXT STEP (deferred program):** typography/spacing tokenisation (332 arbitrary font sizes, 157 arbitrary spacing/size values); missing primitives (tabs/switch/tooltip/progress/avatar/separator/skeleton/label); page-by-page adoption incl. 9-state coverage; a11y/360px/motion sweeps; DevBoard living styleguide.
+
+### Session 131 — 2026-10-18 (Typography & Recurring-Size Tokenisation)
+
+- **Scope:** Moved arbitrary font sizes and the recurring fixed dimensions onto tokens. Values are **exact** (no visual change); only naming/consolidation changed.
+- **Typography (332 occurrences, 76 files touched):** added primitives `--primitive-font-size-8/9/10/11/15/36/38/60/80` and semantic `--text-micro` 8 · `--text-caption` 9 · `--text-label` 10 · `--text-meta` 11 · `--text-body` 15 · `--text-body-lg` 16 · `--text-display-sm/md/lg/xl/2xl` 32/36/38/60/80. Codemod replaced every `text-[Npx]`; 7 fluid/relative values (`clamp(...)`, `0.3em`) left arbitrary by design.
+- **Sizing (9 recurring values):** `--spacing-control-sm/md/lg` (44/50/74) · `--spacing-dropdown-min` (170) · `--spacing-panel-sm` (400) · `--container-artwork-sm/md` (200/240) · `--container-panel-sm/md/lg` (400/620/840); `min-w-[8rem]` → native `min-w-32`. Layout math (`calc/min/vh/var/env`) and ~80 one-off dimensions remain arbitrary intentionally.
+- **Enforcement:** two new rules — arbitrary px font sizes (`text-[Npx]`) and re-introduced tokenised sizes (`min-h/h/min-w/max-w-[44|50|74|170|200|240|400|620|840px]`). `clamp`/`em` and layout math pass.
+- **Quality Gates:** `text-[Npx]` = 0 · tokenised-size literals = 0 · typecheck 0 · lint 0 errors · web Vitest **156 files / 1,457 tests** green · `next build` clean · emitted CSS confirmed (`.text-meta`, `.min-h-control-sm{min-height:44px}`, `.md:text-display-lg`, `.md:max-w-panel-lg`).
+- **Docs:** `DESIGN.md` §2.2 (sizing row) + §3.2 type-scale token table; `docs/design-system/README.md` §3.3 + migration table.
+- **Remaining arbitrary values:** 7 fluid font sizes; 83 spacing/size values (layout math + one-offs) — intentional, not linted.
+- **NEXT STEP:** missing primitives (tabs/switch/tooltip/progress/avatar/separator/skeleton/label), then page adoption + 9-state coverage, then a11y/360px/motion sweeps and the DevBoard styleguide.
+
+### Session 132 — 2026-10-18 (Missing UI Primitives Added)
+
+- **Scope:** Added the 11 missing primitives, bringing `components/ui` to **29**. All are additive — no existing page changed.
+- **New primitives:** `tabs` (Radix), `switch`, `tooltip` (+ `TooltipProvider` mounted once in `app/layout.tsx`), `progress`, `avatar`, `separator`, `label`, `alert` (plain + cva, 5 variants), `radio-group`, `scroll-area`, `skeleton` (plain).
+- **Dependencies:** added `@radix-ui/react-{tabs,switch,tooltip,progress,avatar,separator,label,radio-group,scroll-area}` to `@holdmetoit/web`.
+- **Tokens:** Tier 3 gained `radio-*` (bg/border/selected), `switch-*` (track/track-active/thumb) and `checkbox-*` (bg/border/check). `checkbox.tsx` migrated off the shadcn `primary/ring` vars onto these tokens.
+- **Styling:** all obsidian — semantic tokens for surfaces/text/borders, `brand-1` for active switch/progress/radio, `feedback-*` for alert variants, `shadow-dropdown` for tooltips.
+- **Tests:** NEW `components/ui/primitives.test.tsx` (jsdom/RTL) — tabs activation, switch toggle, radio selection, progress `aria-valuenow/max`, avatar fallback, alert role/content, label↔input association, separator role, skeleton `aria-hidden`. **9/9 green.**
+- **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **157 files / 1,466 tests** green; `next build` clean (17 routes, First Load JS unchanged at 87.4 kB); emitted CSS confirmed for `bg-switch-track-active`, `border-radio-selected`, `bg-checkbox-bg`, `rounded-pill`, `shadow-dropdown`.
+- **Docs:** `docs/design-system/README.md` §3.4 (component tokens + inventory); `DESIGN.md` §4 inventory note.
+- **NEXT STEP:** Phase D adoption — Tabs → the 6 `role="tablist"` surfaces (DevBoard switcher first), Skeleton → 22 `animate-pulse` placeholders, Separator → 3 `<hr>`, ScrollArea → selective `overflow-y-auto` containers, Progress → the 1 `role="progressbar"`, Avatar → header/profile/leaderboard images; then the a11y/360px/motion sweeps.

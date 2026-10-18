@@ -24,6 +24,16 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
    Select,
@@ -711,8 +721,8 @@ export function ChallengeManageTab({
             <div
                className={`flex items-center gap-3 p-4 rounded-2xl text-xs font-medium border ${
                   feedback.type === "success"
-                     ? "bg-[#144520]/40 border-[#22c55e]/40 text-[#4ade80]"
-                     : "bg-[#450a0a]/40 border-[#ef4444]/40 text-[#f87171]"
+                     ? "bg-feedback-success-bg/40 border-feedback-success/40 text-feedback-success"
+                     : "bg-feedback-error-bg/40 border-feedback-error/40 text-feedback-error-text"
                }`}
             >
                {feedback.type === "success" ? (
@@ -726,7 +736,7 @@ export function ChallengeManageTab({
                      type="button"
                      onClick={handleUndoLockResults}
                      disabled={isPending}
-                     className="ml-auto shrink-0 rounded-lg border border-[#4ade80]/40 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#4ade80] transition hover:bg-[#22c55e]/10 disabled:opacity-50"
+                     className="ml-auto shrink-0 rounded-lg border border-feedback-success/40 px-3 py-1 text-meta font-bold uppercase tracking-wide text-feedback-success transition hover:bg-feedback-success/10 disabled:opacity-50"
                   >
                      Undo
                   </button>
@@ -735,26 +745,26 @@ export function ChallengeManageTab({
          )}
 
          {/* Main Container matching Figma Obsidian Frame */}
-         <div className="rounded-3xl border border-[#262626] bg-[#141414] p-4 sm:p-6 lg:p-8 space-y-8 shadow-xl">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-4 sm:p-6 lg:p-8 space-y-8 shadow-xl">
             {/* Event Lifecycle Ribbon */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#262626]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-default">
                <div className="space-y-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#868686]">
+                  <span className="text-meta font-bold uppercase tracking-wider text-text-tertiary">
                      Lifecycle Status
                   </span>
                   <div className="flex items-center gap-2">
                      <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                            challenge.status === "ACTIVE"
-                              ? "bg-[#22c55e]/20 text-[#4ade80] border border-[#22c55e]/30"
+                              ? "bg-feedback-success/20 text-feedback-success border border-feedback-success/30"
                               : challenge.status === "COMPLETED"
-                                ? "bg-[#3b82f6]/20 text-[#60a5fa] border border-[#3b82f6]/30"
-                                : "bg-[#eab308]/20 text-[#facc15] border border-[#eab308]/30"
+                                ? "bg-feedback-info/20 text-feedback-info border border-feedback-info/30"
+                                : "bg-brand-1/20 text-brand-1 border border-brand-1/30"
                         }`}
                      >
                         ● {challenge.status}
                      </span>
-                     <span className="text-xs text-[#868686]">
+                     <span className="text-xs text-text-tertiary">
                         Format: {challenge.format.replace(/_/g, " ")}
                      </span>
                   </div>
@@ -766,7 +776,7 @@ export function ChallengeManageTab({
                         type="button"
                         onClick={handleKickoff}
                         disabled={isPending}
-                        className="h-10 px-4 w-full sm:w-auto rounded-xl bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold text-xs gap-2"
+                        className="h-10 px-4 w-full sm:w-auto rounded-xl bg-feedback-success hover:bg-feedback-success text-black font-semibold text-xs gap-2"
                      >
                         {isPending ? (
                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -785,7 +795,7 @@ export function ChallengeManageTab({
                         type="button"
                         onClick={handleLockResults}
                         disabled={isPending}
-                        className="h-10 px-4 w-full sm:w-auto rounded-xl bg-[#eab308] hover:bg-[#ca8a04] text-black font-semibold text-xs gap-2"
+                        className="h-10 px-4 w-full sm:w-auto rounded-xl bg-brand-1 hover:bg-brand-1 text-black font-semibold text-xs gap-2"
                      >
                         {isPending ? (
                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -797,8 +807,8 @@ export function ChallengeManageTab({
                   )}
 
                   {Boolean(challenge.resultsLockedAt) && (
-                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#262626] border border-[#383838] text-xs text-[#a3a3a3]">
-                        <Lock className="h-3.5 w-3.5 text-[#eab308]" />
+                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-nested border border-border-strong text-xs text-text-tertiary">
+                        <Lock className="h-3.5 w-3.5 text-brand-1" />
                         <span>Results Locked</span>
                      </div>
                   )}
@@ -807,25 +817,25 @@ export function ChallengeManageTab({
 
             {/* SECTION 1: CHALLENGE DETAILS & TIMETABLE */}
             <section className="space-y-5">
-               <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#ffffff]">
+               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                   Challenge Details & Timetable
                </h3>
 
                <div className="space-y-4">
                   <div className="space-y-1.5">
-                     <label className="text-xs font-semibold text-[#a3a3a3]">
+                     <label className="text-xs font-semibold text-text-tertiary">
                         Challenge Title
                      </label>
                      <Input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g. Midterm Reading Week Sprint"
-                        className="h-12 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-4 text-sm"
+                        className="h-12 rounded-2xl bg-surface-nested border-border-strong focus:border-input-bg text-white px-4 text-sm"
                      />
                   </div>
 
                   <div className="space-y-1.5">
-                     <label className="text-xs font-semibold text-[#a3a3a3]">
+                     <label className="text-xs font-semibold text-text-tertiary">
                         Challenge Description
                      </label>
                      <Textarea
@@ -833,37 +843,37 @@ export function ChallengeManageTab({
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Explain the challenge rules and accountability system..."
                         rows={4}
-                        className="rounded-2xl bg-[#292929] border-[#383838] text-white p-3 text-xs leading-relaxed focus:border-[#545454] focus:bg-[#292929]"
+                        className="rounded-2xl bg-surface-nested border-border-strong text-white p-3 text-xs leading-relaxed focus:border-input-bg focus:bg-surface-nested"
                      />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-[#a3a3a3] flex items-center justify-between">
+                        <label className="text-xs font-semibold text-text-tertiary flex items-center justify-between">
                            <span>Start Date & Time (UTC)</span>
-                           <Calendar className="h-3.5 w-3.5 text-[#868686]" />
+                           <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
                         </label>
                         <div className="relative">
                            <Input
                               type="datetime-local"
                               value={startAt}
                               onChange={(e) => setStartAt(e.target.value)}
-                              className="h-12 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-4 text-xs"
+                              className="h-12 rounded-2xl bg-surface-nested border-border-strong focus:border-input-bg text-white px-4 text-xs"
                            />
                         </div>
                      </div>
 
                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-[#a3a3a3] flex items-center justify-between">
+                        <label className="text-xs font-semibold text-text-tertiary flex items-center justify-between">
                            <span>End Date & Time (UTC)</span>
-                           <Calendar className="h-3.5 w-3.5 text-[#868686]" />
+                           <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
                         </label>
                         <div className="relative">
                            <Input
                               type="datetime-local"
                               value={endAt}
                               onChange={(e) => setEndAt(e.target.value)}
-                              className="h-12 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-4 text-xs"
+                              className="h-12 rounded-2xl bg-surface-nested border-border-strong focus:border-input-bg text-white px-4 text-xs"
                            />
                         </div>
                      </div>
@@ -872,12 +882,12 @@ export function ChallengeManageTab({
             </section>
 
             {/* SECTION 2: DYNAMIC HOUSE / TEAM IDENTITIES */}
-            <section className="space-y-5 pt-4 border-t border-[#262626]">
+            <section className="space-y-5 pt-4 border-t border-border-default">
                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#ffffff]">
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                      Dynamic House / Team Identities
                   </h3>
-                  <span className="text-[11px] text-[#868686]">
+                  <span className="text-meta text-text-tertiary">
                      {teams.length} Teams Configured
                   </span>
                </div>
@@ -889,7 +899,7 @@ export function ChallengeManageTab({
                         className="flex items-center gap-2 sm:gap-3 min-w-0"
                      >
                         {/* Emoji Avatar Box */}
-                        <div className="relative h-12 w-12 rounded-2xl bg-[#292929] border border-[#383838] flex items-center justify-center shrink-0">
+                        <div className="relative h-12 w-12 rounded-2xl bg-surface-nested border border-border-strong flex items-center justify-center shrink-0">
                            <input
                               type="text"
                               value={team.iconEmoji}
@@ -913,19 +923,19 @@ export function ChallengeManageTab({
                                  handleUpdateTeam(idx, "name", e.target.value)
                               }
                               placeholder="Team Name"
-                              className="h-12 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-3 sm:px-4 text-sm min-w-0"
+                              className="h-12 rounded-2xl bg-surface-nested border-border-strong focus:border-input-bg text-white px-3 sm:px-4 text-sm min-w-0"
                            />
                         </div>
 
                         {/* Color Swatch Badge */}
-                        <label className="relative h-12 px-2.5 sm:px-3 rounded-2xl bg-[#292929] border border-[#383838] flex items-center gap-2 cursor-pointer shrink-0 hover:bg-[#333333] transition-colors">
+                        <label className="relative h-12 px-2.5 sm:px-3 rounded-2xl bg-surface-nested border border-border-strong flex items-center gap-2 cursor-pointer shrink-0 hover:bg-surface-nested transition-colors">
                            <span
                               className="h-5 w-5 rounded-md border border-white/20 shrink-0"
                               style={{
                                  backgroundColor: team.color || "#FFB066",
                               }}
                            />
-                           <span className="hidden sm:inline text-xs font-sans text-[#d1d1d1] uppercase select-none">
+                           <span className="hidden sm:inline text-xs font-sans text-text-secondary uppercase select-none">
                               {team.color || "#FFB066"}
                            </span>
                            <input
@@ -943,7 +953,7 @@ export function ChallengeManageTab({
                            <button
                               type="button"
                               onClick={() => handleRemoveTeam(idx)}
-                              className="h-12 w-12 rounded-2xl border border-transparent hover:border-[#383838] hover:bg-[#292929] text-[#868686] hover:text-[#ef4444] flex items-center justify-center transition-colors shrink-0"
+                              className="h-12 w-12 rounded-2xl border border-transparent hover:border-border-strong hover:bg-surface-nested text-text-tertiary hover:text-feedback-error flex items-center justify-center transition-colors shrink-0"
                               title="Remove Team"
                            >
                               <Trash2 className="h-4 w-4" />
@@ -956,15 +966,15 @@ export function ChallengeManageTab({
                <button
                   type="button"
                   onClick={handleAddTeam}
-                  className="flex items-center gap-2 text-xs font-semibold text-[#ffffff] hover:text-[#e0e0e0] transition-colors pt-1"
+                  className="flex items-center gap-2 text-xs font-semibold text-white hover:text-text-secondary transition-colors pt-1"
                >
                   <Plus className="h-4 w-4" />
                   <span>Add Another Team</span>
                </button>
             </section>
 
-            <section className="space-y-5 pt-4 border-t border-[#262626]">
-               <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#ffffff]">
+            <section className="space-y-5 pt-4 border-t border-border-default">
+               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                   Event Header Image
                </h3>
                <ChallengeImageInput
@@ -978,8 +988,8 @@ export function ChallengeManageTab({
                />
             </section>
 
-            <section className="space-y-5 pt-4 border-t border-[#262626]">
-               <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#ffffff]">
+            <section className="space-y-5 pt-4 border-t border-border-default">
+               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                   Assigned Punishment PFP
                </h3>
                <ChallengeImageInput
@@ -994,20 +1004,20 @@ export function ChallengeManageTab({
             </section>
 
             {/* SECTION 4: PARTICIPANT ROSTERS & HOURS MANAGEMENT (ADMIN OVERRIDE) */}
-            <section className="space-y-5 pt-4 border-t border-[#262626]">
+            <section className="space-y-5 pt-4 border-t border-border-default">
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
-                     <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#ffffff]">
+                     <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">
                         Participant Rosters & Study Hours Management
                      </h3>
-                     <p className="text-xs text-[#868686]">
+                     <p className="text-xs text-text-tertiary">
                         Reassign houses or override participant logged hours
                         throughout the challenge week (D1–D7). All manual
                         adjustments require an audit reason.
                      </p>
                   </div>
 
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#1c1c1c] border border-[#292929] text-[#868686] self-start sm:self-auto">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface-elevated border border-border-default text-text-tertiary self-start sm:self-auto">
                      {filteredRoster.length} of {visibleStandings.length}{" "}
                      scholars
                   </span>
@@ -1017,7 +1027,7 @@ export function ChallengeManageTab({
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-1">
                      {/* Search bar */}
                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-tertiary" />
                         <Input
                            type="text"
                            placeholder="Search roster by name, @handle, team..."
@@ -1028,7 +1038,7 @@ export function ChallengeManageTab({
                               setRosterPage(1);
                               updateUrlParams({ search: val, page: 1 });
                            }}
-                           className="h-8 pl-8 pr-7 bg-[#242424] border-[#383838] text-[#ffffff] placeholder-[#868686] text-xs rounded-xl"
+                           className="h-8 pl-8 pr-7 bg-surface-nested border-border-strong text-white placeholder-text-tertiary text-xs rounded-xl"
                         />
                         {rosterSearch && (
                            <button
@@ -1038,7 +1048,7 @@ export function ChallengeManageTab({
                                  setRosterPage(1);
                                  updateUrlParams({ search: "", page: 1 });
                               }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#868686] hover:text-white p-0.5"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white p-0.5"
                            >
                               <X className="h-3 w-3" />
                            </button>
@@ -1057,7 +1067,7 @@ export function ChallengeManageTab({
                         >
                            <SelectTrigger
                               data-testid="manage-roster-team-select"
-                              className="h-8 rounded-xl border-[#383838] bg-[#242424] text-xs text-[#ffffff]"
+                              className="h-8 rounded-xl border-border-strong bg-surface-nested text-xs text-white"
                            >
                               <SelectValue
                                  placeholder={`All Houses (${visibleStandings.length})`}
@@ -1089,7 +1099,7 @@ export function ChallengeManageTab({
                            variant="outline"
                            size="sm"
                            onClick={handleResetRosterFilters}
-                           className="h-8 px-2.5 text-xs rounded-xl border-[#383838] bg-[#1c1c1c] hover:bg-[#292929] text-[#d1d1d1] shrink-0"
+                           className="h-8 px-2.5 text-xs rounded-xl border-border-strong bg-surface-elevated hover:bg-surface-nested text-text-secondary shrink-0"
                            title="Clear roster filters"
                         >
                            <RotateCcw className="h-3 w-3 mr-1" />
@@ -1100,12 +1110,12 @@ export function ChallengeManageTab({
                )}
 
                {visibleStandings.length === 0 ? (
-                  <div className="rounded-2xl border border-[#262626] bg-[#1c1c1c] p-6 text-center text-xs text-[#868686]">
+                  <div className="rounded-2xl border border-border-default bg-surface-elevated p-6 text-center text-xs text-text-tertiary">
                      No scholars have enrolled in this challenge yet.
                   </div>
                ) : filteredRoster.length === 0 ? (
-                  <div className="rounded-2xl border border-[#262626] bg-[#1c1c1c] p-6 text-center space-y-2">
-                     <p className="text-xs text-[#868686]">
+                  <div className="rounded-2xl border border-border-default bg-surface-elevated p-6 text-center space-y-2">
+                     <p className="text-xs text-text-tertiary">
                         No scholars match your roster search or team filter.
                      </p>
                      <Button
@@ -1113,13 +1123,13 @@ export function ChallengeManageTab({
                         variant="outline"
                         size="sm"
                         onClick={handleResetRosterFilters}
-                        className="h-7 px-3 text-[11px] rounded-lg border-[#383838] bg-[#242424] hover:bg-[#333333] text-white"
+                        className="h-7 px-3 text-meta rounded-lg border-border-strong bg-surface-nested hover:bg-surface-nested text-white"
                      >
                         Reset filters
                      </Button>
                   </div>
                ) : (
-                  <div className="space-y-3 rounded-2xl border border-[#262626] bg-[#1a1a1a] p-3 sm:p-4">
+                  <div className="space-y-3 rounded-2xl border border-border-default bg-surface-tertiary p-3 sm:p-4">
                      {paginatedRoster.map((participant) => {
                         const currentSelectedTeamId =
                            participantTeamMap[participant.participantId] ||
@@ -1131,14 +1141,14 @@ export function ChallengeManageTab({
                         return (
                            <div
                               key={participant.participantId}
-                              className="p-3 sm:p-4 rounded-2xl bg-[#1c1c1c] border border-[#262626] space-y-3 hover:border-[#383838] transition-colors"
+                              className="p-3 sm:p-4 rounded-2xl bg-surface-elevated border border-border-default space-y-3 hover:border-border-strong transition-colors"
                            >
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                  {/* User info */}
                                  <div className="flex items-center gap-3 min-w-0">
                                     <Link
                                        href={`/challenge/${challenge.id}/participant/${participant.participantId}`}
-                                       className="h-10 w-10 rounded-full bg-[#292929] border border-[#383838] overflow-hidden shrink-0 flex items-center justify-center hover:border-[#22c55e] transition-colors"
+                                       className="h-10 w-10 rounded-full bg-surface-nested border border-border-strong overflow-hidden shrink-0 flex items-center justify-center hover:border-feedback-success transition-colors"
                                     >
                                        {participant.image ? (
                                           <Image
@@ -1150,23 +1160,23 @@ export function ChallengeManageTab({
                                              unoptimized
                                           />
                                        ) : (
-                                          <UserIcon className="h-5 w-5 text-[#868686]" />
+                                          <UserIcon className="h-5 w-5 text-text-tertiary" />
                                        )}
                                     </Link>
                                     <div className="min-w-0">
                                        <Link
                                           href={`/challenge/${challenge.id}/participant/${participant.participantId}`}
-                                          className="text-xs font-bold text-[#ffffff] hover:text-[#22c55e] hover:underline truncate block"
+                                          className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate block"
                                        >
                                           {participant.displayName}
                                        </Link>
-                                       <p className="text-[11px] text-[#868686] truncate">
+                                       <p className="text-meta text-text-tertiary truncate">
                                           @{participant.username || "scholar"} •{" "}
-                                          <span className="text-[#d1d1d1] font-mono">
+                                          <span className="text-text-secondary font-mono">
                                              {participant.totalLoggedClock}
                                           </span>{" "}
                                           logged /{" "}
-                                          <span className="text-[#c084fc] font-mono font-semibold">
+                                          <span className="text-accent-text font-mono font-semibold">
                                              {participant.targetClock}
                                           </span>{" "}
                                           target
@@ -1188,13 +1198,13 @@ export function ChallengeManageTab({
                                           }
                                           disabled={isReassigning}
                                        >
-                                          <SelectTrigger className="h-9 w-full sm:w-auto rounded-xl border-[#383838] bg-[#292929] text-xs font-semibold text-[#ffffff] disabled:opacity-50">
+                                          <SelectTrigger className="h-9 w-full sm:w-auto rounded-xl border-border-strong bg-surface-nested text-xs font-semibold text-white disabled:opacity-50">
                                              <SelectValue placeholder="⏳ Not Assigned" />
                                           </SelectTrigger>
                                           <SelectContent>
                                              <SelectItem
                                                 value="no-assigned"
-                                                className="text-[#868686]"
+                                                className="text-text-tertiary"
                                              >
                                                 ⏳ Not Assigned
                                              </SelectItem>
@@ -1227,10 +1237,10 @@ export function ChallengeManageTab({
                                                 1
                                           )
                                        }
-                                       className="h-9 px-3 rounded-xl border-[#383838] bg-[#292929] hover:bg-[#333333] text-white text-xs font-semibold gap-1.5 shrink-0"
+                                       className="h-9 px-3 rounded-xl border-border-strong bg-surface-nested hover:bg-surface-nested text-white text-xs font-semibold gap-1.5 shrink-0"
                                        title="Admin: Edit Participant Study Hours"
                                     >
-                                       <Clock className="h-3.5 w-3.5 text-[#3b82f6]" />
+                                       <Clock className="h-3.5 w-3.5 text-feedback-info" />
                                        <span>Edit hr</span>
                                     </Button>
 
@@ -1241,15 +1251,15 @@ export function ChallengeManageTab({
                                        onClick={() =>
                                           handleOpenTargetOverride(participant)
                                        }
-                                       className="h-9 px-3 rounded-xl border-[#383838] bg-[#292929] hover:bg-[#333333] text-white text-xs font-semibold gap-1.5 shrink-0"
+                                       className="h-9 px-3 rounded-xl border-border-strong bg-surface-nested hover:bg-surface-nested text-white text-xs font-semibold gap-1.5 shrink-0"
                                        title="Admin: Edit Weekly Target Hours"
                                     >
-                                       <Target className="h-3.5 w-3.5 text-[#a855f7]" />
+                                       <Target className="h-3.5 w-3.5 text-accent" />
                                        <span>Edit target</span>
                                     </Button>
 
                                     {isReassigning && (
-                                       <Loader2 className="h-4 w-4 animate-spin text-[#868686]" />
+                                       <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />
                                     )}
 
                                     {challenge.status !== "COMPLETED" && (
@@ -1260,7 +1270,7 @@ export function ChallengeManageTab({
                                              setRemoveReason("");
                                           }}
                                           disabled={isBusy}
-                                          className="h-9 w-9 rounded-xl border border-transparent hover:border-[#383838] hover:bg-[#292929] text-[#868686] hover:text-[#ef4444] flex items-center justify-center transition-colors shrink-0 disabled:opacity-50"
+                                          className="h-9 w-9 rounded-xl border border-transparent hover:border-border-strong hover:bg-surface-nested text-text-tertiary hover:text-feedback-error flex items-center justify-center transition-colors shrink-0 disabled:opacity-50"
                                           title="Remove participant from challenge"
                                        >
                                           <UserMinus className="h-4 w-4" />
@@ -1270,12 +1280,12 @@ export function ChallengeManageTab({
                               </div>
 
                               {/* 7-Day Week Strip (Clickable to jump to specific day in override modal) */}
-                              <div className="pt-2 border-t border-[#262626]">
-                                 <div className="flex items-center justify-between text-[10px] text-[#868686] pb-1 px-0.5">
+                              <div className="pt-2 border-t border-border-default">
+                                 <div className="flex items-center justify-between text-label text-text-tertiary pb-1 px-0.5">
                                     <span>
                                        7-Day Log Breakdown (Click day to edit)
                                     </span>
-                                    <span className="text-[#a1a1a1]">
+                                    <span className="text-text-tertiary">
                                        Full Week D1–D7
                                     </span>
                                  </div>
@@ -1300,10 +1310,10 @@ export function ChallengeManageTab({
                                              }
                                              className={`py-1.5 px-0.5 rounded-lg text-center transition-all ${
                                                 isFuture
-                                                   ? "bg-[#1c1c1c]/30 border border-transparent text-[#545454] cursor-not-allowed opacity-50"
+                                                   ? "bg-surface-elevated/30 border border-transparent text-text-tertiary cursor-not-allowed opacity-50"
                                                    : hasHours
-                                                     ? "bg-[#144520]/30 hover:bg-[#144520]/60 border border-[#22c55e]/30 text-[#4ade80]"
-                                                     : "bg-[#242424]/40 hover:bg-[#2f2f2f] border border-[#2e2e2e] text-[#868686] hover:text-[#d1d1d1]"
+                                                     ? "bg-feedback-success-bg/30 hover:bg-feedback-success-bg/60 border border-feedback-success/30 text-feedback-success"
+                                                     : "bg-surface-nested/40 hover:bg-surface-nested border border-border-strong text-text-tertiary hover:text-text-secondary"
                                              }`}
                                              title={
                                                 isFuture
@@ -1311,13 +1321,13 @@ export function ChallengeManageTab({
                                                    : `Click to edit Day ${opt.dayNumber} (${opt.dateKey}) - ${formatSecondsToClock(loggedSec)}`
                                              }
                                           >
-                                             <div className="text-[9px] uppercase tracking-wider text-[#a1a1a1] leading-none">
+                                             <div className="text-caption uppercase tracking-wider text-text-tertiary leading-none">
                                                 {opt.weekday}
                                              </div>
-                                             <div className="text-[10px] font-semibold mt-0.5 leading-none">
+                                             <div className="text-label font-semibold mt-0.5 leading-none">
                                                 D{opt.dayNumber}
                                              </div>
-                                             <div className="text-[9px] font-mono mt-1 leading-none truncate">
+                                             <div className="text-caption font-mono mt-1 leading-none truncate">
                                                 {isFuture
                                                    ? "-"
                                                    : hasHours
@@ -1349,13 +1359,13 @@ export function ChallengeManageTab({
             </section>
 
             {/* BOTTOM ACTION BAR (Cancel & Save) */}
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-6 border-t border-[#262626]">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-6 border-t border-border-default">
                <Button
                   type="button"
                   variant="outline"
                   onClick={handleReset}
                   disabled={isBusy}
-                  className="h-11 px-6 w-full sm:w-auto rounded-2xl border-[#383838] bg-[#1c1c1c] text-[#ffffff] hover:bg-[#292929] hover:text-[#ffffff] text-xs font-bold"
+                  className="h-11 px-6 w-full sm:w-auto rounded-2xl border-border-strong bg-surface-elevated text-white hover:bg-surface-nested hover:text-white text-xs font-bold"
                >
                   Cancel
                </Button>
@@ -1364,7 +1374,7 @@ export function ChallengeManageTab({
                   type="button"
                   onClick={handleSaveChallenge}
                   disabled={isBusy}
-                  className="h-11 px-6 w-full sm:w-auto rounded-2xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-xs font-bold shadow-sm gap-2"
+                  className="h-11 px-6 w-full sm:w-auto rounded-2xl bg-white text-text-inverse hover:bg-white/90 text-xs font-bold shadow-sm gap-2"
                >
                   {(isPending || isSaving) && (
                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1381,7 +1391,7 @@ export function ChallengeManageTab({
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-red-400">
                      Danger Zone
                   </h4>
-                  <p className="text-xs text-[#a3a3a3] max-w-xl">
+                  <p className="text-xs text-text-tertiary max-w-xl">
                      Permanently delete this event. All associated teams, member
                      study logs, weekly goals, and punishment records will be
                      permanently purged.
@@ -1401,71 +1411,69 @@ export function ChallengeManageTab({
          </div>
 
          {/* Delete Confirmation Modal */}
-         {showDeleteModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-               <div className="bg-[#141414] border border-[#262626] rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-6 shadow-2xl">
-                  <div className="flex items-center gap-3 text-red-400">
-                     <div className="h-10 w-10 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0">
+         <AlertDialog
+            open={showDeleteModal}
+            onOpenChange={(open) => {
+               if (!open) setShowDeleteModal(false);
+            }}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-3">
+                     <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 shrink-0">
                         <AlertTriangle className="h-5 w-5" />
-                     </div>
-                     <h3 className="text-base font-bold text-white">
-                        Delete Challenge Event?
-                     </h3>
-                  </div>
-
-                  <p className="text-xs leading-relaxed text-[#a3a3a3]">
+                     </span>
+                     Delete Challenge Event?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
                      Are you sure you want to permanently delete{" "}
                      <strong className="text-white">
                         &quot;{challenge.title}&quot;
                      </strong>
                      ? This action cannot be undone. All study records, team
                      rosters, and historical standings will be erased forever.
-                  </p>
-
-                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
-                     <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setShowDeleteModal(false)}
-                        disabled={isDeleting}
-                        className="h-11 px-5 w-full sm:w-auto rounded-2xl border-[#383838] bg-[#1c1c1c] text-white hover:bg-[#292929] text-xs font-semibold"
-                     >
-                        Cancel
-                     </Button>
-
-                     <Button
-                        type="button"
-                        onClick={handleDeleteChallenge}
-                        disabled={isDeleting}
-                        className="h-11 px-5 w-full sm:w-auto rounded-2xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold gap-2"
-                     >
-                        {isDeleting && (
-                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        )}
-                        Yes, Delete Event
-                     </Button>
-                  </div>
-               </div>
-            </div>
-         )}
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>
+                     Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                     onClick={() => void handleDeleteChallenge()}
+                     disabled={isDeleting}
+                     className="gap-2"
+                  >
+                     {isDeleting && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                     )}
+                     Yes, Delete Event
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
 
          {/* Remove Participant Confirmation Modal */}
-         {removeTarget && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-               <div className="bg-[#141414] border border-[#262626] rounded-3xl p-6 sm:p-8 max-w-md w-full space-y-6 shadow-2xl">
-                  <div className="flex items-center gap-3 text-red-400">
-                     <div className="h-10 w-10 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0">
+         <AlertDialog
+            open={Boolean(removeTarget)}
+            onOpenChange={(open) => {
+               if (!open) {
+                  setRemoveTarget(null);
+                  setRemoveReason("");
+               }
+            }}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-3">
+                     <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 shrink-0">
                         <UserMinus className="h-5 w-5" />
-                     </div>
-                     <h3 className="text-base font-bold text-white">
-                        Remove Participant?
-                     </h3>
-                  </div>
-
-                  <p className="text-xs leading-relaxed text-[#a3a3a3]">
+                     </span>
+                     Remove Participant?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
                      You are about to remove{" "}
                      <strong className="text-white">
-                        {removeTarget.displayName}
+                        {removeTarget?.displayName}
                      </strong>{" "}
                      from{" "}
                      <strong className="text-white">
@@ -1473,49 +1481,44 @@ export function ChallengeManageTab({
                      </strong>
                      . Their study logs, punishment record, and standings entry
                      will be permanently deleted. This action cannot be undone.
-                  </p>
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
 
-                  <div className="space-y-1.5">
-                     <label className="text-xs font-semibold text-[#a3a3a3]">
-                        Audit Reason <span className="text-red-400">*</span>
-                     </label>
-                     <Input
-                        value={removeReason}
-                        onChange={(e) => setRemoveReason(e.target.value)}
-                        placeholder="e.g. Duplicate enrollment, rule violation..."
-                        className="h-11 rounded-2xl bg-[#292929] border-[#383838] focus:border-[#545454] text-white px-4 text-xs"
-                     />
-                  </div>
-
-                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
-                     <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                           setRemoveTarget(null);
-                           setRemoveReason("");
-                        }}
-                        disabled={isRemoving}
-                        className="h-11 px-5 w-full sm:w-auto rounded-2xl border-[#383838] bg-[#1c1c1c] text-white hover:bg-[#292929] text-xs font-semibold"
-                     >
-                        Cancel
-                     </Button>
-
-                     <Button
-                        type="button"
-                        onClick={handleRemoveParticipant}
-                        disabled={isRemoving}
-                        className="h-11 px-5 w-full sm:w-auto rounded-2xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold gap-2"
-                     >
-                        {isRemoving && (
-                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        )}
-                        Yes, Remove Participant
-                     </Button>
-                  </div>
+               <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-text-tertiary">
+                     Audit Reason <span className="text-red-400">*</span>
+                  </label>
+                  <Input
+                     value={removeReason}
+                     onChange={(e) => setRemoveReason(e.target.value)}
+                     placeholder="e.g. Duplicate enrollment, rule violation..."
+                     className="h-11 rounded-2xl bg-surface-nested border-border-strong focus:border-input-bg text-white px-4 text-xs"
+                  />
                </div>
-            </div>
-         )}
+
+               <AlertDialogFooter>
+                  <AlertDialogCancel
+                     disabled={isRemoving}
+                     onClick={() => {
+                        setRemoveTarget(null);
+                        setRemoveReason("");
+                     }}
+                  >
+                     Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                     onClick={() => void handleRemoveParticipant()}
+                     disabled={isRemoving}
+                     className="gap-2"
+                  >
+                     {isRemoving && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                     )}
+                     Yes, Remove Participant
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
 
          {/* Admin Hours Override Modal (FEAT-LOG-04) */}
          <AdminHoursOverrideModal

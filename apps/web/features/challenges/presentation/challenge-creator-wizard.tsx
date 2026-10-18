@@ -244,11 +244,11 @@ export function ChallengeCreatorWizard() {
    return (
       <form
          onSubmit={handleSubmit}
-         className="max-w-4xl mx-auto space-y-6 bg-[#0b0b0b] p-6 sm:p-8 rounded-3xl border border-[#262626] shadow-2xl"
+         className="max-w-4xl mx-auto space-y-6 bg-surface-page p-6 sm:p-8 rounded-3xl border border-border-default shadow-2xl"
       >
          {/* Step 1: Battle Format (Figma 144:1012 step-1) */}
          <div className="space-y-3">
-            <h3 className="text-base font-bold text-[#ffffff] tracking-tight">
+            <h3 className="text-base font-bold text-white tracking-tight">
                Battle Format
             </h3>
 
@@ -259,17 +259,17 @@ export function ChallengeCreatorWizard() {
                   onClick={() => handleFormatChange("TEAM_VS_TEAM")}
                   className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all ${
                      format === "TEAM_VS_TEAM"
-                        ? "border-[#ffffff] bg-[#141414] shadow-md"
-                        : "border-[#262626] bg-[#141414]/60 hover:border-[#383838]"
+                        ? "border-white bg-surface-primary shadow-md"
+                        : "border-border-default bg-surface-primary/60 hover:border-border-strong"
                   }`}
                >
                   <div className="flex items-center gap-2 mb-2">
-                     <Users2 className="h-4 w-4 text-[#ffffff]" />
-                     <span className="font-semibold text-sm text-[#f4f3f6]">
+                     <Users2 className="h-4 w-4 text-white" />
+                     <span className="font-semibold text-sm text-text-primary">
                         Team vs Team
                      </span>
                   </div>
-                  <span className="text-xs text-[#d1d1d1] leading-relaxed">
+                  <span className="text-xs text-text-secondary leading-relaxed">
                      Divide participants into houses. Settle cumulative deficit
                      balances collectively.
                   </span>
@@ -281,17 +281,17 @@ export function ChallengeCreatorWizard() {
                   onClick={() => handleFormatChange("DUOS")}
                   className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all ${
                      format === "DUOS"
-                        ? "border-[#ffffff] bg-[#141414] shadow-md"
-                        : "border-[#262626] bg-[#141414]/60 hover:border-[#383838]"
+                        ? "border-white bg-surface-primary shadow-md"
+                        : "border-border-default bg-surface-primary/60 hover:border-border-strong"
                   }`}
                >
                   <div className="flex items-center gap-2 mb-2">
-                     <UserPlus className="h-4 w-4 text-[#d1d1d1]" />
-                     <span className="font-semibold text-sm text-[#f4f3f6]">
+                     <UserPlus className="h-4 w-4 text-text-secondary" />
+                     <span className="font-semibold text-sm text-text-primary">
                         Duos Battle
                      </span>
                   </div>
-                  <span className="text-xs text-[#d1d1d1] leading-relaxed">
+                  <span className="text-xs text-text-secondary leading-relaxed">
                      Buddy up. Complete joint schedules. If one partner falters,
                      both earn the forfeit.
                   </span>
@@ -303,17 +303,17 @@ export function ChallengeCreatorWizard() {
                   onClick={() => handleFormatChange("SOLOS")}
                   className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all ${
                      format === "SOLOS"
-                        ? "border-[#ffffff] bg-[#141414] shadow-md"
-                        : "border-[#262626] bg-[#141414]/60 hover:border-[#383838]"
+                        ? "border-white bg-surface-primary shadow-md"
+                        : "border-border-default bg-surface-primary/60 hover:border-border-strong"
                   }`}
                >
                   <div className="flex items-center gap-2 mb-2">
-                     <User className="h-4 w-4 text-[#d1d1d1]" />
-                     <span className="font-semibold text-sm text-[#f4f3f6]">
+                     <User className="h-4 w-4 text-text-secondary" />
+                     <span className="font-semibold text-sm text-text-primary">
                         Solos FFA
                      </span>
                   </div>
-                  <span className="text-xs text-[#d1d1d1] leading-relaxed">
+                  <span className="text-xs text-text-secondary leading-relaxed">
                      Every scholar for themselves. Complete personal targets or
                      face public punishment.
                   </span>
@@ -322,13 +322,13 @@ export function ChallengeCreatorWizard() {
          </div>
 
          {/* Step 2: Challenge Details & Timetable (Figma 144:1012 step-2) */}
-         <div className="space-y-4 pt-3 border-t border-[#1f1f1f]">
-            <h3 className="text-base font-bold text-[#ffffff] tracking-tight">
+         <div className="space-y-4 pt-3 border-t border-border-subtle">
+            <h3 className="text-base font-bold text-white tracking-tight">
                Challenge Details & Timetable
             </h3>
 
             <div>
-               <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5">
+               <label className="block text-xs font-medium text-text-primary mb-1.5">
                   Challenge Title
                </label>
                <Input
@@ -339,12 +339,12 @@ export function ChallengeCreatorWizard() {
                   required
                   minLength={3}
                   maxLength={80}
-                  className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] placeholder-[#d2d2d2] rounded-xl"
+                  className="h-11 bg-input-bg border-input-border text-text-primary placeholder-text-secondary rounded-xl"
                />
             </div>
 
             <div>
-               <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5">
+               <label className="block text-xs font-medium text-text-primary mb-1.5">
                   Challenge Description
                </label>
                <Textarea
@@ -352,14 +352,14 @@ export function ChallengeCreatorWizard() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. October Team Battle is an automated study battle governed by the HoldMeToIt three-condition accountability system..."
-                  className="bg-[#545454] border-[#484848] text-[#f4f3f6] placeholder:text-[#d2d2d2] rounded-xl p-3 text-xs leading-relaxed focus:bg-[#545454]"
+                  className="bg-input-bg border-input-border text-text-primary placeholder:text-text-secondary rounded-xl p-3 text-xs leading-relaxed focus:bg-input-bg"
                />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
-                  <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5 flex items-center gap-1.5">
-                     <Calendar className="h-3.5 w-3.5 text-[#d1d1d1]" />
+                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                     <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>Start Date & Time (UTC)</span>
                   </label>
                   <Input
@@ -367,12 +367,12 @@ export function ChallengeCreatorWizard() {
                      value={startAt}
                      onChange={(e) => setStartAt(e.target.value)}
                      required
-                     className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl"
+                     className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
                   />
                </div>
                <div>
-                  <label className="block text-xs font-medium text-[#f4f3f6] mb-1.5 flex items-center gap-1.5">
-                     <Calendar className="h-3.5 w-3.5 text-[#d1d1d1]" />
+                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                     <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>End Date & Time (UTC)</span>
                   </label>
                   <Input
@@ -380,15 +380,15 @@ export function ChallengeCreatorWizard() {
                      value={endAt}
                      onChange={(e) => setEndAt(e.target.value)}
                      required
-                     className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl"
+                     className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
                   />
                </div>
             </div>
          </div>
 
          {/* Step 3: Dynamic House / Team Identities (Figma 144:1012 step-3) */}
-         <div className="space-y-4 pt-3 border-t border-[#1f1f1f]">
-            <h3 className="text-base font-bold text-[#ffffff] tracking-tight">
+         <div className="space-y-4 pt-3 border-t border-border-subtle">
+            <h3 className="text-base font-bold text-white tracking-tight">
                Dynamic House / Team Identities
             </h3>
 
@@ -396,7 +396,7 @@ export function ChallengeCreatorWizard() {
                {teams.map((team, idx) => (
                   <div
                      key={idx}
-                     className="flex items-center gap-3 p-2.5 rounded-xl border border-[#292929] bg-[#141414]"
+                     className="flex items-center gap-3 p-2.5 rounded-xl border border-border-default bg-surface-primary"
                   >
                      <div className="w-12 shrink-0">
                         <Input
@@ -406,7 +406,7 @@ export function ChallengeCreatorWizard() {
                            onChange={(e) =>
                               updateTeam(idx, "iconEmoji", e.target.value)
                            }
-                           className="h-10 text-center font-sans bg-[#545454] border-[#484848] text-lg rounded-xl text-white"
+                           className="h-10 text-center font-sans bg-input-bg border-input-border text-lg rounded-xl text-white"
                         />
                      </div>
 
@@ -419,11 +419,11 @@ export function ChallengeCreatorWizard() {
                            }
                            required
                            placeholder="Team Name"
-                           className="h-10 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl text-xs"
+                           className="h-10 bg-input-bg border-input-border text-text-primary rounded-xl text-xs"
                         />
                      </div>
 
-                     <div className="flex items-center gap-2 bg-[#545454] border border-[#484848] rounded-xl px-2 h-10 shrink-0">
+                     <div className="flex items-center gap-2 bg-input-bg border border-input-border rounded-xl px-2 h-10 shrink-0">
                         <input
                            type="color"
                            value={team.color || "#22c55e"}
@@ -432,7 +432,7 @@ export function ChallengeCreatorWizard() {
                            }
                            className="h-6 w-6 cursor-pointer rounded border-none bg-transparent p-0"
                         />
-                        <span className="font-sans text-xs text-[#d1d1d1]">
+                        <span className="font-sans text-xs text-text-secondary">
                            {team.color}
                         </span>
                      </div>
@@ -441,7 +441,7 @@ export function ChallengeCreatorWizard() {
                         <button
                            type="button"
                            onClick={() => removeTeam(idx)}
-                           className="text-xs text-[#ff5757] hover:underline px-2"
+                           className="text-xs text-feedback-error-text hover:underline px-2"
                         >
                            Remove
                         </button>
@@ -453,7 +453,7 @@ export function ChallengeCreatorWizard() {
                   <button
                      type="button"
                      onClick={addTeam}
-                     className="inline-flex items-center gap-1.5 text-xs text-[#ffffff] hover:text-[#d1d1d1] font-medium pt-1"
+                     className="inline-flex items-center gap-1.5 text-xs text-white hover:text-text-secondary font-medium pt-1"
                   >
                      <Plus className="h-3.5 w-3.5" />
                      <span>Add Another Team</span>
@@ -462,10 +462,10 @@ export function ChallengeCreatorWizard() {
             </div>
          </div>
 
-         <section className="space-y-4 pt-3 border-t border-[#1f1f1f]">
-            <h3 className="text-base font-bold text-[#ffffff] tracking-tight">
+         <section className="space-y-4 pt-3 border-t border-border-subtle">
+            <h3 className="text-base font-bold text-white tracking-tight">
                Event Header Image{" "}
-               <span className="text-[#ff5757]" aria-label="required">
+               <span className="text-feedback-error-text" aria-label="required">
                   *
                </span>
             </h3>
@@ -482,10 +482,10 @@ export function ChallengeCreatorWizard() {
             />
          </section>
 
-         <section className="space-y-4 pt-3 border-t border-[#1f1f1f]">
-            <h3 className="text-base font-bold text-[#ffffff] tracking-tight">
+         <section className="space-y-4 pt-3 border-t border-border-subtle">
+            <h3 className="text-base font-bold text-white tracking-tight">
                Assigned Punishment PFP{" "}
-               <span className="text-[#ff5757]" aria-label="required">
+               <span className="text-feedback-error-text" aria-label="required">
                   *
                </span>
             </h3>
@@ -503,14 +503,14 @@ export function ChallengeCreatorWizard() {
          </section>
 
          {errorMsg && (
-            <div className="flex items-center gap-2 rounded-xl border border-[#ff5757]/40 bg-[#381717] p-3 text-xs text-[#ff5757]">
+            <div className="flex items-center gap-2 rounded-xl border border-feedback-error-text/40 bg-feedback-error-bg p-3 text-xs text-feedback-error-text">
                <AlertCircle className="h-4 w-4 shrink-0" />
                <span>{errorMsg}</span>
             </div>
          )}
 
          {/* Modal Actions */}
-         <div className="flex flex-col-reverse items-stretch gap-3 pt-4 border-t border-[#1f1f1f] sm:flex-row sm:items-center sm:justify-end">
+         <div className="flex flex-col-reverse items-stretch gap-3 pt-4 border-t border-border-subtle sm:flex-row sm:items-center sm:justify-end">
             <Button
                type="button"
                variant="outline"
@@ -527,14 +527,14 @@ export function ChallengeCreatorWizard() {
                   router.back();
                }}
                disabled={isSubmitting || isUploading}
-               className="h-11 px-6 rounded-xl border-[#ffffff] text-[#ffffff] bg-transparent hover:bg-white/10 text-xs font-semibold"
+               className="h-11 px-6 rounded-xl border-white text-white bg-transparent hover:bg-white/10 text-xs font-semibold"
             >
                Cancel
             </Button>
             <Button
                type="submit"
                disabled={isSubmitting || isUploading || !title.trim()}
-               className="h-11 px-8 rounded-xl bg-[#ffffff] text-[#0a080e] hover:bg-[#e0e0e0] text-xs font-bold shadow-lg"
+               className="h-11 px-8 rounded-xl bg-white text-text-inverse hover:bg-white/90 text-xs font-bold shadow-lg"
             >
                {isSubmitting ? "Creating..." : "Create & Launch Challenge"}
             </Button>

@@ -106,12 +106,12 @@ export function WalletView({
 
    if (loading && !summary) {
       return (
-         <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
-            <Loader2 className="h-8 w-8 animate-spin text-economy-gold mb-3" />
-            <h3 className="text-sm font-semibold text-obsidian-text">
+         <div className="flex flex-col items-center justify-center min-h-panel-sm text-center p-6">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-1 mb-3" />
+            <h3 className="text-sm font-semibold text-text-primary">
                Loading Virtual Wallet...
             </h3>
-            <p className="text-xs text-obsidian-textDim mt-1">
+            <p className="text-xs text-text-tertiary mt-1">
                Retrieving balances and transaction ledger.
             </p>
          </div>
@@ -120,20 +120,20 @@ export function WalletView({
 
    if (error && !summary) {
       return (
-         <div className="rounded-2xl border border-destructive/30 bg-obsidian-card p-6 text-center max-w-md mx-auto my-12">
+         <div className="rounded-2xl border border-destructive/30 bg-surface-primary p-6 text-center max-w-md mx-auto my-12">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive mx-auto mb-3">
                <AlertCircle className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-obsidian-text">
+            <h3 className="text-sm font-semibold text-text-primary">
                Unable to Load Wallet
             </h3>
-            <p className="text-xs text-obsidian-textDim mt-1">{error}</p>
+            <p className="text-xs text-text-tertiary mt-1">{error}</p>
             <Button
                type="button"
                variant="outline"
                size="sm"
                onClick={() => void loadData(1, activeFilter)}
-               className="mt-4 gap-1.5 text-xs rounded-xl border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-obsidian-text"
+               className="mt-4 gap-1.5 text-xs rounded-xl border-border-strong bg-surface-elevated text-text-secondary hover:text-text-primary"
             >
                <RefreshCw className="h-3.5 w-3.5" />
                Retry
@@ -145,16 +145,16 @@ export function WalletView({
    return (
       <div className="space-y-6">
          {typeof userTrophies === "number" && (
-            <div className="flex items-center justify-between rounded-2xl border border-obsidian-border bg-obsidian-card px-4 py-3 text-xs shadow-md">
+            <div className="flex items-center justify-between rounded-2xl border border-border-default bg-surface-primary px-4 py-3 text-xs shadow-md">
                <div className="flex items-center gap-2.5">
-                  <span className="text-obsidian-textDim text-[11px] font-medium">
+                  <span className="text-text-tertiary text-meta font-medium">
                      Competitive Rating:
                   </span>
                   <TrophyRoleBadge trophies={userTrophies} size="sm" />
                </div>
                <Link
                   href="/leaderboard"
-                  className="text-xs text-economy-gold hover:underline flex items-center gap-1 font-medium"
+                  className="text-xs text-brand-1 hover:underline flex items-center gap-1 font-medium"
                >
                   <span>Leaderboard</span>
                   <ExternalLink className="h-3 w-3" />

@@ -30,14 +30,14 @@ export function ChangelogView({
    return (
       <div className="mx-auto max-w-3xl space-y-8">
          <header className="space-y-2">
-            <h1 className="border-b-2 border-white pb-1.5 font-display text-2xl font-extrabold tracking-tight text-[#f4f3f6]">
+            <h1 className="border-b-2 border-white pb-1.5 font-display text-2xl font-extrabold tracking-tight text-text-primary">
                Changelog
             </h1>
-            <p className="text-sm text-[#868686]">
+            <p className="text-sm text-text-tertiary">
                Product updates and improvements, newest first.
             </p>
             {isAdmin ? (
-               <p className="text-xs text-[#e08a32]">
+               <p className="text-xs text-brand-2">
                   Admin view — internal engineering entries are included.
                </p>
             ) : null}
@@ -48,10 +48,10 @@ export function ChangelogView({
                <section key={group.date} className="space-y-3">
                   <div className="flex items-center gap-2">
                      <History
-                        className="h-4 w-4 shrink-0 text-[#868686]"
+                        className="h-4 w-4 shrink-0 text-text-tertiary"
                         aria-hidden="true"
                      />
-                     <h2 className="font-display text-sm font-semibold text-[#f4f3f6] font-sans-tabular">
+                     <h2 className="font-display text-sm font-semibold text-text-primary font-sans-tabular">
                         {formatEntryDate(group.date)}
                      </h2>
                   </div>
@@ -60,25 +60,25 @@ export function ChangelogView({
                      {group.entries.map((entry) => (
                         <article
                            key={`${group.date}-${entry.title}`}
-                           className="rounded-2xl border border-[#262626] bg-[#141414] p-5 shadow-lg"
+                           className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-lg"
                         >
                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-base font-semibold text-[#f4f3f6]">
+                              <h3 className="text-base font-semibold text-text-primary">
                                  {entry.title}
                               </h3>
                               {entry.audience === "internal" ? (
-                                 <span className="inline-flex items-center rounded-full border border-[#434343] bg-[#1c1c1c] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#868686]">
+                                 <span className="inline-flex items-center rounded-full border border-border-strong bg-surface-elevated px-2 py-0.5 text-label font-semibold uppercase tracking-wider text-text-tertiary">
                                     Internal
                                  </span>
                               ) : null}
                            </div>
                            {entry.body ? (
-                              <p className="mt-2 text-sm leading-relaxed text-[#d1d1d1]">
+                              <p className="mt-2 text-sm leading-relaxed text-text-secondary">
                                  {entry.body}
                               </p>
                            ) : null}
                            {entry.highlights && entry.highlights.length > 0 ? (
-                              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[#d1d1d1] marker:text-[#868686]">
+                              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-text-secondary marker:text-text-tertiary">
                                  {entry.highlights.map((highlight) => (
                                     <li key={highlight}>{highlight}</li>
                                  ))}

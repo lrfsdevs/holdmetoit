@@ -121,12 +121,12 @@ export function HomeCockpitView({
       <div className="space-y-8 max-w-4xl mx-auto px-4 py-8 sm:py-12">
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-               <h1 className="text-3xl sm:text-4xl font-extrabold text-[#ffffff] tracking-tight">
+               <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
                   Welcome{" "}
                   {isLoggedIn ? (
                      <Link
                         href={activeProfileUrl}
-                        className="hover:underline hover:text-[#22c55e] transition-colors"
+                        className="hover:underline hover:text-feedback-success transition-colors"
                         title={`View profile for ${effectiveDisplayName}`}
                      >
                         {effectiveDisplayName}
@@ -135,7 +135,7 @@ export function HomeCockpitView({
                      effectiveDisplayName
                   )}
                </h1>
-               <p className="text-sm font-medium text-[#868686] mt-1 flex items-center gap-2">
+               <p className="text-sm font-medium text-text-tertiary mt-1 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span>{formattedDate} (UTC)</span>
                </p>

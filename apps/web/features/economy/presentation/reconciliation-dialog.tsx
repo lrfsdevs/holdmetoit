@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { reconcileWalletAction } from "../api/wallet.actions";
 import type { ReconciliationReport } from "../domain/reconciliation";
 import {
@@ -64,26 +65,22 @@ export function ReconciliationDialog({
    if (!isOpen) return null;
 
    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-         <div className="relative w-full max-w-lg rounded-2xl border border-obsidian-border bg-obsidian-card text-obsidian-text p-6 shadow-2xl">
-            <button
-               type="button"
-               onClick={onClose}
-               disabled={loading}
-               className="absolute top-4 right-4 text-obsidian-textDim hover:text-obsidian-text transition-colors"
-            >
-               <X className="h-4 w-4" />
-            </button>
-
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
+      >
+         <DialogContent className="max-w-lg rounded-2xl border-border-default bg-surface-primary text-text-primary p-6">
             <div className="flex items-center gap-2.5 mb-4">
-               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-economy-credit/30 bg-economy-credit/10 text-economy-credit">
+               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-feedback-success/30 bg-feedback-success/10 text-feedback-success">
                   <ShieldCheck className="h-5 w-5" />
                </div>
                <div>
-                  <h3 className="text-base font-semibold text-obsidian-text">
+                  <h3 className="text-base font-semibold text-text-primary">
                      Wallet & Ledger Reconciliation
                   </h3>
-                  <p className="text-xs text-obsidian-textDim">
+                  <p className="text-xs text-text-tertiary">
                      Mathematical integrity audit comparing wallet accounting
                      totals to append-only ledger deltas.
                   </p>
@@ -93,8 +90,8 @@ export function ReconciliationDialog({
             <div className="space-y-4">
                {loading ? (
                   <div className="flex flex-col items-center justify-center py-10">
-                     <Loader2 className="h-7 w-7 animate-spin text-economy-gold mb-2" />
-                     <p className="text-xs text-obsidian-textDim">
+                     <Loader2 className="h-7 w-7 animate-spin text-brand-1 mb-2" />
+                     <p className="text-xs text-text-tertiary">
                         Auditing wallet balance against ledger transactions...
                      </p>
                   </div>
@@ -108,12 +105,12 @@ export function ReconciliationDialog({
                      <div
                         className={`rounded-xl p-4 flex items-center gap-3 border ${
                            report.isReconciled
-                              ? "bg-economy-credit/10 border-economy-credit/30 text-economy-credit"
+                              ? "bg-feedback-success/10 border-feedback-success/30 text-feedback-success"
                               : "bg-destructive/10 border-destructive/30 text-destructive"
                         }`}
                      >
                         {report.isReconciled ? (
-                           <CheckCircle2 className="h-5 w-5 shrink-0 text-economy-credit" />
+                           <CheckCircle2 className="h-5 w-5 shrink-0 text-feedback-success" />
                         ) : (
                            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
                         )}
@@ -123,7 +120,7 @@ export function ReconciliationDialog({
                                  ? "100% Invariant Compliant — All Balances Match"
                                  : "Accounting Discrepancies Detected"}
                            </p>
-                           <p className="text-[11px] opacity-80 mt-0.5">
+                           <p className="text-meta opacity-80 mt-0.5">
                               {report.isReconciled
                                  ? "Wallet balance, reserved commitments, and ledger deltas are in exact mathematical alignment."
                                  : `${report.discrepancies.length} discrepancy item(s) found during ledger reconciliation.`}
@@ -133,27 +130,27 @@ export function ReconciliationDialog({
 
                      {/* Breakdown Grid */}
                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-cardHover p-3">
-                           <span className="text-obsidian-textDim">
+                        <div className="rounded-xl border border-border-subtle bg-surface-tertiary p-3">
+                           <span className="text-text-tertiary">
                               Wallet Total Balance
                            </span>
-                           <p className="font-mono text-base font-bold text-obsidian-text mt-1">
+                           <p className="font-mono text-base font-bold text-text-primary mt-1">
                               {report.walletTotal.toLocaleString()} coins
                            </p>
-                           <span className="text-[10px] text-obsidian-textDim">
+                           <span className="text-label text-text-tertiary">
                               Ledger delta:{" "}
                               {report.ledgerTotal.toLocaleString()}
                            </span>
                         </div>
 
-                        <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-cardHover p-3">
-                           <span className="text-obsidian-textDim">
+                        <div className="rounded-xl border border-border-subtle bg-surface-tertiary p-3">
+                           <span className="text-text-tertiary">
                               Reserved Balance
                            </span>
-                           <p className="font-mono text-base font-bold text-obsidian-text mt-1">
+                           <p className="font-mono text-base font-bold text-text-primary mt-1">
                               {report.walletReserved.toLocaleString()} coins
                            </p>
-                           <span className="text-[10px] text-obsidian-textDim">
+                           <span className="text-label text-text-tertiary">
                               Ledger delta:{" "}
                               {report.ledgerReserved.toLocaleString()}
                            </span>
@@ -170,12 +167,12 @@ export function ReconciliationDialog({
                               {report.discrepancies.map((d, idx) => (
                                  <div
                                     key={idx}
-                                    className="rounded-lg border border-obsidian-borderHighlight bg-obsidian-cardHover p-2.5 text-[11px]"
+                                    className="rounded-lg border border-border-strong bg-surface-tertiary p-2.5 text-meta"
                                  >
-                                    <span className="font-bold text-economy-admin">
+                                    <span className="font-bold text-brand-2">
                                        {d.code}:
                                     </span>{" "}
-                                    <span className="text-obsidian-textMuted">
+                                    <span className="text-text-secondary">
                                        {d.message}
                                     </span>
                                  </div>
@@ -186,14 +183,14 @@ export function ReconciliationDialog({
                   </>
                ) : null}
 
-               <div className="flex justify-end gap-2 pt-2 border-t border-obsidian-borderSubtle">
+               <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
                   <Button
                      type="button"
                      variant="outline"
                      size="sm"
                      onClick={runAudit}
                      disabled={loading}
-                     className="text-xs rounded-xl border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-obsidian-text"
+                     className="text-xs rounded-xl border-border-strong bg-surface-elevated text-text-secondary hover:text-text-primary"
                   >
                      Re-Run Audit
                   </Button>
@@ -201,13 +198,13 @@ export function ReconciliationDialog({
                      type="button"
                      size="sm"
                      onClick={onClose}
-                     className="text-xs rounded-xl bg-obsidian-nested hover:bg-obsidian-borderHighlight text-obsidian-text"
+                     className="text-xs rounded-xl bg-surface-nested hover:bg-border-strong text-text-primary"
                   >
                      Close
                   </Button>
                </div>
             </div>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

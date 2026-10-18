@@ -146,7 +146,7 @@ export function PokemonRevealModal({
             <button
                type="button"
                onClick={handleSkip}
-               className="absolute top-5 right-5 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-obsidian-elevated/80 border border-obsidian-border text-obsidian-textDim hover:text-white hover:border-obsidian-borderHighlight text-xs font-medium backdrop-blur-sm transition-all"
+               className="absolute top-5 right-5 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-elevated/80 border border-border-default text-text-tertiary hover:text-white hover:border-border-strong text-xs font-medium backdrop-blur-sm transition-all"
                data-testid="skip-reveal-button"
             >
                <FastForward className="w-3.5 h-3.5" />
@@ -155,13 +155,13 @@ export function PokemonRevealModal({
          )}
 
          {/* Main Container */}
-         <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-pokedex-border bg-gradient-to-b from-pokedex-elevated to-pokedex-bg p-6 sm:p-8 shadow-2xl text-white text-center">
+         <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-border-default bg-gradient-to-b from-surface-elevated to-surface-page p-6 sm:p-8 shadow-2xl text-white text-center">
             {/* Close Button on Details */}
             {stage === "details" && (
                <button
                   type="button"
                   onClick={onClose}
-                  className="absolute top-4 right-4 p-2 rounded-xl bg-pokedex-cardSubtle text-pokedex-textMuted hover:text-white hover:bg-pokedex-border transition-colors z-20"
+                  className="absolute top-4 right-4 p-2 rounded-xl bg-surface-secondary text-text-tertiary hover:text-white hover:bg-border-default transition-colors z-20"
                   aria-label="Close modal"
                   data-testid="reveal-modal-close"
                >
@@ -204,7 +204,7 @@ export function PokemonRevealModal({
                            ? "Summoning Companion..."
                            : "Opening Summon Portal..."}
                      </h3>
-                     <p className="text-xs text-pokedex-textMuted font-mono">
+                     <p className="text-xs text-text-tertiary font-mono">
                         Authorizing acquisition with HoldMeToIt Ledger...
                      </p>
                   </div>
@@ -220,11 +220,11 @@ export function PokemonRevealModal({
                   {/* Top Tag & National Dex Number */}
                   <div className="flex items-center justify-between text-xs">
                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-pokedex-textMuted tracking-wider font-semibold">
+                        <span className="font-mono text-text-tertiary tracking-wider font-semibold">
                            {formattedNumber}
                         </span>
                         {acquisition.bannerName && (
-                           <span className="px-2 py-0.5 rounded-md bg-pokedex-cardSubtle text-[10px] text-pokedex-textDim">
+                           <span className="px-2 py-0.5 rounded-md bg-surface-secondary text-label text-text-tertiary">
                               {acquisition.bannerName}
                            </span>
                         )}
@@ -233,15 +233,15 @@ export function PokemonRevealModal({
                      {/* Ownership Status Pill */}
                      {acquisition.isDuplicate ? (
                         <span
-                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pokedex-cardSubtle text-pokedex-textSecondary border border-pokedex-border"
+                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-meta font-semibold bg-surface-secondary text-text-secondary border border-border-default"
                            data-testid="badge-duplicate"
                         >
-                           <Copy className="w-3 h-3 text-economy-gold" />
+                           <Copy className="w-3 h-3 text-brand-1" />
                            <span>Duplicate Acquired (Count +1)</span>
                         </span>
                      ) : (
                         <span
-                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20"
+                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-meta font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20"
                            data-testid="badge-new-discovery"
                         >
                            <CheckCircle2 className="w-3 h-3" />
@@ -266,7 +266,7 @@ export function PokemonRevealModal({
                            loading="eager"
                         />
                      ) : (
-                        <div className="relative z-10 flex flex-col items-center justify-center text-pokedex-borderLight">
+                        <div className="relative z-10 flex flex-col items-center justify-center text-border-strong">
                            <svg
                               className="w-24 h-24 text-rose-400/50"
                               viewBox="0 0 100 100"
@@ -288,7 +288,7 @@ export function PokemonRevealModal({
                                  cx="50"
                                  cy="50"
                                  r="16"
-                                 fill="hsl(var(--pokedex-card))"
+                                 fill="var(--color-surface-primary)"
                                  stroke="currentColor"
                                  strokeWidth="7"
                               />
@@ -299,7 +299,7 @@ export function PokemonRevealModal({
                                  fill="currentColor"
                               />
                            </svg>
-                           <span className="text-xs text-pokedex-textDim mt-1">
+                           <span className="text-xs text-text-tertiary mt-1">
                               Artwork Unavailable
                            </span>
                         </div>
@@ -316,14 +316,14 @@ export function PokemonRevealModal({
                            {species.name}
                         </h2>
                         {acquisition.isFeatured && (
-                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                           <span className="px-2 py-0.5 rounded-full text-label font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
                               Featured
                            </span>
                         )}
                      </div>
 
                      {species.classification && (
-                        <p className="text-xs text-pokedex-textMuted">
+                        <p className="text-xs text-text-tertiary">
                            {species.classification}
                         </p>
                      )}
@@ -347,16 +347,16 @@ export function PokemonRevealModal({
                   </div>
 
                   {/* Acquisition Summary Info Card */}
-                  <div className="p-3.5 rounded-2xl bg-pokedex-card/80 border border-pokedex-border text-xs text-left space-y-2">
-                     <div className="flex items-center justify-between text-pokedex-textMuted">
+                  <div className="p-3.5 rounded-2xl bg-surface-primary/80 border border-border-default text-xs text-left space-y-2">
+                     <div className="flex items-center justify-between text-text-tertiary">
                         <span>Summon Cost</span>
-                        <span className="font-semibold text-economy-gold flex items-center gap-1 font-mono">
+                        <span className="font-semibold text-brand-1 flex items-center gap-1 font-mono">
                            <CoinsIcon className="w-3.5 h-3.5" />
                            {acquisition.costPaid} Coins
                         </span>
                      </div>
 
-                     <div className="flex items-center justify-between text-pokedex-textMuted">
+                     <div className="flex items-center justify-between text-text-tertiary">
                         <span>Updated Available Balance</span>
                         <span className="font-semibold text-white font-mono">
                            {acquisition.newBalance} Coins
@@ -364,7 +364,7 @@ export function PokemonRevealModal({
                      </div>
 
                      {acquisition.pityTriggered && (
-                        <div className="text-[11px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
+                        <div className="text-meta font-medium text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-center">
                            ✨ Guaranteed Hard Pity Activated on this summon!
                         </div>
                      )}
@@ -378,7 +378,7 @@ export function PokemonRevealModal({
                            variant="outline"
                            size="default"
                            onClick={onViewCollection}
-                           className="w-full sm:flex-1 border-pokedex-borderLight text-pokedex-textSecondary hover:text-white hover:border-pokedex-border text-xs"
+                           className="w-full sm:flex-1 border-border-strong text-text-secondary hover:text-white hover:border-border-default text-xs"
                         >
                            View in Pokédex
                         </Button>

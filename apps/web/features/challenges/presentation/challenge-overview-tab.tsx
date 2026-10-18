@@ -121,12 +121,12 @@ export function ChallengeOverviewTab({
          {/* 1. Left Column: Welcome, About & Timetable, How it Works, Punishment PFP Disclosure */}
          <div className="lg:col-span-7 space-y-6">
             {/* Welcome & About Card */}
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-6 sm:p-7 shadow-lg space-y-4">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-6 sm:p-7 shadow-lg space-y-4">
                <div className="space-y-2">
-                  <h2 className="text-2xl font-extrabold text-[#ffffff] tracking-tight">
+                  <h2 className="text-2xl font-extrabold text-white tracking-tight">
                      Welcome to the {challenge.title}!
                   </h2>
-                  <p className="text-sm leading-relaxed text-[#d1d1d1] whitespace-pre-line">
+                  <p className="text-sm leading-relaxed text-text-secondary whitespace-pre-line">
                      {challenge.description?.trim() || (
                         <>
                            {challenge.title} is an automated study battle
@@ -141,16 +141,14 @@ export function ChallengeOverviewTab({
                   </p>
                </div>
 
-               <hr className="border-[#262626]" />
+               <hr className="border-border-default" />
 
                {/* How it works */}
                <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-[#ffffff]">
-                     How it works
-                  </h3>
-                  <ul className="space-y-2.5 text-xs text-[#d1d1d1]">
+                  <h3 className="text-lg font-bold text-white">How it works</h3>
+                  <ul className="space-y-2.5 text-xs text-text-secondary">
                      <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-[#1c1c1c] border border-[#333333] flex items-center justify-center font-bold text-[10px] text-[#ffffff] shrink-0 mt-0.5">
+                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
                            1
                         </span>
                         <span>
@@ -160,7 +158,7 @@ export function ChallengeOverviewTab({
                               href="https://link.yeolpumta.com"
                               target="_blank"
                               rel="noreferrer"
-                              className="text-[#3b82f6] hover:underline inline-flex items-center gap-1 font-medium"
+                              className="text-feedback-info hover:underline inline-flex items-center gap-1 font-medium"
                            >
                               Open YPT Group Link{" "}
                               <ExternalLink className="h-3 w-3 inline" />
@@ -168,7 +166,7 @@ export function ChallengeOverviewTab({
                         </span>
                      </li>
                      <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-[#1c1c1c] border border-[#333333] flex items-center justify-center font-bold text-[10px] text-[#ffffff] shrink-0 mt-0.5">
+                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
                            2
                         </span>
                         <span>
@@ -177,7 +175,7 @@ export function ChallengeOverviewTab({
                         </span>
                      </li>
                      <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-[#1c1c1c] border border-[#333333] flex items-center justify-center font-bold text-[10px] text-[#ffffff] shrink-0 mt-0.5">
+                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
                            3
                         </span>
                         <span>
@@ -187,7 +185,7 @@ export function ChallengeOverviewTab({
                         </span>
                      </li>
                      <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-[#1c1c1c] border border-[#333333] flex items-center justify-center font-bold text-[10px] text-[#ffffff] shrink-0 mt-0.5">
+                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
                            4
                         </span>
                         <span>
@@ -199,45 +197,45 @@ export function ChallengeOverviewTab({
                   </ul>
                </div>
 
-               <hr className="border-[#262626]" />
+               <hr className="border-border-default" />
 
                {/* Prizes & Consequences */}
                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-[#ffffff] flex items-center gap-2">
-                     <Award className="h-5 w-5 text-[#22c55e]" />
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                     <Award className="h-5 w-5 text-feedback-success" />
                      Prizes & Rewards
                   </h3>
-                  <p className="text-xs text-[#d1d1d1] leading-relaxed">
+                  <p className="text-xs text-text-secondary leading-relaxed">
                      The winning house earns special shiny Discord roles and
                      custom highlight badges for top contributors. Scholars who
                      maintain commitments preserve their standard avatar honor.
                   </p>
                </div>
 
-               <hr className="border-[#262626]" />
+               <hr className="border-border-default" />
 
                {/* Timetable (UTC) */}
                <div className="space-y-2.5 pt-1">
-                  <h4 className="text-xs uppercase font-bold tracking-wider text-[#868686] flex items-center gap-1.5">
-                     <Calendar className="h-3.5 w-3.5 text-[#868686]" />
+                  <h4 className="text-xs uppercase font-bold tracking-wider text-text-tertiary flex items-center gap-1.5">
+                     <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
                      <span>Timetable (UTC)</span>
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
-                        <p className="text-[#868686] text-[11px]">
+                     <div className="rounded-xl bg-surface-elevated p-3 border border-border-default">
+                        <p className="text-text-tertiary text-meta">
                            Kickoff Date
                         </p>
-                        <p className="font-sans font-medium text-[#ffffff] mt-1">
+                        <p className="font-sans font-medium text-white mt-1">
                            {new Date(challenge.startAt)
                               .toUTCString()
                               .replace("GMT", "UTC")}
                         </p>
                      </div>
-                     <div className="rounded-xl bg-[#1c1c1c] p-3 border border-[#292929]">
-                        <p className="text-[#868686] text-[11px]">
+                     <div className="rounded-xl bg-surface-elevated p-3 border border-border-default">
+                        <p className="text-text-tertiary text-meta">
                            Conclusion Date
                         </p>
-                        <p className="font-sans font-medium text-[#ffffff] mt-1">
+                        <p className="font-sans font-medium text-white mt-1">
                            {new Date(challenge.endAt)
                               .toUTCString()
                               .replace("GMT", "UTC")}
@@ -251,17 +249,17 @@ export function ChallengeOverviewTab({
             <ChallengeBettingCard challenge={challenge} />
 
             {/* 2. Forfeit Avatar & Punishment Disclosure Card (FEAT-PUN-02 / FEAT-PUN-03) */}
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-6 sm:p-7 shadow-lg space-y-4">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-6 sm:p-7 shadow-lg space-y-4">
                <div>
-                  <h3 className="text-lg font-bold text-[#ffffff]">
+                  <h3 className="text-lg font-bold text-white">
                      Forfeit Avatar & Accountability
                   </h3>
                </div>
 
-               <div className="p-4 rounded-2xl bg-[#181818] border border-[#262626] flex flex-col sm:flex-row items-center gap-4">
+               <div className="p-4 rounded-2xl bg-surface-secondary border border-border-default flex flex-col sm:flex-row items-center gap-4">
                   {challenge.punishmentPfpUrl ? (
                      <>
-                        <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-2xl overflow-hidden border-2 border-[#ef4444]/40 shadow-md bg-[#1c1c1c] group">
+                        <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-2xl overflow-hidden border-2 border-feedback-error/40 shadow-md bg-surface-elevated group">
                            <Image
                               src={challenge.punishmentPfpUrl}
                               alt="Challenge Forfeit Avatar"
@@ -272,10 +270,10 @@ export function ChallengeOverviewTab({
                         </div>
                         <div className="space-y-2.5 text-center sm:text-left min-w-0 flex-1">
                            <div className="space-y-1">
-                              <p className="text-xs font-semibold text-[#ffffff]">
+                              <p className="text-xs font-semibold text-white">
                                  Assigned Forfeit Picture
                               </p>
-                              <p className="text-xs text-[#d1d1d1] leading-relaxed">
+                              <p className="text-xs text-text-secondary leading-relaxed">
                                  Scholars who fail either their declared target
                                  hours or incomplete weekly milestone goals must
                                  equip this Discord avatar for 7 days
@@ -288,9 +286,9 @@ export function ChallengeOverviewTab({
                                  download="forfeit-avatar.png"
                                  target="_blank"
                                  rel="noreferrer"
-                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#383838] bg-[#242424] hover:bg-[#333333] text-white hover:text-white transition-colors"
+                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border-strong bg-surface-nested hover:bg-surface-nested text-white hover:text-white transition-colors"
                               >
-                                 <Download className="h-3.5 w-3.5 text-[#ff5757]" />
+                                 <Download className="h-3.5 w-3.5 text-feedback-error-text" />
                                  <span>Download Forfeit PFP</span>
                               </a>
                            </div>
@@ -298,14 +296,14 @@ export function ChallengeOverviewTab({
                      </>
                   ) : (
                      <div className="flex items-center gap-3 py-2 text-center sm:text-left">
-                        <div className="h-12 w-12 rounded-xl bg-[#1c1c1c] border border-[#292929] flex items-center justify-center shrink-0">
-                           <Shield className="h-6 w-6 text-[#868686]" />
+                        <div className="h-12 w-12 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center shrink-0">
+                           <Shield className="h-6 w-6 text-text-tertiary" />
                         </div>
                         <div>
-                           <p className="text-xs font-semibold text-[#ffffff]">
+                           <p className="text-xs font-semibold text-white">
                               No Custom Forfeit Avatar Set
                            </p>
-                           <p className="text-xs text-[#868686]">
+                           <p className="text-xs text-text-tertiary">
                               Accountability rules still apply. Hosts can upload
                               an avatar via the Challenge Manage tab.
                            </p>
@@ -318,13 +316,13 @@ export function ChallengeOverviewTab({
 
          {/* 2. Right Column: Participants List (Challenge/Default 64:1806) */}
          <div className="lg:col-span-5">
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-6 shadow-lg space-y-4">
-               <div className="flex items-center justify-between pb-2 border-b border-[#262626]">
-                  <h3 className="text-lg font-bold text-[#ffffff] flex items-center gap-2">
-                     <Users className="h-4 w-4 text-[#868686]" />
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-lg space-y-4">
+               <div className="flex items-center justify-between pb-2 border-b border-border-default">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                     <Users className="h-4 w-4 text-text-tertiary" />
                      Participants
                   </h3>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#1c1c1c] border border-[#292929] text-[#868686]">
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface-elevated border border-border-default text-text-tertiary">
                      {filteredParticipants.length} of {standings.length}
                   </span>
                </div>
@@ -333,7 +331,7 @@ export function ChallengeOverviewTab({
                {standings.length > 0 && (
                   <div className="space-y-2">
                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#868686]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-tertiary" />
                         <Input
                            type="text"
                            placeholder="Search participants..."
@@ -342,7 +340,7 @@ export function ChallengeOverviewTab({
                               setSearchQuery(e.target.value);
                               setParticipantPage(1);
                            }}
-                           className="h-8 pl-8 pr-7 bg-[#1c1c1c] border-[#333333] text-white text-xs placeholder:text-[#868686] rounded-xl"
+                           className="h-8 pl-8 pr-7 bg-surface-elevated border-border-strong text-white text-xs placeholder:text-text-tertiary rounded-xl"
                         />
                         {searchQuery && (
                            <button
@@ -351,7 +349,7 @@ export function ChallengeOverviewTab({
                                  setSearchQuery("");
                                  setParticipantPage(1);
                               }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#868686] hover:text-white p-0.5"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white p-0.5"
                            >
                               <X className="h-3 w-3" />
                            </button>
@@ -369,7 +367,7 @@ export function ChallengeOverviewTab({
                            >
                               <SelectTrigger
                                  data-testid="overview-team-select"
-                                 className="h-8 rounded-xl border-[#333333] bg-[#1c1c1c] text-xs text-[#ffffff]"
+                                 className="h-8 rounded-xl border-border-strong bg-surface-elevated text-xs text-white"
                               >
                                  <SelectValue
                                     placeholder={`All Teams (${standings.length})`}
@@ -391,7 +389,7 @@ export function ChallengeOverviewTab({
                      )}
 
                      {hasActiveFilters && (
-                        <div className="flex items-center justify-between text-[11px] text-[#868686] pt-0.5">
+                        <div className="flex items-center justify-between text-meta text-text-tertiary pt-0.5">
                            <span>Filtering active</span>
                            <button
                               type="button"
@@ -406,12 +404,12 @@ export function ChallengeOverviewTab({
                )}
 
                {standings.length === 0 ? (
-                  <p className="text-xs text-[#868686] text-center py-6 border border-dashed border-[#292929] rounded-xl">
+                  <p className="text-xs text-text-tertiary text-center py-6 border border-dashed border-border-default rounded-xl">
                      No participants enrolled yet.
                   </p>
                ) : filteredParticipants.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-[#292929] rounded-xl space-y-2">
-                     <p className="text-xs text-[#868686]">
+                  <div className="text-center py-6 border border-dashed border-border-default rounded-xl space-y-2">
+                     <p className="text-xs text-text-tertiary">
                         No participants match your search or team filter.
                      </p>
                      <Button
@@ -419,7 +417,7 @@ export function ChallengeOverviewTab({
                         variant="outline"
                         size="sm"
                         onClick={handleResetFilters}
-                        className="h-7 px-3 text-[11px] rounded-lg border-[#383838] bg-[#242424] hover:bg-[#333333] text-white"
+                        className="h-7 px-3 text-meta rounded-lg border-border-strong bg-surface-nested hover:bg-surface-nested text-white"
                      >
                         Reset filters
                      </Button>
@@ -431,12 +429,12 @@ export function ChallengeOverviewTab({
                         return (
                            <div
                               key={p.participantId}
-                              className="flex items-center justify-between p-2.5 rounded-xl bg-[#1c1c1c] border border-[#292929] hover:border-[#383838] transition-colors"
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-surface-elevated border border-border-default hover:border-border-strong transition-colors"
                            >
                               <div className="flex items-center gap-3 min-w-0">
                                  <Link
                                     href={`/challenge/${challenge.id}/participant/${p.participantId}`}
-                                    className="h-8 w-8 rounded-full bg-[#292929] border overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0 transition-colors"
+                                    className="h-8 w-8 rounded-full bg-surface-nested border overflow-hidden flex items-center justify-center text-xs font-bold text-white shrink-0 transition-colors"
                                     style={{
                                        borderColor: pPalette.borderMuted,
                                     }}
@@ -460,12 +458,12 @@ export function ChallengeOverviewTab({
                                  <div className="min-w-0">
                                     <Link
                                        href={`/challenge/${challenge.id}/participant/${p.participantId}`}
-                                       className="text-sm font-semibold text-[#ffffff] hover:underline truncate block"
+                                       className="text-sm font-semibold text-white hover:underline truncate block"
                                     >
                                        {p.displayName}
                                     </Link>
                                     <span
-                                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 mt-0.5"
+                                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 mt-0.5"
                                        style={{
                                           backgroundColor: pPalette.badgeBg,
                                           borderColor: pPalette.badgeBorder,
@@ -480,8 +478,8 @@ export function ChallengeOverviewTab({
 
                               <div className="flex items-center gap-2.5 shrink-0">
                                  <div className="flex items-center gap-1.5">
-                                    <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-                                    <span className="text-[11px] font-medium text-[#d1d1d1]">
+                                    <span className="h-2 w-2 rounded-full bg-feedback-success" />
+                                    <span className="text-meta font-medium text-text-secondary">
                                        Active
                                     </span>
                                  </div>
@@ -491,10 +489,10 @@ export function ChallengeOverviewTab({
                                        variant="outline"
                                        size="sm"
                                        onClick={() => handleOpenOverride(p)}
-                                       className="h-7 px-2.5 rounded-lg border-[#383838] bg-[#242424] hover:bg-[#333333] text-white text-[11px] font-semibold gap-1 shrink-0"
+                                       className="h-7 px-2.5 rounded-lg border-border-strong bg-surface-nested hover:bg-surface-nested text-white text-meta font-semibold gap-1 shrink-0"
                                        title={`Admin: Edit hours for ${p.displayName}`}
                                     >
-                                       <Clock className="h-3 w-3 text-[#3b82f6]" />
+                                       <Clock className="h-3 w-3 text-feedback-info" />
                                        <span>Edit hr</span>
                                     </Button>
                                  )}

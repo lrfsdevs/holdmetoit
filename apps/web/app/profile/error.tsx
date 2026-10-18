@@ -33,12 +33,12 @@ export default function ProfileError({ error, reset }: ProfileErrorProps) {
             <Button
                type="button"
                variant="default"
-               className="min-h-[44px]"
+               className="min-h-control-sm"
                onClick={reset}
             >
                Try again
             </Button>
-            <Button asChild variant="secondary" className="min-h-[44px]">
+            <Button asChild variant="secondary" className="min-h-control-sm">
                <Link href="/">Return to Study Lounge</Link>
             </Button>
          </div>

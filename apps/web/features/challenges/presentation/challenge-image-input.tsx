@@ -46,7 +46,7 @@ function ImagePreview({
             type="button"
             onClick={() => setStatus("loading")}
             aria-label={`Retry ${label} preview`}
-            className="flex min-h-[44px] w-full flex-col items-center gap-1 p-1 text-[10px] text-[#d1d1d1]"
+            className="flex min-h-control-sm w-full flex-col items-center gap-1 p-1 text-label text-text-secondary"
          >
             <RefreshCw className="h-4 w-4" aria-hidden />
             Retry
@@ -60,7 +60,7 @@ function ImagePreview({
             <div
                role="status"
                aria-label={`Loading ${label} preview`}
-               className="absolute inset-0 animate-pulse bg-[#292929]"
+               className="absolute inset-0 animate-pulse bg-surface-nested"
             />
          )}
          <Image
@@ -176,7 +176,7 @@ export function ChallengeImageInput({
       <div className="min-w-0 space-y-2" data-image-purpose={purpose}>
          <p
             id={`${inputId}-help`}
-            className="text-xs leading-relaxed text-[#868686]"
+            className="text-xs leading-relaxed text-text-tertiary"
          >
             {isBanner
                ? "Displayed as the challenge banner and event thumbnail in the admin console."
@@ -184,11 +184,11 @@ export function ChallengeImageInput({
          </p>
          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div
-               className={`relative flex shrink-0 items-center justify-center overflow-hidden border bg-[#171717] ${
+               className={`relative flex shrink-0 items-center justify-center overflow-hidden border bg-surface-secondary ${
                   isBanner
                      ? "aspect-[5/1] w-full rounded-xl sm:w-56"
                      : "h-14 w-14 rounded-full"
-               } ${previewSrc ? "border-[#333333]" : "border-dashed border-[#484848]"}`}
+               } ${previewSrc ? "border-border-strong" : "border-dashed border-input-border"}`}
             >
                {previewSrc ? (
                   <ImagePreview
@@ -200,7 +200,10 @@ export function ChallengeImageInput({
                      }
                   />
                ) : (
-                  <ImagePlus className="h-5 w-5 text-[#868686]" aria-hidden />
+                  <ImagePlus
+                     className="h-5 w-5 text-text-tertiary"
+                     aria-hidden
+                  />
                )}
                {uploading && (
                   <div
@@ -236,7 +239,7 @@ export function ChallengeImageInput({
                   onClick={() => fileRef.current?.click()}
                   disabled={disabled || uploading}
                   aria-label={`${uploading ? "Uploading" : value ? "Replace" : "Upload"} ${label}`}
-                  className="inline-flex min-h-[44px] max-w-full items-center gap-2 rounded-xl border border-[#484848] bg-[#545454] px-4 text-xs font-semibold text-[#f4f3f6] transition-colors hover:bg-[#656565] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex min-h-control-sm max-w-full items-center gap-2 rounded-xl border border-input-border bg-input-bg px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-input-bg disabled:cursor-not-allowed disabled:opacity-50"
                >
                   {uploading ? (
                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -251,7 +254,7 @@ export function ChallengeImageInput({
                </button>
                <p
                   id={`${inputId}-format`}
-                  className="text-[11px] text-[#868686]"
+                  className="text-meta text-text-tertiary"
                >
                   PNG, JPEG or WebP · up to 3 MB
                </p>
@@ -262,7 +265,7 @@ export function ChallengeImageInput({
             <div
                id={`${inputId}-error`}
                role="alert"
-               className="flex flex-wrap items-center gap-2 rounded-xl border border-[#ff5757]/40 bg-[#381717] p-2.5 text-xs text-[#ff5757]"
+               className="flex flex-wrap items-center gap-2 rounded-xl border border-feedback-error-text/40 bg-feedback-error-bg p-2.5 text-xs text-feedback-error-text"
             >
                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
                <span className="min-w-0 flex-1 break-words">{shownError}</span>
@@ -272,7 +275,7 @@ export function ChallengeImageInput({
                      onClick={() => void upload(lastFile)}
                      disabled={disabled}
                      aria-label={`Retry ${label} upload`}
-                     className="inline-flex min-h-[44px] items-center gap-1 font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
+                     className="inline-flex min-h-control-sm items-center gap-1 font-semibold underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                      <RefreshCw className="h-3 w-3" aria-hidden /> Retry
                   </button>

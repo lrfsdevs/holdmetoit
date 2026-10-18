@@ -30,6 +30,17 @@ import {
 } from "@/features/tasks/domain/task-reorder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
    Select,
    SelectContent,
@@ -2990,20 +3001,20 @@ export function CockpitTasksSection({
             <div
                onDragOver={(e) => handleColumnDragOver(e, "daily")}
                onDrop={(e) => handleColumnDrop(e, "daily")}
-               className={`rounded-2xl border bg-[#141414] p-6 shadow-md flex flex-col justify-between space-y-5 transition-all ${
+               className={`rounded-2xl border bg-surface-primary p-6 shadow-md flex flex-col justify-between space-y-5 transition-all ${
                   dragOverInfo?.type === "column" &&
                   dragOverInfo.targetColumn === "daily"
-                     ? "border-[#e08a32] ring-1 ring-[#e08a32]/50 bg-[#1a1816]"
-                     : "border-[#262626]"
+                     ? "border-brand-2 ring-1 ring-brand-2/50 bg-surface-secondary"
+                     : "border-border-default"
                }`}
             >
                <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-bold text-[#ffffff]">
+                        <h3 className="text-lg font-bold text-white">
                            Daily Todos
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#242424] text-[#e0e0e0] border border-[#383838] inline-flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-meta font-semibold bg-surface-nested text-text-secondary border border-border-strong inline-flex items-center gap-1.5">
                            {activeDayOption.shortLabel}
                            {isActiveDayToday && (
                               <span
@@ -3012,8 +3023,8 @@ export function CockpitTasksSection({
                               />
                            )}
                            {isActiveDayPast && (
-                              <span className="text-[10px] text-[#868686] flex items-center gap-1 font-normal">
-                                 <Lock className="h-3 w-3 text-[#777]" />
+                              <span className="text-label text-text-tertiary flex items-center gap-1 font-normal">
+                                 <Lock className="h-3 w-3 text-text-tertiary" />
                                  Locked
                               </span>
                            )}
@@ -3022,14 +3033,14 @@ export function CockpitTasksSection({
                            <button
                               type="button"
                               onClick={handleJumpToToday}
-                              className="text-[11px] font-medium text-[#e08a32] hover:text-[#f5a742] underline transition-colors"
+                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors"
                            >
                               Today
                            </button>
                         )}
                      </div>
                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#d2d2d2]">
+                        <span className="text-xs font-semibold text-text-secondary">
                            {completedDailyTasksForDay}/{totalDailyTasksForDay}{" "}
                            Completed
                         </span>
@@ -3115,20 +3126,20 @@ export function CockpitTasksSection({
                                     : (draggedItem?.type === "task" ||
                                            draggedItem?.type === "category") &&
                                         !isDropAllowedOnOpt
-                                      ? "bg-[#141414] border-[#262626] text-[#555555] opacity-40 cursor-not-allowed border-dashed"
+                                      ? "bg-surface-primary border-border-default text-text-tertiary opacity-40 cursor-not-allowed border-dashed"
                                       : isSelected
-                                        ? "bg-[#25201b] border-[#e08a32] text-white shadow-sm ring-1 ring-[#e08a32]/60"
-                                        : "bg-[#1c1c1c] border-[#2e2e2e] text-[#a0a0a0] hover:bg-[#262626] hover:text-white"
+                                        ? "bg-brand-1/15 border-brand-2 text-white shadow-sm ring-1 ring-brand-2/60"
+                                        : "bg-surface-elevated border-border-strong text-text-tertiary hover:bg-surface-nested hover:text-white"
                               }`}
                            >
-                              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-tight leading-none truncate max-w-full">
+                              <span className="text-label sm:text-meta font-bold uppercase tracking-tight leading-none truncate max-w-full">
                                  {opt.isToday
                                     ? "Today"
                                     : opt.shortLabel.startsWith("Day ")
                                       ? `D${opt.dayNumber}`
                                       : opt.shortLabel.slice(0, 3)}
                               </span>
-                              <span className="text-[8px] sm:text-[9px] opacity-75 mt-0.5 leading-none truncate max-w-full">
+                              <span className="text-micro sm:text-caption opacity-75 mt-0.5 leading-none truncate max-w-full">
                                  {formatDayDate(opt.dateKey)}
                               </span>
                               <div className="mt-1 flex items-center justify-center gap-0.5 sm:gap-1 min-h-[14px] w-full">
@@ -3141,7 +3152,7 @@ export function CockpitTasksSection({
                                           <span
                                              className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                                                 isSelected
-                                                   ? "bg-[#e08a32]"
+                                                   ? "bg-brand-2"
                                                    : "bg-emerald-400"
                                              }`}
                                              title="Today"
@@ -3149,12 +3160,12 @@ export function CockpitTasksSection({
                                        )}
                                        {stats.total > 0 && (
                                           <span
-                                             className={`text-[8px] sm:text-[9px] font-semibold px-0.5 sm:px-1 rounded leading-tight truncate ${
+                                             className={`text-micro sm:text-caption font-semibold px-0.5 sm:px-1 rounded leading-tight truncate ${
                                                 allDone
                                                    ? "bg-emerald-500/20 text-emerald-400"
                                                    : isSelected
-                                                     ? "bg-[#e08a32]/20 text-[#e08a32]"
-                                                     : "bg-[#333333] text-[#b0b0b0]"
+                                                     ? "bg-brand-2/20 text-brand-2"
+                                                     : "bg-surface-nested text-text-tertiary"
                                              }`}
                                           >
                                              {stats.completed}/{stats.total}
@@ -3170,14 +3181,14 @@ export function CockpitTasksSection({
 
                   <div className="space-y-3">
                      {totalDailyTasksForDay === 0 ? (
-                        <div className="rounded-xl border border-dashed border-[#333333] bg-[#1a1a1a]/50 p-6 text-center space-y-2">
-                           <Calendar className="h-6 w-6 text-[#777777] mx-auto mb-1" />
-                           <p className="text-sm font-medium text-[#d1d1d1]">
+                        <div className="rounded-xl border border-dashed border-border-strong bg-surface-tertiary/50 p-6 text-center space-y-2">
+                           <Calendar className="h-6 w-6 text-text-tertiary mx-auto mb-1" />
+                           <p className="text-sm font-medium text-text-secondary">
                               No todos scheduled for{" "}
                               {activeDayOption.shortLabel} (
                               {formatDayDate(activeDayOption.dateKey)})
                            </p>
-                           <p className="text-xs text-[#868686]">
+                           <p className="text-xs text-text-tertiary">
                               {isActiveDayPast
                                  ? "This challenge day has passed. New tasks cannot be added to past days."
                                  : isActiveDayToday
@@ -3185,8 +3196,8 @@ export function CockpitTasksSection({
                                    : `Plan ahead for ${activeDayOption.shortLabel} of the challenge.`}
                            </p>
                            {isActiveDayPast ? (
-                              <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-[#777777]">
-                                 <Lock className="h-3.5 w-3.5 text-[#868686]" />
+                              <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-text-tertiary">
+                                 <Lock className="h-3.5 w-3.5 text-text-tertiary" />
                                  <span>
                                     Adding tasks to past days is locked
                                  </span>
@@ -3198,7 +3209,7 @@ export function CockpitTasksSection({
                                     onClick={() =>
                                        openAddDailyModal(selectedDateKey)
                                     }
-                                    className="h-8 px-4 rounded-full bg-[#2a2a2a] hover:bg-[#383838] text-white text-xs font-semibold border border-[#444]"
+                                    className="h-8 px-4 rounded-full bg-surface-nested hover:bg-surface-nested text-white text-xs font-semibold border border-border-strong"
                                  >
                                     + Add todo for {activeDayOption.shortLabel}
                                  </Button>
@@ -3232,20 +3243,20 @@ export function CockpitTasksSection({
                                  onDrop={(e) =>
                                     handleCategoryDrop(e, catIdx, "daily")
                                  }
-                                 className={`rounded-xl bg-[#292929] overflow-hidden border transition-all ${
+                                 className={`rounded-xl bg-surface-nested overflow-hidden border transition-all ${
                                     isCatDragging
-                                       ? "opacity-30 border-dashed border-[#e08a32] bg-[#1e1e1e] scale-[0.99]"
+                                       ? "opacity-30 border-dashed border-brand-2 bg-surface-elevated scale-[0.99]"
                                        : ""
                                  } ${
                                     isCatOver &&
                                     dragOverInfo?.position === "above"
-                                       ? "border-t-2 border-t-[#e08a32] border-[#333333]"
+                                       ? "border-t-2 border-t-[#e08a32] border-border-strong"
                                        : isCatOver &&
                                            dragOverInfo?.position === "below"
-                                         ? "border-b-2 border-b-[#e08a32] border-[#333333]"
+                                         ? "border-b-2 border-b-[#e08a32] border-border-strong"
                                          : isCatOver
-                                           ? "border-[#e08a32]"
-                                           : "border-[#333333]"
+                                           ? "border-brand-2"
+                                           : "border-border-strong"
                                  }`}
                               >
                                  <ContextMenu modal={false}>
@@ -3266,10 +3277,10 @@ export function CockpitTasksSection({
                                           onClick={() =>
                                              toggleDailyCollapse(catIdx)
                                           }
-                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
+                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-white hover:bg-surface-nested transition-colors cursor-grab active:cursor-grabbing select-none"
                                        >
                                           <div
-                                             className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
+                                             className="p-1 -ml-1 mr-1 text-text-tertiary hover:text-brand-2 rounded transition-colors shrink-0"
                                              title="Drag category to reorder, move to day or across boards"
                                              aria-label={`Drag category ${cat.name}`}
                                           >
@@ -3292,7 +3303,7 @@ export function CockpitTasksSection({
                                                    <DropdownMenuTrigger asChild>
                                                       <button
                                                          type="button"
-                                                         className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] data-[state=open]:text-[#ffffff] data-[state=open]:bg-[#3d3d3d] transition-colors"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
                                                          title="Category options"
                                                          aria-label={`Options for category ${cat.name}`}
                                                       >
@@ -3301,7 +3312,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuTrigger>
                                                    <DropdownMenuContent
                                                       align="end"
-                                                      className="min-w-[170px]"
+                                                      className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
                                                          cat={cat}
@@ -3363,15 +3374,15 @@ export function CockpitTasksSection({
                                                 </DropdownMenu>
                                              )}
                                              {cat.isCollapsed ? (
-                                                <ChevronDown className="h-4 w-4 text-[#868686]" />
+                                                <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
-                                                <ChevronUp className="h-4 w-4 text-[#868686]" />
+                                                <ChevronUp className="h-4 w-4 text-text-tertiary" />
                                              )}
                                           </div>
                                        </div>
                                     </ContextMenuTrigger>
                                     {isLoggedIn && (
-                                       <ContextMenuContent className="min-w-[170px]">
+                                       <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
                                              cat={cat}
                                              catType="daily"
@@ -3417,9 +3428,9 @@ export function CockpitTasksSection({
                                  </ContextMenu>
 
                                  {!cat.isCollapsed && (
-                                    <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-[#383838]">
+                                    <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {dayTasks.length === 0 ? (
-                                          <p className="text-xs text-[#868686] py-1">
+                                          <p className="text-xs text-text-tertiary py-1">
                                              No daily tasks in this category for{" "}
                                              {activeDayOption.shortLabel}.
                                           </p>
@@ -3460,9 +3471,9 @@ export function CockpitTasksSection({
                                                                "daily"
                                                             )
                                                          }
-                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
+                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-surface-nested transition-all group ${
                                                             isTaskDragging
-                                                               ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
+                                                               ? "opacity-30 border border-dashed border-brand-2 bg-surface-elevated"
                                                                : ""
                                                          } ${
                                                             isTaskOver &&
@@ -3492,7 +3503,7 @@ export function CockpitTasksSection({
                                                             onClick={(e) =>
                                                                e.stopPropagation()
                                                             }
-                                                            className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
+                                                            className="p-1 -ml-1 text-text-tertiary hover:text-brand-2 cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
                                                             title="Drag task to reorder or move across categories"
                                                             aria-label={`Drag task ${task.text}`}
                                                          >
@@ -3535,14 +3546,14 @@ export function CockpitTasksSection({
                                                                         className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
                                                                            status ===
                                                                            "COMPLETED"
-                                                                              ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
+                                                                              ? "bg-white border-white text-text-inverse"
                                                                               : status ===
                                                                                   "IN_PROGRESS"
                                                                                 ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
                                                                                 : status ===
                                                                                     "CROSSED_OUT"
                                                                                   ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
-                                                                                  : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
+                                                                                  : "border-white bg-transparent group-hover:border-gray-300"
                                                                         }`}
                                                                      >
                                                                         {status ===
@@ -3562,14 +3573,14 @@ export function CockpitTasksSection({
                                                                         className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
                                                                            status ===
                                                                            "COMPLETED"
-                                                                              ? "text-[#868686] line-through"
+                                                                              ? "text-text-tertiary line-through"
                                                                               : status ===
                                                                                   "CROSSED_OUT"
-                                                                                ? "text-[#777777] line-through decoration-rose-500/60"
+                                                                                ? "text-text-tertiary line-through decoration-rose-500/60"
                                                                                 : status ===
                                                                                     "IN_PROGRESS"
                                                                                   ? "text-white font-medium"
-                                                                                  : "text-[#ffffff]"
+                                                                                  : "text-white"
                                                                         }`}
                                                                      >
                                                                         {
@@ -3594,7 +3605,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: Completed. Click to reset to To-Do"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
                                                                      >
                                                                         Completed
                                                                      </button>
@@ -3615,7 +3626,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: In Progress. Click to mark Completed"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
                                                                      >
                                                                         In
                                                                         Progress
@@ -3637,7 +3648,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: Crossed Out. Click to reset to To-Do"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
                                                                      >
                                                                         Crossed
                                                                         Out
@@ -3655,7 +3666,7 @@ export function CockpitTasksSection({
                                                                >
                                                                   <button
                                                                      type="button"
-                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
                                                                      title="Task options"
                                                                      aria-label={`Options for task ${task.text}`}
                                                                   >
@@ -3664,7 +3675,7 @@ export function CockpitTasksSection({
                                                                </DropdownMenuTrigger>
                                                                <DropdownMenuContent
                                                                   align="end"
-                                                                  className="min-w-[170px]"
+                                                                  className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
                                                                      task={task}
@@ -3758,7 +3769,7 @@ export function CockpitTasksSection({
                                                       </div>
                                                    </ContextMenuTrigger>
                                                    {isLoggedIn && (
-                                                      <ContextMenuContent className="min-w-[170px]">
+                                                      <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
                                                             task={task}
                                                             catIdx={catIdx}
@@ -3863,17 +3874,17 @@ export function CockpitTasksSection({
                      <Button
                         type="button"
                         disabled
-                        className="h-10 px-6 rounded-full bg-[#1c1c1c] text-[#666666] text-xs font-semibold border border-[#2c2c2c] cursor-not-allowed inline-flex items-center gap-1.5 shadow-none"
+                        className="h-10 px-6 rounded-full bg-surface-elevated text-text-tertiary text-xs font-semibold border border-border-default cursor-not-allowed inline-flex items-center gap-1.5 shadow-none"
                         title="Adding tasks to past challenge days is locked"
                      >
-                        <Lock className="h-3.5 w-3.5 text-[#666666]" />
+                        <Lock className="h-3.5 w-3.5 text-text-tertiary" />
                         <span>Past day locked (new tasks blocked)</span>
                      </Button>
                   ) : (
                      <Button
                         type="button"
                         onClick={() => openAddDailyModal(selectedDateKey)}
-                        className="h-10 px-6 rounded-full bg-[#ffffff] text-[#000000] text-xs font-bold hover:bg-[#e0e0e0] shadow-sm inline-flex items-center gap-1.5"
+                        className="h-10 px-6 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center gap-1.5"
                      >
                         {totalDailyTasksForDay === 0
                            ? `+ Add first todo for ${activeDayOption.shortLabel}`
@@ -3887,30 +3898,30 @@ export function CockpitTasksSection({
             <div
                onDragOver={(e) => handleColumnDragOver(e, "weekly")}
                onDrop={(e) => handleColumnDrop(e, "weekly")}
-               className={`rounded-2xl border bg-[#141414] p-6 shadow-md flex flex-col justify-between space-y-5 transition-all ${
+               className={`rounded-2xl border bg-surface-primary p-6 shadow-md flex flex-col justify-between space-y-5 transition-all ${
                   dragOverInfo?.type === "column" &&
                   dragOverInfo.targetColumn === "weekly"
-                     ? "border-[#e08a32] ring-1 ring-[#e08a32]/50 bg-[#1a1816]"
-                     : "border-[#262626]"
+                     ? "border-brand-2 ring-1 ring-brand-2/50 bg-surface-secondary"
+                     : "border-border-default"
                }`}
             >
                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                     <h3 className="text-lg font-bold text-[#ffffff]">
+                     <h3 className="text-lg font-bold text-white">
                         Weekly Todos
                      </h3>
-                     <span className="text-xs font-semibold text-[#d2d2d2]">
+                     <span className="text-xs font-semibold text-text-secondary">
                         {completedWeeklyTasks}/{totalWeeklyTasks} Completed
                      </span>
                   </div>
 
                   <div className="space-y-3">
                      {weeklyCategories.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-[#333333] bg-[#1a1a1a]/50 p-6 text-center">
-                           <p className="text-sm font-medium text-[#d1d1d1]">
+                        <div className="rounded-xl border border-dashed border-border-strong bg-surface-tertiary/50 p-6 text-center">
+                           <p className="text-sm font-medium text-text-secondary">
                               No weekly todos yet
                            </p>
-                           <p className="text-xs text-[#868686] mt-1">
+                           <p className="text-xs text-text-tertiary mt-1">
                               Set your weekly milestones and track them across
                               the challenge.
                            </p>
@@ -3936,20 +3947,20 @@ export function CockpitTasksSection({
                                  onDrop={(e) =>
                                     handleCategoryDrop(e, catIdx, "weekly")
                                  }
-                                 className={`rounded-xl bg-[#292929] overflow-hidden border transition-all ${
+                                 className={`rounded-xl bg-surface-nested overflow-hidden border transition-all ${
                                     isCatDragging
-                                       ? "opacity-30 border-dashed border-[#e08a32] bg-[#1e1e1e] scale-[0.99]"
+                                       ? "opacity-30 border-dashed border-brand-2 bg-surface-elevated scale-[0.99]"
                                        : ""
                                  } ${
                                     isCatOver &&
                                     dragOverInfo?.position === "above"
-                                       ? "border-t-2 border-t-[#e08a32] border-[#333333]"
+                                       ? "border-t-2 border-t-[#e08a32] border-border-strong"
                                        : isCatOver &&
                                            dragOverInfo?.position === "below"
-                                         ? "border-b-2 border-b-[#e08a32] border-[#333333]"
+                                         ? "border-b-2 border-b-[#e08a32] border-border-strong"
                                          : isCatOver
-                                           ? "border-[#e08a32]"
-                                           : "border-[#333333]"
+                                           ? "border-brand-2"
+                                           : "border-border-strong"
                                  }`}
                               >
                                  <ContextMenu modal={false}>
@@ -3970,10 +3981,10 @@ export function CockpitTasksSection({
                                           onClick={() =>
                                              toggleWeeklyCollapse(catIdx)
                                           }
-                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-[#ffffff] hover:bg-[#333333] transition-colors cursor-grab active:cursor-grabbing select-none"
+                                          className="w-full flex items-center justify-between px-3 py-3 text-left font-medium text-sm text-white hover:bg-surface-nested transition-colors cursor-grab active:cursor-grabbing select-none"
                                        >
                                           <div
-                                             className="p-1 -ml-1 mr-1 text-[#666] hover:text-[#e08a32] rounded transition-colors shrink-0"
+                                             className="p-1 -ml-1 mr-1 text-text-tertiary hover:text-brand-2 rounded transition-colors shrink-0"
                                              title="Drag category to reorder, move to day or across boards"
                                              aria-label={`Drag category ${cat.name}`}
                                           >
@@ -3996,7 +4007,7 @@ export function CockpitTasksSection({
                                                    <DropdownMenuTrigger asChild>
                                                       <button
                                                          type="button"
-                                                         className="p-1 rounded-md text-[#868686] hover:text-[#ffffff] hover:bg-[#3d3d3d] data-[state=open]:text-[#ffffff] data-[state=open]:bg-[#3d3d3d] transition-colors"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
                                                          title="Category options"
                                                          aria-label={`Options for category ${cat.name}`}
                                                       >
@@ -4005,7 +4016,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuTrigger>
                                                    <DropdownMenuContent
                                                       align="end"
-                                                      className="min-w-[170px]"
+                                                      className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
                                                          cat={cat}
@@ -4067,15 +4078,15 @@ export function CockpitTasksSection({
                                                 </DropdownMenu>
                                              )}
                                              {cat.isCollapsed ? (
-                                                <ChevronDown className="h-4 w-4 text-[#868686]" />
+                                                <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
-                                                <ChevronUp className="h-4 w-4 text-[#868686]" />
+                                                <ChevronUp className="h-4 w-4 text-text-tertiary" />
                                              )}
                                           </div>
                                        </div>
                                     </ContextMenuTrigger>
                                     {isLoggedIn && (
-                                       <ContextMenuContent className="min-w-[170px]">
+                                       <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
                                              cat={cat}
                                              catType="weekly"
@@ -4121,9 +4132,9 @@ export function CockpitTasksSection({
                                  </ContextMenu>
 
                                  {!cat.isCollapsed && (
-                                    <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-[#383838]">
+                                    <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {cat.tasks.length === 0 ? (
-                                          <p className="text-xs text-[#868686] py-1">
+                                          <p className="text-xs text-text-tertiary py-1">
                                              No weekly tasks in this category.
                                           </p>
                                        ) : (
@@ -4163,9 +4174,9 @@ export function CockpitTasksSection({
                                                                "weekly"
                                                             )
                                                          }
-                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-[#383838] transition-all group ${
+                                                         className={`flex items-start justify-between gap-2 p-1.5 rounded-lg hover:bg-surface-nested transition-all group ${
                                                             isTaskDragging
-                                                               ? "opacity-30 border border-dashed border-[#e08a32] bg-[#1e1e1e]"
+                                                               ? "opacity-30 border border-dashed border-brand-2 bg-surface-elevated"
                                                                : ""
                                                          } ${
                                                             isTaskOver &&
@@ -4195,7 +4206,7 @@ export function CockpitTasksSection({
                                                             onClick={(e) =>
                                                                e.stopPropagation()
                                                             }
-                                                            className="p-1 -ml-1 text-[#666] hover:text-[#e08a32] cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
+                                                            className="p-1 -ml-1 text-text-tertiary hover:text-brand-2 cursor-grab active:cursor-grabbing rounded transition-colors shrink-0 mt-0.5"
                                                             title="Drag task to reorder or move across categories"
                                                             aria-label={`Drag task ${task.text}`}
                                                          >
@@ -4238,14 +4249,14 @@ export function CockpitTasksSection({
                                                                         className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
                                                                            status ===
                                                                            "COMPLETED"
-                                                                              ? "bg-[#ffffff] border-[#ffffff] text-[#0d0d0d]"
+                                                                              ? "bg-white border-white text-text-inverse"
                                                                               : status ===
                                                                                   "IN_PROGRESS"
                                                                                 ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
                                                                                 : status ===
                                                                                     "CROSSED_OUT"
                                                                                   ? "border-rose-500/80 bg-rose-500/15 text-rose-400"
-                                                                                  : "border-[#ffffff] bg-transparent group-hover:border-gray-300"
+                                                                                  : "border-white bg-transparent group-hover:border-gray-300"
                                                                         }`}
                                                                      >
                                                                         {status ===
@@ -4265,14 +4276,14 @@ export function CockpitTasksSection({
                                                                         className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
                                                                            status ===
                                                                            "COMPLETED"
-                                                                              ? "text-[#868686] line-through"
+                                                                              ? "text-text-tertiary line-through"
                                                                               : status ===
                                                                                   "CROSSED_OUT"
-                                                                                ? "text-[#777777] line-through decoration-rose-500/60"
+                                                                                ? "text-text-tertiary line-through decoration-rose-500/60"
                                                                                 : status ===
                                                                                     "IN_PROGRESS"
                                                                                   ? "text-white font-medium"
-                                                                                  : "text-[#ffffff]"
+                                                                                  : "text-white"
                                                                         }`}
                                                                      >
                                                                         {
@@ -4297,7 +4308,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: Completed. Click to reset to To-Do"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
                                                                      >
                                                                         Completed
                                                                      </button>
@@ -4318,7 +4329,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: In Progress. Click to mark Completed"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
                                                                      >
                                                                         In
                                                                         Progress
@@ -4340,7 +4351,7 @@ export function CockpitTasksSection({
                                                                            );
                                                                         }}
                                                                         title="Status: Crossed Out. Click to reset to To-Do"
-                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                                                                        className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
                                                                      >
                                                                         Crossed
                                                                         Out
@@ -4358,7 +4369,7 @@ export function CockpitTasksSection({
                                                                >
                                                                   <button
                                                                      type="button"
-                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-[#868686] hover:text-[#ffffff] rounded hover:bg-[#444444] transition-opacity shrink-0 mt-0.5"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
                                                                      title="Task options"
                                                                      aria-label={`Options for task ${task.text}`}
                                                                   >
@@ -4367,7 +4378,7 @@ export function CockpitTasksSection({
                                                                </DropdownMenuTrigger>
                                                                <DropdownMenuContent
                                                                   align="end"
-                                                                  className="min-w-[170px]"
+                                                                  className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
                                                                      task={task}
@@ -4461,7 +4472,7 @@ export function CockpitTasksSection({
                                                       </div>
                                                    </ContextMenuTrigger>
                                                    {isLoggedIn && (
-                                                      <ContextMenuContent className="min-w-[170px]">
+                                                      <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
                                                             task={task}
                                                             catIdx={catIdx}
@@ -4574,7 +4585,7 @@ export function CockpitTasksSection({
                            setIsCreatingCategory(true);
                         }
                      }}
-                     className="h-10 px-6 rounded-full bg-[#ffffff] text-[#000000] text-xs font-bold hover:bg-[#e0e0e0] shadow-sm inline-flex items-center gap-1.5"
+                     className="h-10 px-6 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center gap-1.5"
                   >
                      {weeklyCategories.length === 0
                         ? "+ Add first todo"
@@ -4585,714 +4596,669 @@ export function CockpitTasksSection({
          </div>
 
          {/* Add Todo Modal */}
-         {addModalType && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-               <div className="w-full max-w-md rounded-2xl border border-[#434343] bg-[#292929] p-6 shadow-2xl space-y-5">
-                  <div className="flex items-center justify-between">
-                     <h4 className="text-xl font-bold text-[#ffffff]">
-                        Add {addModalType === "daily" ? "Daily" : "Weekly"} Todo
-                     </h4>
-                     <button
-                        type="button"
-                        onClick={() => setAddModalType(null)}
-                        className="text-[#868686] hover:text-[#ffffff] transition-colors"
-                     >
-                        <X className="h-5 w-5" />
-                     </button>
+         <Dialog
+            open={Boolean(addModalType)}
+            onOpenChange={(open) => {
+               if (!open) setAddModalType(null);
+            }}
+         >
+            <DialogContent className="max-w-md rounded-2xl border-border-strong bg-surface-nested p-6 space-y-5">
+               <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl font-bold text-white">
+                     Add {addModalType === "daily" ? "Daily" : "Weekly"} Todo
+                  </DialogTitle>
+               </div>
+
+               <form onSubmit={handleAddTodoSubmit} className="space-y-4">
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Todo Content
+                     </label>
+                     <Input
+                        type="text"
+                        placeholder="What needs to get done?"
+                        value={newTodoText}
+                        onChange={(e) => setNewTodoText(e.target.value)}
+                        autoFocus
+                        required
+                        className="h-11 bg-input-bg border-input-border text-text-primary placeholder-text-secondary rounded-xl"
+                     />
                   </div>
 
-                  <form onSubmit={handleAddTodoSubmit} className="space-y-4">
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Todo Content
-                        </label>
-                        <Input
-                           type="text"
-                           placeholder="What needs to get done?"
-                           value={newTodoText}
-                           onChange={(e) => setNewTodoText(e.target.value)}
-                           autoFocus
-                           required
-                           className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] placeholder-[#d2d2d2] rounded-xl"
-                        />
-                     </div>
-
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Todo Category
-                        </label>
-                        {!isCreatingCategory ? (
-                           <div className="flex gap-2">
-                              <Select
-                                 value={selectedCategory}
-                                 onValueChange={(value) => {
-                                    if (value === "__NEW__") {
-                                       setIsCreatingCategory(true);
-                                       setTimeout(() => {
-                                          categoryInputRef.current?.focus();
-                                          categoryInputRef.current?.select();
-                                       }, 50);
-                                    } else {
-                                       setSelectedCategory(value);
-                                    }
-                                 }}
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Todo Category
+                     </label>
+                     {!isCreatingCategory ? (
+                        <div className="flex gap-2">
+                           <Select
+                              value={selectedCategory}
+                              onValueChange={(value) => {
+                                 if (value === "__NEW__") {
+                                    setIsCreatingCategory(true);
+                                    setTimeout(() => {
+                                       categoryInputRef.current?.focus();
+                                       categoryInputRef.current?.select();
+                                    }, 50);
+                                 } else {
+                                    setSelectedCategory(value);
+                                 }
+                              }}
+                           >
+                              <SelectTrigger
+                                 ref={categorySelectRef}
+                                 data-testid="todo-category-select"
+                                 className="h-11 w-full rounded-xl border-input-border bg-input-bg px-3 text-sm text-text-primary"
                               >
-                                 <SelectTrigger
-                                    ref={categorySelectRef}
-                                    data-testid="todo-category-select"
-                                    className="h-11 w-full rounded-xl border-[#484848] bg-[#545454] px-3 text-sm text-[#f4f3f6]"
-                                 >
-                                    <SelectValue placeholder="Select a category" />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                    {addModalType === "daily" ? (
-                                       <>
-                                          {weeklyCategoryOptions.length > 0 && (
-                                             <SelectGroup>
-                                                <SelectLabel>
-                                                   Weekly Categories (Inherited)
-                                                </SelectLabel>
-                                                {weeklyCategoryOptions.map(
-                                                   (catName) => (
-                                                      <SelectItem
-                                                         key={catName}
-                                                         value={catName}
-                                                      >
-                                                         {catName}
-                                                      </SelectItem>
-                                                   )
-                                                )}
-                                             </SelectGroup>
-                                          )}
-                                          {independentDailyCategoryOptions.length >
-                                             0 && (
-                                             <SelectGroup>
-                                                <SelectLabel>
-                                                   Independent Daily Categories
-                                                </SelectLabel>
-                                                {independentDailyCategoryOptions.map(
-                                                   (catName) => (
-                                                      <SelectItem
-                                                         key={catName}
-                                                         value={catName}
-                                                      >
-                                                         {catName}
-                                                      </SelectItem>
-                                                   )
-                                                )}
-                                             </SelectGroup>
-                                          )}
-                                          <SelectItem value="__NEW__">
-                                             + Create Independent Category...
+                                 <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                 {addModalType === "daily" ? (
+                                    <>
+                                       {weeklyCategoryOptions.length > 0 && (
+                                          <SelectGroup>
+                                             <SelectLabel>
+                                                Weekly Categories (Inherited)
+                                             </SelectLabel>
+                                             {weeklyCategoryOptions.map(
+                                                (catName) => (
+                                                   <SelectItem
+                                                      key={catName}
+                                                      value={catName}
+                                                   >
+                                                      {catName}
+                                                   </SelectItem>
+                                                )
+                                             )}
+                                          </SelectGroup>
+                                       )}
+                                       {independentDailyCategoryOptions.length >
+                                          0 && (
+                                          <SelectGroup>
+                                             <SelectLabel>
+                                                Independent Daily Categories
+                                             </SelectLabel>
+                                             {independentDailyCategoryOptions.map(
+                                                (catName) => (
+                                                   <SelectItem
+                                                      key={catName}
+                                                      value={catName}
+                                                   >
+                                                      {catName}
+                                                   </SelectItem>
+                                                )
+                                             )}
+                                          </SelectGroup>
+                                       )}
+                                       <SelectItem value="__NEW__">
+                                          + Create Independent Category...
+                                       </SelectItem>
+                                    </>
+                                 ) : (
+                                    <>
+                                       {weeklyCategoryOptions.map((catName) => (
+                                          <SelectItem
+                                             key={catName}
+                                             value={catName}
+                                          >
+                                             {catName}
                                           </SelectItem>
-                                       </>
-                                    ) : (
-                                       <>
-                                          {weeklyCategoryOptions.map(
-                                             (catName) => (
-                                                <SelectItem
-                                                   key={catName}
-                                                   value={catName}
-                                                >
-                                                   {catName}
-                                                </SelectItem>
-                                             )
-                                          )}
-                                          <SelectItem value="__NEW__">
-                                             + Create New Category...
-                                          </SelectItem>
-                                       </>
-                                    )}
-                                 </SelectContent>
-                              </Select>
-                           </div>
-                        ) : (
-                           <div className="flex gap-2">
-                              <Input
-                                 ref={categoryInputRef}
-                                 type="text"
-                                 placeholder={
-                                    addModalType === "daily"
-                                       ? "Independent category name (e.g. Unplanned, Urgent)"
-                                       : "Category name"
-                                 }
-                                 value={customCategory}
-                                 onChange={(e) =>
-                                    setCustomCategory(e.target.value)
-                                 }
-                                 autoFocus
-                                 className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl"
-                              />
-                              {(addModalType === "daily"
-                                 ? dailyCategoryOptions
-                                 : weeklyCategoryOptions
-                              ).length > 0 && (
-                                 <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                       setIsCreatingCategory(false);
-                                       setTimeout(() => {
-                                          categorySelectRef.current?.focus();
-                                       }, 50);
-                                    }}
-                                    className="h-11 border-[#484848] text-xs text-[#ffffff]"
-                                 >
-                                    Back
-                                 </Button>
-                              )}
-                           </div>
-                        )}
-                     </div>
-
-                     {addModalType === "daily" && (
-                        <div>
-                           <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5 flex items-center justify-between">
-                              <span>Assigned Challenge Day</span>
-                              <span className="text-[11px] text-[#e08a32] font-semibold">
-                                 {formatDayDate(
-                                    addTodoDateKey || selectedDateKey
+                                       ))}
+                                       <SelectItem value="__NEW__">
+                                          + Create New Category...
+                                       </SelectItem>
+                                    </>
                                  )}
-                              </span>
-                           </label>
-                           <div className="grid grid-cols-7 gap-1 w-full pb-1">
-                              {dayOptions.map((opt) => {
-                                 const isSelected =
-                                    (addTodoDateKey || selectedDateKey) ===
-                                    opt.dateKey;
-                                 const isPastDay =
-                                    opt.isPast ??
-                                    opt.dateKey < effectiveTodayDate;
+                              </SelectContent>
+                           </Select>
+                        </div>
+                     ) : (
+                        <div className="flex gap-2">
+                           <Input
+                              ref={categoryInputRef}
+                              type="text"
+                              placeholder={
+                                 addModalType === "daily"
+                                    ? "Independent category name (e.g. Unplanned, Urgent)"
+                                    : "Category name"
+                              }
+                              value={customCategory}
+                              onChange={(e) =>
+                                 setCustomCategory(e.target.value)
+                              }
+                              autoFocus
+                              className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
+                           />
+                           {(addModalType === "daily"
+                              ? dailyCategoryOptions
+                              : weeklyCategoryOptions
+                           ).length > 0 && (
+                              <Button
+                                 type="button"
+                                 variant="outline"
+                                 onClick={() => {
+                                    setIsCreatingCategory(false);
+                                    setTimeout(() => {
+                                       categorySelectRef.current?.focus();
+                                    }, 50);
+                                 }}
+                                 className="h-11 border-input-border text-xs text-white"
+                              >
+                                 Back
+                              </Button>
+                           )}
+                        </div>
+                     )}
+                  </div>
 
-                                 if (isPastDay) {
-                                    return (
-                                       <button
-                                          key={opt.dateKey}
-                                          type="button"
-                                          disabled
-                                          title={`${opt.label} (Past Day — Locked for new tasks)`}
-                                          className="py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border border-[#262626] bg-[#141414] text-[#555555] opacity-40 cursor-not-allowed overflow-hidden"
-                                       >
-                                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none truncate max-w-full">
-                                             {opt.isToday
-                                                ? "Today"
-                                                : opt.shortLabel.startsWith(
-                                                       "Day "
-                                                    )
-                                                  ? `D${opt.dayNumber}`
-                                                  : opt.shortLabel.slice(0, 3)}
-                                          </span>
-                                          <span className="text-[9px] opacity-60 mt-0.5 leading-none truncate max-w-full">
-                                             {formatDayDate(opt.dateKey)}
-                                          </span>
-                                          <span className="text-[8px] text-[#666] mt-1 flex items-center justify-center">
-                                             <Lock className="h-2 w-2" />
-                                          </span>
-                                       </button>
-                                    );
-                                 }
+                  {addModalType === "daily" && (
+                     <div>
+                        <label className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between">
+                           <span>Assigned Challenge Day</span>
+                           <span className="text-meta text-brand-2 font-semibold">
+                              {formatDayDate(addTodoDateKey || selectedDateKey)}
+                           </span>
+                        </label>
+                        <div className="grid grid-cols-7 gap-1 w-full pb-1">
+                           {dayOptions.map((opt) => {
+                              const isSelected =
+                                 (addTodoDateKey || selectedDateKey) ===
+                                 opt.dateKey;
+                              const isPastDay =
+                                 opt.isPast ?? opt.dateKey < effectiveTodayDate;
 
+                              if (isPastDay) {
                                  return (
                                     <button
                                        key={opt.dateKey}
                                        type="button"
-                                       onClick={() =>
-                                          setAddTodoDateKey(opt.dateKey)
-                                       }
-                                       title={
-                                          opt.isToday
-                                             ? "Today"
-                                             : opt.isYesterday
-                                               ? `Yesterday (${opt.label})`
-                                               : opt.label
-                                       }
-                                       className={`py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border transition-all overflow-hidden ${
-                                          isSelected
-                                             ? "bg-[#e08a32] text-white border-[#e08a32] shadow-sm shadow-[#e08a32]/30 ring-1 ring-[#e08a32]"
-                                             : "bg-[#1f1f1f] text-[#a0a0a0] border-[#383838] hover:text-white hover:bg-[#282828]"
-                                       }`}
+                                       disabled
+                                       title={`${opt.label} (Past Day — Locked for new tasks)`}
+                                       className="py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border border-border-default bg-surface-primary text-text-tertiary opacity-40 cursor-not-allowed overflow-hidden"
                                     >
-                                       <span className="text-[10px] uppercase font-bold tracking-wider leading-none truncate max-w-full">
+                                       <span className="text-label uppercase font-bold tracking-wider leading-none truncate max-w-full">
                                           {opt.isToday
                                              ? "Today"
                                              : opt.shortLabel.startsWith("Day ")
                                                ? `D${opt.dayNumber}`
                                                : opt.shortLabel.slice(0, 3)}
                                        </span>
-                                       <span className="text-[9px] opacity-80 mt-0.5 leading-none truncate max-w-full">
+                                       <span className="text-caption opacity-60 mt-0.5 leading-none truncate max-w-full">
                                           {formatDayDate(opt.dateKey)}
                                        </span>
-                                       {opt.isToday && (
-                                          <span
-                                             className={`h-1 w-1 rounded-full mt-1 ${
-                                                isSelected
-                                                   ? "bg-white"
-                                                   : "bg-[#e08a32]"
-                                             }`}
-                                          />
-                                       )}
+                                       <span className="text-micro text-text-tertiary mt-1 flex items-center justify-center">
+                                          <Lock className="h-2 w-2" />
+                                       </span>
                                     </button>
                                  );
-                              })}
-                           </div>
-                        </div>
-                     )}
+                              }
 
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Initial Status
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                           <button
-                              type="button"
-                              onClick={() => setNewTodoStatus("TODO")}
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              return (
+                                 <button
+                                    key={opt.dateKey}
+                                    type="button"
+                                    onClick={() =>
+                                       setAddTodoDateKey(opt.dateKey)
+                                    }
+                                    title={
+                                       opt.isToday
+                                          ? "Today"
+                                          : opt.isYesterday
+                                            ? `Yesterday (${opt.label})`
+                                            : opt.label
+                                    }
+                                    className={`py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border transition-all overflow-hidden ${
+                                       isSelected
+                                          ? "bg-brand-2 text-white border-brand-2 shadow-sm shadow-brand-2/30 ring-1 ring-brand-2"
+                                          : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                                    }`}
+                                 >
+                                    <span className="text-label uppercase font-bold tracking-wider leading-none truncate max-w-full">
+                                       {opt.isToday
+                                          ? "Today"
+                                          : opt.shortLabel.startsWith("Day ")
+                                            ? `D${opt.dayNumber}`
+                                            : opt.shortLabel.slice(0, 3)}
+                                    </span>
+                                    <span className="text-caption opacity-80 mt-0.5 leading-none truncate max-w-full">
+                                       {formatDayDate(opt.dateKey)}
+                                    </span>
+                                    {opt.isToday && (
+                                       <span
+                                          className={`h-1 w-1 rounded-full mt-1 ${
+                                             isSelected
+                                                ? "bg-white"
+                                                : "bg-brand-2"
+                                          }`}
+                                       />
+                                    )}
+                                 </button>
+                              );
+                           })}
+                        </div>
+                     </div>
+                  )}
+
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Initial Status
+                     </label>
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                           type="button"
+                           onClick={() => setNewTodoStatus("TODO")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              newTodoStatus === "TODO"
+                                 ? "bg-surface-nested text-white border-white/30 shadow-inner ring-1 ring-white/20"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <span
+                              className={`h-2 w-2 rounded-full ${
                                  newTodoStatus === "TODO"
-                                    ? "bg-[#383838] text-white border-white/30 shadow-inner ring-1 ring-white/20"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
+                                    ? "bg-white"
+                                    : "bg-input-bg"
                               }`}
-                           >
-                              <span
-                                 className={`h-2 w-2 rounded-full ${
-                                    newTodoStatus === "TODO"
-                                       ? "bg-white"
-                                       : "bg-[#555555]"
-                                 }`}
-                              />
-                              <span>To-Do</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() => setNewTodoStatus("IN_PROGRESS")}
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                           />
+                           <span>To-Do</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setNewTodoStatus("IN_PROGRESS")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              newTodoStatus === "IN_PROGRESS"
+                                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner ring-1 ring-amber-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <span
+                              className={`h-2 w-2 rounded-full ${
                                  newTodoStatus === "IN_PROGRESS"
-                                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner ring-1 ring-amber-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
+                                    ? "bg-amber-400"
+                                    : "bg-input-bg"
                               }`}
-                           >
-                              <span
-                                 className={`h-2 w-2 rounded-full ${
-                                    newTodoStatus === "IN_PROGRESS"
-                                       ? "bg-amber-400"
-                                       : "bg-[#555555]"
-                                 }`}
-                              />
-                              <span>In Progress</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() => setNewTodoStatus("COMPLETED")}
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                           />
+                           <span>In Progress</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setNewTodoStatus("COMPLETED")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              newTodoStatus === "COMPLETED"
+                                 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-inner ring-1 ring-emerald-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <Check
+                              className={`h-3.5 w-3.5 ${
                                  newTodoStatus === "COMPLETED"
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-inner ring-1 ring-emerald-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
+                                    ? "text-emerald-400 stroke-[3]"
+                                    : "text-text-tertiary"
                               }`}
-                           >
-                              <Check
-                                 className={`h-3.5 w-3.5 ${
-                                    newTodoStatus === "COMPLETED"
-                                       ? "text-emerald-400 stroke-[3]"
-                                       : "text-[#555555]"
-                                 }`}
-                              />
-                              <span>Completed</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() => setNewTodoStatus("CROSSED_OUT")}
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                           />
+                           <span>Completed</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setNewTodoStatus("CROSSED_OUT")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              newTodoStatus === "CROSSED_OUT"
+                                 ? "bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-inner ring-1 ring-rose-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <X
+                              className={`h-3.5 w-3.5 ${
                                  newTodoStatus === "CROSSED_OUT"
-                                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-inner ring-1 ring-rose-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
+                                    ? "text-rose-400 stroke-[2.5]"
+                                    : "text-text-tertiary"
                               }`}
-                           >
-                              <X
-                                 className={`h-3.5 w-3.5 ${
-                                    newTodoStatus === "CROSSED_OUT"
-                                       ? "text-rose-400 stroke-[2.5]"
-                                       : "text-[#555555]"
-                                 }`}
-                              />
-                              <span>Crossed Out</span>
-                           </button>
-                        </div>
+                           />
+                           <span>Crossed Out</span>
+                        </button>
                      </div>
-
-                     <div className="flex items-center justify-end gap-3 pt-3">
-                        <Button
-                           type="button"
-                           variant="ghost"
-                           onClick={() => setAddModalType(null)}
-                           className="h-11 px-5 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
-                        >
-                           Cancel
-                        </Button>
-                        <Button
-                           type="submit"
-                           className="h-11 px-6 rounded-xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-xs font-semibold"
-                        >
-                           Submit
-                        </Button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
-
-         {/* Edit Task Modal */}
-         {editTaskModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-               <div className="w-full max-w-md rounded-2xl border border-[#434343] bg-[#292929] p-6 shadow-2xl space-y-5">
-                  <div className="flex items-center justify-between">
-                     <h4 className="text-xl font-bold text-[#ffffff]">
-                        Edit Task
-                     </h4>
-                     <button
-                        type="button"
-                        onClick={() => setEditTaskModal(null)}
-                        className="text-[#868686] hover:text-[#ffffff] transition-colors"
-                     >
-                        <X className="h-5 w-5" />
-                     </button>
                   </div>
-                  <form
-                     onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSaveEditTask(
-                           editTaskInputText,
-                           editTaskInputStatus,
-                           editTaskInputDueDate
-                        );
-                     }}
-                     className="space-y-4"
-                  >
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Task Title
-                        </label>
-                        <Input
-                           type="text"
-                           value={editTaskInputText}
-                           onChange={(e) =>
-                              setEditTaskInputText(e.target.value)
-                           }
-                           autoFocus
-                           required
-                           className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl"
-                        />
-                     </div>
 
-                     {editTaskModal.taskType === "daily" && (
-                        <div>
-                           <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5 flex items-center justify-between">
-                              <span>Assigned Challenge Day</span>
-                              <span className="text-[11px] text-[#e08a32] font-semibold">
-                                 {formatDayDate(editTaskInputDueDate)}
-                              </span>
-                           </label>
-                           <div className="grid grid-cols-7 gap-1 w-full pb-1">
-                              {dayOptions.map((opt) => {
-                                 const isSelected =
-                                    editTaskInputDueDate === opt.dateKey;
-                                 const originalDateKey = editTaskModal.dueDate
-                                    ? typeof editTaskModal.dueDate === "string"
-                                       ? editTaskModal.dueDate.slice(0, 10)
-                                       : new Date(editTaskModal.dueDate)
-                                            .toISOString()
-                                            .slice(0, 10)
-                                    : "";
-                                 const isOriginalDate =
-                                    originalDateKey === opt.dateKey;
-                                 const isPastDay =
-                                    opt.isPast ??
-                                    opt.dateKey < effectiveTodayDate;
-                                 const isBlockedPastDay =
-                                    isPastDay && !isOriginalDate;
-
-                                 if (isBlockedPastDay) {
-                                    return (
-                                       <button
-                                          key={opt.dateKey}
-                                          type="button"
-                                          disabled
-                                          title={`${opt.label} (Past Day — Locked)`}
-                                          className="py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border border-[#262626] bg-[#141414] text-[#555555] opacity-40 cursor-not-allowed overflow-hidden"
-                                       >
-                                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none truncate max-w-full">
-                                             {opt.isToday
-                                                ? "Today"
-                                                : opt.shortLabel.startsWith(
-                                                       "Day "
-                                                    )
-                                                  ? `D${opt.dayNumber}`
-                                                  : opt.shortLabel.slice(0, 3)}
-                                          </span>
-                                          <span className="text-[9px] opacity-60 mt-0.5 leading-none truncate max-w-full">
-                                             {formatDayDate(opt.dateKey)}
-                                          </span>
-                                          <span className="text-[8px] text-[#666] mt-1 flex items-center justify-center">
-                                             <Lock className="h-2 w-2" />
-                                          </span>
-                                       </button>
-                                    );
-                                 }
-
-                                 return (
-                                    <button
-                                       key={opt.dateKey}
-                                       type="button"
-                                       onClick={() =>
-                                          setEditTaskInputDueDate(opt.dateKey)
-                                       }
-                                       title={
-                                          opt.isToday
-                                             ? "Today"
-                                             : opt.isYesterday
-                                               ? `Yesterday (${opt.label})`
-                                               : opt.label
-                                       }
-                                       className={`py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border transition-all overflow-hidden ${
-                                          isSelected
-                                             ? "bg-[#e08a32] text-white border-[#e08a32] shadow-sm shadow-[#e08a32]/30 ring-1 ring-[#e08a32]"
-                                             : "bg-[#1f1f1f] text-[#a0a0a0] border-[#383838] hover:text-white hover:bg-[#282828]"
-                                       }`}
-                                    >
-                                       <span className="text-[10px] uppercase font-bold tracking-wider leading-none truncate max-w-full">
-                                          {opt.isToday
-                                             ? "Today"
-                                             : opt.shortLabel.startsWith("Day ")
-                                               ? `D${opt.dayNumber}`
-                                               : opt.shortLabel.slice(0, 3)}
-                                       </span>
-                                       <span className="text-[9px] opacity-80 mt-0.5 leading-none truncate max-w-full">
-                                          {formatDayDate(opt.dateKey)}
-                                       </span>
-                                       {opt.isToday && (
-                                          <span
-                                             className={`h-1 w-1 rounded-full mt-1 ${
-                                                isSelected
-                                                   ? "bg-white"
-                                                   : "bg-[#e08a32]"
-                                             }`}
-                                          />
-                                       )}
-                                    </button>
-                                 );
-                              })}
-                           </div>
-                        </div>
-                     )}
-
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Task Status
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                           <button
-                              type="button"
-                              onClick={() => setEditTaskInputStatus("TODO")}
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
-                                 editTaskInputStatus === "TODO"
-                                    ? "bg-[#383838] text-white border-white/30 shadow-inner ring-1 ring-white/20"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
-                              }`}
-                           >
-                              <span
-                                 className={`h-2 w-2 rounded-full ${
-                                    editTaskInputStatus === "TODO"
-                                       ? "bg-white"
-                                       : "bg-[#555555]"
-                                 }`}
-                              />
-                              <span>To-Do</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() =>
-                                 setEditTaskInputStatus("IN_PROGRESS")
-                              }
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
-                                 editTaskInputStatus === "IN_PROGRESS"
-                                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner ring-1 ring-amber-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
-                              }`}
-                           >
-                              <span
-                                 className={`h-2 w-2 rounded-full ${
-                                    editTaskInputStatus === "IN_PROGRESS"
-                                       ? "bg-amber-400"
-                                       : "bg-[#555555]"
-                                 }`}
-                              />
-                              <span>In Progress</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() =>
-                                 setEditTaskInputStatus("COMPLETED")
-                              }
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
-                                 editTaskInputStatus === "COMPLETED"
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-inner ring-1 ring-emerald-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
-                              }`}
-                           >
-                              <Check
-                                 className={`h-3.5 w-3.5 ${
-                                    editTaskInputStatus === "COMPLETED"
-                                       ? "text-emerald-400 stroke-[3]"
-                                       : "text-[#555555]"
-                                 }`}
-                              />
-                              <span>Completed</span>
-                           </button>
-                           <button
-                              type="button"
-                              onClick={() =>
-                                 setEditTaskInputStatus("CROSSED_OUT")
-                              }
-                              className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
-                                 editTaskInputStatus === "CROSSED_OUT"
-                                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-inner ring-1 ring-rose-500/30"
-                                    : "bg-[#1f1f1f] text-[#868686] border-[#383838] hover:text-white hover:bg-[#282828]"
-                              }`}
-                           >
-                              <X
-                                 className={`h-3.5 w-3.5 ${
-                                    editTaskInputStatus === "CROSSED_OUT"
-                                       ? "text-rose-400 stroke-[2.5]"
-                                       : "text-[#555555]"
-                                 }`}
-                              />
-                              <span>Crossed Out</span>
-                           </button>
-                        </div>
-                     </div>
-
-                     <div className="flex items-center justify-end gap-3 pt-3">
-                        <Button
-                           type="button"
-                           variant="ghost"
-                           onClick={() => setEditTaskModal(null)}
-                           className="h-11 px-5 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
-                        >
-                           Cancel
-                        </Button>
-                        <Button
-                           type="submit"
-                           className="h-11 px-6 rounded-xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-xs font-semibold"
-                        >
-                           Save Changes
-                        </Button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
-
-         {/* Rename Category Modal */}
-         {editCategoryModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-               <div className="w-full max-w-md rounded-2xl border border-[#434343] bg-[#292929] p-6 shadow-2xl space-y-5">
-                  <div className="flex items-center justify-between">
-                     <h4 className="text-xl font-bold text-[#ffffff]">
-                        Rename Category
-                     </h4>
-                     <button
-                        type="button"
-                        onClick={() => setEditCategoryModal(null)}
-                        className="text-[#868686] hover:text-[#ffffff] transition-colors"
-                     >
-                        <X className="h-5 w-5" />
-                     </button>
-                  </div>
-                  <form
-                     onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSaveEditCategory(editCategoryInputName);
-                     }}
-                     className="space-y-4"
-                  >
-                     <div>
-                        <label className="block text-xs font-medium text-[#d1d1d1] mb-1.5">
-                           Category Name
-                        </label>
-                        <Input
-                           type="text"
-                           value={editCategoryInputName}
-                           onChange={(e) =>
-                              setEditCategoryInputName(e.target.value)
-                           }
-                           autoFocus
-                           required
-                           className="h-11 bg-[#545454] border-[#484848] text-[#f4f3f6] rounded-xl"
-                        />
-                     </div>
-                     <div className="flex items-center justify-end gap-3 pt-3">
-                        <Button
-                           type="button"
-                           variant="ghost"
-                           onClick={() => setEditCategoryModal(null)}
-                           className="h-11 px-5 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
-                        >
-                           Cancel
-                        </Button>
-                        <Button
-                           type="submit"
-                           className="h-11 px-6 rounded-xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-xs font-semibold"
-                        >
-                           Save Changes
-                        </Button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
-
-         {/* Delete Category Confirmation Modal */}
-         {deleteCategoryModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-               <div className="w-full max-w-md rounded-2xl border border-[#434343] bg-[#292929] p-6 shadow-2xl space-y-5">
-                  <div className="flex items-center justify-between">
-                     <h4 className="text-xl font-bold text-[#ffffff]">
-                        Delete Category
-                     </h4>
-                     <button
-                        type="button"
-                        onClick={() => setDeleteCategoryModal(null)}
-                        className="text-[#868686] hover:text-[#ffffff] transition-colors"
-                     >
-                        <X className="h-5 w-5" />
-                     </button>
-                  </div>
-                  <p className="text-sm text-[#d1d1d1] leading-relaxed">
-                     Are you sure you want to delete{" "}
-                     <span className="font-semibold text-white">
-                        &quot;{deleteCategoryModal.name}&quot;
-                     </span>
-                     ? All daily and weekly tasks inside this category will also
-                     be permanently deleted.
-                  </p>
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                  <div className="flex items-center justify-end gap-3 pt-3">
                      <Button
                         type="button"
                         variant="ghost"
-                        onClick={() => setDeleteCategoryModal(null)}
-                        className="h-11 px-5 rounded-xl bg-[#4a4a4a] text-[#ffffff] hover:bg-[#5a5a5a] text-xs font-medium"
+                        onClick={() => setAddModalType(null)}
+                        className="h-11 px-5 rounded-xl bg-input-bg text-white hover:bg-input-bg text-xs font-medium"
                      >
                         Cancel
                      </Button>
                      <Button
-                        type="button"
-                        onClick={handleConfirmDeleteCategory}
-                        className="h-11 px-6 rounded-xl bg-red-600 text-white hover:bg-red-700 text-xs font-semibold"
+                        type="submit"
+                        className="h-11 px-6 rounded-xl bg-white text-text-inverse hover:bg-white/90 text-xs font-semibold"
                      >
-                        Delete Category
+                        Submit
                      </Button>
                   </div>
+               </form>
+            </DialogContent>
+         </Dialog>
+
+         {/* Edit Task Modal */}
+         <Dialog
+            open={Boolean(editTaskModal)}
+            onOpenChange={(open) => {
+               if (!open) setEditTaskModal(null);
+            }}
+         >
+            <DialogContent className="max-w-md rounded-2xl border-border-strong bg-surface-nested p-6 space-y-5">
+               <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl font-bold text-white">
+                     Edit Task
+                  </DialogTitle>
                </div>
-            </div>
-         )}
+               <form
+                  onSubmit={(e) => {
+                     e.preventDefault();
+                     handleSaveEditTask(
+                        editTaskInputText,
+                        editTaskInputStatus,
+                        editTaskInputDueDate
+                     );
+                  }}
+                  className="space-y-4"
+               >
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Task Title
+                     </label>
+                     <Input
+                        type="text"
+                        value={editTaskInputText}
+                        onChange={(e) => setEditTaskInputText(e.target.value)}
+                        autoFocus
+                        required
+                        className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
+                     />
+                  </div>
+
+                  {editTaskModal?.taskType === "daily" && (
+                     <div>
+                        <label className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between">
+                           <span>Assigned Challenge Day</span>
+                           <span className="text-meta text-brand-2 font-semibold">
+                              {formatDayDate(editTaskInputDueDate)}
+                           </span>
+                        </label>
+                        <div className="grid grid-cols-7 gap-1 w-full pb-1">
+                           {dayOptions.map((opt) => {
+                              const isSelected =
+                                 editTaskInputDueDate === opt.dateKey;
+                              const originalDateKey = editTaskModal?.dueDate
+                                 ? typeof editTaskModal.dueDate === "string"
+                                    ? editTaskModal.dueDate.slice(0, 10)
+                                    : new Date(editTaskModal.dueDate)
+                                         .toISOString()
+                                         .slice(0, 10)
+                                 : "";
+                              const isOriginalDate =
+                                 originalDateKey === opt.dateKey;
+                              const isPastDay =
+                                 opt.isPast ?? opt.dateKey < effectiveTodayDate;
+                              const isBlockedPastDay =
+                                 isPastDay && !isOriginalDate;
+
+                              if (isBlockedPastDay) {
+                                 return (
+                                    <button
+                                       key={opt.dateKey}
+                                       type="button"
+                                       disabled
+                                       title={`${opt.label} (Past Day — Locked)`}
+                                       className="py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border border-border-default bg-surface-primary text-text-tertiary opacity-40 cursor-not-allowed overflow-hidden"
+                                    >
+                                       <span className="text-label uppercase font-bold tracking-wider leading-none truncate max-w-full">
+                                          {opt.isToday
+                                             ? "Today"
+                                             : opt.shortLabel.startsWith("Day ")
+                                               ? `D${opt.dayNumber}`
+                                               : opt.shortLabel.slice(0, 3)}
+                                       </span>
+                                       <span className="text-caption opacity-60 mt-0.5 leading-none truncate max-w-full">
+                                          {formatDayDate(opt.dateKey)}
+                                       </span>
+                                       <span className="text-micro text-text-tertiary mt-1 flex items-center justify-center">
+                                          <Lock className="h-2 w-2" />
+                                       </span>
+                                    </button>
+                                 );
+                              }
+
+                              return (
+                                 <button
+                                    key={opt.dateKey}
+                                    type="button"
+                                    onClick={() =>
+                                       setEditTaskInputDueDate(opt.dateKey)
+                                    }
+                                    title={
+                                       opt.isToday
+                                          ? "Today"
+                                          : opt.isYesterday
+                                            ? `Yesterday (${opt.label})`
+                                            : opt.label
+                                    }
+                                    className={`py-1.5 px-1 flex flex-col items-center justify-center rounded-xl text-xs font-semibold border transition-all overflow-hidden ${
+                                       isSelected
+                                          ? "bg-brand-2 text-white border-brand-2 shadow-sm shadow-brand-2/30 ring-1 ring-brand-2"
+                                          : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                                    }`}
+                                 >
+                                    <span className="text-label uppercase font-bold tracking-wider leading-none truncate max-w-full">
+                                       {opt.isToday
+                                          ? "Today"
+                                          : opt.shortLabel.startsWith("Day ")
+                                            ? `D${opt.dayNumber}`
+                                            : opt.shortLabel.slice(0, 3)}
+                                    </span>
+                                    <span className="text-caption opacity-80 mt-0.5 leading-none truncate max-w-full">
+                                       {formatDayDate(opt.dateKey)}
+                                    </span>
+                                    {opt.isToday && (
+                                       <span
+                                          className={`h-1 w-1 rounded-full mt-1 ${
+                                             isSelected
+                                                ? "bg-white"
+                                                : "bg-brand-2"
+                                          }`}
+                                       />
+                                    )}
+                                 </button>
+                              );
+                           })}
+                        </div>
+                     </div>
+                  )}
+
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Task Status
+                     </label>
+                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                           type="button"
+                           onClick={() => setEditTaskInputStatus("TODO")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              editTaskInputStatus === "TODO"
+                                 ? "bg-surface-nested text-white border-white/30 shadow-inner ring-1 ring-white/20"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <span
+                              className={`h-2 w-2 rounded-full ${
+                                 editTaskInputStatus === "TODO"
+                                    ? "bg-white"
+                                    : "bg-input-bg"
+                              }`}
+                           />
+                           <span>To-Do</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setEditTaskInputStatus("IN_PROGRESS")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              editTaskInputStatus === "IN_PROGRESS"
+                                 ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner ring-1 ring-amber-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <span
+                              className={`h-2 w-2 rounded-full ${
+                                 editTaskInputStatus === "IN_PROGRESS"
+                                    ? "bg-amber-400"
+                                    : "bg-input-bg"
+                              }`}
+                           />
+                           <span>In Progress</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setEditTaskInputStatus("COMPLETED")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              editTaskInputStatus === "COMPLETED"
+                                 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-inner ring-1 ring-emerald-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <Check
+                              className={`h-3.5 w-3.5 ${
+                                 editTaskInputStatus === "COMPLETED"
+                                    ? "text-emerald-400 stroke-[3]"
+                                    : "text-text-tertiary"
+                              }`}
+                           />
+                           <span>Completed</span>
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setEditTaskInputStatus("CROSSED_OUT")}
+                           className={`flex items-center justify-center gap-1.5 h-10 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                              editTaskInputStatus === "CROSSED_OUT"
+                                 ? "bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-inner ring-1 ring-rose-500/30"
+                                 : "bg-surface-elevated text-text-tertiary border-border-strong hover:text-white hover:bg-surface-nested"
+                           }`}
+                        >
+                           <X
+                              className={`h-3.5 w-3.5 ${
+                                 editTaskInputStatus === "CROSSED_OUT"
+                                    ? "text-rose-400 stroke-[2.5]"
+                                    : "text-text-tertiary"
+                              }`}
+                           />
+                           <span>Crossed Out</span>
+                        </button>
+                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-3">
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setEditTaskModal(null)}
+                        className="h-11 px-5 rounded-xl bg-input-bg text-white hover:bg-input-bg text-xs font-medium"
+                     >
+                        Cancel
+                     </Button>
+                     <Button
+                        type="submit"
+                        className="h-11 px-6 rounded-xl bg-white text-text-inverse hover:bg-white/90 text-xs font-semibold"
+                     >
+                        Save Changes
+                     </Button>
+                  </div>
+               </form>
+            </DialogContent>
+         </Dialog>
+
+         {/* Rename Category Modal */}
+         <Dialog
+            open={Boolean(editCategoryModal)}
+            onOpenChange={(open) => {
+               if (!open) setEditCategoryModal(null);
+            }}
+         >
+            <DialogContent className="max-w-md rounded-2xl border-border-strong bg-surface-nested p-6 space-y-5">
+               <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl font-bold text-white">
+                     Rename Category
+                  </DialogTitle>
+               </div>
+               <form
+                  onSubmit={(e) => {
+                     e.preventDefault();
+                     handleSaveEditCategory(editCategoryInputName);
+                  }}
+                  className="space-y-4"
+               >
+                  <div>
+                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                        Category Name
+                     </label>
+                     <Input
+                        type="text"
+                        value={editCategoryInputName}
+                        onChange={(e) =>
+                           setEditCategoryInputName(e.target.value)
+                        }
+                        autoFocus
+                        required
+                        className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
+                     />
+                  </div>
+                  <div className="flex items-center justify-end gap-3 pt-3">
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setEditCategoryModal(null)}
+                        className="h-11 px-5 rounded-xl bg-input-bg text-white hover:bg-input-bg text-xs font-medium"
+                     >
+                        Cancel
+                     </Button>
+                     <Button
+                        type="submit"
+                        className="h-11 px-6 rounded-xl bg-white text-text-inverse hover:bg-white/90 text-xs font-semibold"
+                     >
+                        Save Changes
+                     </Button>
+                  </div>
+               </form>
+            </DialogContent>
+         </Dialog>
+
+         {/* Delete Category Confirmation Modal */}
+         <AlertDialog
+            open={Boolean(deleteCategoryModal)}
+            onOpenChange={(open) => {
+               if (!open) setDeleteCategoryModal(null);
+            }}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                  <AlertDialogDescription>
+                     Are you sure you want to delete{" "}
+                     <span className="font-semibold text-white">
+                        &quot;{deleteCategoryModal?.name}&quot;
+                     </span>
+                     ? All daily and weekly tasks inside this category will also
+                     be permanently deleted.
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                     onClick={() => handleConfirmDeleteCategory()}
+                  >
+                     Delete Category
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
       </>
    );
 }

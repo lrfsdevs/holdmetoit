@@ -43,20 +43,20 @@ export function PokemonCard({
          }}
          className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border transition-all duration-300 text-left cursor-pointer p-4 select-none ${
             isOwned
-               ? `bg-gradient-to-b ${rarityConfig.gradient} border-pokedex-border hover:border-rose-500/60 hover:shadow-lg ${rarityConfig.glowColor} hover:-translate-y-1`
-               : "bg-pokedex-cardSubtle/80 border-pokedex-borderSubtle opacity-75 hover:opacity-100 hover:border-pokedex-borderLight hover:-translate-y-0.5"
+               ? `bg-gradient-to-b ${rarityConfig.gradient} border-border-default hover:border-rose-500/60 hover:shadow-lg ${rarityConfig.glowColor} hover:-translate-y-1`
+               : "bg-surface-secondary/80 border-border-subtle opacity-75 hover:opacity-100 hover:border-border-strong hover:-translate-y-0.5"
          }`}
          data-testid={`pokemon-card-${species.slug}`}
       >
          {/* Top Header: Pokédex Number & Ownership Badge */}
          <div className="flex items-center justify-between text-xs font-medium">
             <div className="flex items-center gap-1.5">
-               <span className="font-mono text-pokedex-textMuted tracking-wider text-[11px]">
+               <span className="font-mono text-text-tertiary tracking-wider text-meta">
                   {formattedNumber}
                </span>
                {species.isMythical && (
                   <span
-                     className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                     className="px-1.5 py-0.5 rounded text-caption font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40"
                      title="Official Mythical Classification"
                   >
                      Mythical
@@ -64,7 +64,7 @@ export function PokemonCard({
                )}
                {species.isLegendary && !species.isMythical && (
                   <span
-                     className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                     className="px-1.5 py-0.5 rounded text-caption font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40"
                      title="Official Legendary Classification"
                   >
                      Legendary
@@ -74,7 +74,7 @@ export function PokemonCard({
 
             {isOwned ? (
                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-meta font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20"
                   data-testid="badge-owned"
                >
                   <CheckCircle2 className="w-3 h-3" />
@@ -82,7 +82,7 @@ export function PokemonCard({
                </span>
             ) : (
                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-pokedex-cardSubtle text-pokedex-textDim border border-pokedex-border"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-meta font-medium bg-surface-secondary text-text-tertiary border border-border-default"
                   data-testid="badge-unowned"
                >
                   <CircleDashed className="w-3 h-3" />
@@ -120,7 +120,7 @@ export function PokemonCard({
                />
             ) : (
                /* Sleek fallback SVG Pokéball silhouette */
-               <div className="relative z-10 flex flex-col items-center justify-center text-pokedex-borderLight">
+               <div className="relative z-10 flex flex-col items-center justify-center text-border-strong">
                   <svg
                      className={`w-20 h-20 transition-transform duration-300 group-hover:scale-110 ${
                         isOwned ? "text-rose-400/50" : "text-slate-700/60"
@@ -141,13 +141,13 @@ export function PokemonCard({
                         cx="50"
                         cy="50"
                         r="16"
-                        fill="hsl(var(--pokedex-card))"
+                        fill="var(--color-surface-primary)"
                         stroke="currentColor"
                         strokeWidth="7"
                      />
                      <circle cx="50" cy="50" r="7" fill="currentColor" />
                   </svg>
-                  <span className="text-[10px] text-pokedex-textDim mt-1">
+                  <span className="text-label text-text-tertiary mt-1">
                      {species.name}
                   </span>
                </div>
@@ -155,13 +155,13 @@ export function PokemonCard({
          </div>
 
          {/* Bottom Info: Species Name, Types, Rarity */}
-         <div className="space-y-2 pt-2 border-t border-pokedex-borderSubtle/60">
+         <div className="space-y-2 pt-2 border-t border-border-subtle/60">
             <div>
                <h3 className="font-bold text-sm sm:text-base text-white tracking-tight group-hover:text-rose-300 transition-colors truncate">
                   {species.name}
                </h3>
                {species.classification && (
-                  <p className="text-[11px] text-pokedex-textMuted truncate">
+                  <p className="text-meta text-text-tertiary truncate">
                      {species.classification}
                   </p>
                )}

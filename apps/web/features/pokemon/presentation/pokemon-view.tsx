@@ -50,7 +50,7 @@ function CatalogueSkeleton() {
          {Array.from({ length: 12 }).map((_, i) => (
             <div
                key={i}
-               className="h-56 rounded-2xl bg-pokedex-cardSubtle/60 border border-pokedex-border animate-pulse"
+               className="h-56 rounded-2xl bg-surface-secondary/60 border border-border-default animate-pulse"
             />
          ))}
       </div>
@@ -325,16 +325,16 @@ export function PokemonView({
                </div>
             ) : (
                <div
-                  className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl bg-pokedex-cardSubtle/50 border border-pokedex-border text-center"
+                  className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl bg-surface-secondary/50 border border-border-default text-center"
                   data-testid="summon-empty-state"
                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pokedex-inset text-amber-400 mb-4 border border-amber-500/20 shadow-lg shadow-amber-500/10">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-secondary text-amber-400 mb-4 border border-amber-500/20 shadow-lg shadow-amber-500/10">
                      <Sparkles className="w-7 h-7" />
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">
                      Summon Portals Currently Sealed
                   </h3>
-                  <p className="text-xs sm:text-sm text-pokedex-textMuted max-w-md mb-6 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-text-tertiary max-w-md mb-6 leading-relaxed">
                      No companion banners are currently active. Event banners
                      become available during seasonal challenges, milestones,
                      and special community study events!
@@ -360,14 +360,14 @@ export function PokemonView({
                <h3 className="text-base font-semibold text-white mb-1">
                   Couldn&apos;t load the Pokédex
                </h3>
-               <p className="text-xs sm:text-sm text-pokedex-textMuted max-w-sm mb-4">
+               <p className="text-xs sm:text-sm text-text-tertiary max-w-sm mb-4">
                   {error}
                </p>
                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setReloadKey((k) => k + 1)}
-                  className="text-xs border-pokedex-borderLight text-pokedex-textSecondary hover:text-white hover:border-pokedex-border"
+                  className="text-xs border-border-strong text-text-secondary hover:text-white hover:border-border-default"
                >
                   Retry
                </Button>
@@ -405,10 +405,10 @@ export function PokemonView({
          ) : (
             /* Empty State (Law L9) */
             <div
-               className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl bg-pokedex-cardSubtle/50 border border-pokedex-border text-center"
+               className="flex flex-col items-center justify-center py-16 px-4 rounded-2xl bg-surface-secondary/50 border border-border-default text-center"
                data-testid="pokemon-empty-state"
             >
-               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-pokedex-inset text-pokedex-textMuted mb-3">
+               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-secondary text-text-tertiary mb-3">
                   <Inbox className="w-6 h-6" />
                </div>
                <h3 className="text-base font-semibold text-white mb-1">
@@ -416,7 +416,7 @@ export function PokemonView({
                      ? "Your Collection is Empty"
                      : "No Pokémon Match Your Filters"}
                </h3>
-               <p className="text-xs sm:text-sm text-pokedex-textMuted max-w-sm mb-4">
+               <p className="text-xs sm:text-sm text-text-tertiary max-w-sm mb-4">
                   {activeTab === "collection"
                      ? "You haven't obtained any Pokémon yet. Complete your daily study goals, earn coins, and head to the Summon Portal to unlock companions!"
                      : "Try adjusting your search terms or clearing your filters."}
@@ -426,7 +426,7 @@ export function PokemonView({
                      variant="outline"
                      size="sm"
                      onClick={handleResetFilters}
-                     className="text-xs border-pokedex-borderLight text-pokedex-textSecondary hover:text-white hover:border-pokedex-border"
+                     className="text-xs border-border-strong text-text-secondary hover:text-white hover:border-border-default"
                   >
                      Reset Filters
                   </Button>

@@ -5,6 +5,7 @@ import { Inter, Outfit } from "next/font/google";
 
 import { AppHeader } from "@/components/ui/header";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { auth } from "@/core/auth";
 import { LogRocketProvider } from "@/core/observability/logrocket-provider";
 import {
@@ -57,22 +58,24 @@ export default async function RootLayout({
          lang="en"
          className={`dark ${fontSans.variable} ${fontDisplay.variable}`}
       >
-         <body className="min-h-screen overflow-x-clip bg-[#0d0d0d] text-[#f4f3f6] font-sans antialiased selection:bg-[#292929] selection:text-[#ffffff]">
-            <LogRocketProvider user={session?.user ?? null} />
-            <Suspense
-               fallback={
-                  <div className="h-16 border-b border-[#1f1f1f] bg-[#0d0d0d]" />
-               }
-            >
-               <AppHeader
-                  user={effectiveUser}
-                  isActualAdmin={isActualAdmin}
-                  isPreviewActive={isPreviewActive}
-               />
-            </Suspense>
-            {children}
-            <FeedbackTriggerButton />
-            <Toaster />
+         <body className="min-h-screen overflow-x-clip bg-surface-page text-text-primary font-sans antialiased selection:bg-surface-nested selection:text-white">
+            <TooltipProvider delayDuration={200}>
+               <LogRocketProvider user={session?.user ?? null} />
+               <Suspense
+                  fallback={
+                     <div className="h-16 border-b border-border-subtle bg-surface-page" />
+                  }
+               >
+                  <AppHeader
+                     user={effectiveUser}
+                     isActualAdmin={isActualAdmin}
+                     isPreviewActive={isPreviewActive}
+                  />
+               </Suspense>
+               {children}
+               <FeedbackTriggerButton />
+               <Toaster />
+            </TooltipProvider>
          </body>
       </html>
    );

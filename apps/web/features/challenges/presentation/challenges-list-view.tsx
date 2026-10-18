@@ -109,7 +109,7 @@ export function ChallengesListView({
          <div>
             <Link
                href="/"
-               className="inline-flex items-center gap-1.5 text-sm font-medium text-white underline underline-offset-4 hover:text-[#d1d1d1] transition-colors"
+               className="inline-flex items-center gap-1.5 text-sm font-medium text-white underline underline-offset-4 hover:text-text-secondary transition-colors"
             >
                <span>← Back</span>
             </Link>
@@ -123,7 +123,7 @@ export function ChallengesListView({
             >
                <Link
                   href="/admin/challenges/new"
-                  className="flex h-[74px] w-full sm:w-[253px] items-center justify-center gap-3 rounded-[20px] bg-[#1d1d1d] hover:bg-[#262626] border border-[#2e2e2e] text-white text-[15px] font-medium transition-all shadow-sm"
+                  className="flex h-control-lg w-full sm:w-[253px] items-center justify-center gap-3 rounded-[20px] bg-surface-elevated hover:bg-surface-nested border border-border-strong text-white text-body font-medium transition-all shadow-sm"
                >
                   <Plus className="h-4 w-4 stroke-[2.5]" />
                   <span>Create Challenge</span>
@@ -131,9 +131,9 @@ export function ChallengesListView({
 
                <button
                   type="button"
-                  className="flex h-[74px] w-full sm:w-[253px] items-center justify-center gap-3 rounded-[20px] bg-[#1d1d1d] hover:bg-[#262626] border border-[#2e2e2e] text-white text-[15px] font-medium transition-all shadow-sm"
+                  className="flex h-control-lg w-full sm:w-[253px] items-center justify-center gap-3 rounded-[20px] bg-surface-elevated hover:bg-surface-nested border border-border-strong text-white text-body font-medium transition-all shadow-sm"
                >
-                  <span className="h-4 w-4 rounded-full bg-[#ff0000] shrink-0" />
+                  <span className="h-4 w-4 rounded-full bg-feedback-error shrink-0" />
                   <span>Change Accent Color</span>
                </button>
             </div>
@@ -143,14 +143,14 @@ export function ChallengesListView({
          <div className="space-y-4 pt-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                <div>
-                  <h2 className="inline-block text-2xl font-extrabold text-[#ffffff] tracking-tight border-b-2 border-white pb-1.5">
+                  <h2 className="inline-block text-2xl font-extrabold text-white tracking-tight border-b-2 border-white pb-1.5">
                      Events
                   </h2>
                </div>
 
                {/* Status Filter Tabs */}
                {challenges.length > 0 && (
-                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#141414] border border-[#262626] overflow-x-auto max-w-full">
+                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-surface-primary border border-border-default overflow-x-auto max-w-full">
                      <button
                         type="button"
                         onClick={() => {
@@ -159,8 +159,8 @@ export function ChallengesListView({
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                            statusFilter === "ALL"
-                              ? "bg-[#292929] text-white shadow-sm border border-[#383838]"
-                              : "text-[#868686] hover:text-white"
+                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                              : "text-text-tertiary hover:text-white"
                         }`}
                      >
                         All ({countAll})
@@ -173,11 +173,11 @@ export function ChallengesListView({
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                            statusFilter === "ACTIVE"
-                              ? "bg-[#144520] text-[#85ff93] border border-[#22c55e]/40"
-                              : "text-[#868686] hover:text-[#85ff93]"
+                              ? "bg-feedback-success-bg text-feedback-success-text border border-feedback-success/40"
+                              : "text-text-tertiary hover:text-feedback-success-text"
                         }`}
                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-feedback-success" />
                         Active ({countActive})
                      </button>
                      <button
@@ -188,11 +188,11 @@ export function ChallengesListView({
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                            statusFilter === "UPCOMING"
-                              ? "bg-[#102d40] text-[#85d6ff] border border-[#3b82f6]/40"
-                              : "text-[#868686] hover:text-[#85d6ff]"
+                              ? "bg-feedback-info-bg text-feedback-info-text border border-feedback-info/40"
+                              : "text-text-tertiary hover:text-feedback-info-text"
                         }`}
                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#3b82f6]" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-feedback-info" />
                         Upcoming ({countUpcoming})
                      </button>
                      <button
@@ -203,8 +203,8 @@ export function ChallengesListView({
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                            statusFilter === "COMPLETED"
-                              ? "bg-[#292929] text-[#bcbcbc] border border-[#434343]"
-                              : "text-[#868686] hover:text-[#bcbcbc]"
+                              ? "bg-surface-nested text-text-secondary border border-border-strong"
+                              : "text-text-tertiary hover:text-text-secondary"
                         }`}
                      >
                         Completed ({countCompleted})
@@ -217,7 +217,7 @@ export function ChallengesListView({
             {challenges.length > 0 && (
                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <div className="relative flex-1">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868686]" />
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                      <Input
                         type="text"
                         placeholder="Search challenges by title, format, host, team..."
@@ -226,7 +226,7 @@ export function ChallengesListView({
                            setSearchQuery(e.target.value);
                            setCurrentPage(1);
                         }}
-                        className="h-10 pl-9 pr-8 bg-[#141414] border-[#292929] text-white placeholder:text-[#868686] text-xs rounded-xl"
+                        className="h-10 pl-9 pr-8 bg-surface-primary border-border-default text-white placeholder:text-text-tertiary text-xs rounded-xl"
                      />
                      {searchQuery && (
                         <button
@@ -235,7 +235,7 @@ export function ChallengesListView({
                               setSearchQuery("");
                               setCurrentPage(1);
                            }}
-                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#868686] hover:text-white p-0.5"
+                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white p-0.5"
                         >
                            <X className="h-3.5 w-3.5" />
                         </button>
@@ -259,7 +259,7 @@ export function ChallengesListView({
                      >
                         <SelectTrigger
                            data-testid="challenges-format-select"
-                           className="h-10 rounded-xl border-[#292929] bg-[#141414] text-xs text-[#ffffff]"
+                           className="h-10 rounded-xl border-border-default bg-surface-primary text-xs text-white"
                         >
                            <SelectValue placeholder="All Formats" />
                         </SelectTrigger>
@@ -281,7 +281,7 @@ export function ChallengesListView({
                         variant="outline"
                         size="sm"
                         onClick={handleResetFilters}
-                        className="h-10 px-3 text-xs rounded-xl border-[#383838] bg-[#1c1c1c] hover:bg-[#292929] text-[#d1d1d1] shrink-0"
+                        className="h-10 px-3 text-xs rounded-xl border-border-strong bg-surface-elevated hover:bg-surface-nested text-text-secondary shrink-0"
                      >
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                         Reset
@@ -293,8 +293,8 @@ export function ChallengesListView({
 
          {/* 4. 3-Column Card Grid */}
          {challenges.length === 0 ? (
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-12 text-center space-y-4">
-               <p className="text-sm text-[#868686]">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-12 text-center space-y-4">
+               <p className="text-sm text-text-tertiary">
                   {canManageChallenges
                      ? "No challenges created yet."
                      : "No challenges active yet. Check back soon for upcoming events!"}
@@ -302,7 +302,7 @@ export function ChallengesListView({
                {canManageChallenges ? (
                   <Button
                      asChild
-                     className="h-10 px-6 rounded-full bg-[#ffffff] text-[#0d0d0d] font-bold"
+                     className="h-10 px-6 rounded-full bg-white text-text-inverse font-bold"
                   >
                      <Link href="/admin/challenges/new">
                         Create First Challenge
@@ -311,18 +311,18 @@ export function ChallengesListView({
                ) : (
                   <Button
                      asChild
-                     className="h-10 px-6 rounded-full bg-[#262626] hover:bg-[#333333] text-white text-xs font-semibold"
+                     className="h-10 px-6 rounded-full bg-surface-nested hover:bg-surface-nested text-white text-xs font-semibold"
                   >
                      <Link href="/">Back to Home</Link>
                   </Button>
                )}
             </div>
          ) : filteredChallenges.length === 0 ? (
-            <div className="rounded-3xl border border-[#262626] bg-[#141414] p-12 text-center space-y-3">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-12 text-center space-y-3">
                <p className="text-sm font-semibold text-white">
                   No challenges match your search and filter criteria.
                </p>
-               <p className="text-xs text-[#868686]">
+               <p className="text-xs text-text-tertiary">
                   Try adjusting your search terms or clearing status and format
                   filters.
                </p>
@@ -331,7 +331,7 @@ export function ChallengesListView({
                   variant="outline"
                   size="sm"
                   onClick={handleResetFilters}
-                  className="rounded-full border-[#383838] bg-[#242424] hover:bg-[#333333] text-white text-xs"
+                  className="rounded-full border-border-strong bg-surface-nested hover:bg-surface-nested text-white text-xs"
                >
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                   Reset all filters
@@ -362,15 +362,15 @@ export function ChallengesListView({
 
                      const statusStyle =
                         c.status === "ACTIVE"
-                           ? "bg-[#3a6a35] border-[#468c46] text-[#85ff93]"
+                           ? "bg-feedback-success border-feedback-success text-feedback-success-text"
                            : c.status === "UPCOMING"
-                             ? "bg-[#35596a] border-[#46748c] text-[#85d6ff]"
-                             : "bg-[#292929] border-[#434343] text-[#bcbcbc]";
+                             ? "bg-feedback-info border-feedback-info text-feedback-info-text"
+                             : "bg-surface-nested border-border-strong text-text-secondary";
 
                      return (
                         <div
                            key={c.id}
-                           className="rounded-2xl border border-[#262626] bg-[#141414] overflow-hidden shadow-lg flex flex-col justify-between hover:border-[#383838] transition-all group"
+                           className="rounded-2xl border border-border-default bg-surface-primary overflow-hidden shadow-lg flex flex-col justify-between hover:border-border-strong transition-all group"
                            data-testid={`challenge-card-${c.id}`}
                         >
                            {/* Banner Thumbnail */}
@@ -381,26 +381,26 @@ export function ChallengesListView({
                            />
 
                            {/* Card Content */}
-                           <div className="p-5 bg-[#1d1d1d] space-y-4 flex-1 flex flex-col justify-between">
+                           <div className="p-5 bg-surface-elevated space-y-4 flex-1 flex flex-col justify-between">
                               <div>
-                                 <h3 className="text-base font-bold text-[#ffffff] truncate">
+                                 <h3 className="text-base font-bold text-white truncate">
                                     {c.title}
                                  </h3>
 
                                  {/* Metadata Badges Row */}
                                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <span className="flex items-center gap-1.5 text-xs text-[#ffffff]">
-                                       <Users className="h-3.5 w-3.5 text-[#868686]" />
+                                    <span className="flex items-center gap-1.5 text-xs text-white">
+                                       <Users className="h-3.5 w-3.5 text-text-tertiary" />
                                        <span>{c._count.participants}</span>
                                     </span>
 
                                     <span
-                                       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${statusStyle}`}
+                                       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-meta font-semibold ${statusStyle}`}
                                     >
                                        {statusLabel}
                                     </span>
 
-                                    <span className="inline-flex items-center rounded-full border border-[#46748c] bg-[#35596a] px-2.5 py-0.5 font-sans font-medium text-[11px] text-[#85d6ff]">
+                                    <span className="inline-flex items-center rounded-full border border-feedback-info bg-feedback-info px-2.5 py-0.5 font-sans font-medium text-meta text-feedback-info-text">
                                        {formattedDate}
                                     </span>
                                  </div>
@@ -410,7 +410,7 @@ export function ChallengesListView({
                               <div className="pt-2 flex items-center">
                                  <Button
                                     asChild
-                                    className="h-9 w-full rounded-xl bg-[#3d3d3d] border border-[#545454] text-[#ffffff] hover:bg-[#4a4a4a] text-xs font-semibold"
+                                    className="h-9 w-full rounded-xl bg-input-bg border border-input-bg text-white hover:bg-input-bg text-xs font-semibold"
                                  >
                                     <Link href={`/challenge/${c.id}`}>
                                        View Challenge

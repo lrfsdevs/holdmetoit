@@ -59,17 +59,20 @@ export function WrappedShyCard({
       saved: {
          label: "Saved",
          icon: "🎉",
-         className: "bg-[#144520] text-[#85ff93] border-[#22c55e]/40",
+         className:
+            "bg-feedback-success-bg text-feedback-success-text border-feedback-success/40",
       },
       punished: {
          label: "Punished",
          icon: "💀",
-         className: "bg-[#401010] text-[#ff5757] border-[#ef4444]/40",
+         className:
+            "bg-feedback-error-bg text-feedback-error-text border-feedback-error/40",
       },
       excused: {
          label: "Excused",
          icon: "🛡️",
-         className: "bg-[#102d40] text-[#85d6ff] border-[#3b82f6]/40",
+         className:
+            "bg-feedback-info-bg text-feedback-info-text border-feedback-info/40",
       },
    }[viewer?.verdict ?? "saved"];
 
@@ -116,14 +119,14 @@ export function WrappedShyCard({
             className={`fixed z-[60] outline-none transition-[left,right,top,bottom,width,transform] duration-600 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
                isOpen
                   ? "left-1/2 right-auto top-1/2 bottom-auto w-[min(340px,calc(100vw-32px))] max-h-[calc(100dvh-2rem)] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rotate-0 scale-100 cursor-default"
-                  : "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 left-auto top-auto w-[72px] origin-bottom-right -rotate-6 scale-100 cursor-pointer hover:scale-105 focus-visible:outline-2 focus-visible:outline-[#22c55e] sm:left-full sm:right-auto sm:top-1/2 sm:bottom-auto sm:origin-top-left sm:w-[min(340px,calc(100vw-32px))] sm:-translate-x-[64px] sm:-translate-y-[16px] sm:-rotate-12 sm:scale-75 sm:hover:-translate-x-[76px] sm:hover:-rotate-8"
+                  : "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 left-auto top-auto w-[72px] origin-bottom-right -rotate-6 scale-100 cursor-pointer hover:scale-105 focus-visible:outline-2 focus-visible:outline-feedback-success sm:left-full sm:right-auto sm:top-1/2 sm:bottom-auto sm:origin-top-left sm:w-[min(340px,calc(100vw-32px))] sm:-translate-x-[64px] sm:-translate-y-[16px] sm:-rotate-12 sm:scale-75 sm:hover:-translate-x-[76px] sm:hover:-rotate-8"
             }`}
          >
             <div
-               className={`card-body bg-[#141414] border-2 rounded-2xl p-3 sm:p-5 flex flex-col gap-3.5 shadow-2xl shadow-black/80 transition-all duration-400 ${
+               className={`card-body bg-surface-primary border-2 rounded-2xl p-3 sm:p-5 flex flex-col gap-3.5 shadow-2xl shadow-black/80 transition-all duration-400 ${
                   isOpen
-                     ? "border-[#292929] bg-[#141414]"
-                     : "border-[#22c55e] animate-shy-nudge hover:border-[#85ff93]"
+                     ? "border-border-default bg-surface-primary"
+                     : "border-feedback-success animate-shy-nudge hover:border-feedback-success-text"
                }`}
             >
                {/* Animated Eyes Header */}
@@ -139,16 +142,16 @@ export function WrappedShyCard({
                      aria-hidden="true"
                      title="Peek peek"
                   >
-                     <span className="w-5 h-5 bg-[#f4f3f6] border-2 border-[#0d0d0d] rounded-full grid place-items-center animate-shy-blink">
+                     <span className="w-5 h-5 bg-white border-2 border-border-subtle rounded-full grid place-items-center animate-shy-blink">
                         <span
-                           className={`w-2 h-2 bg-[#0d0d0d] rounded-full transition-transform duration-400 delay-300 ${
+                           className={`w-2 h-2 bg-surface-page rounded-full transition-transform duration-400 delay-300 ${
                               isOpen ? "translate-x-0" : "-translate-x-[3px]"
                            }`}
                         />
                      </span>
-                     <span className="w-5 h-5 bg-[#f4f3f6] border-2 border-[#0d0d0d] rounded-full grid place-items-center animate-shy-blink">
+                     <span className="w-5 h-5 bg-white border-2 border-border-subtle rounded-full grid place-items-center animate-shy-blink">
                         <span
-                           className={`w-2 h-2 bg-[#0d0d0d] rounded-full transition-transform duration-400 delay-300 ${
+                           className={`w-2 h-2 bg-surface-page rounded-full transition-transform duration-400 delay-300 ${
                               isOpen ? "translate-x-0" : "-translate-x-[3px]"
                            }`}
                         />
@@ -163,7 +166,7 @@ export function WrappedShyCard({
                            e.stopPropagation();
                            setOpen(false);
                         }}
-                        className="w-7 h-7 rounded-lg border border-[#292929] bg-[#1c1c1c] text-[#868686] hover:text-[#f4f3f6] hover:border-[#434343] grid place-items-center cursor-pointer transition-colors"
+                        className="w-7 h-7 rounded-lg border border-border-default bg-surface-elevated text-text-tertiary hover:text-text-primary hover:border-border-strong grid place-items-center cursor-pointer transition-colors"
                         aria-label="Hide wrapped card"
                      >
                         <X className="w-3.5 h-3.5" />
@@ -180,11 +183,11 @@ export function WrappedShyCard({
                   }`}
                >
                   <div>
-                     <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#22c55e]">
+                     <div className="flex items-center gap-1.5 text-meta font-bold uppercase tracking-wider text-feedback-success">
                         <Sparkles className="w-3 h-3" />
                         <span>Challenge Wrapped</span>
                      </div>
-                     <h3 className="mt-0.5 text-base font-bold font-display text-[#f4f3f6] tracking-tight truncate">
+                     <h3 className="mt-0.5 text-base font-bold font-display text-text-primary tracking-tight truncate">
                         {wrapped.title}
                      </h3>
                   </div>
@@ -200,32 +203,34 @@ export function WrappedShyCard({
                         </div>
 
                         {/* Performance Details Box */}
-                        <div className="rounded-xl border border-[#292929] bg-[#1c1c1c] p-3 text-xs space-y-2">
+                        <div className="rounded-xl border border-border-default bg-surface-elevated p-3 text-xs space-y-2">
                            <div className="flex items-center justify-between">
-                              <span className="text-[#868686]">Study Time</span>
-                              <span className="font-sans font-sans-tabular font-bold text-[#f4f3f6]">
+                              <span className="text-text-tertiary">
+                                 Study Time
+                              </span>
+                              <span className="font-sans font-sans-tabular font-bold text-text-primary">
                                  {viewer.totalClock}{" "}
-                                 <span className="text-[#868686] font-normal">
+                                 <span className="text-text-tertiary font-normal">
                                     / {viewer.targetClock}
                                  </span>
                               </span>
                            </div>
 
                            <div className="flex items-center justify-between">
-                              <span className="text-[#868686]">
+                              <span className="text-text-tertiary">
                                  Leaderboard Rank
                               </span>
-                              <span className="font-sans font-sans-tabular font-bold text-[#f4f3f6]">
+                              <span className="font-sans font-sans-tabular font-bold text-text-primary">
                                  #{viewer.rank}{" "}
-                                 <span className="text-[#868686] font-normal">
+                                 <span className="text-text-tertiary font-normal">
                                     of {viewer.totalParticipants}
                                  </span>
                               </span>
                            </div>
 
                            <div className="flex items-center justify-between">
-                              <span className="text-[#868686]">Team</span>
-                              <span className="font-semibold text-[#f4f3f6] inline-flex items-center gap-1">
+                              <span className="text-text-tertiary">Team</span>
+                              <span className="font-semibold text-text-primary inline-flex items-center gap-1">
                                  {viewer.teamIcon && (
                                     <span>{viewer.teamIcon}</span>
                                  )}
@@ -248,7 +253,7 @@ export function WrappedShyCard({
                            setOpen(false);
                            onReplayStory();
                         }}
-                        className="w-full h-10 rounded-xl bg-[#22c55e] text-[#0d0d0d] font-bold text-xs cursor-pointer inline-flex items-center justify-center gap-2 hover:bg-[#16a34a] transition-all shadow-md shadow-[#22c55e]/10"
+                        className="w-full h-10 rounded-xl bg-feedback-success text-text-inverse font-bold text-xs cursor-pointer inline-flex items-center justify-center gap-2 hover:bg-feedback-success transition-all shadow-md shadow-feedback-success/10"
                      >
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>Replay Wrapped Story</span>
@@ -257,10 +262,10 @@ export function WrappedShyCard({
                      <Link
                         href={`/challenge/${wrapped.challengeId}?tab=summary`}
                         onClick={() => setOpen(false)}
-                        className="w-full h-9 rounded-xl border border-[#292929] bg-[#1c1c1c] text-[#f4f3f6] font-medium text-xs inline-flex items-center justify-center gap-1.5 hover:border-[#434343] hover:bg-[#252525] transition-colors"
+                        className="w-full h-9 rounded-xl border border-border-default bg-surface-elevated text-text-primary font-medium text-xs inline-flex items-center justify-center gap-1.5 hover:border-border-strong hover:bg-surface-nested transition-colors"
                      >
                         <span>View Full Summary</span>
-                        <ExternalLink className="w-3 h-3 text-[#868686]" />
+                        <ExternalLink className="w-3 h-3 text-text-tertiary" />
                      </Link>
 
                      <button
@@ -269,7 +274,7 @@ export function WrappedShyCard({
                            e.stopPropagation();
                            setOpen(false);
                         }}
-                        className="text-[11px] text-[#868686] hover:text-[#f4f3f6] transition-colors py-1 cursor-pointer text-center"
+                        className="text-meta text-text-tertiary hover:text-text-primary transition-colors py-1 cursor-pointer text-center"
                      >
                         Hide again
                      </button>

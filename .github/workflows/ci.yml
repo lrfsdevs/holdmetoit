@@ -37,6 +37,9 @@ jobs:
          - name: Web typecheck
            run: npm run typecheck -w @holdmetoit/web
 
+         - name: Web lint
+           run: npm run lint -w @holdmetoit/web
+
          - name: Web tests
            run: npm run test -w @holdmetoit/web
 

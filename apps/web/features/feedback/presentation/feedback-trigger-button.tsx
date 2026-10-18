@@ -12,7 +12,7 @@ export function FeedbackTriggerButton() {
          <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 group flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-full bg-[#18171e]/90 hover:bg-[#21202a] border border-[#2b2a35] hover:border-[#3d3b4b] text-zinc-300 hover:text-white shadow-xl backdrop-blur-md transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-zinc-500/30"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 group flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-full bg-surface-secondary/90 hover:bg-surface-nested border border-border-strong hover:border-border-strong text-zinc-300 hover:text-white shadow-xl backdrop-blur-md transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-zinc-500/30"
             aria-label="Send Feedback or Report Bug"
             title="Send Feedback"
          >

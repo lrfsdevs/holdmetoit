@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import type { ReactElement } from "react";
 
 vi.mock("@/features/wrapped/api/wrapped.actions", () => ({
    submitChallengeFeedbackAction: vi.fn().mockResolvedValue({ ok: true }),
@@ -11,6 +13,13 @@ vi.mock("@/features/wrapped/presentation/wrapped-storage", () => ({
 
 import { ChallengeFeedbackDialog } from "./challenge-feedback-dialog";
 
+afterEach(cleanup);
+
+function renderToHtml(el: ReactElement): string {
+   const { container } = render(el);
+   return document.body.innerHTML.replace(container.outerHTML, "");
+}
+
 describe("ChallengeFeedbackDialog", () => {
    const defaultProps = {
       isOpen: true,
@@ -21,16 +30,14 @@ describe("ChallengeFeedbackDialog", () => {
    };
 
    it("renders nothing when isOpen is false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          <ChallengeFeedbackDialog {...defaultProps} isOpen={false} />
       );
       expect(html).toBe("");
    });
 
    it("renders header and challenge title when open", () => {
-      const html = renderToStaticMarkup(
-         <ChallengeFeedbackDialog {...defaultProps} />
-      );
+      const html = renderToHtml(<ChallengeFeedbackDialog {...defaultProps} />);
 
       expect(html).toContain("Challenge Feedback");
       expect(html).toContain("October Study Battle");
@@ -38,18 +45,14 @@ describe("ChallengeFeedbackDialog", () => {
    });
 
    it("renders a unified form without Part 1 or Part 2 dividers", () => {
-      const html = renderToStaticMarkup(
-         <ChallengeFeedbackDialog {...defaultProps} />
-      );
+      const html = renderToHtml(<ChallengeFeedbackDialog {...defaultProps} />);
 
       expect(html).not.toContain("Part 1");
       expect(html).not.toContain("Part 2");
    });
 
    it("renders all 8 survey questions", () => {
-      const html = renderToStaticMarkup(
-         <ChallengeFeedbackDialog {...defaultProps} />
-      );
+      const html = renderToHtml(<ChallengeFeedbackDialog {...defaultProps} />);
 
       // Q1
       expect(html).toContain(
@@ -106,25 +109,21 @@ describe("ChallengeFeedbackDialog", () => {
    });
 
    it("uses ratified Obsidian tokens and no prototype variables", () => {
-      const html = renderToStaticMarkup(
-         <ChallengeFeedbackDialog {...defaultProps} />
-      );
+      const html = renderToHtml(<ChallengeFeedbackDialog {...defaultProps} />);
 
-      expect(html).toContain("bg-[#141414]");
-      expect(html).toContain("border-[#292929]");
-      expect(html).toContain("bg-[#1c1c1c]");
-      expect(html).toContain("text-[#f4f3f6]");
-      expect(html).toContain("text-[#868686]");
-      expect(html).toContain("bg-[#22c55e]");
+      expect(html).toContain("bg-surface-primary");
+      expect(html).toContain("border-border-default");
+      expect(html).toContain("bg-surface-elevated");
+      expect(html).toContain("text-text-primary");
+      expect(html).toContain("text-text-tertiary");
+      expect(html).toContain("bg-feedback-success");
       expect(html).not.toContain("var(--hl-yellow)");
       expect(html).not.toContain("var(--hl-pink)");
       expect(html).not.toContain("var(--ink)");
    });
 
    it("includes submit and cancel action buttons", () => {
-      const html = renderToStaticMarkup(
-         <ChallengeFeedbackDialog {...defaultProps} />
-      );
+      const html = renderToHtml(<ChallengeFeedbackDialog {...defaultProps} />);
 
       expect(html).toContain("Submit Feedback");
       expect(html).toContain("Cancel");

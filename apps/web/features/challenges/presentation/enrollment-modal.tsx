@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -103,16 +104,16 @@ export function EnrollmentModal({
    return (
       <>
          {showTrigger && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-[#262626] bg-[#141414] p-4 text-xs shadow-lg">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-border-default bg-surface-primary p-4 text-xs shadow-lg">
                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#292929] text-[#ffffff] border border-[#333333]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-nested text-white border border-border-strong">
                      <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                     <p className="font-bold text-sm text-[#ffffff]">
+                     <p className="font-bold text-sm text-white">
                         Join {challengeTitle}
                      </p>
-                     <p className="text-[11px] text-[#868686]">
+                     <p className="text-meta text-text-tertiary">
                         Declare your target study hours and expected leaves
                         before kickoff.
                      </p>
@@ -121,75 +122,76 @@ export function EnrollmentModal({
 
                <Button
                   onClick={() => setIsOpen(true)}
-                  className="min-h-[40px] px-5 font-bold bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] rounded-full"
+                  className="min-h-[40px] px-5 font-bold bg-white text-text-inverse hover:bg-white/90 rounded-full"
                >
                   <span>Enroll Now</span>
                </Button>
             </div>
          )}
 
-         {isOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in">
-               <div className="w-full max-w-sm sm:max-w-md rounded-[28px] border border-[#383838] bg-[#242424] p-7 sm:p-8 shadow-2xl space-y-6">
-                  <form onSubmit={handleEnroll} className="space-y-6">
-                     <div className="space-y-3">
-                        <label className="block text-xl font-bold text-[#ffffff] tracking-tight">
-                           So how many hours can you put in?
-                        </label>
-                        <Input
-                           type="number"
-                           min={1}
-                           max={100}
-                           value={hours}
-                           onChange={(e) => setHours(e.target.value)}
-                           placeholder="Enter hours..."
-                           required
-                           className="h-12 min-h-0 rounded-full border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm focus:border-[#ffffff] focus:bg-[#3a3a3a]"
-                        />
-                     </div>
+         <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogContent className="max-w-sm sm:max-w-md rounded-[28px] border-border-strong bg-surface-nested p-7 sm:p-8 space-y-6">
+               <DialogTitle className="sr-only">
+                  Enroll in {challengeTitle}
+               </DialogTitle>
+               <form onSubmit={handleEnroll} className="space-y-6">
+                  <div className="space-y-3">
+                     <label className="block text-xl font-bold text-white tracking-tight">
+                        So how many hours can you put in?
+                     </label>
+                     <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={hours}
+                        onChange={(e) => setHours(e.target.value)}
+                        placeholder="Enter hours..."
+                        required
+                        className="h-12 min-h-0 rounded-full border-border-strong bg-input-bg px-5 text-white placeholder:text-text-tertiary text-sm focus:border-white focus:bg-input-bg"
+                     />
+                  </div>
 
-                     <div className="space-y-3">
-                        <label className="block text-xl font-bold text-[#ffffff] tracking-tight">
-                           How many leaves you might take
-                        </label>
-                        <Input
-                           type="number"
-                           min={0}
-                           max={3}
-                           value={leaveDays}
-                           onChange={(e) => setLeaveDays(e.target.value)}
-                           placeholder="Enter days..."
-                           className="h-12 min-h-0 rounded-full border-[#555555] bg-[#3a3a3a] px-5 text-[#ffffff] placeholder:text-[#888888] text-sm focus:border-[#ffffff] focus:bg-[#3a3a3a]"
-                        />
-                     </div>
+                  <div className="space-y-3">
+                     <label className="block text-xl font-bold text-white tracking-tight">
+                        How many leaves you might take
+                     </label>
+                     <Input
+                        type="number"
+                        min={0}
+                        max={3}
+                        value={leaveDays}
+                        onChange={(e) => setLeaveDays(e.target.value)}
+                        placeholder="Enter days..."
+                        className="h-12 min-h-0 rounded-full border-border-strong bg-input-bg px-5 text-white placeholder:text-text-tertiary text-sm focus:border-white focus:bg-input-bg"
+                     />
+                  </div>
 
-                     {errorMsg && (
-                        <div className="rounded-xl border border-[#ef4444]/40 bg-[#401010]/30 p-3 text-xs text-[#ff5757]">
-                           {errorMsg}
-                        </div>
-                     )}
-
-                     <div className="flex items-center justify-between pt-2">
-                        <button
-                           type="button"
-                           onClick={() => setIsOpen(false)}
-                           disabled={isPending}
-                           className="h-11 px-8 rounded-full bg-[#3d3d3d] hover:bg-[#4a4a4a] text-sm font-semibold text-[#ffffff] transition-colors"
-                        >
-                           Cancel
-                        </button>
-                        <button
-                           type="submit"
-                           disabled={isPending}
-                           className="h-11 px-8 rounded-full bg-[#ffffff] hover:bg-[#e0e0e0] text-sm font-bold text-[#000000] transition-colors disabled:opacity-50"
-                        >
-                           {isPending ? "Submitting..." : "Submit"}
-                        </button>
+                  {errorMsg && (
+                     <div className="rounded-xl border border-feedback-error/40 bg-feedback-error-bg/30 p-3 text-xs text-feedback-error-text">
+                        {errorMsg}
                      </div>
-                  </form>
-               </div>
-            </div>
-         )}
+                  )}
+
+                  <div className="flex items-center justify-between pt-2">
+                     <button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        disabled={isPending}
+                        className="h-11 px-8 rounded-full bg-input-bg hover:bg-input-bg text-sm font-semibold text-white transition-colors"
+                     >
+                        Cancel
+                     </button>
+                     <button
+                        type="submit"
+                        disabled={isPending}
+                        className="h-11 px-8 rounded-full bg-white hover:bg-white/90 text-sm font-bold text-black transition-colors disabled:opacity-50"
+                     >
+                        {isPending ? "Submitting..." : "Submit"}
+                     </button>
+                  </div>
+               </form>
+            </DialogContent>
+         </Dialog>
       </>
    );
 }

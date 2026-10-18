@@ -2,7 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { Flag, Plus, UserCheck } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
    assignTesterAction,
    createFeatureFlagAction,
@@ -52,6 +63,9 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
    const [testerFlag, setTesterFlag] = useState<FeatureFlagEntity | null>(null);
    const [auditFlag, setAuditFlag] = useState<FeatureFlagEntity | null>(null);
+   const [pendingDelete, setPendingDelete] = useState<FeatureFlagEntity | null>(
+      null
+   );
 
    // Counters
    const totalCount = flags.length;
@@ -129,7 +143,7 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                f.id === flagId ? { ...f, isEnabled: !isEnabled } : f
             )
          );
-         alert(res.error || "Failed to toggle switch.");
+         toast.error(res.error || "Failed to toggle switch.");
       }
    };
 
@@ -155,7 +169,7 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                )
             );
          }
-         alert(res.error || "Failed to change rollout mode.");
+         toast.error(res.error || "Failed to change rollout mode.");
       }
    };
 
@@ -202,7 +216,7 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
    const handleAssignTester = async (flagId: string, userId: string) => {
       const res = await assignTesterAction({ flagId, targetUserId: userId });
       if (!res.ok) {
-         alert(res.error || "Failed to assign tester.");
+         toast.error(res.error || "Failed to assign tester.");
          return;
       }
 
@@ -247,7 +261,7 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
    const handleRemoveTester = async (flagId: string, userId: string) => {
       const res = await removeTesterAction({ flagId, targetUserId: userId });
       if (!res.ok) {
-         alert(res.error || "Failed to remove tester.");
+         toast.error(res.error || "Failed to remove tester.");
          return;
       }
 
@@ -274,26 +288,28 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
       }
    };
 
-   // Delete flag
+   // Delete flag: open the confirm dialog, then execute on confirm.
    const handleDelete = async (flagId: string) => {
       const flag = flags.find((f) => f.id === flagId);
       if (!flag) return;
+      setPendingDelete(flag);
+   };
 
-      const confirmed = window.confirm(
-         `Are you sure you want to delete and decommission feature flag "${flag.key}"?`
-      );
-      if (!confirmed) return;
+   const confirmDelete = async () => {
+      if (!pendingDelete) return;
+      const target = pendingDelete;
+      setPendingDelete(null);
 
-      const res = await deleteFeatureFlagAction(flagId);
+      const res = await deleteFeatureFlagAction(target.id);
       if (!res.ok) {
-         alert(res.error || "Failed to delete flag.");
+         toast.error(res.error || "Failed to delete flag.");
          return;
       }
 
-      setFlags((prev) => prev.filter((f) => f.id !== flagId));
+      setFlags((prev) => prev.filter((f) => f.id !== target.id));
       setSelectedFlagIds((prev) => {
          const next = new Set(prev);
-         next.delete(flagId);
+         next.delete(target.id);
          return next;
       });
    };
@@ -328,7 +344,7 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
          <div
             role="tablist"
             aria-label="DevBoard sections"
-            className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-[#121212] border border-[#262626]"
+            className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-surface-primary border border-border-default"
          >
             <button
                type="button"
@@ -339,8 +355,8 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                onClick={() => setSection("flags")}
                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   section === "flags"
-                     ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                     : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                     ? "bg-surface-nested text-text-primary border border-border-strong"
+                     : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                }`}
             >
                <Flag className="h-3.5 w-3.5" />
@@ -355,8 +371,8 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                onClick={() => setSection("ypt")}
                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   section === "ypt"
-                     ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                     : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                     ? "bg-surface-nested text-text-primary border border-border-strong"
+                     : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                }`}
             >
                <UserCheck className="h-3.5 w-3.5" />
@@ -391,16 +407,16 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
                {/* Flag Table or Empty State */}
                {filteredFlags.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[#292929] bg-[#101010] p-12 text-center">
-                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181818] border border-[#2e2e2e] text-[#868686]">
+                  <div className="rounded-2xl border border-dashed border-border-default bg-surface-page p-12 text-center">
+                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-secondary border border-border-strong text-text-tertiary">
                         <Flag className="h-6 w-6" />
                      </div>
-                     <h3 className="mt-4 text-base font-semibold text-[#f4f3f6]">
+                     <h3 className="mt-4 text-base font-semibold text-text-primary">
                         {searchQuery || activeFilter !== "ALL"
                            ? "No matching flags found"
                            : "No feature flags configured"}
                      </h3>
-                     <p className="mt-1 text-xs text-[#868686] max-w-sm mx-auto text-wrap:balance">
+                     <p className="mt-1 text-xs text-text-tertiary max-w-sm mx-auto text-wrap:balance">
                         {searchQuery || activeFilter !== "ALL"
                            ? "Try clearing your search query or switching filters to view other release toggles."
                            : "Create your first feature flag to safely control production rollouts without redeployments."}
@@ -472,6 +488,31 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
             onClose={() => setAuditFlag(null)}
             flag={auditFlag}
          />
+
+         {/* Delete Flag Confirmation */}
+         <AlertDialog
+            open={Boolean(pendingDelete)}
+            onOpenChange={(open) => {
+               if (!open) setPendingDelete(null);
+            }}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Delete feature flag?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                     This will delete and decommission{" "}
+                     <span className="text-white">{pendingDelete?.key}</span>.
+                     This action cannot be undone.
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void confirmDelete()}>
+                     Delete flag
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
       </div>
    );
 }

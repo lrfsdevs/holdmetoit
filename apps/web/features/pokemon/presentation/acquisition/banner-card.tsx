@@ -106,29 +106,29 @@ export function BannerCard({
 
    return (
       <div
-         className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-pokedex-border bg-gradient-to-b from-pokedex-elevated to-pokedex-card p-5 sm:p-7 shadow-xl text-white transition-all duration-300"
+         className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border-default bg-gradient-to-b from-surface-elevated to-surface-primary p-5 sm:p-7 shadow-xl text-white transition-all duration-300"
          data-testid={`banner-card-${banner.slug}`}
       >
          {/* Top Banner Header: Name, Type Pill & Cost */}
          <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                  <span className="px-2.5 py-0.5 rounded-full text-label font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/40">
                      {banner.bannerType}
                   </span>
                   {banner.isActive ? (
-                     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+                     <span className="inline-flex items-center gap-1 text-meta font-medium text-emerald-400">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Active
                      </span>
                   ) : (
-                     <span className="text-[11px] font-medium text-pokedex-textDim">
+                     <span className="text-meta font-medium text-text-tertiary">
                         {banner.status}
                      </span>
                   )}
                </div>
 
-               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-pokedex-cardSubtle border border-pokedex-border text-xs font-semibold text-economy-gold">
+               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-secondary border border-border-default text-xs font-semibold text-brand-1">
                   <CoinsIcon className="w-3.5 h-3.5" />
                   <span>{banner.pullCost} Coins</span>
                </div>
@@ -137,17 +137,17 @@ export function BannerCard({
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-2.5">
                {banner.name}
             </h3>
-            <p className="text-xs text-pokedex-textMuted mt-1 leading-relaxed">
+            <p className="text-xs text-text-tertiary mt-1 leading-relaxed">
                {banner.description}
             </p>
 
             {/* Featured Companion Spotlight */}
             {banner.featuredSpecies && (
-               <div className="mt-4 p-4 rounded-2xl bg-pokedex-cardSubtle/80 border border-pokedex-border flex items-center justify-between gap-3">
+               <div className="mt-4 p-4 rounded-2xl bg-surface-secondary/80 border border-border-default flex items-center justify-between gap-3">
                   <div className="space-y-1 min-w-0">
                      <div className="flex items-center gap-1.5">
                         <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                        <span className="text-meta font-bold text-amber-300 uppercase tracking-wider">
                            Featured Companion
                         </span>
                      </div>
@@ -173,8 +173,8 @@ export function BannerCard({
 
             {/* Pity Progress Gauge */}
             {hardPityThreshold > 0 && (
-               <div className="mt-4 p-3 rounded-xl bg-pokedex-inset/50 border border-pokedex-borderSubtle text-xs space-y-1.5">
-                  <div className="flex items-center justify-between text-pokedex-textMuted">
+               <div className="mt-4 p-3 rounded-xl bg-surface-secondary/50 border border-border-subtle text-xs space-y-1.5">
+                  <div className="flex items-center justify-between text-text-tertiary">
                      <span className="flex items-center gap-1 font-medium">
                         <Sparkles className="w-3 h-3 text-amber-400" />
                         Pity Progress:
@@ -184,14 +184,14 @@ export function BannerCard({
                      </span>
                   </div>
 
-                  <div className="w-full h-1.5 bg-pokedex-cardSubtle rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-surface-secondary rounded-full overflow-hidden">
                      <div
                         className="h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full transition-all duration-500"
                         style={{ width: `${pityPercentage}%` }}
                      />
                   </div>
 
-                  <p className="text-[10px] text-pokedex-textDim">
+                  <p className="text-label text-text-tertiary">
                      Guaranteed {banner.pityConfig?.targetRarity ?? "Rare"}{" "}
                      companion at {hardPityThreshold} pulls.
                   </p>
@@ -203,7 +203,7 @@ export function BannerCard({
                <button
                   type="button"
                   onClick={() => setShowRates(!showRates)}
-                  className="flex items-center gap-1 text-[11px] text-pokedex-textDim hover:text-pokedex-textMuted transition-colors"
+                  className="flex items-center gap-1 text-meta text-text-tertiary hover:text-text-tertiary transition-colors"
                >
                   <Info className="w-3 h-3" />
                   <span>
@@ -214,7 +214,7 @@ export function BannerCard({
                </button>
 
                {showRates && (
-                  <div className="mt-2 p-3 rounded-xl bg-pokedex-cardSubtle border border-pokedex-border text-[11px] space-y-1.5">
+                  <div className="mt-2 p-3 rounded-xl bg-surface-secondary border border-border-default text-meta space-y-1.5">
                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                         {Object.entries(banner.rarityRates).map(
                            ([rarity, bps]) => {
@@ -224,7 +224,7 @@ export function BannerCard({
                                     key={rarity}
                                     className="flex items-center justify-between"
                                  >
-                                    <span className="text-pokedex-textMuted font-medium">
+                                    <span className="text-text-tertiary font-medium">
                                        {rarity}:
                                     </span>
                                     <span className="font-mono font-semibold text-white">
@@ -241,7 +241,7 @@ export function BannerCard({
          </div>
 
          {/* Bottom Action Area: Error message, balance check & Summon Button */}
-         <div className="mt-6 pt-4 border-t border-pokedex-borderSubtle/60 space-y-3">
+         <div className="mt-6 pt-4 border-t border-border-subtle/60 space-y-3">
             {errorMessage && (
                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -251,7 +251,7 @@ export function BannerCard({
 
             {!isLoggedIn ? (
                <div className="text-center space-y-2">
-                  <p className="text-xs text-pokedex-textDim">
+                  <p className="text-xs text-text-tertiary">
                      Sign in with Discord to access HoldMeToIt coins and summon
                      companions.
                   </p>

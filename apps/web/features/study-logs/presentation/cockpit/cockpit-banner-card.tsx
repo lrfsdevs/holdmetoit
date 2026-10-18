@@ -64,13 +64,13 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "ON_LEAVE_TODAY") {
       return (
-         <div className="rounded-2xl border border-[#e08a32]/40 bg-[#3d2008] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-brand-2/40 bg-brand-1/15 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight flex items-center gap-2">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
                   <span>🌴</span>
                   <span>You are on leave today</span>
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Take a well-deserved rest, or update your study hours whenever
                   you are ready.
                </p>
@@ -80,7 +80,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={() => onOpenHoursModal(todayDayNumber)}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Update Today Hours
                </Button>
@@ -91,13 +91,13 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "STUDIED_TODAY") {
       return (
-         <div className="rounded-2xl border border-[#1e6b35]/40 bg-[#0f4a24] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-feedback-success-bg/40 bg-feedback-success-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Wow, you studied{" "}
                   {formatStudiedTodayHours(effectiveTodaySeconds)} today
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and keep your team on top
                </p>
             </div>
@@ -117,7 +117,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={() => onOpenHoursModal(todayDayNumber)}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Log Today&apos;s Hours
                </Button>
@@ -128,12 +128,12 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "NOT_LOGGED_TODAY") {
       return (
-         <div className="rounded-2xl border border-[#6b3020]/40 bg-[#451f15] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-feedback-error-bg/40 bg-feedback-error-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   You haven&apos;t logged today&apos;s hours
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and keep your team on top
                </p>
             </div>
@@ -153,7 +153,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={() => onOpenHoursModal(todayDayNumber)}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Log Today&apos;s Hours
                </Button>
@@ -164,12 +164,12 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "FORGOT_YESTERDAY") {
       return (
-         <div className="rounded-2xl border border-[#942626]/40 bg-[#6b1818] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-feedback-error/40 bg-feedback-error-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Don&apos;t forget yesterday&apos;s hard work!
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Log it as leave and get right back into the challenge today
                </p>
             </div>
@@ -178,7 +178,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={() => onOpenHoursModal(yesterdayDayNumber)}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Log Yesterday Hours
                </Button>
@@ -189,13 +189,13 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "CHALLENGE_COMPLETED") {
       return (
-         <div className="rounded-2xl border border-[#237599]/40 bg-[#16536e] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-feedback-info/40 bg-feedback-info-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Congrats, your team secured{" "}
                   {formatOrdinalRank(cockpit?.teamRank ?? 1)} in this challenge
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and come stronger next time
                </p>
             </div>
@@ -203,7 +203,7 @@ export function CockpitBannerCard({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto">
                <Button
                   asChild
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   <Link
                      href={`/challenge/${activeChallengeId}?tab=leaderboard`}
@@ -218,12 +218,12 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "ENROLL_SOLO") {
       return (
-         <div className="rounded-2xl border border-[#3e2475]/40 bg-[#251744] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-accent-bg/40 bg-accent-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Enroll in solo battle this week
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and keep your team on top
                </p>
             </div>
@@ -239,7 +239,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={onOpenEnrollModal}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Enroll
                </Button>
@@ -250,12 +250,12 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "ENROLL_GROUP") {
       return (
-         <div className="rounded-2xl border border-[#3e2475]/40 bg-[#251744] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-accent-bg/40 bg-accent-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Enroll in group battle this week
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and keep your team on top
                </p>
             </div>
@@ -271,7 +271,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={onOpenEnrollModal}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Enroll
                </Button>
@@ -282,12 +282,12 @@ export function CockpitBannerCard({
 
    if (bannerVariant === "ENROLL_DUO") {
       return (
-         <div className="rounded-2xl border border-[#3e2475]/40 bg-[#251744] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+         <div className="rounded-2xl border border-accent-bg/40 bg-accent-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
             <div>
-               <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Enroll in duo battle this week
                </h3>
-               <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+               <p className="text-xs sm:text-sm text-text-secondary mt-1">
                   Work hard, stay consistent, and keep your team on top
                </p>
             </div>
@@ -303,7 +303,7 @@ export function CockpitBannerCard({
                <Button
                   type="button"
                   onClick={onOpenEnrollModal}
-                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-[#e0e0e0] text-xs sm:text-sm font-bold transition-colors shadow-sm"
+                  className="w-full sm:w-auto h-10 px-5 rounded-full bg-white text-black hover:bg-white/90 text-xs sm:text-sm font-bold transition-colors shadow-sm"
                >
                   Enroll
                </Button>
@@ -314,16 +314,16 @@ export function CockpitBannerCard({
 
    // ENROLLED_UPCOMING
    return (
-      <div className="rounded-2xl border border-[#3e2475]/40 bg-[#251744] p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
+      <div className="rounded-2xl border border-accent-bg/40 bg-accent-bg p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
          <div>
-            <h3 className="text-base sm:text-lg font-bold text-[#ffffff] tracking-tight">
+            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                {activeChallengeFormat === "SOLOS"
                   ? "You are enrolled in solo battle this week"
                   : activeChallengeFormat === "DUOS"
                     ? "You are enrolled in duo battle this week"
                     : "You are enrolled in group battle this week"}
             </h3>
-            <p className="text-xs sm:text-sm text-[#d1d1d1] mt-1">
+            <p className="text-xs sm:text-sm text-text-secondary mt-1">
                Work hard, stay consistent, and keep your team on top
             </p>
          </div>

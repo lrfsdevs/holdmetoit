@@ -86,15 +86,15 @@ export function PokemonFilterBar({
    return (
       <div className="space-y-4">
          {/* Top row: Tab Switcher & Result Count */}
-         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-pokedex-border/60 pb-3">
-            <div className="inline-flex p-1 rounded-xl bg-pokedex-card border border-pokedex-border flex-wrap gap-1">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-default/60 pb-3">
+            <div className="inline-flex p-1 rounded-xl bg-surface-primary border border-border-default flex-wrap gap-1">
                <button
                   type="button"
                   onClick={() => onTabChange("pokedex")}
                   className={`px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                      activeTab === "pokedex"
                         ? "bg-gradient-to-r from-purple-600 to-rose-600 text-white shadow-md shadow-purple-600/25"
-                        : "text-pokedex-textMuted hover:text-white"
+                        : "text-text-tertiary hover:text-white"
                   }`}
                   data-testid="tab-pokedex"
                >
@@ -108,8 +108,8 @@ export function PokemonFilterBar({
                      activeTab === "collection"
                         ? "bg-gradient-to-r from-purple-600 to-rose-600 text-white shadow-md shadow-purple-600/25"
                         : isSpectator
-                          ? "text-pokedex-textDim cursor-not-allowed"
-                          : "text-pokedex-textMuted hover:text-white"
+                          ? "text-text-tertiary cursor-not-allowed"
+                          : "text-text-tertiary hover:text-white"
                   }`}
                   data-testid="tab-collection"
                   title={
@@ -124,7 +124,7 @@ export function PokemonFilterBar({
                   className={`px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                      activeTab === "summon"
                         ? "bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md shadow-amber-500/25"
-                        : "text-pokedex-textMuted hover:text-white"
+                        : "text-text-tertiary hover:text-white"
                   }`}
                   data-testid="tab-summon"
                >
@@ -137,7 +137,7 @@ export function PokemonFilterBar({
                   <button
                      type="button"
                      onClick={onOpenHistory}
-                     className="px-3 py-1.5 rounded-xl bg-pokedex-cardSubtle border border-pokedex-border text-pokedex-textSecondary hover:text-white text-xs font-medium transition-colors"
+                     className="px-3 py-1.5 rounded-xl bg-surface-secondary border border-border-default text-text-secondary hover:text-white text-xs font-medium transition-colors"
                      data-testid="history-button"
                   >
                      Summon History
@@ -162,14 +162,14 @@ export function PokemonFilterBar({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                {/* Search */}
                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pokedex-textDim" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                   <Input
                      type="text"
                      placeholder="Search species or classification..."
                      value={search}
                      onChange={(e) => onSearchChange(e.target.value)}
                      data-testid="pokemon-search-input"
-                     className="h-9 min-h-0 pl-9 pr-3 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white placeholder:text-pokedex-textDim focus:border-rose-500/70"
+                     className="h-9 min-h-0 pl-9 pr-3 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white placeholder:text-text-tertiary focus:border-rose-500/70"
                   />
                </div>
 
@@ -182,7 +182,7 @@ export function PokemonFilterBar({
                >
                   <SelectTrigger
                      data-testid="pokemon-generation-select"
-                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                     className="h-9 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white"
                   >
                      <SelectValue placeholder="All Generations (1–9)" />
                   </SelectTrigger>
@@ -203,7 +203,7 @@ export function PokemonFilterBar({
                >
                   <SelectTrigger
                      data-testid="pokemon-rarity-select"
-                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                     className="h-9 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white"
                   >
                      <SelectValue placeholder="All Rarities" />
                   </SelectTrigger>
@@ -224,7 +224,7 @@ export function PokemonFilterBar({
                >
                   <SelectTrigger
                      data-testid="pokemon-type-select"
-                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                     className="h-9 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white"
                   >
                      <SelectValue placeholder="All Elemental Types" />
                   </SelectTrigger>
@@ -247,7 +247,7 @@ export function PokemonFilterBar({
                >
                   <SelectTrigger
                      data-testid="pokemon-classification-select"
-                     className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                     className="h-9 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white"
                   >
                      <SelectValue placeholder="All Classifications" />
                   </SelectTrigger>
@@ -266,7 +266,7 @@ export function PokemonFilterBar({
                   <Select value={sortBy} onValueChange={onSortChange}>
                      <SelectTrigger
                         data-testid="pokemon-sort-select"
-                        className="h-9 rounded-xl bg-pokedex-card border-pokedex-border text-xs sm:text-sm text-white"
+                        className="h-9 rounded-xl bg-surface-primary border-border-default text-xs sm:text-sm text-white"
                      >
                         <SelectValue placeholder="Pokédex # (Ascending)" />
                      </SelectTrigger>
@@ -293,7 +293,7 @@ export function PokemonFilterBar({
                      <button
                         type="button"
                         onClick={handleClear}
-                        className="p-2 rounded-xl bg-pokedex-elevated border border-pokedex-border text-pokedex-textMuted hover:text-white hover:border-rose-500/50 transition-colors shrink-0"
+                        className="p-2 rounded-xl bg-surface-elevated border border-border-default text-text-tertiary hover:text-white hover:border-rose-500/50 transition-colors shrink-0"
                         title="Clear all filters"
                         data-testid="clear-filters-btn"
                      >

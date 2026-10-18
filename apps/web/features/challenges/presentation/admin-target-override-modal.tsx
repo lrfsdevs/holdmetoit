@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -204,46 +205,37 @@ export function AdminTargetOverrideModal({
    };
 
    return (
-      <div
-         className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="admin-target-override-title"
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
       >
-         <div className="relative w-full max-w-lg rounded-[28px] border border-[#383838] bg-[#1c1c1c] p-6 sm:p-7 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-lg rounded-[28px] border-border-strong bg-surface-elevated p-6 sm:p-7 space-y-5">
             {/* Header */}
-            <div className="flex items-start justify-between gap-3 border-b border-[#292929] pb-4">
+            <div className="flex items-start justify-between gap-3 border-b border-border-default pb-4">
                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-[#2a1b3d] border border-[#a855f7]/40 flex items-center justify-center shrink-0">
-                     <Target className="h-5 w-5 text-[#c084fc]" />
+                  <div className="h-10 w-10 rounded-2xl bg-accent-bg border border-accent/40 flex items-center justify-center shrink-0">
+                     <Target className="h-5 w-5 text-accent-text" />
                   </div>
                   <div>
-                     <h2
+                     <DialogTitle
                         id="admin-target-override-title"
-                        className="text-base sm:text-lg font-bold text-[#f4f3f6] tracking-tight"
+                        className="text-base sm:text-lg font-bold text-text-primary tracking-tight"
                      >
                         Edit Weekly Target Hours
-                     </h2>
-                     <p className="text-xs text-[#868686]">
+                     </DialogTitle>
+                     <p className="text-xs text-text-tertiary">
                         Host & Developer Override · Law L5 / FEAT-DECL-04
                      </p>
                   </div>
                </div>
-               <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full p-1.5 text-[#868686] hover:bg-[#292929] hover:text-[#f4f3f6] transition-colors"
-                  aria-label="Close dialog"
-                  disabled={isPending}
-               >
-                  <X className="h-5 w-5" />
-               </button>
             </div>
 
             {/* Participant Info Banner */}
-            <div className="rounded-2xl border border-[#292929] bg-[#141414] p-3.5 flex items-center justify-between gap-3">
+            <div className="rounded-2xl border border-border-default bg-surface-primary p-3.5 flex items-center justify-between gap-3">
                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-full bg-[#292929] border border-[#383838] overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-surface-nested border border-border-strong overflow-hidden shrink-0 flex items-center justify-center">
                      {participant.image && participant.image.trim() !== "" ? (
                         <Image
                            src={participant.image}
@@ -254,21 +246,21 @@ export function AdminTargetOverrideModal({
                            unoptimized
                         />
                      ) : (
-                        <UserIcon className="h-5 w-5 text-[#868686]" />
+                        <UserIcon className="h-5 w-5 text-text-tertiary" />
                      )}
                   </div>
                   <div className="min-w-0">
-                     <p className="text-xs font-bold text-[#ffffff] truncate">
+                     <p className="text-xs font-bold text-white truncate">
                         {participant.displayName}
                      </p>
-                     <p className="text-[11px] text-[#868686] truncate">
+                     <p className="text-meta text-text-tertiary truncate">
                         @{participant.username || "scholar"}
                         {teamBadge && (
                            <>
                               {" "}
                               •{" "}
                               <span
-                                 className="px-1.5 py-0.2 rounded font-semibold text-[10px]"
+                                 className="px-1.5 py-0.2 rounded font-semibold text-label"
                                  style={teamBadge}
                               >
                                  {participant.teamName}
@@ -280,10 +272,10 @@ export function AdminTargetOverrideModal({
                </div>
 
                <div className="text-right shrink-0">
-                  <span className="text-[10px] uppercase font-semibold text-[#868686] block">
+                  <span className="text-label uppercase font-semibold text-text-tertiary block">
                      Current Target
                   </span>
-                  <span className="text-xs font-mono font-bold text-[#c084fc]">
+                  <span className="text-xs font-mono font-bold text-accent-text">
                      {formatSecondsToClock(currentTargetSeconds)}
                   </span>
                </div>
@@ -293,12 +285,12 @@ export function AdminTargetOverrideModal({
             <form onSubmit={handleSubmit} className="space-y-5">
                {/* Clock Input (HH:MM:SS) */}
                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#d1d1d1] block">
+                  <label className="text-xs font-bold uppercase tracking-wider text-text-secondary block">
                      New Target Commitment (HH:MM:SS)
                   </label>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                      <div>
-                        <span className="text-[10px] text-[#868686] uppercase font-bold block mb-1">
+                        <span className="text-label text-text-tertiary uppercase font-bold block mb-1">
                            Hours (1–105)
                         </span>
                         <Input
@@ -311,13 +303,13 @@ export function AdminTargetOverrideModal({
                               setFeedback(null);
                            }}
                            disabled={isPending}
-                           className="h-12 text-center text-lg font-bold font-mono bg-[#242424] border-[#383838] text-white focus:border-[#a855f7]"
+                           className="h-12 text-center text-lg font-bold font-mono bg-surface-nested border-border-strong text-white focus:border-accent"
                            placeholder="35"
                            required
                         />
                      </div>
                      <div>
-                        <span className="text-[10px] text-[#868686] uppercase font-bold block mb-1">
+                        <span className="text-label text-text-tertiary uppercase font-bold block mb-1">
                            Minutes (0–59)
                         </span>
                         <Input
@@ -330,12 +322,12 @@ export function AdminTargetOverrideModal({
                               setFeedback(null);
                            }}
                            disabled={isPending}
-                           className="h-12 text-center text-lg font-bold font-mono bg-[#242424] border-[#383838] text-white focus:border-[#a855f7]"
+                           className="h-12 text-center text-lg font-bold font-mono bg-surface-nested border-border-strong text-white focus:border-accent"
                            placeholder="00"
                         />
                      </div>
                      <div>
-                        <span className="text-[10px] text-[#868686] uppercase font-bold block mb-1">
+                        <span className="text-label text-text-tertiary uppercase font-bold block mb-1">
                            Seconds (0–59)
                         </span>
                         <Input
@@ -348,7 +340,7 @@ export function AdminTargetOverrideModal({
                               setFeedback(null);
                            }}
                            disabled={isPending}
-                           className="h-12 text-center text-lg font-bold font-mono bg-[#242424] border-[#383838] text-white focus:border-[#a855f7]"
+                           className="h-12 text-center text-lg font-bold font-mono bg-surface-nested border-border-strong text-white focus:border-accent"
                            placeholder="00"
                         />
                      </div>
@@ -357,7 +349,7 @@ export function AdminTargetOverrideModal({
 
                {/* Quick Presets */}
                <div className="space-y-1.5">
-                  <span className="text-[11px] text-[#868686] font-medium block">
+                  <span className="text-meta text-text-tertiary font-medium block">
                      Quick Presets:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -371,8 +363,8 @@ export function AdminTargetOverrideModal({
                               disabled={isPending}
                               className={`px-2.5 py-1 text-xs rounded-xl border transition-colors font-mono ${
                                  isSelected
-                                    ? "bg-[#a855f7]/20 border-[#a855f7] text-[#e9d5ff] font-bold"
-                                    : "bg-[#242424] border-[#383838] text-[#d1d1d1] hover:bg-[#2e2e2e] hover:text-white"
+                                    ? "bg-accent/20 border-accent text-accent-text font-bold"
+                                    : "bg-surface-nested border-border-strong text-text-secondary hover:bg-surface-nested hover:text-white"
                               }`}
                            >
                               {pHours}h
@@ -383,19 +375,19 @@ export function AdminTargetOverrideModal({
                </div>
 
                {/* Comparison & Preview Box */}
-               <div className="rounded-2xl border border-[#292929] bg-[#141414] p-3 space-y-2">
+               <div className="rounded-2xl border border-border-default bg-surface-primary p-3 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                     <span className="text-[#868686]">Target Change:</span>
+                     <span className="text-text-tertiary">Target Change:</span>
                      <div className="flex items-center gap-2 font-mono font-semibold">
-                        <span className="text-[#868686]">
+                        <span className="text-text-tertiary">
                            {formatSecondsToClock(currentTargetSeconds)}
                         </span>
-                        <ArrowRight className="h-3 w-3 text-[#868686]" />
+                        <ArrowRight className="h-3 w-3 text-text-tertiary" />
                         <span
                            className={`font-bold ${
                               validationError
-                                 ? "text-[#ef4444]"
-                                 : "text-[#c084fc]"
+                                 ? "text-feedback-error"
+                                 : "text-accent-text"
                            }`}
                         >
                            {formatSecondsToClock(previewSeconds)}
@@ -403,16 +395,16 @@ export function AdminTargetOverrideModal({
                      </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-[#868686] pt-1 border-t border-[#262626]">
+                  <div className="flex items-center justify-between text-meta text-text-tertiary pt-1 border-t border-border-default">
                      <span>Human Duration:</span>
-                     <span className="font-medium text-[#d1d1d1]">
+                     <span className="font-medium text-text-secondary">
                         {formatSecondsToHuman(Math.max(0, previewSeconds))}
                         {diffSeconds !== 0 && (
                            <span
                               className={`ml-1.5 font-semibold ${
                                  diffSeconds > 0
-                                    ? "text-[#22c55e]"
-                                    : "text-[#f59e0b]"
+                                    ? "text-feedback-success"
+                                    : "text-brand-1"
                               }`}
                            >
                               ({diffSeconds > 0 ? "+" : "-"}
@@ -425,7 +417,7 @@ export function AdminTargetOverrideModal({
 
                {/* Audit Reason */}
                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#d1d1d1] block">
+                  <label className="text-xs font-bold uppercase tracking-wider text-text-secondary block">
                      Audit Reason
                   </label>
                   <Input
@@ -434,18 +426,18 @@ export function AdminTargetOverrideModal({
                      onChange={(e) => setReason(e.target.value)}
                      disabled={isPending}
                      placeholder="e.g. Host accommodation for student illness / work schedule"
-                     className="h-10 text-xs bg-[#242424] border-[#383838] text-white placeholder-[#868686] focus:border-[#a855f7]"
+                     className="h-10 text-xs bg-surface-nested border-border-strong text-white placeholder-text-tertiary focus:border-accent"
                   />
-                  <p className="text-[10px] text-[#868686]">
+                  <p className="text-label text-text-tertiary">
                      Recorded in the immutable event audit trail for
                      transparency.
                   </p>
                </div>
 
                {/* Notice */}
-               <div className="rounded-xl border border-[#3b82f6]/20 bg-[#1e293b]/20 p-2.5 flex items-start gap-2 text-xs text-[#93c5fd]">
-                  <Info className="h-4 w-4 shrink-0 text-[#60a5fa] mt-0.5" />
-                  <p className="text-[11px] leading-relaxed">
+               <div className="rounded-xl border border-feedback-info/20 bg-feedback-info-bg/20 p-2.5 flex items-start gap-2 text-xs text-feedback-info-text">
+                  <Info className="h-4 w-4 shrink-0 text-feedback-info mt-0.5" />
+                  <p className="text-meta leading-relaxed">
                      Updating weekly target hours dynamically recalculates the
                      scholar&apos;s catch-up deficit pace, goal completion
                      percentage, and three-condition punishment outcomes.
@@ -457,8 +449,8 @@ export function AdminTargetOverrideModal({
                   <div
                      className={`rounded-xl border p-3 text-xs flex items-center gap-2 ${
                         feedback.type === "success"
-                           ? "bg-[#144520]/40 border-[#22c55e]/40 text-[#85ff93]"
-                           : "bg-[#401010]/40 border-[#ef4444]/40 text-[#ff5757]"
+                           ? "bg-feedback-success-bg/40 border-feedback-success/40 text-feedback-success-text"
+                           : "bg-feedback-error-bg/40 border-feedback-error/40 text-feedback-error-text"
                      }`}
                   >
                      {feedback.type === "success" ? (
@@ -471,13 +463,13 @@ export function AdminTargetOverrideModal({
                )}
 
                {/* Action Buttons */}
-               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#292929]">
+               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-default">
                   <Button
                      type="button"
                      variant="outline"
                      onClick={onClose}
                      disabled={isPending}
-                     className="h-10 px-4 rounded-xl border-[#383838] bg-[#242424] hover:bg-[#2e2e2e] text-[#d1d1d1] text-xs font-semibold"
+                     className="h-10 px-4 rounded-xl border-border-strong bg-surface-nested hover:bg-surface-nested text-text-secondary text-xs font-semibold"
                   >
                      Cancel
                   </Button>
@@ -485,7 +477,7 @@ export function AdminTargetOverrideModal({
                   <Button
                      type="submit"
                      disabled={isPending || Boolean(validationError)}
-                     className="h-10 px-5 rounded-xl bg-[#a855f7] hover:bg-[#9333ea] text-white text-xs font-bold gap-2 disabled:opacity-50"
+                     className="h-10 px-5 rounded-xl bg-accent hover:bg-accent text-white text-xs font-bold gap-2 disabled:opacity-50"
                   >
                      {isPending ? (
                         <>
@@ -501,7 +493,7 @@ export function AdminTargetOverrideModal({
                   </Button>
                </div>
             </form>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

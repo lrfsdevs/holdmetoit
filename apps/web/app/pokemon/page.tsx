@@ -81,7 +81,7 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
       : 0;
 
    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-obsidian-bg text-obsidian-text">
+      <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
          <main className="mx-auto max-w-6xl px-3 sm:px-6 py-6 sm:py-8">
             <PokemonView
                initialSpecies={catalogueResult.species}

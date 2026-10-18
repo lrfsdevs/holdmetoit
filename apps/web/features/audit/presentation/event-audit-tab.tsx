@@ -87,29 +87,29 @@ function getActionBadgeStyle(action: AuditEventType): string {
       case "EVENT_BANNER_UPDATED":
       case "PUNISHMENT_PFP_UPDATED":
       case "HOUSE_IDENTITY_UPDATED":
-         return "bg-[#e08a32]/15 text-[#f5ba73] border-[#e08a32]/30";
+         return "bg-brand-2/15 text-brand-1 border-brand-2/30";
       case "ROSTER_EDIT":
-         return "bg-[#9f8dc0]/15 text-[#d8cce8] border-[#9f8dc0]/30";
+         return "bg-accent/15 text-accent-text border-accent/30";
       case "HOURS_OVERRIDE":
-         return "bg-[#529e72]/15 text-[#85ff93] border-[#529e72]/30";
+         return "bg-feedback-success/15 text-feedback-success-text border-feedback-success/30";
       case "TARGET_HOURS_OVERRIDE":
-         return "bg-[#a855f7]/15 text-[#d8b4fe] border-[#a855f7]/30";
+         return "bg-accent/15 text-accent-text border-accent/30";
       case "STUDY_LOG_ADDED":
-         return "bg-[#10b981]/15 text-[#34d399] border-[#10b981]/30";
+         return "bg-feedback-success/15 text-feedback-success border-feedback-success/30";
       case "CHALLENGE_KICKOFF":
-         return "bg-[#22c55e]/15 text-[#4ade80] border-[#22c55e]/30";
+         return "bg-feedback-success/15 text-feedback-success border-feedback-success/30";
       case "CHALLENGE_LOCKED":
-         return "bg-[#eab308]/15 text-[#facc15] border-[#eab308]/30";
+         return "bg-brand-1/15 text-brand-1 border-brand-1/30";
       case "CHALLENGE_UNLOCKED":
-         return "bg-[#f97316]/15 text-[#fdba74] border-[#f97316]/30";
+         return "bg-brand-1/15 text-brand-1 border-brand-1/30";
       case "PARTICIPANT_PARDONED":
-         return "bg-[#38bdf8]/15 text-[#7dd3fc] border-[#38bdf8]/30";
+         return "bg-feedback-info/15 text-feedback-info-text border-feedback-info/30";
       case "CHALLENGE_CREATED":
-         return "bg-[#3b82f6]/15 text-[#93c5fd] border-[#3b82f6]/30";
+         return "bg-feedback-info/15 text-feedback-info-text border-feedback-info/30";
       case "CHALLENGE_DELETED":
-         return "bg-[#ef4444]/15 text-[#f87171] border-[#ef4444]/30";
+         return "bg-feedback-error/15 text-feedback-error-text border-feedback-error/30";
       default:
-         return "bg-[#262626] text-[#d1d1d1] border-[#383838]";
+         return "bg-surface-nested text-text-secondary border-border-strong";
    }
 }
 
@@ -247,13 +247,13 @@ export function EventAuditTab({
    return (
       <div className="space-y-6 max-w-5xl mx-auto pb-16">
          {/* Header Container */}
-         <div className="rounded-3xl border border-[#262626] bg-[#141414] p-6 sm:p-8 space-y-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#262626]">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-6 sm:p-8 space-y-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-default">
                <div className="space-y-1">
                   <h2 className="text-xl font-bold text-white tracking-tight">
                      Event Audit Log
                   </h2>
-                  <p className="text-xs text-[#868686] max-w-xl">
+                  <p className="text-xs text-text-tertiary max-w-xl">
                      Append-only, immutable record of every administrative
                      action, schedule change, roster reassignment, and hours
                      override for{" "}
@@ -271,7 +271,7 @@ export function EventAuditTab({
                      size="sm"
                      onClick={fetchLogs}
                      disabled={isLoading || isPending}
-                     className="h-9 px-3 rounded-xl border-[#383838] bg-[#1d1d1d] hover:bg-[#262626] text-white text-xs font-medium gap-1.5"
+                     className="h-9 px-3 rounded-xl border-border-strong bg-surface-elevated hover:bg-surface-nested text-white text-xs font-medium gap-1.5"
                   >
                      <RefreshCw
                         className={`h-3.5 w-3.5 ${
@@ -287,9 +287,9 @@ export function EventAuditTab({
                      size="sm"
                      onClick={handleExportJson}
                      disabled={logs.length === 0}
-                     className="h-9 px-3.5 rounded-xl border-[#383838] bg-[#1d1d1d] hover:bg-[#262626] text-white text-xs font-medium gap-1.5"
+                     className="h-9 px-3.5 rounded-xl border-border-strong bg-surface-elevated hover:bg-surface-nested text-white text-xs font-medium gap-1.5"
                   >
-                     <Download className="h-3.5 w-3.5 text-[#e08a32]" />
+                     <Download className="h-3.5 w-3.5 text-brand-2" />
                      <span>Export JSON</span>
                   </Button>
                </div>
@@ -298,7 +298,7 @@ export function EventAuditTab({
             {/* Filter & Search Bar */}
             <div className="space-y-4">
                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#868686]" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                   <Input
                      value={searchQuery}
                      onChange={(e) => {
@@ -306,12 +306,12 @@ export function EventAuditTab({
                         setCurrentPage(1);
                      }}
                      placeholder="Search audit trail by admin, action, target entity, or reason..."
-                     className="h-11 rounded-2xl bg-[#1d1d1d] border-[#2e2e2e] focus:border-[#483c30] text-white pl-10 pr-4 text-xs"
+                     className="h-11 rounded-2xl bg-surface-elevated border-border-strong focus:border-brand-1 text-white pl-10 pr-4 text-xs"
                   />
                </div>
 
                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  <Filter className="h-3.5 w-3.5 text-[#868686] shrink-0 mr-1" />
+                  <Filter className="h-3.5 w-3.5 text-text-tertiary shrink-0 mr-1" />
                   {(
                      [
                         ["ALL", "All Actions"],
@@ -331,8 +331,8 @@ export function EventAuditTab({
                         }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                            selectedCategory === cat
-                              ? "bg-[#e08a32] text-black shadow-sm"
-                              : "bg-[#1d1d1d] text-[#868686] hover:text-white hover:bg-[#262626] border border-[#2a2a2a]"
+                              ? "bg-brand-2 text-black shadow-sm"
+                              : "bg-surface-elevated text-text-tertiary hover:text-white hover:bg-surface-nested border border-border-default"
                         }`}
                      >
                         {label}
@@ -346,18 +346,18 @@ export function EventAuditTab({
          <div className="space-y-4">
             {/* Loading State Skeleton */}
             {isLoading && (
-               <div className="rounded-3xl border border-[#262626] bg-[#141414] p-6 space-y-4">
+               <div className="rounded-3xl border border-border-default bg-surface-primary p-6 space-y-4">
                   {[1, 2, 3, 4].map((i) => (
                      <div
                         key={i}
-                        className="animate-pulse flex items-start gap-4 p-4 rounded-2xl bg-[#1d1d1d]/60 border border-[#262626]"
+                        className="animate-pulse flex items-start gap-4 p-4 rounded-2xl bg-surface-elevated/60 border border-border-default"
                      >
-                        <div className="h-10 w-10 rounded-full bg-[#2a2a2a]" />
+                        <div className="h-10 w-10 rounded-full bg-surface-nested" />
                         <div className="flex-1 space-y-2">
-                           <div className="h-4 w-1/3 rounded bg-[#2a2a2a]" />
-                           <div className="h-3 w-1/2 rounded bg-[#2a2a2a]" />
+                           <div className="h-4 w-1/3 rounded bg-surface-nested" />
+                           <div className="h-3 w-1/2 rounded bg-surface-nested" />
                         </div>
-                        <div className="h-6 w-24 rounded bg-[#2a2a2a]" />
+                        <div className="h-6 w-24 rounded bg-surface-nested" />
                      </div>
                   ))}
                </div>
@@ -365,8 +365,8 @@ export function EventAuditTab({
 
             {/* Error State */}
             {!isLoading && errorMessage && (
-               <div className="rounded-3xl border border-[#ef4444]/30 bg-[#251010] p-8 text-center space-y-3">
-                  <p className="text-sm font-semibold text-[#f87171]">
+               <div className="rounded-3xl border border-feedback-error/30 bg-feedback-error-bg p-8 text-center space-y-3">
+                  <p className="text-sm font-semibold text-feedback-error-text">
                      {errorMessage}
                   </p>
                   <Button
@@ -374,7 +374,7 @@ export function EventAuditTab({
                      variant="outline"
                      size="sm"
                      onClick={fetchLogs}
-                     className="rounded-xl border-[#ef4444]/40 text-white"
+                     className="rounded-xl border-feedback-error/40 text-white"
                   >
                      Try Again
                   </Button>
@@ -383,14 +383,14 @@ export function EventAuditTab({
 
             {/* Empty State */}
             {!isLoading && !errorMessage && filteredLogs.length === 0 && (
-               <div className="rounded-3xl border border-[#262626] bg-[#141414] p-12 text-center space-y-3">
-                  <Clock className="h-8 w-8 text-[#868686] mx-auto opacity-60" />
+               <div className="rounded-3xl border border-border-default bg-surface-primary p-12 text-center space-y-3">
+                  <Clock className="h-8 w-8 text-text-tertiary mx-auto opacity-60" />
                   <h3 className="text-sm font-semibold text-white">
                      {searchQuery || selectedCategory !== "ALL"
                         ? "No matching audit logs found"
                         : "No audit logs recorded for this event yet"}
                   </h3>
-                  <p className="text-xs text-[#868686] max-w-sm mx-auto">
+                  <p className="text-xs text-text-tertiary max-w-sm mx-auto">
                      {searchQuery || selectedCategory !== "ALL"
                         ? "Try clearing filters or search terms to view all recorded administrative events."
                         : "Any changes to event title, schedule, houses, rosters, or study hour overrides will be automatically recorded here."}
@@ -417,7 +417,7 @@ export function EventAuditTab({
                         return (
                            <div
                               key={log.id}
-                              className="rounded-2xl border border-[#262626] bg-[#141414] hover:border-[#383838] transition-all shadow-md overflow-hidden"
+                              className="rounded-2xl border border-border-default bg-surface-primary hover:border-border-strong transition-all shadow-md overflow-hidden"
                            >
                               <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                  {/* Column 1 & 2: Admin + Action Info */}
@@ -433,10 +433,10 @@ export function EventAuditTab({
                                              }
                                              width={40}
                                              height={40}
-                                             className="h-10 w-10 rounded-full border border-[#383838] object-cover"
+                                             className="h-10 w-10 rounded-full border border-border-strong object-cover"
                                           />
                                        ) : (
-                                          <div className="h-10 w-10 rounded-full border border-[#383838] bg-[#221b2c] text-[#d8cce8] flex items-center justify-center font-bold text-sm">
+                                          <div className="h-10 w-10 rounded-full border border-border-strong bg-accent-bg text-accent-text flex items-center justify-center font-bold text-sm">
                                              {(
                                                 log.actorDisplayName ||
                                                 log.actorUsername ||
@@ -455,27 +455,27 @@ export function EventAuditTab({
                                              {log.actorDisplayName ||
                                                 log.actorUsername}
                                           </span>
-                                          <span className="text-xs text-[#868686]">
+                                          <span className="text-xs text-text-tertiary">
                                              @{log.actorUsername}
                                           </span>
 
                                           {/* Action Badge */}
                                           <span
-                                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badgeStyle}`}
+                                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-meta font-semibold border ${badgeStyle}`}
                                           >
                                              {actionLabel}
                                           </span>
 
                                           {/* Target Entity Name Pill */}
                                           {log.targetEntityName && (
-                                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#1d1d1d] text-[#c9c9c9] border border-[#2e2e2e] truncate max-w-[200px]">
+                                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-meta font-medium bg-surface-elevated text-text-secondary border border-border-strong truncate max-w-artwork-sm">
                                                 {log.targetEntityName}
                                              </span>
                                           )}
                                        </div>
 
                                        {/* Audit Reason / Human Summary */}
-                                       <p className="text-xs text-[#d1d1d1] leading-relaxed">
+                                       <p className="text-xs text-text-secondary leading-relaxed">
                                           {log.auditReason ||
                                              "Administrative update executed"}
                                        </p>
@@ -483,12 +483,12 @@ export function EventAuditTab({
                                  </div>
 
                                  {/* Column 4: Time Clock & Details Trigger */}
-                                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#262626]">
+                                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-default">
                                     <div className="text-right">
                                        <span className="block text-xs font-semibold text-white font-mono">
                                           {relativeTime}
                                        </span>
-                                       <span className="block text-[10px] text-[#868686] font-mono">
+                                       <span className="block text-label text-text-tertiary font-mono">
                                           {clockTime}
                                        </span>
                                     </div>
@@ -497,7 +497,7 @@ export function EventAuditTab({
                                        <button
                                           type="button"
                                           onClick={() => toggleExpand(log.id)}
-                                          className="inline-flex items-center gap-1 text-[11px] text-[#e08a32] hover:text-[#f5ba73] font-medium transition-colors"
+                                          className="inline-flex items-center gap-1 text-meta text-brand-2 hover:text-brand-1 font-medium transition-colors"
                                        >
                                           <span>
                                              {isExpanded
@@ -516,14 +516,14 @@ export function EventAuditTab({
 
                               {/* Expandable Field-Level Diff Panel */}
                               {isExpanded && hasDiff && (
-                                 <div className="px-5 pb-5 pt-2 border-t border-[#262626] bg-[#191919] space-y-3">
+                                 <div className="px-5 pb-5 pt-2 border-t border-border-default bg-surface-secondary space-y-3">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                                        {/* Previous Value */}
-                                       <div className="rounded-xl border border-[#382e25] bg-[#231d18]/70 p-3 space-y-1.5">
-                                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#c87948]">
+                                       <div className="rounded-xl border border-brand-1 bg-brand-1/15/70 p-3 space-y-1.5">
+                                          <span className="text-label font-extrabold uppercase tracking-wider text-brand-1">
                                              Previous State
                                           </span>
-                                          <pre className="text-[11px] font-mono text-[#d8cfc4] overflow-x-auto whitespace-pre-wrap leading-tight bg-[#1b1713] p-2.5 rounded-lg border border-[#382e25]/60 max-h-48">
+                                          <pre className="text-meta font-mono text-brand-1 overflow-x-auto whitespace-pre-wrap leading-tight bg-brand-1/15 p-2.5 rounded-lg border border-brand-1/60 max-h-48">
                                              {log.previousValue !== null &&
                                              log.previousValue !== undefined
                                                 ? JSON.stringify(
@@ -536,11 +536,11 @@ export function EventAuditTab({
                                        </div>
 
                                        {/* New Value */}
-                                       <div className="rounded-xl border border-[#2a3c2c] bg-[#17271c]/70 p-3 space-y-1.5">
-                                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#529e72]">
+                                       <div className="rounded-xl border border-feedback-success-bg bg-feedback-success-bg/70 p-3 space-y-1.5">
+                                          <span className="text-label font-extrabold uppercase tracking-wider text-feedback-success">
                                              New Updated State
                                           </span>
-                                          <pre className="text-[11px] font-mono text-[#e5f5eb] overflow-x-auto whitespace-pre-wrap leading-tight bg-[#111f15] p-2.5 rounded-lg border border-[#2a3c2c]/60 max-h-48">
+                                          <pre className="text-meta font-mono text-feedback-success-text overflow-x-auto whitespace-pre-wrap leading-tight bg-feedback-success-bg p-2.5 rounded-lg border border-feedback-success-bg/60 max-h-48">
                                              {log.newValue !== null &&
                                              log.newValue !== undefined
                                                 ? JSON.stringify(

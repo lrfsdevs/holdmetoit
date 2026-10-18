@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
    Wrench,
    X,
@@ -90,15 +91,15 @@ export function AdminTrophyAdjustmentDialog({
    };
 
    return (
-      <div
-         className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="admin-trophy-adjust-title"
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
       >
-         <div className="relative w-full max-w-md rounded-3xl border border-obsidian-border bg-obsidian-card p-6 shadow-2xl backdrop-blur-xl">
+         <DialogContent className="max-w-md rounded-3xl border-border-default bg-surface-primary p-6">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-obsidian-borderSubtle">
+            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
                <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
                      <Wrench className="h-4 w-4" />
@@ -106,11 +107,11 @@ export function AdminTrophyAdjustmentDialog({
                   <div>
                      <h3
                         id="admin-trophy-adjust-title"
-                        className="text-sm font-bold text-obsidian-text font-display"
+                        className="text-sm font-bold text-text-primary font-display"
                      >
                         Admin Trophy Adjustment
                      </h3>
-                     <p className="text-xs text-obsidian-textDim">
+                     <p className="text-xs text-text-tertiary">
                         Explicit audited rating modification
                      </p>
                   </div>
@@ -118,7 +119,7 @@ export function AdminTrophyAdjustmentDialog({
                <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-obsidian-textDim hover:text-obsidian-text hover:bg-obsidian-elevated transition-colors"
+                  className="rounded-lg p-1.5 text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors"
                   aria-label="Close dialog"
                >
                   <X className="h-4 w-4" />
@@ -126,20 +127,20 @@ export function AdminTrophyAdjustmentDialog({
             </div>
 
             {/* Target User Info */}
-            <div className="mt-4 rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated p-3.5 flex items-center justify-between text-xs">
+            <div className="mt-4 rounded-xl border border-border-subtle bg-surface-elevated p-3.5 flex items-center justify-between text-xs">
                <div>
-                  <span className="text-[11px] text-obsidian-textDim block">
+                  <span className="text-meta text-text-tertiary block">
                      Participant
                   </span>
                   <strong className="text-sm font-semibold text-white">
                      {targetUser.displayName}
                   </strong>
-                  <span className="text-obsidian-textDim pl-1.5 font-mono">
+                  <span className="text-text-tertiary pl-1.5 font-mono">
                      (@{targetUser.username})
                   </span>
                </div>
                <div className="text-right">
-                  <span className="text-[11px] text-obsidian-textDim block">
+                  <span className="text-meta text-text-tertiary block">
                      Current Trophies
                   </span>
                   <span className="font-mono text-sm font-bold text-amber-400">
@@ -151,7 +152,7 @@ export function AdminTrophyAdjustmentDialog({
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                <div>
-                  <label className="text-xs font-semibold text-obsidian-textMuted block mb-1.5">
+                  <label className="text-xs font-semibold text-text-secondary block mb-1.5">
                      Adjustment Amount (+ or -)
                   </label>
                   <div className="flex items-center gap-2">
@@ -162,7 +163,7 @@ export function AdminTrophyAdjustmentDialog({
                         onChange={(e) =>
                            setAmount(parseInt(e.target.value) || 0)
                         }
-                        className="rounded-xl border-obsidian-border bg-obsidian-elevated font-mono text-sm text-white"
+                        className="rounded-xl border-border-default bg-surface-elevated font-mono text-sm text-white"
                         placeholder="e.g. 50 or -25"
                         required
                      />
@@ -172,7 +173,7 @@ export function AdminTrophyAdjustmentDialog({
                            variant="outline"
                            size="sm"
                            onClick={() => setAmount(25)}
-                           className="text-xs h-9 px-2.5 border-obsidian-borderSubtle bg-obsidian-elevated"
+                           className="text-xs h-9 px-2.5 border-border-subtle bg-surface-elevated"
                         >
                            +25
                         </Button>
@@ -181,13 +182,13 @@ export function AdminTrophyAdjustmentDialog({
                            variant="outline"
                            size="sm"
                            onClick={() => setAmount(-15)}
-                           className="text-xs h-9 px-2.5 border-obsidian-borderSubtle bg-obsidian-elevated"
+                           className="text-xs h-9 px-2.5 border-border-subtle bg-surface-elevated"
                         >
                            -15
                         </Button>
                      </div>
                   </div>
-                  <div className="mt-1.5 flex justify-between text-[11px] text-obsidian-textDim">
+                  <div className="mt-1.5 flex justify-between text-meta text-text-tertiary">
                      <span>Resulting balance:</span>
                      <span className="font-mono font-bold text-white">
                         {newBalance.toLocaleString()} 🏆
@@ -196,7 +197,7 @@ export function AdminTrophyAdjustmentDialog({
                </div>
 
                <div>
-                  <label className="text-xs font-semibold text-obsidian-textMuted block mb-1.5">
+                  <label className="text-xs font-semibold text-text-secondary block mb-1.5">
                      Audit Reason (Required)
                   </label>
                   <Input
@@ -204,11 +205,11 @@ export function AdminTrophyAdjustmentDialog({
                      value={reason}
                      onChange={(e) => setReason(e.target.value)}
                      placeholder="e.g. Tournament result correction / tiebreaker adjustment"
-                     className="rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white"
+                     className="rounded-xl border-border-default bg-surface-elevated text-xs text-white"
                      required
                      minLength={3}
                   />
-                  <span className="text-[10px] text-obsidian-textDim mt-1 block">
+                  <span className="text-label text-text-tertiary mt-1 block">
                      This reason will be permanently recorded in the system
                      audit trail.
                   </span>
@@ -231,14 +232,14 @@ export function AdminTrophyAdjustmentDialog({
                   </div>
                )}
 
-               <div className="flex items-center justify-end gap-2 pt-2 border-t border-obsidian-borderSubtle">
+               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
                   <Button
                      type="button"
                      variant="outline"
                      size="sm"
                      onClick={onClose}
                      disabled={isSubmitting}
-                     className="rounded-xl text-xs border-obsidian-borderSubtle bg-obsidian-elevated text-obsidian-textMuted"
+                     className="rounded-xl text-xs border-border-subtle bg-surface-elevated text-text-secondary"
                   >
                      Cancel
                   </Button>
@@ -258,7 +259,7 @@ export function AdminTrophyAdjustmentDialog({
                   </Button>
                </div>
             </form>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

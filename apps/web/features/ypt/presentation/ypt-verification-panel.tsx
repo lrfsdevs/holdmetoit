@@ -14,6 +14,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+   AlertDialog,
+   AlertDialogAction,
+   AlertDialogCancel,
+   AlertDialogContent,
+   AlertDialogDescription,
+   AlertDialogFooter,
+   AlertDialogHeader,
+   AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
    getAdminClaimsListAction,
    adminApproveClaimAction,
    adminRejectClaimAction,
@@ -55,9 +65,7 @@ export function YptVerificationPanel() {
 
    const [rejectDialogClaim, setRejectDialogClaim] = useState<any | null>(null);
    const [rejectReason, setRejectReason] = useState("");
-
-   const dialogRef = useRef<HTMLDivElement | null>(null);
-   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
 
    const loadClaims = async (statusParam?: YptClaimStatus | "ALL") => {
       setIsLoading(true);
@@ -80,49 +88,6 @@ export function YptVerificationPanel() {
       void loadClaims(claimsFilter);
       // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [claimsFilter]);
-
-   // Reject dialog: trap focus, close on Escape, restore focus on close.
-   useEffect(() => {
-      if (!rejectDialogClaim) return;
-      previouslyFocusedRef.current =
-         document.activeElement as HTMLElement | null;
-
-      const getFocusable = () =>
-         Array.from(
-            dialogRef.current?.querySelectorAll<HTMLElement>(
-               'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            ) ?? []
-         ).filter((el) => !el.hasAttribute("disabled"));
-
-      getFocusable()[0]?.focus();
-
-      const onKeyDown = (event: KeyboardEvent) => {
-         if (event.key === "Escape") {
-            event.preventDefault();
-            setRejectDialogClaim(null);
-            setRejectReason("");
-            return;
-         }
-         if (event.key !== "Tab") return;
-         const focusable = getFocusable();
-         if (focusable.length === 0) return;
-         const first = focusable[0];
-         const last = focusable[focusable.length - 1];
-         if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last.focus();
-         } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-         }
-      };
-
-      document.addEventListener("keydown", onKeyDown);
-      return () => {
-         document.removeEventListener("keydown", onKeyDown);
-         previouslyFocusedRef.current?.focus();
-      };
-   }, [rejectDialogClaim]);
 
    const handleApprove = async (claimId: string) => {
       setActionInProgress(claimId);
@@ -162,14 +127,14 @@ export function YptVerificationPanel() {
       }
    };
 
-   const handleRevoke = async (claimId: string) => {
-      if (
-         !confirm(
-            "Are you sure you want to revoke this verified YPT identity? The participant's YPT ID will be unlinked."
-         )
-      ) {
-         return;
-      }
+   const handleRevoke = (claimId: string) => {
+      setPendingRevoke(claimId);
+   };
+
+   const confirmRevoke = async () => {
+      if (!pendingRevoke) return;
+      const claimId = pendingRevoke;
+      setPendingRevoke(null);
 
       setActionInProgress(claimId);
       setError(null);
@@ -210,7 +175,7 @@ export function YptVerificationPanel() {
                className={`text-left rounded-2xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   claimsFilter === "PENDING"
                      ? "border-amber-500/50 bg-amber-500/10 shadow-lg"
-                     : "border-obsidian-border bg-obsidian-card hover:bg-obsidian-elevated"
+                     : "border-border-default bg-surface-primary hover:bg-surface-elevated"
                }`}
             >
                <div className="flex items-center justify-between">
@@ -222,7 +187,7 @@ export function YptVerificationPanel() {
                <div className="text-2xl font-bold font-display text-white mt-2">
                   {claimsData.counts.pending}
                </div>
-               <span className="text-[11px] text-obsidian-textDim">
+               <span className="text-meta text-text-tertiary">
                   Awaiting developer review
                </span>
             </button>
@@ -234,7 +199,7 @@ export function YptVerificationPanel() {
                className={`text-left rounded-2xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   claimsFilter === "VERIFIED"
                      ? "border-emerald-500/50 bg-emerald-500/10 shadow-lg"
-                     : "border-obsidian-border bg-obsidian-card hover:bg-obsidian-elevated"
+                     : "border-border-default bg-surface-primary hover:bg-surface-elevated"
                }`}
             >
                <div className="flex items-center justify-between">
@@ -246,7 +211,7 @@ export function YptVerificationPanel() {
                <div className="text-2xl font-bold font-display text-white mt-2">
                   {claimsData.counts.verified}
                </div>
-               <span className="text-[11px] text-obsidian-textDim">
+               <span className="text-meta text-text-tertiary">
                   Active synchronization enabled
                </span>
             </button>
@@ -258,7 +223,7 @@ export function YptVerificationPanel() {
                className={`text-left rounded-2xl border p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   claimsFilter === "REJECTED"
                      ? "border-rose-500/50 bg-rose-500/10 shadow-lg"
-                     : "border-obsidian-border bg-obsidian-card hover:bg-obsidian-elevated"
+                     : "border-border-default bg-surface-primary hover:bg-surface-elevated"
                }`}
             >
                <div className="flex items-center justify-between">
@@ -270,20 +235,20 @@ export function YptVerificationPanel() {
                <div className="text-2xl font-bold font-display text-white mt-2">
                   {claimsData.counts.rejected}
                </div>
-               <span className="text-[11px] text-obsidian-textDim">
+               <span className="text-meta text-text-tertiary">
                   Unverified or invalid claims
                </span>
             </button>
          </div>
 
          {/* Requests List */}
-         <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-6 shadow-xl">
-            <div className="flex items-center justify-between pb-4 border-b border-obsidian-borderSubtle mb-4">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-6 shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
                <div>
                   <h2 className="text-sm font-bold text-white uppercase tracking-wider">
                      YPT Identity Requests ({claimsFilter})
                   </h2>
-                  <p className="text-xs text-obsidian-textDim mt-0.5">
+                  <p className="text-xs text-text-tertiary mt-0.5">
                      Inspect participant identity claims, verify numeric IDs,
                      and confirm ownership.
                   </p>
@@ -294,7 +259,7 @@ export function YptVerificationPanel() {
                   size="sm"
                   onClick={() => void loadClaims(claimsFilter)}
                   disabled={isLoading}
-                  className="text-xs h-8 border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted"
+                  className="text-xs h-8 border-border-strong bg-surface-elevated text-text-secondary"
                >
                   {isLoading ? (
                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -305,12 +270,12 @@ export function YptVerificationPanel() {
             </div>
 
             {isLoading && claimsData.claims.length === 0 ? (
-               <div className="py-12 text-center text-xs text-obsidian-textDim">
-                  <Loader2 className="h-6 w-6 animate-spin text-economy-gold mx-auto mb-2" />
+               <div className="py-12 text-center text-xs text-text-tertiary">
+                  <Loader2 className="h-6 w-6 animate-spin text-brand-1 mx-auto mb-2" />
                   Loading identity requests...
                </div>
             ) : claimsData.claims.length === 0 ? (
-               <div className="py-12 text-center text-xs text-obsidian-textDim">
+               <div className="py-12 text-center text-xs text-text-tertiary">
                   No identity claims found matching filter: {claimsFilter}.
                </div>
             ) : (
@@ -323,12 +288,12 @@ export function YptVerificationPanel() {
                      return (
                         <div
                            key={claim.id}
-                           className="rounded-2xl border border-obsidian-borderSubtle bg-obsidian-elevated/70 p-4 shadow-sm hover:border-obsidian-borderHighlight transition-colors"
+                           className="rounded-2xl border border-border-subtle bg-surface-elevated/70 p-4 shadow-sm hover:border-border-strong transition-colors"
                         >
                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                               {/* Left: User & Selected Identity Details */}
                               <div className="flex items-start gap-3.5 min-w-0">
-                                 <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-obsidian-card border border-obsidian-border shrink-0">
+                                 <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-surface-primary border border-border-default shrink-0">
                                     {claim.user?.image ? (
                                        <Image
                                           src={claim.user.image}
@@ -338,7 +303,7 @@ export function YptVerificationPanel() {
                                           className="object-cover"
                                        />
                                     ) : (
-                                       <Shield className="h-5 w-5 m-auto text-obsidian-textDim" />
+                                       <Shield className="h-5 w-5 m-auto text-text-tertiary" />
                                     )}
                                  </div>
 
@@ -349,13 +314,13 @@ export function YptVerificationPanel() {
                                              claim.user?.name ||
                                              "Participant"}
                                        </h3>
-                                       <span className="text-xs text-obsidian-textDim font-mono">
+                                       <span className="text-xs text-text-tertiary font-mono">
                                           @{claim.user?.username || "user"}
                                        </span>
 
                                        {/* State Badge */}
                                        <span
-                                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                          className={`text-label px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
                                              isVerified
                                                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                                                 : isPending
@@ -366,12 +331,12 @@ export function YptVerificationPanel() {
                                           {claim.status}
                                        </span>
 
-                                       <span className="text-[10px] text-obsidian-textDim font-mono">
+                                       <span className="text-label text-text-tertiary font-mono">
                                           Attempt #{claim.attemptsCount}
                                        </span>
                                     </div>
 
-                                    <div className="mt-1.5 text-xs text-obsidian-textMuted flex items-center gap-3 flex-wrap">
+                                    <div className="mt-1.5 text-xs text-text-secondary flex items-center gap-3 flex-wrap">
                                        <span>
                                           Selected:{" "}
                                           <strong className="text-white">
@@ -381,7 +346,7 @@ export function YptVerificationPanel() {
                                        <span>•</span>
                                        <span>
                                           YPT ID:{" "}
-                                          <strong className="text-economy-gold font-mono">
+                                          <strong className="text-brand-1 font-mono">
                                              {claim.yptId}
                                           </strong>
                                        </span>
@@ -478,78 +443,90 @@ export function YptVerificationPanel() {
             )}
          </div>
 
+         {/* Revoke Confirmation */}
+         <AlertDialog
+            open={Boolean(pendingRevoke)}
+            onOpenChange={(open) => {
+               if (!open) setPendingRevoke(null);
+            }}
+         >
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Revoke YPT identity?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                     This participant&apos;s YPT ID will be unlinked and their
+                     study synchronization disabled.
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void confirmRevoke()}>
+                     Revoke link
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
+
          {/* Reject Reason Dialog */}
-         {rejectDialogClaim && (
-            <div
-               className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-               role="dialog"
-               aria-modal="true"
-               aria-labelledby="ypt-reject-title"
-            >
-               <div
-                  ref={dialogRef}
-                  className="relative w-full max-w-md rounded-3xl border border-rose-500/40 bg-obsidian-card p-6 shadow-2xl backdrop-blur-xl"
-               >
-                  <h3
-                     id="ypt-reject-title"
-                     className="text-sm font-bold text-white"
-                  >
-                     Reject YPT Identity Claim
-                  </h3>
-                  <p className="text-xs text-obsidian-textDim mt-1">
+         <AlertDialog
+            open={Boolean(rejectDialogClaim)}
+            onOpenChange={(open) => {
+               if (!open) {
+                  setRejectDialogClaim(null);
+                  setRejectReason("");
+               }
+            }}
+         >
+            <AlertDialogContent className="border-rose-500/40">
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Reject YPT Identity Claim</AlertDialogTitle>
+                  <AlertDialogDescription>
                      Provide a clear reason for rejecting{" "}
                      <strong className="text-white">
-                        {rejectDialogClaim.yptName || rejectDialogClaim.yptId}
+                        {rejectDialogClaim?.yptName || rejectDialogClaim?.yptId}
                      </strong>
                      . The participant will see this feedback.
-                  </p>
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
 
-                  <form
-                     onSubmit={handleRejectSubmit}
-                     className="mt-4 space-y-3"
-                  >
-                     <Input
-                        type="text"
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="e.g. YPT numeric ID did not match group roster"
-                        className="rounded-xl border-obsidian-border bg-obsidian-elevated text-xs text-white"
-                        required
-                     />
-
-                     <div className="flex items-center justify-end gap-2 pt-2">
-                        <Button
-                           type="button"
-                           variant="outline"
-                           size="sm"
-                           onClick={() => {
-                              setRejectDialogClaim(null);
-                              setRejectReason("");
-                           }}
-                           className="text-xs rounded-xl border-obsidian-borderSubtle bg-obsidian-elevated"
-                        >
-                           Cancel
-                        </Button>
-                        <Button
-                           type="submit"
-                           size="sm"
-                           disabled={
-                              !rejectReason.trim() ||
-                              actionInProgress === rejectDialogClaim.id
-                           }
-                           className="text-xs rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold"
-                        >
-                           {actionInProgress === rejectDialogClaim.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                           ) : (
-                              "Confirm Rejection"
-                           )}
-                        </Button>
-                     </div>
-                  </form>
-               </div>
-            </div>
-         )}
+               <form onSubmit={handleRejectSubmit} className="space-y-3">
+                  <Input
+                     type="text"
+                     value={rejectReason}
+                     onChange={(e) => setRejectReason(e.target.value)}
+                     placeholder="e.g. YPT numeric ID did not match group roster"
+                     className="rounded-xl border-border-default bg-surface-elevated text-xs text-white"
+                     required
+                     autoFocus
+                  />
+                  <AlertDialogFooter>
+                     <AlertDialogCancel
+                        onClick={() => {
+                           setRejectDialogClaim(null);
+                           setRejectReason("");
+                        }}
+                     >
+                        Cancel
+                     </AlertDialogCancel>
+                     <Button
+                        type="submit"
+                        size="sm"
+                        disabled={
+                           !rejectReason.trim() ||
+                           actionInProgress === rejectDialogClaim?.id
+                        }
+                        className="text-xs rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold"
+                     >
+                        {actionInProgress === rejectDialogClaim?.id ? (
+                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                           "Confirm Rejection"
+                        )}
+                     </Button>
+                  </AlertDialogFooter>
+               </form>
+            </AlertDialogContent>
+         </AlertDialog>
       </div>
    );
 }

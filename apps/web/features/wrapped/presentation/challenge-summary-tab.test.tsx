@@ -115,10 +115,10 @@ describe("ChallengeSummaryTab", () => {
       );
 
       // Verifies ratified Obsidian tokens are applied
-      expect(html).toContain("bg-[#141414]");
-      expect(html).toContain("border-[#292929]");
-      expect(html).toContain("bg-[#1c1c1c]");
-      expect(html).toContain("text-[#f4f3f6]");
+      expect(html).toContain("bg-surface-primary");
+      expect(html).toContain("border-border-default");
+      expect(html).toContain("bg-surface-elevated");
+      expect(html).toContain("text-text-primary");
       expect(html).toContain("font-display");
 
       // Verifies team winner pill uses Obsidian amber token
@@ -127,7 +127,7 @@ describe("ChallengeSummaryTab", () => {
       expect(html).toContain("text-amber-300");
 
       // Verifies daily study bar fill uses Emerald
-      expect(html).toContain("bg-[#22c55e]");
+      expect(html).toContain("bg-feedback-success");
 
       // Verifies typography system: font-display for title, font-sans-tabular for numbers, no font-mono
       expect(html).toContain("font-display");
@@ -153,9 +153,9 @@ describe("ChallengeSummaryTab", () => {
       expect(html).toContain("Your wrapped");
       expect(html).toContain("AuraStudier");
       expect(html).toContain("Saved");
-      expect(html).toContain("bg-[#144520]");
-      expect(html).toContain("text-[#85ff93]");
-      expect(html).toContain("border-[#22c55e]/40");
+      expect(html).toContain("bg-feedback-success-bg");
+      expect(html).toContain("text-feedback-success-text");
+      expect(html).toContain("border-feedback-success/40");
    });
 
    it("renders Punished verdict with Crimson theme and reason list when participant fails hours", () => {
@@ -174,9 +174,9 @@ describe("ChallengeSummaryTab", () => {
       );
 
       expect(html).toContain("Punished");
-      expect(html).toContain("bg-[#401010]");
-      expect(html).toContain("text-[#ff5757]");
-      expect(html).toContain("border-[#ef4444]/40");
+      expect(html).toContain("bg-feedback-error-bg");
+      expect(html).toContain("text-feedback-error-text");
+      expect(html).toContain("border-feedback-error/40");
       expect(html).toContain("missed target hours");
    });
 
@@ -194,9 +194,9 @@ describe("ChallengeSummaryTab", () => {
       );
 
       expect(html).toContain("Excused");
-      expect(html).toContain("bg-[#102d40]");
-      expect(html).toContain("text-[#85d6ff]");
-      expect(html).toContain("border-[#3b82f6]/40");
+      expect(html).toContain("bg-feedback-info-bg");
+      expect(html).toContain("text-feedback-info-text");
+      expect(html).toContain("border-feedback-info/40");
    });
 
    it("renders empty state when there are 0 participants", () => {

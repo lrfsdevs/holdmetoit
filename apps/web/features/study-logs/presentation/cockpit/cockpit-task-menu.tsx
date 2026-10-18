@@ -108,9 +108,9 @@ export function TaskMenuItems({
             <Item
                onSelect={() => onSetStatus("TODO")}
                onClick={() => onSetStatus("TODO")}
-               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#d1d1d1] rounded-lg hover:bg-[#333333] transition-colors text-left"
+               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-secondary rounded-lg hover:bg-surface-nested transition-colors text-left"
             >
-               <RotateCcw className="h-3.5 w-3.5 text-[#868686]" />
+               <RotateCcw className="h-3.5 w-3.5 text-text-tertiary" />
                <span>Reset to To-Do</span>
             </Item>
          ) : (
@@ -132,14 +132,14 @@ export function TaskMenuItems({
             onClick={() => onSetStatus("IN_PROGRESS")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "IN_PROGRESS"
-                  ? "text-[#ffffff] bg-[#2d2d2d]"
-                  : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
+                  ? "text-white bg-surface-nested"
+                  : "text-text-tertiary hover:bg-surface-nested hover:text-text-secondary"
             }`}
          >
             <div className="flex items-center gap-2">
                <span
                   className={`h-2 w-2 rounded-full ${
-                     status === "IN_PROGRESS" ? "bg-amber-400" : "bg-[#555555]"
+                     status === "IN_PROGRESS" ? "bg-amber-400" : "bg-input-bg"
                   }`}
                />
                <span>In Progress</span>
@@ -154,14 +154,14 @@ export function TaskMenuItems({
             onClick={() => onSetStatus("COMPLETED")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "COMPLETED"
-                  ? "text-[#ffffff] bg-[#2d2d2d]"
-                  : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
+                  ? "text-white bg-surface-nested"
+                  : "text-text-tertiary hover:bg-surface-nested hover:text-text-secondary"
             }`}
          >
             <div className="flex items-center gap-2">
                <span
                   className={`h-2 w-2 rounded-full ${
-                     status === "COMPLETED" ? "bg-emerald-400" : "bg-[#555555]"
+                     status === "COMPLETED" ? "bg-emerald-400" : "bg-input-bg"
                   }`}
                />
                <span>Completed</span>
@@ -176,14 +176,14 @@ export function TaskMenuItems({
             onClick={() => onSetStatus("CROSSED_OUT")}
             className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
                status === "CROSSED_OUT"
-                  ? "text-[#ffffff] bg-[#2d2d2d]"
-                  : "text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1]"
+                  ? "text-white bg-surface-nested"
+                  : "text-text-tertiary hover:bg-surface-nested hover:text-text-secondary"
             }`}
          >
             <div className="flex items-center gap-2">
                <span
                   className={`h-2 w-2 rounded-full ${
-                     status === "CROSSED_OUT" ? "bg-rose-400" : "bg-[#555555]"
+                     status === "CROSSED_OUT" ? "bg-rose-400" : "bg-input-bg"
                   }`}
                />
                <span>Crossed Out</span>
@@ -197,9 +197,9 @@ export function TaskMenuItems({
             <Item
                onSelect={() => onSetStatus("TODO")}
                onClick={() => onSetStatus("TODO")}
-               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-[#868686] hover:bg-[#2a2a2a] hover:text-[#d1d1d1] rounded-lg transition-colors text-left"
+               className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-text-tertiary hover:bg-surface-nested hover:text-text-secondary rounded-lg transition-colors text-left"
             >
-               <RotateCcw className="h-3 w-3 text-[#777777]" />
+               <RotateCcw className="h-3 w-3 text-text-tertiary" />
                <span>Reset to To-Do</span>
             </Item>
          )}
@@ -207,10 +207,10 @@ export function TaskMenuItems({
          {moveDaysConfig && (
             <>
                <Separator />
-               <div className="px-3 py-1 text-[10px] font-semibold tracking-wider uppercase text-[#777777] flex items-center justify-between">
+               <div className="px-3 py-1 text-label font-semibold tracking-wider uppercase text-text-tertiary flex items-center justify-between">
                   <span>Move to Day</span>
                   {moveDaysConfig.isSourcePast && (
-                     <span className="text-[9px] text-amber-400 font-medium normal-case">
+                     <span className="text-caption text-amber-400 font-medium normal-case">
                         From past day
                      </span>
                   )}
@@ -230,9 +230,9 @@ export function TaskMenuItems({
                      key={opt.dateKey}
                      onSelect={() => onMoveToDay(opt.dateKey)}
                      onClick={() => onMoveToDay(opt.dateKey)}
-                     className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
+                     className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-nested hover:text-white rounded-lg transition-colors text-left"
                   >
-                     <ArrowRight className="h-3 w-3 text-[#777777]" />
+                     <ArrowRight className="h-3 w-3 text-text-tertiary" />
                      <span>
                         Move to {opt.shortLabel} ({formatDayDate(opt.dateKey)})
                      </span>
@@ -246,19 +246,19 @@ export function TaskMenuItems({
          <Item
             onSelect={onEditTask}
             onClick={onEditTask}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-primary rounded-lg hover:bg-surface-nested transition-colors text-left"
          >
-            <Pencil className="h-3.5 w-3.5 text-[#868686]" />
+            <Pencil className="h-3.5 w-3.5 text-text-tertiary" />
             <span>Edit Task</span>
          </Item>
 
          {isTaskOnPastDay ? (
             <Item
                disabled
-               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#555555] cursor-not-allowed text-left opacity-50"
+               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-tertiary cursor-not-allowed text-left opacity-50"
                title="Tasks on past challenge days cannot be deleted"
             >
-               <Trash2 className="h-3.5 w-3.5 text-[#555555]" />
+               <Trash2 className="h-3.5 w-3.5 text-text-tertiary" />
                <span>Delete Task (Locked)</span>
             </Item>
          ) : (
@@ -376,9 +376,9 @@ export function CategoryMenuItems({
                      key={opt.dateKey}
                      onSelect={() => onMoveCategoryToDay(opt.dateKey)}
                      onClick={() => onMoveCategoryToDay(opt.dateKey)}
-                     className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-[#c0c0c0] hover:bg-[#2e2e2e] hover:text-white rounded-lg transition-colors text-left"
+                     className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-nested hover:text-white rounded-lg transition-colors text-left"
                   >
-                     <ArrowRight className="h-3 w-3 text-[#777777]" />
+                     <ArrowRight className="h-3 w-3 text-text-tertiary" />
                      <span>
                         Move to {opt.shortLabel} ({formatDayDate(opt.dateKey)})
                      </span>
@@ -391,19 +391,19 @@ export function CategoryMenuItems({
          <Item
             onSelect={onRenameCategory}
             onClick={onRenameCategory}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#f4f3f6] rounded-lg hover:bg-[#333333] transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-primary rounded-lg hover:bg-surface-nested transition-colors text-left"
          >
-            <Pencil className="h-3.5 w-3.5 text-[#868686]" />
+            <Pencil className="h-3.5 w-3.5 text-text-tertiary" />
             <span>Rename Category</span>
          </Item>
 
          {hasPastTasks ? (
             <Item
                disabled
-               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#555555] cursor-not-allowed text-left opacity-50"
+               className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-tertiary cursor-not-allowed text-left opacity-50"
                title="Categories containing tasks on past challenge days cannot be deleted"
             >
-               <Trash2 className="h-3.5 w-3.5 text-[#555555]" />
+               <Trash2 className="h-3.5 w-3.5 text-text-tertiary" />
                <span>Delete Category (Locked)</span>
             </Item>
          ) : (

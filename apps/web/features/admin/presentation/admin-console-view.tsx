@@ -43,7 +43,7 @@ export function AdminConsoleView() {
    return (
       <div className="space-y-6">
          {/* Top Hero Bar */}
-         <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-6 shadow-xl backdrop-blur-md">
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-6 shadow-xl backdrop-blur-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
@@ -53,7 +53,7 @@ export function AdminConsoleView() {
                      <h1 className="text-xl sm:text-2xl font-bold font-display text-white tracking-tight">
                         Host Administration Console
                      </h1>
-                     <p className="text-xs text-obsidian-textDim mt-0.5">
+                     <p className="text-xs text-text-tertiary mt-0.5">
                         Manage competitive trophy ratings and study operations.
                      </p>
                   </div>
@@ -61,7 +61,7 @@ export function AdminConsoleView() {
 
                <Link
                   href="/challenges"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-obsidian-textMuted hover:text-white transition-colors"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-text-secondary hover:text-white transition-colors"
                >
                   <Calendar className="h-3.5 w-3.5" />
                   <span>Challenges</span>
@@ -73,14 +73,14 @@ export function AdminConsoleView() {
          {/* Trophy Management */}
          <div className="space-y-5">
             {/* Centralized Config Overview */}
-            <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-6 shadow-xl">
-               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-borderSubtle">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-6 shadow-xl">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
                   <div>
                      <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-economy-gold" />
+                        <Trophy className="h-4 w-4 text-brand-1" />
                         Trophy System Configuration
                      </h2>
-                     <p className="text-xs text-obsidian-textDim mt-0.5">
+                     <p className="text-xs text-text-tertiary mt-0.5">
                         Deterministic Clash of Clans style competitive
                         progression values.
                      </p>
@@ -88,32 +88,32 @@ export function AdminConsoleView() {
                </div>
 
                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated p-3">
-                     <span className="text-obsidian-textDim block">
+                  <div className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                     <span className="text-text-tertiary block">
                         Win Reward Base
                      </span>
                      <strong className="text-base font-bold text-emerald-400 font-mono">
                         +25 🏆
                      </strong>
                   </div>
-                  <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated p-3">
-                     <span className="text-obsidian-textDim block">
+                  <div className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                     <span className="text-text-tertiary block">
                         Loss Penalty Base
                      </span>
                      <strong className="text-base font-bold text-rose-400 font-mono">
                         -15 🏆
                      </strong>
                   </div>
-                  <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated p-3">
-                     <span className="text-obsidian-textDim block">
+                  <div className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                     <span className="text-text-tertiary block">
                         Draw / Cancelled
                      </span>
-                     <strong className="text-base font-bold text-obsidian-text font-mono">
+                     <strong className="text-base font-bold text-text-primary font-mono">
                         0 🏆
                      </strong>
                   </div>
-                  <div className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-elevated p-3">
-                     <span className="text-obsidian-textDim block">
+                  <div className="rounded-xl border border-border-subtle bg-surface-elevated p-3">
+                     <span className="text-text-tertiary block">
                         Rating Floor
                      </span>
                      <strong className="text-base font-bold text-yellow-400 font-mono">
@@ -124,13 +124,13 @@ export function AdminConsoleView() {
             </div>
 
             {/* Standings & Admin Adjustment Table */}
-            <div className="rounded-3xl border border-obsidian-border bg-obsidian-card p-6 shadow-xl">
-               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-obsidian-borderSubtle mb-4">
+            <div className="rounded-3xl border border-border-default bg-surface-primary p-6 shadow-xl">
+               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle mb-4">
                   <div>
                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                         Participant Standings & Ratings
                      </h3>
-                     <p className="text-xs text-obsidian-textDim mt-0.5">
+                     <p className="text-xs text-text-tertiary mt-0.5">
                         Audited manual adjustments may be issued for tournament
                         corrections.
                      </p>
@@ -138,18 +138,18 @@ export function AdminConsoleView() {
 
                   {/* Search User Input */}
                   <div className="relative w-full sm:w-64">
-                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-obsidian-textDim" />
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-tertiary" />
                      <Input
                         type="text"
                         placeholder="Filter participants..."
                         value={trophySearchQuery}
                         onChange={(e) => setTrophySearchQuery(e.target.value)}
-                        className="rounded-xl border-obsidian-border bg-obsidian-elevated pl-8 text-xs text-white"
+                        className="rounded-xl border-border-default bg-surface-elevated pl-8 text-xs text-white"
                      />
                   </div>
                </div>
 
-               <div className="divide-y divide-obsidian-borderSubtle">
+               <div className="divide-y divide-border-subtle">
                   {leaderboardEntries
                      .filter((u) => {
                         if (!trophySearchQuery.trim()) return true;
@@ -165,14 +165,14 @@ export function AdminConsoleView() {
                            className="py-3 flex items-center justify-between gap-3 text-xs"
                         >
                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="font-mono text-xs font-bold text-obsidian-textDim w-6 text-center">
+                              <span className="font-mono text-xs font-bold text-text-tertiary w-6 text-center">
                                  #{u.rank}
                               </span>
                               <div className="truncate">
                                  <span className="font-bold text-white">
                                     {u.displayName}
                                  </span>
-                                 <span className="text-obsidian-textDim pl-1.5 font-mono">
+                                 <span className="text-text-tertiary pl-1.5 font-mono">
                                     (@{u.username})
                                  </span>
                               </div>
@@ -183,7 +183,7 @@ export function AdminConsoleView() {
                                  trophies={u.trophyBalance}
                                  size="sm"
                               />
-                              <span className="hidden sm:inline font-mono text-obsidian-textDim">
+                              <span className="hidden sm:inline font-mono text-text-tertiary">
                                  {u.wins}W / {u.losses}L ({u.winRate}%)
                               </span>
                               <Button
@@ -199,7 +199,7 @@ export function AdminConsoleView() {
                                     });
                                     setIsAdjustModalOpen(true);
                                  }}
-                                 className="text-xs h-7 px-2 border-obsidian-borderHighlight bg-obsidian-elevated text-obsidian-textMuted hover:text-white"
+                                 className="text-xs h-7 px-2 border-border-strong bg-surface-elevated text-text-secondary hover:text-white"
                               >
                                  <Wrench className="h-3 w-3 mr-1" />
                                  Adjust

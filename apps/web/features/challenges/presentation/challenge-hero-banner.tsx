@@ -27,7 +27,7 @@ function ChallengeHeroImage({ src }: { src: string | null }) {
                <div
                   role="status"
                   aria-label="Loading challenge image"
-                  className="absolute inset-0 animate-pulse bg-[#292929] motion-reduce:animate-none"
+                  className="absolute inset-0 animate-pulse bg-surface-nested motion-reduce:animate-none"
                />
             )}
             {src && status !== "error" && (
@@ -50,7 +50,7 @@ function ChallengeHeroImage({ src }: { src: string | null }) {
          {src && status === "error" && (
             <div
                role="status"
-               className="relative z-10 flex flex-wrap items-center gap-2 px-6 pt-4 text-xs text-[#d1d1d1] sm:px-8"
+               className="relative z-10 flex flex-wrap items-center gap-2 px-6 pt-4 text-xs text-text-secondary sm:px-8"
             >
                <span>Challenge image unavailable.</span>
                <button
@@ -59,7 +59,7 @@ function ChallengeHeroImage({ src }: { src: string | null }) {
                      setAttempt((previous) => previous + 1);
                      setStatus("loading");
                   }}
-                  className="min-h-[44px] rounded-md px-2 font-medium underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                  className="min-h-control-sm rounded-md px-2 font-medium underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                >
                   Retry image
                </button>
@@ -90,20 +90,20 @@ function ChallengeHeroActions({ challenge }: ChallengeHeroBannerProps) {
 
    return (
       <>
-         <div className="w-36 sm:w-44 rounded-2xl bg-[#351517] border border-[#ff5757]/20 shadow-xl overflow-hidden shrink-0 self-start sm:self-center flex flex-col">
+         <div className="w-36 sm:w-44 rounded-2xl bg-feedback-error-bg border border-feedback-error-text/20 shadow-xl overflow-hidden shrink-0 self-start sm:self-center flex flex-col">
             {challenge.status !== "COMPLETED" ? (
                currentUser.isLoggedIn ? (
                   <Button
                      type="button"
                      onClick={() => setIsEnrollModalOpen(true)}
-                     className="w-full h-11 sm:h-12 rounded-2xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-sm sm:text-base font-bold shadow-md transition-colors flex items-center justify-center border-none"
+                     className="w-full h-11 sm:h-12 rounded-2xl bg-white text-text-inverse hover:bg-white/90 text-sm sm:text-base font-bold shadow-md transition-colors flex items-center justify-center border-none"
                   >
                      Enroll Now
                   </Button>
                ) : (
                   <Button
                      asChild
-                     className="w-full h-11 sm:h-12 rounded-2xl bg-[#ffffff] text-[#0d0d0d] hover:bg-[#e0e0e0] text-sm sm:text-base font-bold shadow-md transition-colors flex items-center justify-center border-none"
+                     className="w-full h-11 sm:h-12 rounded-2xl bg-white text-text-inverse hover:bg-white/90 text-sm sm:text-base font-bold shadow-md transition-colors flex items-center justify-center border-none"
                   >
                      <Link
                         href={`/api/auth/signin?callbackUrl=/challenge/${challenge.id}`}
@@ -114,7 +114,7 @@ function ChallengeHeroActions({ challenge }: ChallengeHeroBannerProps) {
                )
             ) : null}
 
-            <div className="w-full py-2 sm:py-2.5 px-3 text-center text-xs sm:text-sm font-semibold text-[#ff5c5c]">
+            <div className="w-full py-2 sm:py-2.5 px-3 text-center text-xs sm:text-sm font-semibold text-feedback-error">
                {challenge.status === "COMPLETED"
                   ? "Completed"
                   : challenge.status === "UPCOMING" &&
@@ -160,7 +160,7 @@ export function ChallengeHeroBanner({ challenge }: ChallengeHeroBannerProps) {
    const dateRangeFormatted = `${formatChallengeDate(challenge.startAt)} - ${formatChallengeDate(challenge.endAt)}`;
 
    return (
-      <div className="relative overflow-hidden rounded-3xl border border-[#262626] bg-[#0e0e10] shadow-2xl min-h-[220px]">
+      <div className="relative overflow-hidden rounded-3xl border border-border-default bg-surface-page shadow-2xl min-h-[220px]">
          <ChallengeHeroImage
             key={challenge.heroImageUrl}
             src={challenge.heroImageUrl}
@@ -170,21 +170,21 @@ export function ChallengeHeroBanner({ challenge }: ChallengeHeroBannerProps) {
             <div className="flex flex-col justify-center">
                <Link
                   href="/challenges"
-                  className="group inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full border border-white/15 bg-black/50 hover:bg-black/75 hover:border-white/30 text-xs sm:text-sm font-medium text-[#f4f3f6] hover:text-white backdrop-blur-md shadow-md transition-all duration-200 mb-3 sm:mb-4 w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  className="group inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full border border-white/15 bg-black/50 hover:bg-black/75 hover:border-white/30 text-xs sm:text-sm font-medium text-text-primary hover:text-white backdrop-blur-md shadow-md transition-all duration-200 mb-3 sm:mb-4 w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                >
-                  <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#d1d1d1] group-hover:text-white transition-transform group-hover:-translate-x-0.5" />
+                  <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-text-secondary group-hover:text-white transition-transform group-hover:-translate-x-0.5" />
                   <span>Back to challenges</span>
                </Link>
 
-               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#ffffff] tracking-tight">
+               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
                   {challenge.title}
                </h1>
 
-               <p className="text-sm sm:text-base font-medium text-[#d1d1d1] mt-2">
+               <p className="text-sm sm:text-base font-medium text-text-secondary mt-2">
                   {matchupText}
                </p>
 
-               <p className="text-xs sm:text-sm text-[#a3a3a3] mt-1">
+               <p className="text-xs sm:text-sm text-text-tertiary mt-1">
                   {dateRangeFormatted}
                </p>
             </div>

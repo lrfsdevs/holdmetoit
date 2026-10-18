@@ -12,6 +12,14 @@ import {
    ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+   Table,
+   TableBody,
+   TableCell,
+   TableHead,
+   TableHeader,
+   TableRow,
+} from "@/components/ui/table";
 
 export interface TransactionItem {
    id: string;
@@ -58,35 +66,35 @@ export function TransactionHistoryTable({
       switch (type) {
          case "STUDY_REWARD":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-credit/15 border border-economy-credit/30 px-2 py-0.5 text-[11px] font-medium text-economy-credit">
+               <span className="inline-flex items-center gap-1 rounded-full bg-feedback-success/15 border border-feedback-success/30 px-2 py-0.5 text-meta font-medium text-feedback-success">
                   <ArrowUpRight className="h-3 w-3" />
                   Study Reward
                </span>
             );
          case "CHALLENGE_REWARD":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-gold/15 border border-economy-gold/30 px-2 py-0.5 text-[11px] font-medium text-economy-gold">
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand-1/15 border border-brand-1/30 px-2 py-0.5 text-meta font-medium text-brand-1">
                   <ArrowUpRight className="h-3 w-3" />
                   Challenge Bonus
                </span>
             );
          case "WAGER_SETTLEMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-adjustment/15 border border-economy-adjustment/30 px-2 py-0.5 text-[11px] font-medium text-economy-adjustment">
+               <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-meta font-medium text-accent">
                   <Coins className="h-3 w-3" />
                   Wager Settlement
                </span>
             );
          case "WAGER_RESERVATION":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reserved/15 border border-economy-reserved/30 px-2 py-0.5 text-[11px] font-medium text-economy-reserved">
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand-1/15 border border-brand-1/30 px-2 py-0.5 text-meta font-medium text-brand-1">
                   <Lock className="h-3 w-3" />
                   Wager Reservation
                </span>
             );
          case "TRADE_RESERVATION":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reserved/15 border border-economy-reserved/30 px-2 py-0.5 text-[11px] font-medium text-economy-reserved">
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand-1/15 border border-brand-1/30 px-2 py-0.5 text-meta font-medium text-brand-1">
                   <Lock className="h-3 w-3" />
                   Reservation
                </span>
@@ -94,21 +102,21 @@ export function TransactionHistoryTable({
          case "WAGER_REFUND":
          case "TRADE_REFUND":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-refund/15 border border-economy-refund/30 px-2 py-0.5 text-[11px] font-medium text-economy-refund">
+               <span className="inline-flex items-center gap-1 rounded-full bg-feedback-info/15 border border-feedback-info/30 px-2 py-0.5 text-meta font-medium text-feedback-info">
                   <RotateCcw className="h-3 w-3" />
                   Refund
                </span>
             );
          case "ADMIN_ADJUSTMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-adjustment/15 border border-economy-adjustment/30 px-2 py-0.5 text-[11px] font-medium text-economy-adjustment">
+               <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-meta font-medium text-accent">
                   <ShieldAlert className="h-3 w-3" />
                   Admin Adjustment
                </span>
             );
          case "REVERSAL":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-reversal/15 border border-economy-reversal/30 px-2 py-0.5 text-[11px] font-medium text-economy-reversal">
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand-3/15 border border-brand-3/30 px-2 py-0.5 text-meta font-medium text-brand-3">
                   <RotateCcw className="h-3 w-3" />
                   Reversal
                </span>
@@ -116,14 +124,14 @@ export function TransactionHistoryTable({
          case "GACHA_PURCHASE":
          case "TRADE_SETTLEMENT":
             return (
-               <span className="inline-flex items-center gap-1 rounded-full bg-economy-debit/15 border border-economy-debit/30 px-2 py-0.5 text-[11px] font-medium text-economy-debit">
+               <span className="inline-flex items-center gap-1 rounded-full bg-brand-3/15 border border-brand-3/30 px-2 py-0.5 text-meta font-medium text-brand-3">
                   <ArrowDownLeft className="h-3 w-3" />
                   Debit
                </span>
             );
          default:
             return (
-               <span className="inline-flex items-center rounded-full bg-obsidian-nested px-2 py-0.5 text-[11px] font-medium text-obsidian-textMuted">
+               <span className="inline-flex items-center rounded-full bg-surface-nested px-2 py-0.5 text-meta font-medium text-text-secondary">
                   {type}
                </span>
             );
@@ -133,35 +141,33 @@ export function TransactionHistoryTable({
    function renderAmountDelta(tx: TransactionItem) {
       if (tx.totalDelta > 0) {
          return (
-            <span className="font-semibold text-economy-credit tabular-nums">
+            <span className="font-semibold text-feedback-success tabular-nums">
                +{tx.totalDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.totalDelta < 0) {
          return (
-            <span className="font-semibold text-economy-debit tabular-nums">
+            <span className="font-semibold text-brand-3 tabular-nums">
                {tx.totalDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.reservedDelta > 0) {
          return (
-            <span className="font-semibold text-economy-gold tabular-nums">
+            <span className="font-semibold text-brand-1 tabular-nums">
                Locked {tx.reservedDelta.toLocaleString()} coins
             </span>
          );
       }
       if (tx.reservedDelta < 0) {
          return (
-            <span className="font-semibold text-economy-refund tabular-nums">
+            <span className="font-semibold text-feedback-info tabular-nums">
                Unlocked {Math.abs(tx.reservedDelta).toLocaleString()} coins
             </span>
          );
       }
-      return (
-         <span className="text-obsidian-textDim tabular-nums">0 coins</span>
-      );
+      return <span className="text-text-tertiary tabular-nums">0 coins</span>;
    }
 
    function formatDate(dateInput: string | Date) {
@@ -177,21 +183,21 @@ export function TransactionHistoryTable({
    }
 
    return (
-      <div className="rounded-2xl border border-obsidian-border bg-obsidian-card p-4 sm:p-6 shadow-xl mt-6">
+      <div className="rounded-2xl border border-border-default bg-surface-primary p-4 sm:p-6 shadow-xl mt-6">
          {/* Table Header & Filter Tabs */}
-         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-obsidian-borderSubtle pb-4">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4">
             <div>
-               <h3 className="text-base font-semibold text-obsidian-text">
+               <h3 className="text-base font-semibold text-text-primary">
                   Append-Only Currency Ledger
                </h3>
-               <p className="text-xs text-obsidian-textDim">
+               <p className="text-xs text-text-tertiary">
                   Immutable audit log of all coin rewards, debits, and
                   reservations
                </p>
             </div>
 
             {onFilterChange && (
-               <div className="flex flex-wrap gap-1.5 bg-obsidian-bg p-1 rounded-xl border border-obsidian-borderSubtle">
+               <div className="flex flex-wrap gap-1.5 bg-surface-page p-1 rounded-xl border border-border-subtle">
                   {filterOptions.map((opt) => (
                      <button
                         key={opt.id}
@@ -199,8 +205,8 @@ export function TransactionHistoryTable({
                         onClick={() => onFilterChange(opt.id)}
                         className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-colors ${
                            activeFilter === opt.id
-                              ? "bg-obsidian-nested text-obsidian-text shadow"
-                              : "text-obsidian-textDim hover:text-obsidian-textMuted"
+                              ? "bg-surface-nested text-text-primary shadow"
+                              : "text-text-tertiary hover:text-text-secondary"
                         }`}
                      >
                         {opt.label}
@@ -213,13 +219,13 @@ export function TransactionHistoryTable({
          {/* Zero-State (Empty State) */}
          {transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-obsidian-border bg-obsidian-elevated text-obsidian-textDim mb-3">
+               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border-default bg-surface-elevated text-text-tertiary mb-3">
                   <Coins className="h-6 w-6" />
                </div>
-               <h4 className="text-sm font-semibold text-obsidian-text">
+               <h4 className="text-sm font-semibold text-text-primary">
                   No Transactions Yet
                </h4>
-               <p className="text-xs text-obsidian-textDim max-w-sm mt-1">
+               <p className="text-xs text-text-tertiary max-w-sm mt-1">
                   Log study time during any active challenge to earn coins at
                   100 coins per hour. Every credit will be recorded here
                   automatically.
@@ -229,46 +235,52 @@ export function TransactionHistoryTable({
             <>
                {/* Desktop View (Table >= 640px) */}
                <div className="hidden sm:block overflow-x-auto mt-4">
-                  <table className="w-full text-left text-xs">
-                     <thead>
-                        <tr className="border-b border-obsidian-borderSubtle text-obsidian-textDim">
-                           <th className="pb-3 font-medium">Type</th>
-                           <th className="pb-3 font-medium">Description</th>
-                           <th className="pb-3 font-medium">Date & Time</th>
-                           <th className="pb-3 font-medium text-right">
+                  <Table className="w-full text-left text-xs">
+                     <TableHeader>
+                        <TableRow className="border-b border-border-subtle text-text-tertiary">
+                           <TableHead className="pb-3 font-medium">
+                              Type
+                           </TableHead>
+                           <TableHead className="pb-3 font-medium">
+                              Description
+                           </TableHead>
+                           <TableHead className="pb-3 font-medium">
+                              Date & Time
+                           </TableHead>
+                           <TableHead className="pb-3 font-medium text-right">
                               Amount
-                           </th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-obsidian-subtle">
+                           </TableHead>
+                        </TableRow>
+                     </TableHeader>
+                     <TableBody className="divide-y divide-surface-secondary">
                         {transactions.map((tx) => (
-                           <tr
+                           <TableRow
                               key={tx.id}
-                              className="hover:bg-obsidian-cardHover transition-colors"
+                              className="hover:bg-surface-tertiary transition-colors"
                            >
-                              <td className="py-3.5 pr-3">
+                              <TableCell className="py-3.5 pr-3">
                                  {renderTypeBadge(tx.type)}
-                              </td>
-                              <td className="py-3.5 pr-3">
-                                 <p className="font-medium text-obsidian-text">
+                              </TableCell>
+                              <TableCell className="py-3.5 pr-3">
+                                 <p className="font-medium text-text-primary">
                                     {tx.description}
                                  </p>
                                  {tx.sourceType && (
-                                    <span className="text-[10px] text-obsidian-textDim">
+                                    <span className="text-label text-text-tertiary">
                                        Source: {tx.sourceType}
                                     </span>
                                  )}
-                              </td>
-                              <td className="py-3.5 pr-3 text-obsidian-textDim">
+                              </TableCell>
+                              <TableCell className="py-3.5 pr-3 text-text-tertiary">
                                  {formatDate(tx.createdAt)}
-                              </td>
-                              <td className="py-3.5 text-right font-mono">
+                              </TableCell>
+                              <TableCell className="py-3.5 text-right font-mono">
                                  {renderAmountDelta(tx)}
-                              </td>
-                           </tr>
+                              </TableCell>
+                           </TableRow>
                         ))}
-                     </tbody>
-                  </table>
+                     </TableBody>
+                  </Table>
                </div>
 
                {/* Mobile View (Cards < 640px to eliminate horizontal overflow) */}
@@ -276,7 +288,7 @@ export function TransactionHistoryTable({
                   {transactions.map((tx) => (
                      <div
                         key={tx.id}
-                        className="rounded-xl border border-obsidian-borderSubtle bg-obsidian-subtle p-3 flex flex-col gap-2"
+                        className="rounded-xl border border-border-subtle bg-surface-secondary p-3 flex flex-col gap-2"
                      >
                         <div className="flex items-center justify-between">
                            {renderTypeBadge(tx.type)}
@@ -284,10 +296,10 @@ export function TransactionHistoryTable({
                               {renderAmountDelta(tx)}
                            </span>
                         </div>
-                        <p className="text-xs text-obsidian-text font-medium">
+                        <p className="text-xs text-text-primary font-medium">
                            {tx.description}
                         </p>
-                        <div className="flex items-center justify-between text-[10px] text-obsidian-textDim border-t border-obsidian-borderSubtle pt-2">
+                        <div className="flex items-center justify-between text-label text-text-tertiary border-t border-border-subtle pt-2">
                            <span>
                               {tx.sourceType ? `Source: ${tx.sourceType}` : ""}
                            </span>
@@ -299,7 +311,7 @@ export function TransactionHistoryTable({
 
                {/* Pagination Controls */}
                {pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-obsidian-borderSubtle pt-4 mt-4 text-xs text-obsidian-textDim">
+                  <div className="flex items-center justify-between border-t border-border-subtle pt-4 mt-4 text-xs text-text-tertiary">
                      <span>
                         Showing {transactions.length} of {pagination.totalCount}{" "}
                         entries
@@ -311,11 +323,11 @@ export function TransactionHistoryTable({
                            size="sm"
                            disabled={pagination.page <= 1}
                            onClick={() => onPageChange(pagination.page - 1)}
-                           className="h-7 w-7 p-0 rounded-lg border-obsidian-border bg-obsidian-subtle"
+                           className="h-7 w-7 p-0 rounded-lg border-border-default bg-surface-secondary"
                         >
                            <ChevronLeft className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="px-2 font-medium text-obsidian-textMuted">
+                        <span className="px-2 font-medium text-text-secondary">
                            {pagination.page} / {pagination.totalPages}
                         </span>
                         <Button
@@ -324,7 +336,7 @@ export function TransactionHistoryTable({
                            size="sm"
                            disabled={pagination.page >= pagination.totalPages}
                            onClick={() => onPageChange(pagination.page + 1)}
-                           className="h-7 w-7 p-0 rounded-lg border-obsidian-border bg-obsidian-subtle"
+                           className="h-7 w-7 p-0 rounded-lg border-border-default bg-surface-secondary"
                         >
                            <ChevronRight className="h-3.5 w-3.5" />
                         </Button>

@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Plus, Search, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+   DropdownMenu,
+   DropdownMenuContent,
+   DropdownMenuRadioGroup,
+   DropdownMenuRadioItem,
+   DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type FilterStatus = "ALL" | "GLOBAL" | "TARGETED" | "KILLED";
 export type SortOption =
@@ -44,34 +50,14 @@ export function DevBoardHeader({
    onSortChange,
    onCreateClick,
 }: DevBoardHeaderProps) {
-   const [isSortOpen, setIsSortOpen] = useState(false);
-   const sortRef = useRef<HTMLDivElement>(null);
-
-   useEffect(() => {
-      function handleClickOutside(event: MouseEvent) {
-         if (
-            sortRef.current &&
-            !sortRef.current.contains(event.target as Node)
-         ) {
-            setIsSortOpen(false);
-         }
-      }
-      if (isSortOpen) {
-         document.addEventListener("mousedown", handleClickOutside);
-      }
-      return () => {
-         document.removeEventListener("mousedown", handleClickOutside);
-      };
-   }, [isSortOpen]);
-
    return (
       <div className="space-y-5">
          {/* DevBoard Title & Subtitle */}
          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#f4f3f6] font-display">
+            <h1 className="text-2xl font-bold tracking-tight text-text-primary font-display">
                DevBoard
             </h1>
-            <p className="mt-1 text-sm text-[#868686] text-balance">
+            <p className="mt-1 text-sm text-text-tertiary text-balance">
                Real-time runtime release toggles, tester assignments, and
                instant kill switches.
             </p>
@@ -80,19 +66,19 @@ export function DevBoardHeader({
          {/* Top Filter Group & New Flag Button */}
          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Status Filter Tabs Container */}
-            <div className="inline-flex items-center gap-1 rounded-xl border border-[#262626] bg-[#121212] p-1.5 flex-wrap">
+            <div className="inline-flex items-center gap-1 rounded-xl border border-border-default bg-surface-primary p-1.5 flex-wrap">
                {/* All */}
                <button
                   type="button"
                   onClick={() => onFilterChange("ALL")}
                   className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.96] ${
                      activeFilter === "ALL"
-                        ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                        : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                        ? "bg-surface-nested text-text-primary border border-border-strong"
+                        : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                   }`}
                >
                   <span>All</span>
-                  <span className="rounded bg-[#1c1c1c] px-1.5 py-0.5 text-[11px] tabular-nums text-[#a3a3a3]">
+                  <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-meta tabular-nums text-text-tertiary">
                      {totalCount}
                   </span>
                </button>
@@ -103,13 +89,13 @@ export function DevBoardHeader({
                   onClick={() => onFilterChange("GLOBAL")}
                   className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.96] ${
                      activeFilter === "GLOBAL"
-                        ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                        : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                        ? "bg-surface-nested text-text-primary border border-border-strong"
+                        : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                   }`}
                >
                   <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                   <span>Active Global</span>
-                  <span className="rounded bg-[#1c1c1c] px-1.5 py-0.5 text-[11px] tabular-nums text-[#a3a3a3]">
+                  <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-meta tabular-nums text-text-tertiary">
                      {globalCount}
                   </span>
                </button>
@@ -120,18 +106,18 @@ export function DevBoardHeader({
                   onClick={() => onFilterChange("TARGETED")}
                   className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.96] ${
                      activeFilter === "TARGETED"
-                        ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                        : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                        ? "bg-surface-nested text-text-primary border border-border-strong"
+                        : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                   }`}
                >
                   <svg
-                     className="h-3 w-3 text-[#a3a3a3] fill-current shrink-0"
+                     className="h-3 w-3 text-text-tertiary fill-current shrink-0"
                      viewBox="0 0 24 24"
                   >
                      <polygon points="12,2 22,12 12,22 2,12" />
                   </svg>
                   <span>Targeted Beta</span>
-                  <span className="rounded bg-[#1c1c1c] px-1.5 py-0.5 text-[11px] tabular-nums text-[#a3a3a3]">
+                  <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-meta tabular-nums text-text-tertiary">
                      {targetedCount}
                   </span>
                </button>
@@ -142,13 +128,13 @@ export function DevBoardHeader({
                   onClick={() => onFilterChange("KILLED")}
                   className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors duration-150 active:scale-[0.96] ${
                      activeFilter === "KILLED"
-                        ? "bg-[#242424] text-[#f4f3f6] border border-[#383838]"
-                        : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1a1a1a]"
+                        ? "bg-surface-nested text-text-primary border border-border-strong"
+                        : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
                   }`}
                >
-                  <XCircle className="h-3.5 w-3.5 text-[#868686] shrink-0" />
+                  <XCircle className="h-3.5 w-3.5 text-text-tertiary shrink-0" />
                   <span>Killed/Dormant</span>
-                  <span className="rounded bg-[#1c1c1c] px-1.5 py-0.5 text-[11px] tabular-nums text-[#a3a3a3]">
+                  <span className="rounded bg-surface-elevated px-1.5 py-0.5 text-meta tabular-nums text-text-tertiary">
                      {killedOrDisabledCount}
                   </span>
                </button>
@@ -168,57 +154,44 @@ export function DevBoardHeader({
          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Left: Search input */}
             <div className="relative">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#737373]" />
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-tertiary" />
                <Input
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Filter flags..."
-                  className="pl-9 bg-[#141414] border-[#262626] text-[#f4f3f6] placeholder:text-[#666666] text-xs rounded-xl w-60 h-9 focus-visible:ring-1 focus-visible:ring-neutral-400"
+                  className="pl-9 bg-surface-primary border-border-default text-text-primary placeholder:text-text-tertiary text-xs rounded-xl w-60 h-9 focus-visible:ring-1 focus-visible:ring-neutral-400"
                />
             </div>
 
             {/* Right: Sort Dropdown */}
-            <div className="relative self-end sm:self-auto" ref={sortRef}>
-               <button
-                  type="button"
-                  onClick={() => setIsSortOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#262626] bg-[#141414] px-3 py-1.5 text-xs font-medium text-[#d1d1d1] hover:text-white hover:bg-[#1a1a1a] transition-colors active:scale-[0.96]"
-               >
-                  <span>{SORT_LABELS[sortBy]}</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-[#868686]" />
-               </button>
-
-               {isSortOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-[#2e2e2e] bg-[#161616] py-1 shadow-2xl z-30 animate-in fade-in-0 duration-100">
-                     {(
-                        [
-                           { id: "UPDATED", label: "Sort: Updated" },
-                           { id: "KEY_ASC", label: "Sort: Key (A-Z)" },
-                           { id: "CREATED_DESC", label: "Sort: Created" },
-                           { id: "TESTERS_DESC", label: "Sort: Testers" },
-                        ] as const
-                     ).map((option) => (
-                        <button
-                           key={option.id}
-                           type="button"
-                           onClick={() => {
-                              onSortChange(option.id);
-                              setIsSortOpen(false);
-                           }}
-                           className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors ${
-                              sortBy === option.id
-                                 ? "bg-[#242424] text-white font-medium"
-                                 : "text-[#868686] hover:text-[#f4f3f6] hover:bg-[#1c1c1c]"
-                           }`}
-                        >
-                           <span>{option.label}</span>
-                           {sortBy === option.id && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                           )}
-                        </button>
-                     ))}
-                  </div>
-               )}
+            <div className="self-end sm:self-auto">
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                     <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border-default bg-surface-primary px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-white hover:bg-surface-tertiary transition-colors active:scale-[0.96]"
+                     >
+                        <span>{SORT_LABELS[sortBy]}</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-text-tertiary" />
+                     </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                     <DropdownMenuRadioGroup
+                        value={sortBy}
+                        onValueChange={(value) =>
+                           onSortChange(value as SortOption)
+                        }
+                     >
+                        {(
+                           Object.entries(SORT_LABELS) as [SortOption, string][]
+                        ).map(([id, label]) => (
+                           <DropdownMenuRadioItem key={id} value={id}>
+                              {label}
+                           </DropdownMenuRadioItem>
+                        ))}
+                     </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+               </DropdownMenu>
             </div>
          </div>
       </div>

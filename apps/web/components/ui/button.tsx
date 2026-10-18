@@ -10,17 +10,17 @@ const buttonVariants = cva(
       variants: {
          variant: {
             default:
-               "bg-[#ffffff] text-[#0d0d0d] font-semibold shadow-sm hover:bg-[#e0e0e0] active:scale-[0.98]",
+               "bg-button-primary-bg text-button-primary-text font-semibold shadow-sm hover:bg-button-primary-hover active:scale-[0.98]",
             secondary:
-               "border border-[#333333] bg-[#292929] text-[#ffffff] font-medium hover:bg-[#3d3d3d] active:scale-[0.98]",
+               "border border-button-secondary-border bg-button-secondary-bg text-button-secondary-text font-medium hover:bg-button-secondary-hover active:scale-[0.98]",
             outline:
-               "border border-[#333333] bg-transparent text-[#ffffff] font-medium hover:bg-[#1c1c1c] active:scale-[0.98]",
-            ghost: "text-[#d1d1d1] hover:bg-[#1c1c1c] hover:text-[#ffffff]",
+               "border border-button-outline-border bg-transparent text-button-outline-text font-medium hover:bg-button-outline-hover active:scale-[0.98]",
+            ghost: "text-button-ghost-text hover:bg-button-ghost-hover hover:text-button-ghost-text-hover",
             destructive:
-               "border border-[#ef4444]/40 bg-[#401010] text-[#ff5757] font-semibold hover:bg-[#521515] active:scale-[0.98]",
-            pill: "rounded-full bg-[#292929] border border-[#333333] text-[#ffffff] hover:bg-[#3d3d3d]",
-            gold: "border border-economy-gold/40 bg-economy-gold text-obsidian-bg font-semibold shadow hover:bg-economy-goldLight active:scale-[0.98]",
-            admin: "border border-economy-admin/40 bg-economy-admin text-obsidian-bg font-semibold shadow hover:bg-economy-adminHover active:scale-[0.98]",
+               "border border-button-destructive-border/40 bg-button-destructive-bg text-button-destructive-text font-semibold hover:bg-button-destructive-bg active:scale-[0.98]",
+            pill: "rounded-full bg-button-secondary-bg border border-button-secondary-border text-button-secondary-text hover:bg-button-secondary-hover",
+            gold: "border border-button-brand-border/40 bg-button-brand-bg text-button-brand-text font-semibold shadow hover:bg-button-brand-hover active:scale-[0.98]",
+            admin: "border border-button-admin-border/40 bg-button-admin-bg text-button-admin-text font-semibold shadow hover:bg-button-admin-hover active:scale-[0.98]",
          },
          size: {
             default: "h-10 px-4 py-2",

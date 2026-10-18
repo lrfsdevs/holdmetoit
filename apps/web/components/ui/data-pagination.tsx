@@ -99,11 +99,11 @@ export function DataPagination({
          <nav
             aria-label="Pagination"
             className={cn(
-               "flex items-center justify-between gap-2 pt-3 border-t border-[#262626] text-xs",
+               "flex items-center justify-between gap-2 pt-3 border-t border-border-default text-xs",
                className
             )}
          >
-            <span className="text-[11px] text-[#868686]">
+            <span className="text-meta text-text-tertiary">
                {totalItems !== undefined &&
                startItem !== undefined &&
                endItem !== undefined ? (
@@ -136,13 +136,13 @@ export function DataPagination({
                   onClick={handlePrev}
                   disabled={safeCurrentPage <= 1}
                   aria-label="Previous page"
-                  className="inline-flex items-center justify-center h-7 px-2 rounded-lg bg-[#1c1c1c] hover:bg-[#282828] text-white border border-[#333333] disabled:opacity-30 disabled:pointer-events-none transition-colors text-[11px] font-semibold gap-1"
+                  className="inline-flex items-center justify-center h-7 px-2 rounded-lg bg-surface-elevated hover:bg-surface-nested text-white border border-border-strong disabled:opacity-30 disabled:pointer-events-none transition-colors text-meta font-semibold gap-1"
                >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   <span className="hidden xs:inline">Prev</span>
                </button>
 
-               <span className="px-2 py-0.5 rounded-md bg-[#242424] text-[11px] font-mono text-[#d1d1d1] border border-[#333333]">
+               <span className="px-2 py-0.5 rounded-md bg-surface-nested text-meta font-mono text-text-secondary border border-border-strong">
                   {safeCurrentPage}/{totalPages}
                </span>
 
@@ -151,7 +151,7 @@ export function DataPagination({
                   onClick={handleNext}
                   disabled={safeCurrentPage >= totalPages}
                   aria-label="Next page"
-                  className="inline-flex items-center justify-center h-7 px-2 rounded-lg bg-[#1c1c1c] hover:bg-[#282828] text-white border border-[#333333] disabled:opacity-30 disabled:pointer-events-none transition-colors text-[11px] font-semibold gap-1"
+                  className="inline-flex items-center justify-center h-7 px-2 rounded-lg bg-surface-elevated hover:bg-surface-nested text-white border border-border-strong disabled:opacity-30 disabled:pointer-events-none transition-colors text-meta font-semibold gap-1"
                >
                   <span className="hidden xs:inline">Next</span>
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -165,12 +165,12 @@ export function DataPagination({
       <nav
          aria-label="Pagination Navigation"
          className={cn(
-            "flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-[#262626] text-xs",
+            "flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-border-default text-xs",
             className
          )}
       >
          {/* Items Summary */}
-         <div className="text-xs text-[#868686]">
+         <div className="text-xs text-text-tertiary">
             {totalItems !== undefined &&
             startItem !== undefined &&
             endItem !== undefined ? (
@@ -202,14 +202,14 @@ export function DataPagination({
                onClick={handlePrev}
                disabled={safeCurrentPage <= 1}
                aria-label="Previous page"
-               className="inline-flex items-center justify-center h-8 px-2.5 sm:px-3 rounded-xl bg-[#1c1c1c] hover:bg-[#282828] text-white border border-[#333333] disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-semibold gap-1"
+               className="inline-flex items-center justify-center h-8 px-2.5 sm:px-3 rounded-xl bg-surface-elevated hover:bg-surface-nested text-white border border-border-strong disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-semibold gap-1"
             >
                <ChevronLeft className="h-4 w-4" />
                <span className="hidden sm:inline">Prev</span>
             </button>
 
             {/* Mobile Page Indicator */}
-            <div className="sm:hidden px-3 py-1 rounded-xl bg-[#1d1d1d] text-xs font-semibold text-white border border-[#333333]">
+            <div className="sm:hidden px-3 py-1 rounded-xl bg-surface-elevated text-xs font-semibold text-white border border-border-strong">
                {safeCurrentPage} / {totalPages}
             </div>
 
@@ -220,7 +220,7 @@ export function DataPagination({
                      return (
                         <span
                            key={`ellipsis-${idx}`}
-                           className="w-8 text-center text-[#868686] select-none text-xs"
+                           className="w-8 text-center text-text-tertiary select-none text-xs"
                         >
                            …
                         </span>
@@ -239,7 +239,7 @@ export function DataPagination({
                            "h-8 min-w-[32px] px-2 rounded-xl text-xs font-semibold transition-all border",
                            isActive
                               ? "bg-white text-black border-white shadow-sm"
-                              : "bg-[#1c1c1c] text-[#d1d1d1] border-[#333333] hover:bg-[#282828] hover:text-white"
+                              : "bg-surface-elevated text-text-secondary border-border-strong hover:bg-surface-nested hover:text-white"
                         )}
                      >
                         {p}
@@ -253,7 +253,7 @@ export function DataPagination({
                onClick={handleNext}
                disabled={safeCurrentPage >= totalPages}
                aria-label="Next page"
-               className="inline-flex items-center justify-center h-8 px-2.5 sm:px-3 rounded-xl bg-[#1c1c1c] hover:bg-[#282828] text-white border border-[#333333] disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-semibold gap-1"
+               className="inline-flex items-center justify-center h-8 px-2.5 sm:px-3 rounded-xl bg-surface-elevated hover:bg-surface-nested text-white border border-border-strong disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-semibold gap-1"
             >
                <span className="hidden sm:inline">Next</span>
                <ChevronRight className="h-4 w-4" />

@@ -6,6 +6,7 @@ import { UserAcquisitionHistoryItem } from "../../data/acquisition-history.repos
 import { PokemonRarityBadge } from "../pokemon-rarity-badge";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    History,
    X,
@@ -79,47 +80,38 @@ export function AcquisitionHistoryModal({
    if (!isOpen) return null;
 
    return (
-      <div
-         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="history-modal-title"
+      <Dialog
+         open={isOpen}
+         onOpenChange={(open) => {
+            if (!open) onClose();
+         }}
       >
-         <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-3xl border border-pokedex-border bg-gradient-to-b from-pokedex-elevated to-pokedex-bg p-5 sm:p-6 shadow-2xl text-white">
+         <DialogContent className="max-w-2xl flex flex-col rounded-3xl border border-border-default bg-gradient-to-b from-surface-elevated to-surface-page text-white">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-pokedex-borderSubtle">
+            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-pokedex-cardSubtle border border-pokedex-border text-pokedex-textSecondary">
+                  <div className="p-2 rounded-xl bg-surface-secondary border border-border-default text-text-secondary">
                      <History className="w-4 h-4" />
                   </div>
                   <div>
-                     <h3
+                     <DialogTitle
                         id="history-modal-title"
                         className="text-base font-bold text-white"
                      >
                         Summon Acquisition History
-                     </h3>
-                     <p className="text-xs text-pokedex-textMuted">
+                     </DialogTitle>
+                     <p className="text-xs text-text-tertiary">
                         {totalCount} total summon{" "}
                         {totalCount === 1 ? "record" : "records"} on ledger
                      </p>
                   </div>
                </div>
-
-               <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-2 rounded-xl bg-pokedex-cardSubtle text-pokedex-textMuted hover:text-white hover:bg-pokedex-border transition-colors"
-                  aria-label="Close history modal"
-               >
-                  <X className="w-4 h-4" />
-               </button>
             </div>
 
             {/* Scrollable Records List */}
             <div className="flex-1 overflow-y-auto py-3 space-y-2 pr-1">
                {items.length === 0 && !isLoading ? (
-                  <div className="py-12 text-center text-pokedex-textMuted text-xs">
+                  <div className="py-12 text-center text-text-tertiary text-xs">
                      No summon acquisitions found. Start summoning from active
                      banners to build your history!
                   </div>
@@ -137,7 +129,7 @@ export function AcquisitionHistoryModal({
                      return (
                         <div
                            key={item.id}
-                           className="p-3 rounded-2xl bg-pokedex-cardSubtle/70 border border-pokedex-borderSubtle hover:border-pokedex-border transition-colors flex items-center justify-between gap-3 text-xs"
+                           className="p-3 rounded-2xl bg-surface-secondary/70 border border-border-subtle hover:border-border-default transition-colors flex items-center justify-between gap-3 text-xs"
                         >
                            <div className="flex items-center gap-3 min-w-0">
                               {item.species.imageUrl ? (
@@ -148,7 +140,7 @@ export function AcquisitionHistoryModal({
                                     loading="lazy"
                                  />
                               ) : (
-                                 <div className="w-10 h-10 rounded-xl bg-pokedex-inset flex items-center justify-center text-pokedex-textDim shrink-0 font-bold">
+                                 <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-text-tertiary shrink-0 font-bold">
                                     ?
                                  </div>
                               )}
@@ -164,13 +156,13 @@ export function AcquisitionHistoryModal({
                                        showStars={false}
                                     />
                                     {item.isFeatured && (
-                                       <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                       <span className="px-1.5 py-0.5 rounded text-caption font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
                                           Featured
                                        </span>
                                     )}
                                  </div>
 
-                                 <div className="flex items-center gap-2 text-[11px] text-pokedex-textMuted">
+                                 <div className="flex items-center gap-2 text-meta text-text-tertiary">
                                     <span>{item.bannerName}</span>
                                     <span>•</span>
                                     <span>{formattedDate}</span>
@@ -179,14 +171,14 @@ export function AcquisitionHistoryModal({
                            </div>
 
                            <div className="text-right space-y-1 shrink-0">
-                              <div className="font-semibold text-economy-gold flex items-center justify-end gap-1 font-mono">
+                              <div className="font-semibold text-brand-1 flex items-center justify-end gap-1 font-mono">
                                  <CoinsIcon className="w-3 h-3" />
                                  <span>{item.costPaid}c</span>
                               </div>
 
-                              <div className="flex items-center justify-end gap-1 text-[10px]">
+                              <div className="flex items-center justify-end gap-1 text-label">
                                  {item.isDuplicate ? (
-                                    <span className="text-pokedex-textDim flex items-center gap-0.5">
+                                    <span className="text-text-tertiary flex items-center gap-0.5">
                                        <Copy className="w-2.5 h-2.5" />{" "}
                                        Duplicate
                                     </span>
@@ -209,7 +201,7 @@ export function AcquisitionHistoryModal({
                )}
 
                {isLoading && (
-                  <div className="py-6 flex items-center justify-center gap-2 text-xs text-pokedex-textMuted">
+                  <div className="py-6 flex items-center justify-center gap-2 text-xs text-text-tertiary">
                      <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
                      <span>Loading records...</span>
                   </div>
@@ -222,14 +214,14 @@ export function AcquisitionHistoryModal({
                         variant="outline"
                         size="sm"
                         onClick={() => loadHistory(nextCursor)}
-                        className="text-xs border-pokedex-borderLight text-pokedex-textSecondary hover:text-white"
+                        className="text-xs border-border-strong text-text-secondary hover:text-white"
                      >
                         Load More Records
                      </Button>
                   </div>
                )}
             </div>
-         </div>
-      </div>
+         </DialogContent>
+      </Dialog>
    );
 }

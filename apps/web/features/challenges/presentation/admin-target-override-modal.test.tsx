@@ -1,10 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement, type ReactElement } from "react";
+import { cleanup, render } from "@testing-library/react";
 import {
    AdminTargetOverrideModal,
    type AdminTargetOverrideParticipant,
 } from "./admin-target-override-modal";
+
+afterEach(cleanup);
+
+function renderToHtml(el: ReactElement): string {
+   const { container } = render(el);
+   return document.body.innerHTML.replace(container.outerHTML, "");
+}
 
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
@@ -28,7 +36,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
    };
 
    it("returns null when isOpen is false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: false,
             onClose: vi.fn(),
@@ -41,7 +49,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
    });
 
    it("returns null when participant is null", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -54,7 +62,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
    });
 
    it("renders participant details, current target, and dialog title when open", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -73,7 +81,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
    });
 
    it("renders quick presets and audit notice", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -95,7 +103,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
    });
 
    it("renders decomposed initial target hours (35h) in input", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -115,7 +123,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
          targetClock: "50:00:00",
       };
 
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),
@@ -134,7 +142,7 @@ describe("AdminTargetOverrideModal (Law L5 / FEAT-DECL-04)", () => {
          image: "",
       };
 
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(AdminTargetOverrideModal, {
             isOpen: true,
             onClose: vi.fn(),

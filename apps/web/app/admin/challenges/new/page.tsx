@@ -9,15 +9,15 @@ export default function NewChallengePage() {
          <div className="flex items-center gap-3">
             <Link
                href="/challenges"
-               className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-obsidian-border bg-obsidian-card text-obsidian-text hover:bg-obsidian-elevated transition-colors"
+               className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border-default bg-surface-primary text-text-primary hover:bg-surface-elevated transition-colors"
             >
                <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
-               <h1 className="text-2xl font-bold text-obsidian-text">
+               <h1 className="text-2xl font-bold text-text-primary">
                   Create Study Challenge
                </h1>
-               <p className="text-xs text-obsidian-textDim">
+               <p className="text-xs text-text-tertiary">
                   Configure format, timetable, thematic team houses, and
                   punishment asset.
                </p>

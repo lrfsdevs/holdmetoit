@@ -17,15 +17,15 @@ export default function WalletError({
    }, [error]);
 
    return (
-      <div className="min-h-screen bg-obsidian-bg text-obsidian-text flex items-center justify-center p-4">
-         <div className="rounded-2xl border border-destructive/40 bg-obsidian-crimson-bg p-8 sm:p-12 text-center text-obsidian-text max-w-lg w-full">
+      <div className="min-h-screen bg-surface-page text-text-primary flex items-center justify-center p-4">
+         <div className="rounded-2xl border border-destructive/40 bg-feedback-error-bg p-8 sm:p-12 text-center text-text-primary max-w-lg w-full">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/30 text-destructive">
                <AlertTriangle className="h-6 w-6" />
             </div>
             <h2 className="mt-4 text-lg font-bold font-display">
                Wallet Encountered an Error
             </h2>
-            <p className="mt-2 text-xs text-obsidian-textDim max-w-md mx-auto">
+            <p className="mt-2 text-xs text-text-tertiary max-w-md mx-auto">
                {error.message ||
                   "An unexpected error occurred while loading your coin wallet."}
             </p>

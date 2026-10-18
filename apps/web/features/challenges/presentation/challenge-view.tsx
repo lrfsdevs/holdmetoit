@@ -87,14 +87,14 @@ export function ChallengeView({
          <ChallengeHeroBanner challenge={challenge} />
 
          <div className="flex items-center justify-center w-full overflow-hidden">
-            <div className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-[#333333] bg-[#292929] p-1 sm:p-1.5 shadow-md max-w-full overflow-x-auto">
+            <div className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-border-strong bg-surface-nested p-1 sm:p-1.5 shadow-md max-w-full overflow-x-auto">
                <button
                   type="button"
                   onClick={() => handleTabChange("overview")}
-                  className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-meta sm:text-xs font-semibold whitespace-nowrap transition-all ${
                      activeTab === "overview"
-                        ? "bg-[#4a4a4a] text-[#ffffff] shadow"
-                        : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                        ? "bg-input-bg text-white shadow"
+                        : "text-text-tertiary hover:text-white hover:bg-surface-nested"
                   }`}
                >
                   Overview
@@ -102,10 +102,10 @@ export function ChallengeView({
                <button
                   type="button"
                   onClick={() => handleTabChange("leaderboard")}
-                  className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-meta sm:text-xs font-semibold whitespace-nowrap transition-all ${
                      activeTab === "leaderboard"
-                        ? "bg-[#4a4a4a] text-[#ffffff] shadow"
-                        : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                        ? "bg-input-bg text-white shadow"
+                        : "text-text-tertiary hover:text-white hover:bg-surface-nested"
                   }`}
                >
                   Leaderboard
@@ -114,10 +114,10 @@ export function ChallengeView({
                   <button
                      type="button"
                      onClick={() => handleTabChange("summary")}
-                     className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                     className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-meta sm:text-xs font-semibold whitespace-nowrap transition-all ${
                         activeTab === "summary"
-                           ? "bg-[#4a4a4a] text-[#ffffff] shadow"
-                           : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                           ? "bg-input-bg text-white shadow"
+                           : "text-text-tertiary hover:text-white hover:bg-surface-nested"
                      }`}
                   >
                      Summary
@@ -128,10 +128,10 @@ export function ChallengeView({
                      <button
                         type="button"
                         onClick={() => handleTabChange("manage")}
-                        className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                        className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-meta sm:text-xs font-semibold whitespace-nowrap transition-all ${
                            activeTab === "manage"
-                              ? "bg-[#4a4a4a] text-[#ffffff] shadow"
-                              : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                              ? "bg-input-bg text-white shadow"
+                              : "text-text-tertiary hover:text-white hover:bg-surface-nested"
                         }`}
                      >
                         Manage
@@ -139,10 +139,10 @@ export function ChallengeView({
                      <button
                         type="button"
                         onClick={() => handleTabChange("audit")}
-                        className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all ${
+                        className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-meta sm:text-xs font-semibold whitespace-nowrap transition-all ${
                            activeTab === "audit"
-                              ? "bg-[#4a4a4a] text-[#ffffff] shadow"
-                              : "text-[#868686] hover:text-[#ffffff] hover:bg-[#333333]"
+                              ? "bg-input-bg text-white shadow"
+                              : "text-text-tertiary hover:text-white hover:bg-surface-nested"
                         }`}
                      >
                         Audit Log

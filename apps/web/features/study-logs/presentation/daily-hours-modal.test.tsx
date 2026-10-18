@@ -1,7 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement, type ReactElement } from "react";
+import { cleanup, render } from "@testing-library/react";
 import { DailyHoursModal } from "./daily-hours-modal";
+
+afterEach(cleanup);
+
+function renderToHtml(el: ReactElement): string {
+   const { container } = render(el);
+   return document.body.innerHTML.replace(container.outerHTML, "");
+}
 
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
@@ -15,7 +23,7 @@ vi.mock("@/features/study-logs/api/log-study-time.actions", () => ({
 
 describe("DailyHoursModal", () => {
    it("renders with empty inputs and 'Submit' when no hours have been logged today", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -39,7 +47,7 @@ describe("DailyHoursModal", () => {
 
    it("pre-populates inputs and displays 'Update Hours' when user has previously committed hours without 'Previously committed' badge", () => {
       // 9,035 seconds = 2h 30m 35s
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -64,7 +72,7 @@ describe("DailyHoursModal", () => {
 
    it("shows 'Yesterday' toggle when isYesterdayMissed is true and pre-populates yesterday's hours when opened with initialDayNumber", () => {
       // 3,600 seconds = 1h
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -90,7 +98,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("hides 'Yesterday' toggle and defaults to today if isYesterdayMissed is false even if initialDate is yesterday", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -113,7 +121,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("renders null when isOpen is false", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: false,
@@ -127,7 +135,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("renders full challenge week selector with future days disabled for admins", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -154,7 +162,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("pre-populates yesterday hours when opened with initialDayNumber for yesterday", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -178,7 +186,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("shows only editable days (yesterday and today) in clean 2-card layout for normal participants", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -210,7 +218,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("renders leave visual cues when today is marked as leave", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,
@@ -240,7 +248,7 @@ describe("DailyHoursModal", () => {
    });
 
    it("renders 'Mark as Leave' button and no leave banner when day is not on leave", () => {
-      const html = renderToStaticMarkup(
+      const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
             isOpen: true,

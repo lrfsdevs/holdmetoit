@@ -20,14 +20,14 @@ const SelectTrigger = React.forwardRef<
    <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-         "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-[#292929] bg-[#1c1c1c] px-3.5 py-2 text-left text-sm text-[#ffffff] shadow-inner outline-none transition-colors focus:border-[#ffffff]/60 focus:bg-[#222222] disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-[#868686] [&>span]:line-clamp-1",
+         "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-input-field-border bg-input-field-bg px-3.5 py-2 text-left text-sm text-input-field-text shadow-inner outline-none transition-colors focus:border-input-field-focus/60 focus:bg-input-field-bg disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-input-field-placeholder [&>span]:line-clamp-1",
          className
       )}
       {...props}
    >
       {children}
       <SelectPrimitive.Icon asChild>
-         <ChevronDown className="h-4 w-4 shrink-0 text-[#868686]" />
+         <ChevronDown className="h-4 w-4 shrink-0 text-text-tertiary" />
       </SelectPrimitive.Icon>
    </SelectPrimitive.Trigger>
 ));
@@ -40,7 +40,7 @@ const SelectScrollUpButton = React.forwardRef<
    <SelectPrimitive.ScrollUpButton
       ref={ref}
       className={cn(
-         "flex cursor-default items-center justify-center py-1 text-[#868686]",
+         "flex cursor-default items-center justify-center py-1 text-text-tertiary",
          className
       )}
       {...props}
@@ -57,7 +57,7 @@ const SelectScrollDownButton = React.forwardRef<
    <SelectPrimitive.ScrollDownButton
       ref={ref}
       className={cn(
-         "flex cursor-default items-center justify-center py-1 text-[#868686]",
+         "flex cursor-default items-center justify-center py-1 text-text-tertiary",
          className
       )}
       {...props}
@@ -80,7 +80,7 @@ const SelectContent = React.forwardRef<
          sideOffset={4}
          collisionPadding={8}
          className={cn(
-            "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-xl border border-[#383838] bg-[#222222] p-1.5 text-[#f4f3f6] shadow-2xl",
+            "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-32 overflow-y-auto overflow-x-hidden rounded-xl border border-border-strong bg-surface-elevated p-1.5 text-text-primary shadow-2xl",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             position === "popper" &&
                "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
@@ -111,7 +111,7 @@ const SelectLabel = React.forwardRef<
    <SelectPrimitive.Label
       ref={ref}
       className={cn(
-         "px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#777777]",
+         "px-2 py-1 text-label font-semibold uppercase tracking-wider text-text-tertiary",
          className
       )}
       {...props}
@@ -126,7 +126,7 @@ const SelectItem = React.forwardRef<
    <SelectPrimitive.Item
       ref={ref}
       className={cn(
-         "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-3 text-xs font-medium text-[#d1d1d1] outline-none transition-colors focus:bg-[#333333] focus:text-[#ffffff] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+         "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 pl-8 pr-3 text-xs font-medium text-text-secondary outline-none transition-colors focus:bg-surface-nested focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
          className
       )}
       {...props}
@@ -147,7 +147,7 @@ const SelectSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
    <SelectPrimitive.Separator
       ref={ref}
-      className={cn("-mx-1 my-1 h-px bg-[#333333]", className)}
+      className={cn("-mx-1 my-1 h-px bg-surface-nested", className)}
       {...props}
    />
 ));

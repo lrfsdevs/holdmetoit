@@ -17,7 +17,7 @@ export function PokemonTypeBadge({ type, size = "md" }: PokemonTypeBadgeProps) {
 
    const sizeClasses =
       size === "sm"
-         ? "text-[10px] px-1.5 py-0.5 rounded"
+         ? "text-label px-1.5 py-0.5 rounded"
          : "text-xs px-2 py-0.5 rounded-md";
 
    return (
