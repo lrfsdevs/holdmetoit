@@ -50,7 +50,7 @@ export interface HomeCockpitViewProps {
 /** Renders the authenticated home cockpit and its participant workflows. */
 export function HomeCockpitView({
    displayName = "Unauthenticated",
-   challengeId = "seed-honey-bees-vs-lavender-butterflies",
+   challengeId = "",
    todayLoggedSeconds = 0,
    user,
    cockpit,

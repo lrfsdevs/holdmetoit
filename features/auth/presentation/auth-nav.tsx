@@ -303,6 +303,13 @@ export function AppHeader({
                   Challenges
                </Link>
 
+               <Link
+                  href="/changelog"
+                  className="text-xs sm:text-sm font-medium text-[#868686] hover:text-[#f4f3f6] transition-colors border-l border-[#292929] pl-2 sm:pl-3"
+               >
+                  Changelog
+               </Link>
+
                {isDevRole(user?.role) && !(isPreviewActive ?? false) && (
                   <Link
                      href="/devboard"
