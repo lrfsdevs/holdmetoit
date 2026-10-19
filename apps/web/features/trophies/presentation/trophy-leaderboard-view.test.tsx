@@ -99,4 +99,42 @@ describe("TrophyLeaderboardView", () => {
          "No competitive players found matching your search."
       );
    });
+
+   it("renders rank 1 first on page 1 even when entries arrive ascending", () => {
+      const ascending = buildEntries(12).reverse();
+      const html = renderToStaticMarkup(
+         <TrophyLeaderboardView initialEntries={ascending} />
+      );
+
+      expect(html.indexOf("Player 01")).toBeLessThan(html.indexOf("Player 10"));
+      expect(html).not.toContain("Player 12");
+      expect(html).toContain("1\u201310");
+   });
+
+   it("does not render the Clash of Clans style league pill", () => {
+      const html = renderToStaticMarkup(
+         <TrophyLeaderboardView initialEntries={buildEntries(3)} />
+      );
+
+      expect(html).not.toContain("Clash of Clans Style League");
+   });
+
+   it("hides the join CTA when the viewer is in an ongoing challenge", () => {
+      const html = renderToStaticMarkup(
+         <TrophyLeaderboardView
+            initialEntries={buildEntries(3)}
+            hasActiveChallenge
+         />
+      );
+
+      expect(html).not.toContain("Join Active Battles");
+   });
+
+   it("shows the join CTA when the viewer has no ongoing challenge", () => {
+      const html = renderToStaticMarkup(
+         <TrophyLeaderboardView initialEntries={buildEntries(3)} />
+      );
+
+      expect(html).toContain("Join Active Battles");
+   });
 });

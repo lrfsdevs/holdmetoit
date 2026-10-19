@@ -4,6 +4,7 @@ import { TrophyLeaderboardView } from "@/features/trophies/presentation/trophy-l
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { EmptyState } from "@/components/state/empty-state";
+import { findActiveChallengeEnrollment } from "@/features/challenges/data/participant.repository";
 
 export const dynamic = "force-dynamic";
 
@@ -32,15 +33,22 @@ export default async function LeaderboardPage() {
    }
 
    const session = await auth();
+   const currentUserId = session?.user?.id ?? null;
 
-   const { entries } = await getTrophyLeaderboard({ all: true });
+   const [{ entries }, activeEnrollment] = await Promise.all([
+      getTrophyLeaderboard({ all: true }),
+      currentUserId
+         ? findActiveChallengeEnrollment(currentUserId)
+         : Promise.resolve(null),
+   ]);
 
    return (
       <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
          <main className="mx-auto max-w-5xl px-3 sm:px-6 py-8">
             <TrophyLeaderboardView
                initialEntries={entries}
-               currentUserId={session?.user?.id ?? null}
+               currentUserId={currentUserId}
+               hasActiveChallenge={Boolean(activeEnrollment)}
             />
          </main>
       </div>

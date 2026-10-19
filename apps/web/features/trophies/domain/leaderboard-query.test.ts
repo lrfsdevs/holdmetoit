@@ -78,6 +78,32 @@ describe("sortLeaderboardEntries", () => {
       ).toEqual([300, 200, 100]);
    });
 
+   it("puts rank 1 first when sorting trophies descending", () => {
+      const scrambled = [
+         { ...entries[0], rank: 3 },
+         { ...entries[1], rank: 1 },
+         { ...entries[2], rank: 2 },
+      ];
+
+      expect(
+         sortLeaderboardEntries(scrambled, "trophies", "desc").map(
+            (e) => e.rank
+         )
+      ).toEqual([1, 2, 3]);
+   });
+
+   it("reverses rank order only when direction is ascending", () => {
+      const scrambled = [
+         { ...entries[0], rank: 3 },
+         { ...entries[1], rank: 1 },
+         { ...entries[2], rank: 2 },
+      ];
+
+      expect(
+         sortLeaderboardEntries(scrambled, "trophies", "asc").map((e) => e.rank)
+      ).toEqual([3, 2, 1]);
+   });
+
    it("sorts by win rate and wins", () => {
       expect(
          sortLeaderboardEntries(entries, "winRate", "desc").map(

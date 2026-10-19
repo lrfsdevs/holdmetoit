@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import LeaderboardPage from "./page";
 import { getTrophyLeaderboard } from "@/features/trophies/data/trophy.repository";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { findActiveChallengeEnrollment } from "@/features/challenges/data/participant.repository";
+import { auth } from "@/core/auth";
 
 vi.mock("@/features/feature-flags/api/server", () => ({
    isFeatureEnabled: vi.fn().mockResolvedValue(true),
@@ -11,6 +13,13 @@ vi.mock("@/features/feature-flags/api/server", () => ({
 vi.mock("@/core/auth", () => ({
    auth: vi.fn().mockResolvedValue({
       user: { id: "usr_1", name: "Afnan", role: "MEMBER" },
+   }),
+}));
+
+vi.mock("@/features/challenges/data/participant.repository", () => ({
+   findActiveChallengeEnrollment: vi.fn().mockResolvedValue({
+      challengeId: "chal_1",
+      challengeTitle: "Bees vs Butterflies",
    }),
 }));
 
@@ -58,7 +67,10 @@ vi.mock("@/features/trophies/data/trophy.repository", () => ({
 
 vi.mock("@/features/trophies/presentation/trophy-leaderboard-view", () => ({
    TrophyLeaderboardView: (props: any) => (
-      <div data-testid="trophy-leaderboard-view">
+      <div
+         data-testid="trophy-leaderboard-view"
+         data-has-active={String(props.hasActiveChallenge)}
+      >
          Leaderboard entries: {props.initialEntries.length}
       </div>
    ),
@@ -73,6 +85,24 @@ describe("LeaderboardPage", () => {
       const page = await LeaderboardPage();
       expect(getTrophyLeaderboard).toHaveBeenCalledWith({ all: true });
       expect(page).toBeDefined();
+   });
+
+   it("marks the viewer as already in an active challenge", async () => {
+      const page = await LeaderboardPage();
+      const html = renderToStaticMarkup(page as any);
+
+      expect(findActiveChallengeEnrollment).toHaveBeenCalledWith("usr_1");
+      expect(html).toContain('data-has-active="true"');
+   });
+
+   it("does not query membership for signed-out spectators", async () => {
+      vi.mocked(auth).mockResolvedValueOnce({ user: null } as any);
+
+      const page = await LeaderboardPage();
+      const html = renderToStaticMarkup(page as any);
+
+      expect(findActiveChallengeEnrollment).not.toHaveBeenCalled();
+      expect(html).toContain('data-has-active="false"');
    });
 
    it("renders the locked state when the leaderboard flag is off", async () => {

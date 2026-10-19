@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-19 (Session 137 — YPT linking reworked to a shared service account; per-user credentials & tokens removed, on `afnan-jr`)
+> **Last Updated:** 2026-10-19 (Session 139 — Leaderboard rank ordering, hero pill removal, join CTA state, on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -993,6 +993,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` green.
 - **NEXT STEP:** Phase D — adopt `Tabs` in `devboard-view.tsx:321` first, then ship `Label` + `Skeleton`.
 
+### Session 139 — 2026-10-19 (Leaderboard Rank Ordering, Pill Removal & Join CTA State on `afnan-jr`)
+
+- **Scope:** `/leaderboard` fixes — page 1 now always starts at rank #1, the internal "Clash of Clans Style League" hero pill is removed, and "Join Active Battles" hides while the viewer is already in an ongoing challenge.
+- **Ranking (data):** `getTrophyLeaderboard` (`features/trophies/data/trophy.repository.ts`) now uses a stable `orderBy: [{ trophyBalance: "desc" }, { id: "asc" }]` and assigns ranks from an explicitly re-sorted array, so rank 1 is always the highest balance.
+- **Ranking (domain/UI):** `sortLeaderboardEntries` (`features/trophies/domain/leaderboard-query.ts`) no longer sorts ascending then reverses; trophy `desc` sorts by canonical `rank` ascending, with an explicit direction multiplier for every key.
+- **Hero:** removed the labelled pill + unused `Trophy` import from `trophy-leaderboard-view.tsx`; per-row `TrophyRoleBadge` pills remain.
+- **CTA:** new lightweight `findActiveChallengeEnrollment` (`features/challenges/data/participant.repository.ts`) probes `startAt <= now < endAt`, `isDeleted = false`, `resultsLockedAt = null`; `/leaderboard` passes `hasActiveChallenge` and the view suppresses the CTA when true.
+- **Tests:** repository rank-order/orderBy tests; scrambled-input domain sort tests; view ordering, pill-removal and CTA visibility tests; participant helper tests; page membership wiring tests.
+- **Docs:** new `docs/leaderboard/README.md` (§9.4); `CHANGELOG.md` user-facing entry.
+- **NEXT STEP:** none.
+
 ### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
 
 - **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
@@ -1024,6 +1035,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Tests (+3):** same nickname+avatar collapses to one row (most-active canonical); different avatars stay separate; a collapsed row stays `LINKED` when any underlying id is linked to another user.
 - **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · YPT suite ✅ **66 tests** green.
 - **NEXT STEP:** unchanged from Session 137 (set env, run the migration, verify end-to-end).
+
 ### Session 135 — 2026-10-19 (Route Security, Law L9 Boundaries, Edge Guard Expansion & Mobile Resilience on `krish`)
 
 - **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.
