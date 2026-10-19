@@ -23,9 +23,14 @@ import {
 interface FeedbackFormProps {
    onSuccess?: (code: string) => void;
    onCancel?: () => void;
+   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
+export function FeedbackForm({
+   onSuccess,
+   onCancel,
+   onDirtyChange,
+}: FeedbackFormProps) {
    const pathname = usePathname();
    const [type, setType] = useState<FeedbackType>("bug");
    const [title, setTitle] = useState("");
@@ -66,6 +71,16 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
          }
       };
    }, []);
+
+   const isDirty =
+      !submittedCode &&
+      (title.trim().length > 0 ||
+         description.trim().length > 0 ||
+         attachments.length > 0);
+
+   useEffect(() => {
+      onDirtyChange?.(isDirty);
+   }, [isDirty, onDirtyChange]);
 
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();

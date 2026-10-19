@@ -70,6 +70,7 @@ Only `ready` drafts are submitted. Submitting is blocked while any draft is `upl
 - **Paths, not URLs, are submitted.** The public URL is derived server-side from the configured bucket/folder.
 - **First image is embedded inline in Discord; videos are links.** Discord cannot inline-play arbitrary video URLs without a multipart file upload.
 - **MOV is allowed** for iPhone camera-library uploads; it is treated as a video link.
+- **Explicit dismissal only once a draft exists.** A pristine form closes on a backdrop press or Escape. Once a title, description, or attachment exists, backdrop presses and Escape are ignored; X/Cancel always close. This prevents viewport shifts, near-miss taps, and higher page overlays from discarding a draft. The overlay and content render at `z-[80]` so app overlays above the default `z-50` (wrapped shy card, wrapped modal) cannot intercept clicks and dismiss the dialog.
 
 ### 2.4 Delivery dispatch (Discord + GitHub + Jira)
 

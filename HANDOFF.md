@@ -1040,6 +1040,15 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** `docs/feedback/README.md` §2.4/§3/§4.4/§4.6/§4.8/§5/§6; `FEATURES.md` §13.1 + matrix; `README.md`; migrations README.
 - **NEXT STEP:** Ensure project KAN has the `Task` and `Story` issue types (it does), set `JIRA_*` in the deployed environment, apply `20261019020000_add_feedback_jira_issue` after reconciling the local migration-history divergence, then run the Jira E2E in `docs/feedback/README.md` §4.6. Existing `FAILED` rows do not auto-retry; new submissions will create `Task`/`Story` issues.
 
+### Session 143 — 2026-10-19 (Feedback Dialog Accidental-Dismiss Guards on `afnan-jr`)
+
+- **Problem:** Radix `Dialog` (adopted in `a48bd8f`) dismisses on outside pointer-down, focus-outside, and Escape. The feedback dialog had no guards, and its `z-50` sat below the wrapped shy card (`z-[55]`/`z-[60]`), wrapped modal (`z-[60]`), and challenge feedback dialog (`z-[70]`), so near-misses and overlay interception could discard a draft and delete uploaded attachments.
+- **Dismiss policy:** A pristine form still closes on backdrop/Escape. Once title/description/attachment content exists, `onInteractOutside`/`onPointerDownOutside` and Escape are ignored; IME-composition Escape (`isComposing`/`keyCode 229`) is always ignored. X/Cancel remain the explicit close paths.
+- **Stacking:** `DialogContent` gained an optional `overlayClassName`; the feedback dialog now renders overlay + content at `z-[80]` above every app overlay.
+- **Tests:** `feedback-dialog.test.tsx` covers pristine/dirty backdrop, pristine/dirty/IME Escape, and stacking; new `components/ui/dialog.test.tsx` covers `overlayClassName`.
+- **Docs:** `docs/feedback/README.md` §2.3 records the dismissal policy.
+- **NEXT STEP:** Run the manual checklist in `/home/afnan/.commandcode/plans/feedback-dialog-accidental-close.md` on a 360 px viewport with the wrapped shy card present; verify the 3-day wrapped flow still behaves.
+
 ### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
 
 - **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
