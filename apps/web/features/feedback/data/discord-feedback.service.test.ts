@@ -60,6 +60,58 @@ describe("buildDiscordFeedbackEmbed", () => {
          "Guest / Anonymous"
       );
    });
+
+   it("embeds the first image and links every attachment", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         feedbackNumber: 7,
+         type: "bug",
+         title: "Visual glitch",
+         description: "The banner overlaps the score.",
+         url: "/challenge/demo",
+         attachments: [
+            {
+               url: "https://cdn.example.com/attachments/one.png",
+               kind: "image",
+            },
+            {
+               url: "https://cdn.example.com/attachments/clip.mp4",
+               kind: "video",
+            },
+            {
+               url: "https://cdn.example.com/attachments/two.png",
+               kind: "image",
+            },
+         ],
+      });
+
+      expect(embed.image).toEqual({
+         url: "https://cdn.example.com/attachments/one.png",
+      });
+      expect(embed.fields.find((f) => f.name === "📎 Attachments (3)")).toEqual(
+         {
+            name: "📎 Attachments (3)",
+            value: [
+               "• [Image 1](https://cdn.example.com/attachments/one.png)",
+               "• [Video 2](https://cdn.example.com/attachments/clip.mp4)",
+               "• [Image 3](https://cdn.example.com/attachments/two.png)",
+            ].join("\n"),
+            inline: false,
+         }
+      );
+   });
+
+   it("omits attachment fields when there are none", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         feedbackNumber: 7,
+         type: "bug",
+         title: "Text only",
+         description: "No media attached to this report.",
+         url: "/",
+      });
+
+      expect(embed.image).toBeUndefined();
+      expect(embed.fields.some((f) => f.name.startsWith("📎"))).toBe(false);
+   });
 });
 
 describe("resolveDiscordFeedbackChannelId", () => {

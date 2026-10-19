@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -137,10 +138,14 @@ export function FlagEditorModal({
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+                  <Label
+                     htmlFor="flag-key"
+                     className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5"
+                  >
                      Flag Key {isEditing && "(Immutable)"}
-                  </label>
+                  </Label>
                   <Input
+                     id="flag-key"
                      value={key}
                      onChange={(e) => setKey(e.target.value)}
                      disabled={isEditing}
@@ -159,10 +164,14 @@ export function FlagEditorModal({
                </div>
 
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+                  <Label
+                     htmlFor="flag-name"
+                     className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5"
+                  >
                      Display Name
-                  </label>
+                  </Label>
                   <Input
+                     id="flag-name"
                      value={name}
                      onChange={(e) => setName(e.target.value)}
                      placeholder="e.g. Voice Study Hours Input"
@@ -171,10 +180,14 @@ export function FlagEditorModal({
                </div>
 
                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+                  <Label
+                     htmlFor="flag-description"
+                     className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5"
+                  >
                      Description
-                  </label>
+                  </Label>
                   <Textarea
+                     id="flag-description"
                      value={description}
                      onChange={(e) => setDescription(e.target.value)}
                      placeholder="Explain what this feature controls and rollout intentions..."
@@ -185,16 +198,22 @@ export function FlagEditorModal({
 
                {!isEditing && (
                   <div className="pt-2">
-                     <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+                     <Label
+                        htmlFor="flag-rollout-mode"
+                        className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5"
+                     >
                         Initial Rollout
-                     </label>
+                     </Label>
                      <Select
                         value={rolloutMode}
                         onValueChange={(v) =>
                            setRolloutMode(v as RolloutModeType)
                         }
                      >
-                        <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-primary text-xs text-text-primary">
+                        <SelectTrigger
+                           id="flag-rollout-mode"
+                           className="h-9 rounded-xl border-border-default bg-surface-primary text-xs text-text-primary"
+                        >
                            <SelectValue placeholder="Disabled" />
                         </SelectTrigger>
                         <SelectContent>

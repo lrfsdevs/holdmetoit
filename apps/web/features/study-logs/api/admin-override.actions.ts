@@ -96,10 +96,7 @@ export async function adminOverrideStudyHoursAction(
 
       invalidateTags([cacheTags.challengeScoreboard(parsed.data.challengeId)]);
 
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}`);
-      revalidatePath(`/admin/challenges/${parsed.data.challengeId}/roster`);
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
-      revalidatePath("/dashboard");
       revalidatePath("/");
 
       logger.info(logEvents.studyLogOverride, {

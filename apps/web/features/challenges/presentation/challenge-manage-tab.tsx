@@ -25,6 +25,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
    AlertDialog,
    AlertDialogAction,
@@ -35,7 +36,6 @@ import {
    AlertDialogHeader,
    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
    Select,
    SelectContent,
@@ -59,6 +59,7 @@ import {
 } from "@/features/challenges/api/challenge-admin.actions";
 import { discardChallengeImageUploadAction } from "@/features/challenges/api/punishment-pfp.actions";
 import { ChallengeImageInput } from "@/features/challenges/presentation/challenge-image-input";
+import { ChallengeDescriptionEditor } from "@/features/challenges/presentation/challenge-description-editor";
 import {
    AdminHoursOverrideModal,
    type AdminHoursOverrideParticipant,
@@ -847,10 +848,14 @@ export function ChallengeManageTab({
 
                <div className="space-y-4">
                   <div className="space-y-1.5">
-                     <label className="text-xs font-semibold text-text-tertiary">
+                     <Label
+                        htmlFor="manage-challenge-title"
+                        className="text-xs font-semibold text-text-tertiary"
+                     >
                         Challenge Title
-                     </label>
+                     </Label>
                      <Input
+                        id="manage-challenge-title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g. Midterm Reading Week Sprint"
@@ -859,26 +864,33 @@ export function ChallengeManageTab({
                   </div>
 
                   <div className="space-y-1.5">
-                     <label className="text-xs font-semibold text-text-tertiary">
+                     <Label
+                        htmlFor="manage-challenge-description"
+                        className="text-xs font-semibold text-text-tertiary"
+                     >
                         Challenge Description
-                     </label>
-                     <Textarea
+                     </Label>
+                     <ChallengeDescriptionEditor
+                        id="manage-challenge-description"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Explain the challenge rules and accountability system..."
-                        rows={4}
-                        className="rounded-2xl bg-surface-nested border-border-strong text-white p-3 text-xs leading-relaxed focus:border-input-bg focus:bg-surface-nested"
+                        onChange={setDescription}
+                        disabled={isBusy}
+                        textareaClassName="rounded-2xl bg-surface-nested border-border-strong text-white p-3 text-xs leading-relaxed focus:border-input-bg focus:bg-surface-nested"
                      />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-text-tertiary flex items-center justify-between">
+                        <Label
+                           htmlFor="manage-start-at"
+                           className="text-xs font-semibold text-text-tertiary flex items-center justify-between"
+                        >
                            <span>Start Date & Time (UTC)</span>
                            <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
-                        </label>
+                        </Label>
                         <div className="relative">
                            <Input
+                              id="manage-start-at"
                               type="datetime-local"
                               value={startAt}
                               onChange={(e) => setStartAt(e.target.value)}
@@ -888,12 +900,16 @@ export function ChallengeManageTab({
                      </div>
 
                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-text-tertiary flex items-center justify-between">
+                        <Label
+                           htmlFor="manage-end-at"
+                           className="text-xs font-semibold text-text-tertiary flex items-center justify-between"
+                        >
                            <span>End Date & Time (UTC)</span>
                            <Calendar className="h-3.5 w-3.5 text-text-tertiary" />
-                        </label>
+                        </Label>
                         <div className="relative">
                            <Input
+                              id="manage-end-at"
                               type="datetime-local"
                               value={endAt}
                               onChange={(e) => setEndAt(e.target.value)}
@@ -952,7 +968,10 @@ export function ChallengeManageTab({
                         </div>
 
                         {/* Color Swatch Badge */}
-                        <label className="relative h-12 px-2.5 sm:px-3 rounded-2xl bg-surface-nested border border-border-strong flex items-center gap-2 cursor-pointer shrink-0 hover:bg-surface-nested transition-colors">
+                        <Label
+                           htmlFor={`manage-team-${team.id ?? idx}-color`}
+                           className="relative h-12 px-2.5 sm:px-3 rounded-2xl bg-surface-nested border border-border-strong flex items-center gap-2 cursor-pointer shrink-0 hover:bg-surface-nested transition-colors"
+                        >
                            <span
                               className="h-5 w-5 rounded-md border border-white/20 shrink-0"
                               style={{
@@ -963,6 +982,7 @@ export function ChallengeManageTab({
                               {team.color || "#FFB066"}
                            </span>
                            <input
+                              id={`manage-team-${team.id ?? idx}-color`}
                               type="color"
                               value={team.color || "#FFB066"}
                               onChange={(e) =>
@@ -970,7 +990,7 @@ export function ChallengeManageTab({
                               }
                               className="sr-only"
                            />
-                        </label>
+                        </Label>
 
                         {/* Delete Team Button */}
                         {teams.length > 2 && (
@@ -1538,10 +1558,14 @@ export function ChallengeManageTab({
                </AlertDialogHeader>
 
                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-text-tertiary">
+                  <Label
+                     htmlFor="manage-remove-participant-reason"
+                     className="text-xs font-semibold text-text-tertiary"
+                  >
                      Audit Reason <span className="text-red-400">*</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="manage-remove-participant-reason"
                      value={removeReason}
                      onChange={(e) => setRemoveReason(e.target.value)}
                      placeholder="e.g. Duplicate enrollment, rule violation..."

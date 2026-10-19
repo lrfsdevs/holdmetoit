@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Loader2, Plus, Search, UserCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { searchDiscordUsersAction } from "../api/feature-flags.actions";
 import type { FeatureFlagEntity } from "../domain/feature-flags.types";
@@ -170,12 +171,16 @@ export function TesterSelectorDialog({
 
             {/* Search Input */}
             <div className="mt-5">
-               <label className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5">
+               <Label
+                  htmlFor="tester-search"
+                  className="block text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-1.5"
+               >
                   Search Discord Scholars
-               </label>
+               </Label>
                <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
                   <Input
+                     id="tester-search"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
                      placeholder="Search by display name, username, or Snowflake..."

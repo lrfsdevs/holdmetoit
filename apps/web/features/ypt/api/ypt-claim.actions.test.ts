@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+   getYptRosterAction,
+   submitYptSelectionAction,
    adminApproveClaimAction,
    adminRejectClaimAction,
    adminRevokeClaimAction,
@@ -7,6 +9,8 @@ import {
 } from "./ypt-claim.actions";
 import * as repo from "../data/ypt-claim.repository";
 import * as requireDev from "@/features/auth/api/require-dev";
+import { requireSessionUser } from "@/features/auth/api/require-session";
+import { clearRateLimitStore } from "@/core/security/rate-limiter";
 
 vi.mock("@/features/auth/api/require-session", () => ({
    requireSessionUser: vi.fn(),
@@ -26,6 +30,7 @@ vi.mock("@/features/auth/api/require-dev", () => {
 vi.mock("../data/ypt-claim.repository", () => ({
    getEligibleYptMembers: vi.fn(),
    getUserActiveClaim: vi.fn(),
+   getYptRosterWithStatus: vi.fn(),
    submitYptClaim: vi.fn(),
    adminApproveYptClaim: vi.fn(),
    adminRejectYptClaim: vi.fn(),
@@ -34,6 +39,79 @@ vi.mock("../data/ypt-claim.repository", () => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
+describe("YPT participant actions", () => {
+   beforeEach(() => {
+      vi.clearAllMocks();
+      clearRateLimitStore();
+      vi.mocked(requireSessionUser).mockResolvedValue({
+         id: "user-1",
+         email: "user@example.com",
+         role: "PARTICIPANT",
+      } as any);
+   });
+
+   it("returns the labelled roster for the session user", async () => {
+      vi.mocked(repo.getYptRosterWithStatus).mockResolvedValue([
+         {
+            yptUserId: "11338944",
+            nickname: "Afnan",
+            avatarUrl: null,
+            todayStudySeconds: 3600,
+            isStudying: false,
+            currentSubject: null,
+            studyDate: "2026-10-19",
+            groupIds: ["111"],
+            claimStatus: "AVAILABLE",
+            isSelf: false,
+         },
+      ]);
+
+      const res = await getYptRosterAction();
+
+      expect(res.ok).toBe(true);
+      expect(res.data).toHaveLength(1);
+      expect(repo.getYptRosterWithStatus).toHaveBeenCalledWith({
+         currentUserId: "user-1",
+         search: undefined,
+      });
+   });
+
+   it("submits a verification request via submitYptClaim", async () => {
+      vi.mocked(repo.submitYptClaim).mockResolvedValue({
+         id: "claim-1",
+         userId: "user-1",
+         yptId: "11338944",
+         status: "PENDING",
+      } as any);
+
+      const res = await submitYptSelectionAction({
+         yptUserId: "11338944",
+         yptNickname: "Afnan Pathan",
+         groupId: "111",
+      });
+
+      expect(res.ok).toBe(true);
+      expect(repo.submitYptClaim).toHaveBeenCalledWith(
+         expect.objectContaining({
+            userId: "user-1",
+            yptId: "11338944",
+            yptName: "Afnan Pathan",
+            groupId: "111",
+         })
+      );
+   });
+
+   it("rejects an invalid selection payload", async () => {
+      const res = await submitYptSelectionAction({
+         yptUserId: "",
+      } as any);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.code).toBe("INVALID_INPUT");
+      expect(repo.submitYptClaim).not.toHaveBeenCalled();
+   });
+});
 
 describe("YPT claim admin actions (DEV-only)", () => {
    beforeEach(() => {

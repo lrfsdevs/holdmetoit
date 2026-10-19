@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
    getEligibleYptMembers,
    getUserActiveClaim,
+   getYptRosterWithStatus,
    submitYptClaim,
    adminApproveYptClaim,
    adminRejectYptClaim,
@@ -10,6 +11,7 @@ import {
 } from "./ypt-claim.repository";
 import { prisma } from "@/core/db";
 import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
+import { getYptServiceRoster } from "./ypt-service-account";
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -39,6 +41,10 @@ vi.mock("@/core/db", () => ({
 
 vi.mock("@/features/audit/data/audit-log.repository", () => ({
    recordAuditEvent: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock("./ypt-service-account", () => ({
+   getYptServiceRoster: vi.fn(),
 }));
 
 describe("YPT Claim Repository", () => {
@@ -225,5 +231,82 @@ describe("YPT Claim Repository", () => {
             })
          );
       });
+   });
+});
+
+describe("getYptRosterWithStatus", () => {
+   function rosterMember(overrides: Record<string, unknown> = {}) {
+      return {
+         yptUserId: "111",
+         nickname: "Afnan",
+         avatarUrl: "avatar-a.png",
+         todayStudySeconds: 0,
+         isStudying: false,
+         currentSubject: null,
+         studyDate: "2026-10-19",
+         groupIds: [],
+         ...overrides,
+      };
+   }
+
+   beforeEach(() => {
+      vi.clearAllMocks();
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+         yptId: null,
+      } as any);
+      vi.mocked(prisma.yptIdentityClaim.findMany).mockResolvedValue([] as any);
+   });
+
+   it("collapses same nickname + avatar into one row, keeping the most active account", async () => {
+      vi.mocked(getYptServiceRoster).mockResolvedValue([
+         rosterMember({
+            yptUserId: "111",
+            todayStudySeconds: 100,
+            groupIds: ["g1"],
+         }),
+         rosterMember({
+            yptUserId: "222",
+            todayStudySeconds: 500,
+            groupIds: ["g2"],
+         }),
+      ] as any);
+
+      const result = await getYptRosterWithStatus({
+         currentUserId: "user-1",
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].yptUserId).toBe("222");
+      expect(result[0].groupIds.sort()).toEqual(["g1", "g2"]);
+   });
+
+   it("keeps entries with different avatars separate", async () => {
+      vi.mocked(getYptServiceRoster).mockResolvedValue([
+         rosterMember({ yptUserId: "111", avatarUrl: "a.png" }),
+         rosterMember({ yptUserId: "222", avatarUrl: "b.png" }),
+      ] as any);
+
+      const result = await getYptRosterWithStatus({
+         currentUserId: "user-1",
+      });
+
+      expect(result).toHaveLength(2);
+   });
+
+   it("keeps a collapsed row locked when any underlying id is linked to another user", async () => {
+      vi.mocked(getYptServiceRoster).mockResolvedValue([
+         rosterMember({ yptUserId: "111" }),
+         rosterMember({ yptUserId: "222" }),
+      ] as any);
+      vi.mocked(prisma.yptIdentityClaim.findMany).mockResolvedValue([
+         { yptId: "222", userId: "other-user", status: "VERIFIED" },
+      ] as any);
+
+      const result = await getYptRosterWithStatus({
+         currentUserId: "user-1",
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].claimStatus).toBe("LINKED");
    });
 });

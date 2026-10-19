@@ -10,6 +10,7 @@ import {
 import {
    getEligibleYptMembers,
    getUserActiveClaim,
+   getYptRosterWithStatus,
    submitYptClaim,
    adminApproveYptClaim,
    adminRejectYptClaim,
@@ -18,6 +19,8 @@ import {
    GetAdminClaimsOptions,
 } from "../data/ypt-claim.repository";
 import { YptClaimStatus } from "../domain/ypt-claim-state-machine";
+import { classifyYptError } from "../domain/ypt-error-classifier";
+import { checkRateLimit } from "@/core/security/rate-limiter";
 
 const submitYptClaimSchema = z.object({
    yptId: z
@@ -30,6 +33,14 @@ const submitYptClaimSchema = z.object({
 });
 
 export type SubmitYptClaimInput = z.infer<typeof submitYptClaimSchema>;
+
+const submitYptSelectionSchema = z.object({
+   yptUserId: z.string().min(1, "Valid YPT ID required").max(64),
+   yptNickname: z.string().max(128).optional(),
+   groupId: z.string().max(64).optional(),
+});
+
+export type SubmitYptSelectionInput = z.infer<typeof submitYptSelectionSchema>;
 
 export async function getEligibleMembersAction(search?: string) {
    try {
@@ -109,6 +120,115 @@ export async function submitYptClaimAction(input: SubmitYptClaimInput) {
       revalidatePath("/wallet");
       revalidatePath("/profile");
       revalidatePath("/admin");
+
+      return {
+         ok: true,
+         data: claim,
+      };
+   } catch (error) {
+      return {
+         ok: false,
+         code: "CLAIM_SUBMISSION_FAILED",
+         message:
+            error instanceof Error
+               ? error.message
+               : "Failed to submit YPT verification request.",
+      };
+   }
+}
+
+/**
+ * Returns searchable roster entries with claim status for the signed-in user.
+ * Limits roster lookups per user and returns sanitized upstream errors.
+ */
+export async function getYptRosterAction(search?: string) {
+   try {
+      const user = await requireSessionUser();
+
+      const rateCheck = checkRateLimit(`ypt_roster:${user.id}`, {
+         maxAttempts: 30,
+         windowMs: 60 * 1000,
+      });
+
+      if (!rateCheck.allowed) {
+         return {
+            ok: false,
+            code: "RATE_LIMITED",
+            message: "Too many roster lookups. Please wait a moment.",
+            data: [],
+         };
+      }
+
+      const roster = await getYptRosterWithStatus({
+         currentUserId: user.id,
+         search,
+      });
+
+      return {
+         ok: true,
+         data: roster,
+      };
+   } catch (error) {
+      const message =
+         error instanceof Error && error.message.includes("not configured")
+            ? error.message
+            : classifyYptError(error, "getYptRosterAction").sanitizedMessage;
+      return {
+         ok: false,
+         code: "FETCH_ROSTER_FAILED",
+         message,
+         data: [],
+      };
+   }
+}
+
+/**
+ * Validates and rate-limits the signed-in user’s roster selection before submitting a pending claim.
+ */
+export async function submitYptSelectionAction(input: SubmitYptSelectionInput) {
+   try {
+      const user = await requireSessionUser();
+      const parsed = submitYptSelectionSchema.safeParse(input);
+
+      if (!parsed.success) {
+         const firstMessage =
+            parsed.error.issues?.[0]?.message || "Invalid selection input.";
+         return {
+            ok: false,
+            code: "INVALID_INPUT",
+            message: firstMessage,
+         };
+      }
+
+      const rateCheck = checkRateLimit(`ypt_claim:${user.id}`, {
+         maxAttempts: 10,
+         windowMs: 10 * 60 * 1000,
+      });
+
+      if (!rateCheck.allowed) {
+         return {
+            ok: false,
+            code: "RATE_LIMITED",
+            message:
+               "Too many verification requests. Please wait before retrying.",
+         };
+      }
+
+      const claim = await submitYptClaim({
+         userId: user.id,
+         yptId: parsed.data.yptUserId,
+         yptName: parsed.data.yptNickname,
+         groupId: parsed.data.groupId,
+         actor: {
+            id: user.id,
+            username: user.name || user.email || "user",
+         },
+      });
+
+      revalidatePath("/wallet");
+      revalidatePath("/profile");
+      revalidatePath("/admin");
+      revalidatePath("/devboard");
 
       return {
          ok: true,

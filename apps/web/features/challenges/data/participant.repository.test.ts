@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
 import {
    enrollParticipantInChallenge,
+   findActiveChallengeEnrollment,
    findOwnedParticipant,
    findParticipantForUser,
 } from "@/features/challenges/data/participant.repository";
@@ -138,6 +139,43 @@ describe("participant repository", () => {
             },
             include: { challenge: true },
          });
+      });
+   });
+
+   describe("findActiveChallengeEnrollment", () => {
+      it("returns the active challenge for the user", async () => {
+         const now = new Date("2026-10-19T12:00:00.000Z");
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challenge: { id: "chal_1", title: "Bees vs Butterflies" },
+         } as never);
+
+         await expect(
+            findActiveChallengeEnrollment("u_1", now)
+         ).resolves.toEqual({
+            challengeId: "chal_1",
+            challengeTitle: "Bees vs Butterflies",
+         });
+         expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith({
+            where: {
+               userId: "u_1",
+               challenge: {
+                  isDeleted: false,
+                  resultsLockedAt: null,
+                  startAt: { lte: now },
+                  endAt: { gt: now },
+               },
+            },
+            select: { challenge: { select: { id: true, title: true } } },
+            orderBy: { enrolledAt: "desc" },
+         });
+      });
+
+      it("returns null when the user has no ongoing challenge", async () => {
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+            null
+         );
+
+         await expect(findActiveChallengeEnrollment("u_1")).resolves.toBeNull();
       });
    });
 

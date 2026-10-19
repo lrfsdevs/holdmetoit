@@ -4,7 +4,6 @@ import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-   Trophy,
    Crown,
    Medal,
    Search,
@@ -29,11 +28,16 @@ import type { TrophyLeaderboardEntry } from "../data/trophy.repository";
 interface TrophyLeaderboardViewProps {
    initialEntries: TrophyLeaderboardEntry[];
    currentUserId?: string | null;
+   hasActiveChallenge?: boolean;
 }
 
+/**
+ * Renders searchable, sortable trophy standings and hides the join link during active enrollment.
+ */
 export function TrophyLeaderboardView({
    initialEntries = [],
    currentUserId,
+   hasActiveChallenge = false,
 }: TrophyLeaderboardViewProps) {
    const [searchQuery, setSearchQuery] = useState("");
    const [sortBy, setSortBy] = useState<LeaderboardSortKey>("trophies");
@@ -110,10 +114,6 @@ export function TrophyLeaderboardView({
             <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-yellow-500/10 blur-3xl" />
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-400 mb-3">
-                     <Trophy className="h-3.5 w-3.5" />
-                     <span>Clash of Clans Style League</span>
-                  </div>
                   <h1 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-white">
                      Group Trophy Leaderboard
                   </h1>
@@ -124,19 +124,21 @@ export function TrophyLeaderboardView({
                   </p>
                </div>
 
-               <div className="flex items-center gap-2">
-                  <Link href="/challenges">
-                     <Button
-                        type="button"
-                        variant="gold"
-                        size="sm"
-                        className="rounded-xl text-xs font-bold gap-1.5"
-                     >
-                        <Flame className="h-3.5 w-3.5" />
-                        Join Active Battles
-                     </Button>
-                  </Link>
-               </div>
+               {!hasActiveChallenge && (
+                  <div className="flex items-center gap-2">
+                     <Link href="/challenges">
+                        <Button
+                           type="button"
+                           variant="gold"
+                           size="sm"
+                           className="rounded-xl text-xs font-bold gap-1.5"
+                        >
+                           <Flame className="h-3.5 w-3.5" />
+                           Join Active Battles
+                        </Button>
+                     </Link>
+                  </div>
+               )}
             </div>
          </div>
 

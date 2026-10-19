@@ -62,3 +62,28 @@ describe("PokemonPage feature flag", () => {
       expect(isFeatureEnabled).toHaveBeenCalledWith("pokemon_system_v1");
    });
 });
+
+describe("Pokemon Boundaries (Law L9)", () => {
+   it("renders PokemonLoading skeleton", async () => {
+      const { default: PokemonLoading } = await import("./loading");
+      const html = renderToStaticMarkup(<PokemonLoading />);
+
+      expect(html).toContain("animate-pulse");
+      expect(html).toContain("bg-surface-page");
+   });
+
+   it("renders PokemonError recovery UI", async () => {
+      const { default: PokemonError } = await import("./error");
+      const html = renderToStaticMarkup(
+         <PokemonError
+            error={new Error("Failed to load species catalogue")}
+            reset={vi.fn()}
+         />
+      );
+
+      expect(html).toContain("Pokémon System Unavailable");
+      expect(html).toContain("Failed to load species catalogue");
+      expect(html).toContain("Try again");
+      expect(html).toContain("Return to Challenges");
+   });
+});

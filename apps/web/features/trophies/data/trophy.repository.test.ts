@@ -250,5 +250,39 @@ describe("Trophy Repository", () => {
          );
          expect(result.pagination.totalPages).toBe(3);
       });
+
+      it("assigns rank 1 to the highest trophy balance", async () => {
+         vi.mocked(prisma.user.findMany).mockResolvedValue([
+            {
+               id: "u_low",
+               trophyBalance: 100,
+               trophyTransactions: [],
+            },
+            {
+               id: "u_high",
+               trophyBalance: 900,
+               trophyTransactions: [],
+            },
+         ] as any);
+         vi.mocked(prisma.user.count).mockResolvedValue(2);
+
+         const { entries } = await getTrophyLeaderboard({ all: true });
+
+         expect(entries.map((entry) => entry.rank)).toEqual([1, 2]);
+         expect(entries[0].trophyBalance).toBe(900);
+      });
+
+      it("requests a stable descending trophy order from the database", async () => {
+         vi.mocked(prisma.user.findMany).mockResolvedValue([] as any);
+         vi.mocked(prisma.user.count).mockResolvedValue(0);
+
+         await getTrophyLeaderboard({ all: true });
+
+         expect(prisma.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+               orderBy: [{ trophyBalance: "desc" }, { id: "asc" }],
+            })
+         );
+      });
    });
 });

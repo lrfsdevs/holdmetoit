@@ -29,6 +29,9 @@ const placeWagerSchema = z.object({
 
 export type PlaceWagerInput = z.infer<typeof placeWagerSchema>;
 
+/**
+ * Validates and places the signed-in user’s wager when betting is enabled, then refreshes affected pages.
+ */
 export async function placeWagerAction(input: PlaceWagerInput) {
    try {
       const user = await requireSessionUser();
@@ -65,7 +68,6 @@ export async function placeWagerAction(input: PlaceWagerInput) {
 
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
       revalidatePath("/wallet");
-      revalidatePath("/dashboard");
 
       return {
          ok: true,

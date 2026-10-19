@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { FeedbackForm } from "./feedback-form";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +11,18 @@ interface FeedbackDialogProps {
 }
 
 export function FeedbackDialog({ isOpen, onClose }: FeedbackDialogProps) {
+   const [isDirty, setIsDirty] = useState(false);
+
+   useEffect(() => {
+      if (!isOpen) setIsDirty(false);
+   }, [isOpen]);
+
+   const preventDismissWhenDirty = (event: {
+      preventDefault: () => void;
+   }): void => {
+      if (isDirty) event.preventDefault();
+   };
+
    return (
       <Dialog
          open={isOpen}
@@ -17,7 +30,17 @@ export function FeedbackDialog({ isOpen, onClose }: FeedbackDialogProps) {
             if (!open) onClose();
          }}
       >
-         <DialogContent className="max-w-md rounded-2xl bg-surface-primary border-border-default p-5 md:p-6 text-zinc-100 space-y-4">
+         <DialogContent
+            overlayClassName="z-[80]"
+            className="z-[80] max-w-md rounded-2xl bg-surface-primary border-border-default p-5 md:p-6 text-zinc-100 space-y-4"
+            onInteractOutside={preventDismissWhenDirty}
+            onPointerDownOutside={preventDismissWhenDirty}
+            onEscapeKeyDown={(event) => {
+               if (event.isComposing || event.keyCode === 229 || isDirty) {
+                  event.preventDefault();
+               }
+            }}
+         >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border-default pb-3">
                <div className="flex items-center gap-2.5">
@@ -39,7 +62,7 @@ export function FeedbackDialog({ isOpen, onClose }: FeedbackDialogProps) {
             </div>
 
             {/* Content Form */}
-            <FeedbackForm onCancel={onClose} />
+            <FeedbackForm onCancel={onClose} onDirtyChange={setIsDirty} />
          </DialogContent>
       </Dialog>
    );

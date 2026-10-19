@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import {
    placeWagerAction,
@@ -18,6 +19,9 @@ interface ChallengeBettingCardProps {
    challenge: ChallengeScoreboardViewModel;
 }
 
+/**
+ * Displays challenge rewards, wager history, and a wager form before kickoff.
+ */
 export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
    const [selectedTeamId, setSelectedTeamId] = useState<string>(
       challenge.teams?.[0]?.id || ""
@@ -147,10 +151,17 @@ export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
                   <form onSubmit={handlePlaceBet} className="mt-4 space-y-4">
                      {/* Team Picker */}
                      <div>
-                        <label className="block text-xs font-medium text-text-secondary mb-2">
+                        <Label
+                           id="betting-back-team"
+                           className="block text-xs font-medium text-text-secondary mb-2"
+                        >
                            Back a Team to Win
-                        </label>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="betting-back-team"
+                           className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                        >
                            {challenge.teams.map((team) => {
                               const isSelected = selectedTeamId === team.id;
                               return (
