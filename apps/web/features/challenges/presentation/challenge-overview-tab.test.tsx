@@ -127,17 +127,20 @@ describe("ChallengeOverviewTab", () => {
 
       expect(html).toContain("Welcome to the Midterm Sprint!");
       expect(html).toContain(
-         "Midterm Sprint is an automated study battle governed by the HoldMeToIt three-condition accountability system."
+         "An automated study battle governed by the HoldMeToIt three-condition accountability system."
       );
+      expect(html).toContain("How it works");
+      expect(html).toContain("Prizes &amp; Rewards");
+      expect(html).toContain('href="https://link.yeolpumta.com"');
       expect(html).toContain("Alice Scholar");
       expect(html).toContain("Honey Bees");
       expect(html).toContain("Active");
       expect(html).not.toContain("Edit hr");
    });
 
-   it("renders custom challenge description when provided", () => {
+   it("renders the custom description syntax when provided", () => {
       const customDescription =
-         "Special Reading Week Sprint!\nPush for 50 hours of deep study and conquer the deficit.";
+         "# House Rules\n\nLog daily.\nStay focused.\n\n---\n\n[YPT](https://link.yeolpumta.com)";
       const html = renderToStaticMarkup(
          createElement(ChallengeOverviewTab, {
             challenge: {
@@ -149,12 +152,13 @@ describe("ChallengeOverviewTab", () => {
       );
 
       expect(html).toContain("Welcome to the Midterm Sprint!");
-      expect(html).toContain("Special Reading Week Sprint!");
-      expect(html).toContain(
-         "Push for 50 hours of deep study and conquer the deficit."
-      );
+      expect(html).toContain("<h2");
+      expect(html).toContain("House Rules");
+      expect(html).toContain("Log daily.<br/>Stay focused.");
+      expect(html).toContain("<hr");
+      expect(html).toContain('href="https://link.yeolpumta.com"');
       expect(html).not.toContain(
-         "Midterm Sprint is an automated study battle governed by the HoldMeToIt three-condition accountability system."
+         "An automated study battle governed by the HoldMeToIt three-condition accountability system."
       );
    });
 

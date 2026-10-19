@@ -3,22 +3,41 @@ import { auth } from "@/core/auth";
 import {
    createFeedbackRecord,
    updateFeedbackDiscordStatus,
+   updateFeedbackGitHubStatus,
+   updateFeedbackJiraStatus,
 } from "@/features/feedback/data/feedback.repository";
-import { sendFeedbackToDiscord } from "@/features/feedback/data/discord-feedback.service";
+import {
+   sendFeedbackToDiscord,
+   type DiscordSendResult,
+} from "@/features/feedback/data/discord-feedback.service";
+import {
+   createGitHubIssue,
+   type GitHubIssueResult,
+} from "@/features/feedback/data/github-issue.service";
+import {
+   createJiraIssue,
+   type JiraIssueResult,
+} from "@/features/feedback/data/jira-issue.service";
+import { GitHubDeliveryStatus, JiraDeliveryStatus } from "@prisma/client";
+import { verifyFeedbackAttachment } from "@/features/feedback/data/feedback-attachment.storage";
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
 import { createFeedbackSchema } from "@/features/feedback/domain/feedback.schema";
+import type { VerifiedFeedbackAttachment } from "@/features/feedback/domain/feedback.types";
+import { parseFeedbackAttachmentPath } from "@/features/feedback/domain/feedback-attachment";
+import {
+   deleteStorageObject,
+   getFeedbackAttachmentsUrlConfig,
+} from "@/core/storage/supabase-storage";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import { checkRateLimit } from "@/core/security/rate-limiter";
+import { getClientIp } from "@/core/security/client-ip";
 
 const logger = createLogger("feedback");
 
 /** Persists feedback and attempts fail-soft Discord delivery. */
 export async function POST(req: NextRequest) {
    try {
-      const clientIp =
-         req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-         req.headers.get("x-real-ip") ||
-         "anonymous";
+      const clientIp = getClientIp(req.headers);
 
       const rateLimit = checkRateLimit(`feedback:${clientIp}`, {
          maxAttempts: 5,
@@ -53,6 +72,53 @@ export async function POST(req: NextRequest) {
          );
       }
 
+      if (
+         parsed.data.type === "enhancement" &&
+         parsed.data.attachments.length > 0
+      ) {
+         return NextResponse.json(
+            {
+               success: false,
+               error: "Attachments are only available for bug reports.",
+            },
+            { status: 400 }
+         );
+      }
+
+      const attachmentPaths = parsed.data.attachments;
+      if (new Set(attachmentPaths).size !== attachmentPaths.length) {
+         return NextResponse.json(
+            {
+               success: false,
+               error: "Duplicate attachments are not allowed.",
+            },
+            { status: 400 }
+         );
+      }
+
+      const attachments: VerifiedFeedbackAttachment[] = [];
+      for (const path of attachmentPaths) {
+         const verified = await verifyFeedbackAttachment(path);
+         if (!verified) {
+            try {
+               const { folder } = getFeedbackAttachmentsUrlConfig();
+               if (parseFeedbackAttachmentPath(path, folder)) {
+                  await deleteStorageObject(path);
+               }
+            } catch {
+               // Cleanup is best-effort.
+            }
+            return NextResponse.json(
+               {
+                  success: false,
+                  error: "One or more attachments are invalid or expired. Please re-upload them.",
+               },
+               { status: 400 }
+            );
+         }
+         attachments.push(verified);
+      }
+
       const session = await auth();
       const userId = session?.user?.id ?? null;
 
@@ -64,6 +130,7 @@ export async function POST(req: NextRequest) {
          url: parsed.data.url,
          logrocketSessionId: parsed.data.logrocketSessionId ?? null,
          userId,
+         attachments,
       });
 
       const code = formatFeedbackCode(feedback.feedbackNumber);
@@ -78,8 +145,7 @@ export async function POST(req: NextRequest) {
            }
          : null;
 
-      // Asynchronously dispatch to Discord with safe fallback
-      const discordResult = await sendFeedbackToDiscord({
+      const dispatchPayload = {
          feedbackNumber: feedback.feedbackNumber,
          type: parsed.data.type,
          title: feedback.title,
@@ -88,7 +154,37 @@ export async function POST(req: NextRequest) {
          logrocketSessionId: feedback.logrocketSessionId,
          reporter,
          createdAt: feedback.createdAt,
-      });
+         attachments: attachments.map((attachment) => ({
+            url: attachment.url,
+            kind: attachment.kind,
+         })),
+      };
+
+      // Dispatch side effects in parallel; none may fail the submission.
+      const [discordSettled, githubSettled, jiraSettled] =
+         await Promise.allSettled([
+            sendFeedbackToDiscord(dispatchPayload),
+            createGitHubIssue(dispatchPayload),
+            createJiraIssue(dispatchPayload),
+         ]);
+
+      const discordResult: DiscordSendResult =
+         discordSettled.status === "fulfilled"
+            ? discordSettled.value
+            : {
+                 success: false,
+                 error: "Discord dispatch rejected.",
+              };
+
+      const githubResult: GitHubIssueResult =
+         githubSettled.status === "fulfilled"
+            ? githubSettled.value
+            : { status: "failed", error: "GitHub dispatch rejected." };
+
+      const jiraResult: JiraIssueResult =
+         jiraSettled.status === "fulfilled"
+            ? jiraSettled.value
+            : { status: "failed", error: "Jira dispatch rejected." };
 
       if (discordResult.success && discordResult.messageId) {
          await updateFeedbackDiscordStatus(feedback.id, {
@@ -110,13 +206,76 @@ export async function POST(req: NextRequest) {
          });
       }
 
+      try {
+         if (githubResult.status === "created") {
+            await updateFeedbackGitHubStatus(feedback.id, {
+               status: GitHubDeliveryStatus.CREATED,
+               issueNumber: githubResult.issueNumber,
+               issueUrl: githubResult.issueUrl,
+               syncedAt: new Date(),
+            });
+         } else {
+            await updateFeedbackGitHubStatus(feedback.id, {
+               status:
+                  githubResult.status === "skipped"
+                     ? GitHubDeliveryStatus.SKIPPED
+                     : GitHubDeliveryStatus.FAILED,
+               syncedAt: new Date(),
+            });
+         }
+      } catch (error) {
+         logger.warn(logEvents.feedbackGitHubDispatchFailed, {
+            context: { code, feedbackId: feedback.id },
+            error,
+         });
+      }
+
+      try {
+         if (jiraResult.status === "created") {
+            await updateFeedbackJiraStatus(feedback.id, {
+               status: JiraDeliveryStatus.CREATED,
+               issueKey: jiraResult.issueKey,
+               issueUrl: jiraResult.issueUrl,
+               syncedAt: new Date(),
+            });
+         } else {
+            await updateFeedbackJiraStatus(feedback.id, {
+               status:
+                  jiraResult.status === "skipped"
+                     ? JiraDeliveryStatus.SKIPPED
+                     : JiraDeliveryStatus.FAILED,
+               syncedAt: new Date(),
+            });
+         }
+      } catch (error) {
+         logger.warn(logEvents.feedbackJiraDispatchFailed, {
+            context: { code, feedbackId: feedback.id },
+            error,
+         });
+      }
+
+      const githubDelivered = githubResult.status === "created";
+      const githubIssueUrl = githubDelivered ? githubResult.issueUrl : null;
+      const jiraDelivered = jiraResult.status === "created";
+      const jiraIssueKey = jiraDelivered ? jiraResult.issueKey : null;
+      const jiraIssueUrl = jiraDelivered ? jiraResult.issueUrl : null;
+
       logger.info(logEvents.feedbackSubmitted, {
          context: {
             code,
             feedbackId: feedback.id,
             type: parsed.data.type,
             userId,
+            attachmentCount: attachments.length,
             discordDelivered: discordResult.success,
+            githubDelivered,
+            githubStatus: githubResult.status,
+            githubIssueNumber: githubDelivered
+               ? githubResult.issueNumber
+               : null,
+            jiraDelivered,
+            jiraStatus: jiraResult.status,
+            jiraIssueKey,
          },
       });
 
@@ -130,6 +289,11 @@ export async function POST(req: NextRequest) {
                type: parsed.data.type,
                status: feedback.status,
                discordDelivered: discordResult.success,
+               githubDelivered,
+               githubIssueUrl,
+               jiraDelivered,
+               jiraIssueKey,
+               jiraIssueUrl,
             },
          },
          { status: 201 }

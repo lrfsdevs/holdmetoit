@@ -48,6 +48,17 @@ export const logEvents = {
 
    feedbackSubmitted: "feedback.submitted",
    feedbackDiscordDispatchFailed: "feedback.discord_dispatch_failed",
+   feedbackAttachmentUploadRequested: "feedback.attachment_upload_requested",
+   feedbackAttachmentConfirmed: "feedback.attachment_confirmed",
+   feedbackAttachmentRejected: "feedback.attachment_rejected",
+   feedbackAttachmentDiscarded: "feedback.attachment_discarded",
+   feedbackGitHubIssueCreated: "feedback.github_issue_created",
+   feedbackGitHubDispatchFailed: "feedback.github_dispatch_failed",
+   feedbackGitHubDispatchSkipped: "feedback.github_dispatch_skipped",
+   feedbackGitHubLabelRetry: "feedback.github_label_retry",
+   feedbackJiraIssueCreated: "feedback.jira_issue_created",
+   feedbackJiraDispatchFailed: "feedback.jira_dispatch_failed",
+   feedbackJiraDispatchSkipped: "feedback.jira_dispatch_skipped",
 
    storageUploadFailed: "storage.upload_failed",
    storageCleanupSkipped: "storage.cleanup_skipped",

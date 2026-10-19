@@ -14,6 +14,7 @@ export interface DiscordFeedbackPayloadInput {
       discordId?: string | null;
    } | null;
    createdAt?: Date;
+   attachments?: { url: string; kind: "image" | "video" }[];
 }
 
 export interface DiscordEmbedField {
@@ -30,6 +31,9 @@ export interface DiscordEmbed {
       name: string;
    };
    fields: DiscordEmbedField[];
+   image?: {
+      url: string;
+   };
    footer: {
       text: string;
    };
@@ -88,6 +92,25 @@ export function buildDiscordFeedbackEmbed(
       });
    }
 
+   const attachments = input.attachments ?? [];
+   if (attachments.length > 0) {
+      fields.push({
+         name: `📎 Attachments (${attachments.length})`,
+         value: attachments
+            .map(
+               (attachment, index) =>
+                  `• [${attachment.kind === "image" ? "Image" : "Video"} ${index + 1}](${attachment.url})`
+            )
+            .join("\n")
+            .slice(0, 1024),
+         inline: false,
+      });
+   }
+
+   const firstImage = attachments.find(
+      (attachment) => attachment.kind === "image"
+   );
+
    return {
       title: input.title.slice(0, 256),
       description: input.description.slice(0, 4000),
@@ -96,6 +119,7 @@ export function buildDiscordFeedbackEmbed(
          name: authorName,
       },
       fields,
+      ...(firstImage ? { image: { url: firstImage.url } } : {}),
       footer: {
          text: `HoldMeToIt Feedback Engine • ID: ${code}`,
       },

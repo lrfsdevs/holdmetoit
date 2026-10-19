@@ -323,8 +323,20 @@ model Feedback {
   discordMessageId   String?
   discordChannelId   String?
 
+  githubStatus      GitHubDeliveryStatus @default(PENDING)
+  githubIssueNumber Int?
+  githubIssueUrl    String?              @db.VarChar(2048)
+  githubSyncedAt    DateTime?
+
+  jiraStatus     JiraDeliveryStatus @default(PENDING)
+  jiraIssueKey   String?            @db.VarChar(64)
+  jiraIssueUrl   String?            @db.VarChar(2048)
+  jiraSyncedAt   DateTime?
+
   userId             String?
   user               User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  attachments        FeedbackAttachment[]
 
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
@@ -333,7 +345,26 @@ model Feedback {
   @@index([type])
   @@index([status])
   @@index([discordStatus])
+  @@index([githubStatus])
+  @@index([jiraStatus])
   @@index([userId])
+}
+
+model FeedbackAttachment {
+  id         String                 @id @default(cuid())
+  feedbackId String
+  url        String                 @db.VarChar(2048)
+  path       String                 @db.VarChar(512)
+  kind       FeedbackAttachmentKind
+  mimeType   String                 @db.VarChar(128)
+  sizeBytes  Int
+  sortOrder  Int                    @default(0)
+  createdAt  DateTime               @default(now())
+
+  feedback   Feedback               @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@unique([feedbackId, path])
+  @@index([feedbackId, sortOrder])
 }
 
 // ---------------------------------------------------------------------------
@@ -441,10 +472,29 @@ enum FeedbackStatus {
   CLOSED
 }
 
+enum FeedbackAttachmentKind {
+  IMAGE
+  VIDEO
+}
+
 enum DiscordDeliveryStatus {
   PENDING
   SENT
   FAILED
+}
+
+enum GitHubDeliveryStatus {
+  PENDING
+  CREATED
+  FAILED
+  SKIPPED
+}
+
+enum JiraDeliveryStatus {
+  PENDING
+  CREATED
+  FAILED
+  SKIPPED
 }
 
 // ---------------------------------------------------------------------------

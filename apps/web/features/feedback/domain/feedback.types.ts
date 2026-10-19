@@ -1,3 +1,5 @@
+import type { FeedbackAttachmentKind } from "./feedback-attachment";
+
 export type FeedbackType = "bug" | "enhancement";
 
 export type FeedbackStatus = "open" | "closed";
@@ -27,6 +29,14 @@ export interface FeedbackRecord {
    userId?: string | null;
    createdAt: Date;
    updatedAt: Date;
+}
+
+export interface VerifiedFeedbackAttachment {
+   path: string;
+   url: string;
+   kind: FeedbackAttachmentKind;
+   mimeType: string;
+   sizeBytes: number;
 }
 
 export interface CreateFeedbackResult {

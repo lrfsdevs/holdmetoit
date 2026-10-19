@@ -80,4 +80,57 @@ describe("createFeedbackSchema", () => {
          expect(parsed.data.url).toBe("/test");
       }
    });
+
+   it("defaults attachments to an empty array", () => {
+      const parsed = createFeedbackSchema.safeParse({
+         type: "bug",
+         title: "Valid Title",
+         description: "This description is long enough to pass",
+         url: "/",
+      });
+
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+         expect(parsed.data.attachments).toEqual([]);
+      }
+   });
+
+   it("accepts up to three trimmed attachment paths", () => {
+      const parsed = createFeedbackSchema.safeParse({
+         type: "bug",
+         title: "Valid Title",
+         description: "This description is long enough to pass",
+         url: "/",
+         attachments: [
+            "  feedback-attachments/one.png  ",
+            "feedback-attachments/two.mp4",
+            "feedback-attachments/three.webm",
+         ],
+      });
+
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+         expect(parsed.data.attachments[0]).toBe(
+            "feedback-attachments/one.png"
+         );
+         expect(parsed.data.attachments).toHaveLength(3);
+      }
+   });
+
+   it("rejects more than three attachments", () => {
+      const parsed = createFeedbackSchema.safeParse({
+         type: "bug",
+         title: "Valid Title",
+         description: "This description is long enough to pass",
+         url: "/",
+         attachments: [
+            "feedback-attachments/one.png",
+            "feedback-attachments/two.png",
+            "feedback-attachments/three.png",
+            "feedback-attachments/four.png",
+         ],
+      });
+
+      expect(parsed.success).toBe(false);
+   });
 });
