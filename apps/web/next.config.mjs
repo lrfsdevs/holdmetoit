@@ -78,6 +78,36 @@ const nextConfig = {
             destination: "/challenge/:id",
             permanent: true,
          },
+         {
+            source: "/pokedex",
+            destination: "/pokemon",
+            permanent: true,
+         },
+         {
+            source: "/pokedex/:path*",
+            destination: "/pokemon/:path*",
+            permanent: true,
+         },
+         {
+            source: "/leaderboards",
+            destination: "/leaderboard",
+            permanent: true,
+         },
+         {
+            source: "/wallets",
+            destination: "/wallet",
+            permanent: true,
+         },
+         {
+            source: "/pokemons",
+            destination: "/pokemon",
+            permanent: true,
+         },
+         {
+            source: "/changelogs",
+            destination: "/changelog",
+            permanent: true,
+         },
       ];
    },
    images: {

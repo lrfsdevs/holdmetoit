@@ -15,8 +15,8 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 157 files green (1466/1466 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
-| `npm run build`                                              | ✅ 17 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                                                                                                                                                              |
+| `npm test`                                                   | ✅ 166 files green (1516/1516 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
 | Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                                                                                                                                                                                   |
@@ -983,7 +983,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** `docs/feature-flags/README.md` §1–§3, §5–§7, §9 rewritten to the rollout-only model.
 - **NEXT STEP:** In `/devboard`, set `pokemon_system_v1` to **Global** and confirm `/pokemon` + the Pokédex nav appear immediately; repeat for betting and the global leaderboard. Then commit.
 
-### Session 135 — 2026-10-18 (Design System Phase 0 — Doc Drift Corrected & Phase D/E Scoped)
+### Session 136 — 2026-10-18 (Design System Phase 0 — Doc Drift Corrected & Phase D/E Scoped)
 
 - **Scope:** Pre-flight for the design-system Phase D/E program. No UI/token changes.
 - **`docs/design-system/README.md`:** enforcement count corrected **4 → 6** (added `text-[Npx]` and tokenised size literals); migration table gained **row 7** for the Session 132 primitive kit (11 added → 29); the stale "Deferred: missing primitives …" paragraph replaced with **§6.1 Phase D adoption targets** (verified counts) and **§6.2 Phase E sweeps**.
@@ -993,7 +993,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` green.
 - **NEXT STEP:** Phase D — adopt `Tabs` in `devboard-view.tsx:321` first, then ship `Label` + `Skeleton`.
 
-### Session 136 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
+### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
 
 - **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
 - **D1 — Tabs:** `devboard-view.tsx` hand-rolled switcher (2 buttons + manual `role`/`aria-selected` + ternary panels) → controlled Radix `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` bound to the existing `section` state; the exact look is preserved via `rounded-2xl!`/`rounded-xl!` overrides (−23 lines). The two `role="tablist"`/`aria-selected` test assertions are unchanged.
@@ -1002,7 +1002,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` **163 files / 1500 tests** green; raw `<label>` outside `components/ui` = **0**.
 - **NEXT STEP:** Phase D — `Skeleton` (~20 `animate-pulse`), then `ScrollArea` (9) / `Avatar` (31) / `Separator` (3) / `Progress` (1), then per-page 9-state coverage + Phase E sweeps.
 
-### Session 137 — 2026-10-19 (YPT Linking via Shared Service Account on `afnan-jr`)
+### Session 138 — 2026-10-19 (YPT Linking via Shared Service Account on `afnan-jr`)
 
 - **Decision:** Replace per-user YPT email/password linking with a **shared service account**. Participants pick their own account from the service account's group roster; **DEV-only** approval (no ADMIN); no per-user credentials or tokens. (Supersedes the credential/session model described in Sessions 116–117.)
 - **New module:** `features/ypt/data/ypt-service-account.ts` — authenticated service client (from `YPT_EMAIL`/`YPT_PASSWORD`), roster scoped to `YPT_GROUP_IDS` with a ~60s TTL cache + in-flight de-dup, plus `findYptServiceMember` for sync.
@@ -1024,3 +1024,39 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Tests (+3):** same nickname+avatar collapses to one row (most-active canonical); different avatars stay separate; a collapsed row stays `LINKED` when any underlying id is linked to another user.
 - **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · YPT suite ✅ **66 tests** green.
 - **NEXT STEP:** unchanged from Session 137 (set env, run the migration, verify end-to-end).
+### Session 135 — 2026-10-19 (Route Security, Law L9 Boundaries, Edge Guard Expansion & Mobile Resilience on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.
+- **Scope & Objectives:**
+   - Audit new paths, routes, and guards introduced from the recent `dev` branch pull (`/leaderboard`, `/pokemon`, `/pokedex`, `/wallet`, `/api/feedback`).
+   - Relocate orphaned monorepo test suites into `apps/web/`.
+   - Implement canonical HTTP 308 redirects and expand Edge Middleware to deflect unauthenticated `/profile` requests.
+   - Enforce Law L9 by building missing loading skeletons and error boundaries for `/leaderboard` and `/pokemon`.
+   - Purge dead `/dashboard`, `/pokedex`, and `/admin/challenges/[id]/roster` cache revalidations in non-YPT actions.
+   - Add sliding-window rate limiting to public `POST /api/feedback`.
+   - Optimize navigation header container for 360px mobile viewports.
+- **Implementation Details:**
+   1. **Test Suite & Monorepo Alignment:**
+      - Relocated `middleware.test.ts` and `next.config.test.ts` from repository root to `apps/web/middleware.test.ts` and `apps/web/next.config.test.ts`. Purged root duplicates.
+   2. **Canonical Redirects & Edge Middleware:**
+      - Added HTTP 308 permanent redirects in `apps/web/next.config.mjs`: `/pokedex` and `/pokedex/:path*` -> `/pokemon`, `/leaderboards` -> `/leaderboard`, `/wallets` -> `/wallet`, `/pokemons` -> `/pokemon`, `/changelogs` -> `/changelog`.
+      - Expanded Edge Middleware (`apps/web/middleware.ts`) matcher to include `/profile`, deflecting unauthenticated traffic to `/` before Server Components run.
+   3. **Law L9 Route Boundaries:**
+      - Created `apps/web/app/leaderboard/loading.tsx` and `apps/web/app/leaderboard/error.tsx`.
+      - Created `apps/web/app/pokemon/loading.tsx` and `apps/web/app/pokemon/error.tsx`.
+      - Tested with `app/leaderboard/page.test.tsx` and `app/pokemon/page.test.tsx`.
+   4. **Ghost Revalidation Purge (Non-YPT):**
+      - Purged dead `revalidatePath("/dashboard")` from `admin-override.actions.ts` and `wager.actions.ts`.
+      - Purged dead `revalidatePath("/admin/challenges/*")` from `admin-override.actions.ts`.
+      - Purged redundant `revalidatePath("/pokedex")` from `pokemon.actions.ts`.
+      - Skipped all YPT-specific code per user instruction.
+   5. **Feedback Route Abuse Prevention:**
+      - Implemented sliding-window rate limiting in `POST /api/feedback` using `checkRateLimit` (max 5 submissions per 5-min window per IP). Returns HTTP 429 with `Retry-After`.
+      - Created comprehensive test suite `apps/web/app/api/feedback/route.test.ts`.
+   6. **Mobile Header Responsiveness:**
+      - Updated `AppHeader` in `apps/web/components/ui/header.tsx` with `overflow-x-auto scrollbar-none py-1` on the links container and `shrink-0` on nav links to guarantee clean, unclipped horizontal rendering on 360px viewports.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test:web`: ✅ 166 test files passed (1516/1516 tests green).
+   - `npm run build:web`: ✅ 18 routes + Edge Middleware compiled cleanly.
+- **NEXT STEP:** Review working tree and commit changes (`feat(routing): secure routes, add law l9 boundaries and mobile optimization`).
