@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
    AlertCircle,
@@ -14,6 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getLogRocketSessionURL } from "@/core/observability/logrocket";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
+import { discardFeedbackAttachmentAction } from "@/features/feedback/api/feedback-attachments.actions";
+import {
+   FeedbackAttachmentInput,
+   type DraftFeedbackAttachment,
+} from "@/features/feedback/presentation/feedback-attachment-input";
 
 interface FeedbackFormProps {
    onSuccess?: (code: string) => void;
@@ -28,10 +33,56 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [errorMessage, setErrorMessage] = useState<string | null>(null);
    const [submittedCode, setSubmittedCode] = useState<string | null>(null);
+   const [attachments, setAttachments] = useState<DraftFeedbackAttachment[]>(
+      []
+   );
+   const submittedRef = useRef(false);
+   const attachmentsRef = useRef(attachments);
+   attachmentsRef.current = attachments;
+
+   const attachmentsUploading = attachments.some(
+      (attachment) =>
+         attachment.status === "uploading" || attachment.status === "verifying"
+   );
+   const hasAttachmentError = attachments.some(
+      (attachment) => attachment.status === "error"
+   );
+
+   useEffect(() => {
+      return () => {
+         for (const attachment of attachmentsRef.current) {
+            if (attachment.localUrl) {
+               URL.revokeObjectURL(attachment.localUrl);
+            }
+         }
+         if (submittedRef.current) return;
+
+         for (const attachment of attachmentsRef.current) {
+            if (attachment.path) {
+               void discardFeedbackAttachmentAction({
+                  path: attachment.path,
+               }).catch(() => {});
+            }
+         }
+      };
+   }, []);
 
    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (isSubmitting) return;
+
+      if (attachmentsUploading) {
+         setErrorMessage(
+            "Please wait for the attachments to finish uploading."
+         );
+         return;
+      }
+      if (hasAttachmentError) {
+         setErrorMessage(
+            "Remove or retry the failed attachment before submitting."
+         );
+         return;
+      }
 
       // Client-side quick check
       if (title.trim().length < 3) {
@@ -57,6 +108,16 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
             }
          }
 
+         const attachmentPaths =
+            type === "bug"
+               ? attachments
+                    .filter(
+                       (attachment) =>
+                          attachment.status === "ready" && attachment.path
+                    )
+                    .map((attachment) => attachment.path as string)
+               : [];
+
          const res = await fetch("/api/feedback", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -66,6 +127,7 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
                description: description.trim(),
                url: pathname || window.location.pathname || "/",
                logrocketSessionId,
+               attachments: attachmentPaths,
             }),
          });
 
@@ -76,6 +138,15 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
          }
 
          const code = data.data?.code || "FB-OK";
+         const sentPaths = new Set(attachmentPaths);
+         submittedRef.current = true;
+         for (const attachment of attachments) {
+            if (attachment.path && !sentPaths.has(attachment.path)) {
+               void discardFeedbackAttachmentAction({
+                  path: attachment.path,
+               }).catch(() => {});
+            }
+         }
          setSubmittedCode(code);
          if (onSuccess) {
             onSuccess(code);
@@ -200,6 +271,14 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
             />
          </div>
 
+         {type === "bug" && (
+            <FeedbackAttachmentInput
+               attachments={attachments}
+               onChange={setAttachments}
+               disabled={isSubmitting}
+            />
+         )}
+
          {/* Error message */}
          {errorMessage && (
             <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
@@ -223,13 +302,18 @@ export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
 
             <button
                type="submit"
-               disabled={isSubmitting}
+               disabled={isSubmitting || attachmentsUploading}
                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white text-black text-sm font-medium hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
                {isSubmitting ? (
                   <>
                      <Loader2 className="h-4 w-4 animate-spin" />
                      <span>Submitting...</span>
+                  </>
+               ) : attachmentsUploading ? (
+                  <>
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                     <span>Uploading attachments...</span>
                   </>
                ) : (
                   <span>Submit Feedback</span>

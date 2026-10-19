@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-19 (Session 139 — Leaderboard rank ordering, hero pill removal, join CTA state, on `afnan-jr`)
+> **Last Updated:** 2026-10-19 (Session 142 — Automatic Jira ticket creation from feedback on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -90,19 +90,19 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ### 2.1 Shipped Beyond the Original P0 Spec
 
-| Capability                                            | Location                                                            | Notes                                                                                                                                                                                                              |
-| :---------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                |
-| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
-| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                                 |
-| LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                        |
-| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                 |
-| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`           | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                                            |
-| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`                    | Matches the Figma                                                                                                                                                                                                  |
-| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                         | Grants full admin plus developer access                                                                                                                                                                            |
-| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`         | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                                              |
-| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`             | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                                        |
-| Challenge Wrapped & Three-Condition lock              | `features/wrapped/`, `features/accountability/domain/punishment.ts` | Post-lock wrapped (`?tab=summary` + auto-popup, localStorage-first flags, 3-day auto-seen); challenge-linked tasks + soft delete; `evaluateLockOutcome` saves only on tasks+hours+winning team (ties never punish) |
+| Capability                                            | Location                                                            | Notes                                                                                                                                                                                                                  |
+| :---------------------------------------------------- | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                    |
+| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                                 |
+| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, bug-report image/video attachments (Supabase `feedback-attachments/`), Discord embeds, GitHub issues (fine-grained PAT), Jira Cloud issues (API token), LogRocket session link |
+| LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                            |
+| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                     |
+| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`           | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                                                |
+| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`                    | Matches the Figma                                                                                                                                                                                                      |
+| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                         | Grants full admin plus developer access                                                                                                                                                                                |
+| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`         | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                                                  |
+| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`             | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                                            |
+| Challenge Wrapped & Three-Condition lock              | `features/wrapped/`, `features/accountability/domain/punishment.ts` | Post-lock wrapped (`?tab=summary` + auto-popup, localStorage-first flags, 3-day auto-seen); challenge-linked tasks + soft delete; `evaluateLockOutcome` saves only on tasks+hours+winning team (ties never punish)     |
 
 ---
 
@@ -1003,6 +1003,42 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Tests:** repository rank-order/orderBy tests; scrambled-input domain sort tests; view ordering, pill-removal and CTA visibility tests; participant helper tests; page membership wiring tests.
 - **Docs:** new `docs/leaderboard/README.md` (§9.4); `CHANGELOG.md` user-facing entry.
 - **NEXT STEP:** none.
+
+### Session 140 — 2026-10-19 (Bug Feedback Image/Video Attachments on `afnan-jr`)
+
+- **Scope:** Bug reports now accept up to **3 media attachments** (PNG/JPEG/WebP/GIF ≤5 MB; MP4/WebM/MOV ≤50 MB). Suggestions remain text-only.
+- **Upload architecture:** Signed direct-to-Storage uploads (`createSignedUploadUrl`) so large videos bypass Vercel's ~4.5 MB request cap. Flow: `requestFeedbackAttachmentUploadAction` → browser XHR `PUT` → `confirmFeedbackAttachmentAction` (existence + size + magic-byte sniff, deleting invalid objects) → `POST /api/feedback` re-verifies each path before persisting.
+- **Storage:** bucket `SUPABASE_STORAGE_BUCKET` (`holdmetoit-bucket`), folder `SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER` (default `feedback-attachments`), object path `<folder>/<uuid>.<ext>`. New generic core helpers: `createSignedStorageUpload`, `getStorageObjectInfo`, `getStoragePublicUrl`, `deleteStorageObject`.
+- **Data:** new `FeedbackAttachment` model + `FeedbackAttachmentKind` enum (migration `20261019000000_add_feedback_attachments`); nested create through `createFeedbackRecord`; `isFeedbackAttachmentReferenced` guards cleanup.
+- **Domain:** new pure `feedback-attachment.ts` (limits, MIME/extension maps, magic-byte sniffing incl. MP4/MOV `ftyp` and WebM EBML, managed-path parsing). Zod schema accepts `attachments: string[]` (max 3) and the route rejects them for enhancements.
+- **UI:** `FeedbackAttachmentInput` (previews, progress, retry, 3-file cap, 360px-safe rows) rendered only for bugs; submit is blocked while uploading or while a failed item remains; removal/close discards unreferenced objects.
+- **Discord:** first image renders in `embed.image`; all attachments are linked in an `📎 Attachments (N)` field.
+- **Rate limits:** 30 requests / 10 min per IP for request, confirm, and discard actions.
+- **Docs:** new `docs/feedback/README.md` (§9.4); `FEATURES.md` §13.1 + matrix; `.env.example` / `README.md`; migrations README.
+- **NEXT STEP:** Apply `20261019000000_add_feedback_attachments` (`npm run db:migrate`), confirm the `holdmetoit-bucket` per-object limit is ≥50 MB and Storage CORS allows `PUT` from the web origin, then run the manual E2E in `docs/feedback/README.md` (image + video upload, remove-before-submit cleanup, Discord preview).
+
+### Session 141 — 2026-10-19 (Automatic GitHub Issue Creation from Feedback on `afnan-jr`)
+
+- **Scope:** Every bug report and suggestion now creates a GitHub issue alongside the Discord embed, using a repo-scoped **fine-grained PAT** via the REST Issues API. Enabled only when `GITHUB_TOKEN` + `GITHUB_REPO` are present; otherwise `SKIPPED`.
+- **Dispatch:** `POST /api/feedback` now runs Discord and GitHub in parallel (`Promise.allSettled`) after the DB commit. Neither can fail the submission. Results are persisted as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
+- **Issue content:** `[FB-N] title`, hidden `<!-- holdmetoit-feedback:FB-N -->` marker, type/page/reporter/LogRocket, description, and attachments (images as inline markdown, videos as links). Labels default to `bug` / `enhancement`; a GitHub `422` triggers one retry without labels. 10s request timeout; no automatic retry after a failure.
+- **Domain/data:** pure `features/feedback/domain/github-issue.ts` (title/body builder, limits 256/65,536, label/assignee normalization) and fail-soft `features/feedback/data/github-issue.service.ts` (`createGitHubIssue`, config resolution, error mapping).
+- **Schema:** `20261019010000_add_feedback_github_issue` adds `GitHubDeliveryStatus` and the four `Feedback` columns + index.
+- **Env:** `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_ISSUE_LABELS_BUG`, `GITHUB_ISSUE_LABELS_ENHANCEMENT`, `GITHUB_ISSUE_ASSIGNEES`, optional `GITHUB_API_URL`.
+- **Docs:** `docs/feedback/README.md` §2.4/§3/§4.7/§5/§6 updated; `FEATURES.md` §13.1 + matrix; `README.md`; migrations README.
+- **NEXT STEP:** Create the fine-grained PAT (Issues read/write on `Afnanpathan2004/holdmetoit`), set `GITHUB_TOKEN`/`GITHUB_REPO` in the deployed environment, ensure `bug`/`enhancement` labels exist, apply `20261019000000_add_feedback_github_issue` and `20261019010000_add_feedback_github_issue` after reconciling the local migration-history divergence, then run the GitHub E2E in `docs/feedback/README.md` §4.6.
+
+### Session 142 — 2026-10-19 (Automatic Jira Ticket Creation from Feedback on `afnan-jr`)
+
+- **Scope:** Every bug report and suggestion now creates a **Jira Cloud** issue alongside Discord and GitHub, using a server-side API token (Basic auth). Enabled only when `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` are present; otherwise `SKIPPED`.
+- **Dispatch:** `POST /api/feedback` runs Discord, GitHub, and Jira in parallel (`Promise.allSettled`). None can fail the submission. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
+- **Mapping:** `bug → Task`, `enhancement → Story` (fixed). The target KAN project has no `Bug` issue type, so bugs use `Task` and remain distinguishable by the appended `bug` label. `JIRA_LABELS` defaults to `holdmetoit,feedback`; the type label is appended. Optional `JIRA_ASSIGNEE_ACCOUNT_ID`.
+- **Description:** Atlassian Document Format via a pure builder — plain-text marker `holdmetoit-feedback:FB-N`, type/page/reporter/LogRocket, description paragraphs, and attachment links (images and videos are links; Jira does not inline remote media).
+- **Domain/data:** `features/feedback/domain/jira-issue.ts` (summary 255, description text 30k, ADF helpers, labels) and fail-soft `features/feedback/data/jira-issue.service.ts` (config resolution, REST v3 POST, Jira `errors` extraction).
+- **Schema:** `20261019020000_add_feedback_jira_issue` adds `JiraDeliveryStatus` and the four `Feedback` columns + index.
+- **Env:** `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`, `JIRA_ASSIGNEE_ACCOUNT_ID`, `JIRA_LABELS`.
+- **Docs:** `docs/feedback/README.md` §2.4/§3/§4.4/§4.6/§4.8/§5/§6; `FEATURES.md` §13.1 + matrix; `README.md`; migrations README.
+- **NEXT STEP:** Ensure project KAN has the `Task` and `Story` issue types (it does), set `JIRA_*` in the deployed environment, apply `20261019020000_add_feedback_jira_issue` after reconciling the local migration-history divergence, then run the Jira E2E in `docs/feedback/README.md` §4.6. Existing `FAILED` rows do not auto-retry; new submissions will create `Task`/`Story` issues.
 
 ### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
 

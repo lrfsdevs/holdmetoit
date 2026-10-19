@@ -19,6 +19,7 @@ export interface StorageConfig {
    bucket: string;
    eventBannersFolder: string;
    punishmentPfpsFolder: string;
+   feedbackAttachmentsFolder: string;
 }
 
 export function getStorageConfig(): StorageConfig {
@@ -58,12 +59,28 @@ export function getStorageConfig(): StorageConfig {
       );
    }
 
+   // Optional for backwards compatibility; the canonical folder is the default.
+   const feedbackAttachmentsFolder = folder(
+      process.env.SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER?.trim() ||
+         "feedback-attachments",
+      "SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER"
+   );
+   if (
+      feedbackAttachmentsFolder === eventBannersFolder ||
+      feedbackAttachmentsFolder === punishmentPfpsFolder
+   ) {
+      throw new Error(
+         "Feedback attachments must use a different storage folder."
+      );
+   }
+
    return {
       supabaseUrl: required.SUPABASE_URL!.trim().replace(/\/+$/, ""),
       serviceRoleKey: required.SUPABASE_SERVICE_ROLE_KEY!.trim(),
       bucket: required.SUPABASE_STORAGE_BUCKET!.trim(),
       eventBannersFolder,
       punishmentPfpsFolder,
+      feedbackAttachmentsFolder,
    };
 }
 
@@ -81,6 +98,16 @@ export function getStorageUrlConfig(
          purpose === "event-banner"
             ? config.eventBannersFolder
             : config.punishmentPfpsFolder,
+   };
+}
+
+export function getFeedbackAttachmentsUrlConfig(
+   config = getStorageConfig()
+): StorageUrlConfig {
+   return {
+      supabaseUrl: config.supabaseUrl,
+      bucket: config.bucket,
+      folder: config.feedbackAttachmentsFolder,
    };
 }
 
@@ -158,6 +185,106 @@ export async function deleteManagedChallengeImage(
       const config = getStorageConfig();
       const path = managedImagePath(url, config);
       if (!path) return;
+      const { error } = await getSupabaseAdminClient(config)
+         .storage.from(config.bucket)
+         .remove([path]);
+      if (error) {
+         logger.warn(logEvents.storageCleanupSkipped, {
+            context: { path, reason: error.message },
+         });
+      }
+   } catch (error) {
+      logger.error(logEvents.storageCleanupSkipped, { error });
+   }
+}
+
+export interface SignedStorageUpload {
+   path: string;
+   token: string;
+   signedUrl: string;
+   publicUrl: string;
+}
+
+function buildStorageObjectPath(
+   folder: string,
+   id: string,
+   ext: string
+): string {
+   const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
+   return `${cleanFolder}/${id}.${ext}`;
+}
+
+/**
+ * Issues a short-lived signed upload URL so the browser can PUT large files
+ * directly to Storage, bypassing Vercel's serverless request-size ceiling.
+ */
+export async function createSignedStorageUpload(input: {
+   folder: string;
+   ext: string;
+}): Promise<SignedStorageUpload> {
+   const config = getStorageConfig();
+   const path = buildStorageObjectPath(
+      input.folder,
+      crypto.randomUUID(),
+      input.ext
+   );
+   const storage = getSupabaseAdminClient(config).storage.from(config.bucket);
+
+   const { data, error } = await storage.createSignedUploadUrl(path, {
+      upsert: false,
+   });
+   if (error || !data) {
+      throw new Error(
+         `Failed to create signed upload URL: ${error?.message ?? "unknown error"}`
+      );
+   }
+
+   const { data: publicData } = storage.getPublicUrl(data.path);
+   return {
+      path: data.path,
+      token: data.token,
+      signedUrl: data.signedUrl,
+      publicUrl: publicData.publicUrl,
+   };
+}
+
+export function getStoragePublicUrl(
+   path: string,
+   config = getStorageConfig()
+): string {
+   const { data } = getSupabaseAdminClient(config)
+      .storage.from(config.bucket)
+      .getPublicUrl(path);
+   return data.publicUrl;
+}
+
+export interface StorageObjectInfo {
+   sizeBytes: number;
+   contentType: string | null;
+}
+
+/** Returns object metadata when it exists, otherwise `null`. */
+export async function getStorageObjectInfo(
+   path: string,
+   config = getStorageConfig()
+): Promise<StorageObjectInfo | null> {
+   const { data, error } = await getSupabaseAdminClient(config)
+      .storage.from(config.bucket)
+      .info(path);
+   if (error || !data) return null;
+
+   return {
+      sizeBytes: data.size ?? 0,
+      contentType: data.contentType ?? null,
+   };
+}
+
+/** Deletes a single object. Fail-soft: storage cleanup never breaks a flow. */
+export async function deleteStorageObject(
+   path: string,
+   config = getStorageConfig()
+): Promise<void> {
+   try {
       const { error } = await getSupabaseAdminClient(config)
          .storage.from(config.bucket)
          .remove([path]);
