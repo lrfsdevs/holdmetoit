@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
    captureLogRocketException,
@@ -328,10 +329,14 @@ export function ChallengeCreatorWizard() {
             </h3>
 
             <div>
-               <label className="block text-xs font-medium text-text-primary mb-1.5">
+               <Label
+                  htmlFor="wizard-challenge-title"
+                  className="block text-xs font-medium text-text-primary mb-1.5"
+               >
                   Challenge Title
-               </label>
+               </Label>
                <Input
+                  id="wizard-challenge-title"
                   type="text"
                   placeholder="e.g. Midterm Reading Week Sprint"
                   value={title}
@@ -344,10 +349,14 @@ export function ChallengeCreatorWizard() {
             </div>
 
             <div>
-               <label className="block text-xs font-medium text-text-primary mb-1.5">
+               <Label
+                  htmlFor="wizard-challenge-description"
+                  className="block text-xs font-medium text-text-primary mb-1.5"
+               >
                   Challenge Description
-               </label>
+               </Label>
                <Textarea
+                  id="wizard-challenge-description"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -358,11 +367,15 @@ export function ChallengeCreatorWizard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
-                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                  <Label
+                     htmlFor="wizard-start-at"
+                     className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5"
+                  >
                      <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>Start Date & Time (UTC)</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="wizard-start-at"
                      type="datetime-local"
                      value={startAt}
                      onChange={(e) => setStartAt(e.target.value)}
@@ -371,11 +384,15 @@ export function ChallengeCreatorWizard() {
                   />
                </div>
                <div>
-                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                  <Label
+                     htmlFor="wizard-end-at"
+                     className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5"
+                  >
                      <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>End Date & Time (UTC)</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="wizard-end-at"
                      type="datetime-local"
                      value={endAt}
                      onChange={(e) => setEndAt(e.target.value)}

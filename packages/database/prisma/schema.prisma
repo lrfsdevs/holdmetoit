@@ -922,7 +922,6 @@ model YptConnection {
   yptUserId             String              @db.VarChar(64)
   yptNickname           String?             @db.VarChar(128)
   status                YptConnectionStatus @default(NOT_CONNECTED)
-  encryptedRefreshToken String?             @db.Text
   lastSyncedAt          DateTime?
   lastSyncError         String?             @db.Text
   metadata              Json?

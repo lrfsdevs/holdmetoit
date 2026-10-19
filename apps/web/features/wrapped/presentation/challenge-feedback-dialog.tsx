@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { CheckCircle2Icon, Loader2Icon, XIcon } from "lucide-react";
 
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 import {
@@ -172,12 +173,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q1: Consistency */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-consistency"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            1. Did the Team Battles help improve your study
                            consistency?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-consistency"
+                           className="grid gap-2"
+                        >
                            {consistencyOptions.map((option) => {
                               const selected = consistency === option;
                               return (
@@ -211,12 +219,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q2: Fairness Rating */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-fairness"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            2. How would you rate the fairness of the previous
                            Team Battles?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid grid-cols-5 gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-fairness"
+                           className="grid grid-cols-5 gap-2"
+                        >
                            {[1, 2, 3, 4, 5].map((score) => {
                               const selected = fairnessRating === score;
                               return (
@@ -243,12 +258,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q3: Tracking Method */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-tracking"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            3. Which tracking method do you prefer for future
                            challenges?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-tracking"
+                           className="grid gap-2"
+                        >
                            {trackingPreferenceOptions.map((option) => {
                               const selected = trackingPreference === option;
                               return (
@@ -284,11 +306,15 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q4: Suggestions / Complaints */}
                      <div className="flex flex-col gap-2">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           htmlFor="feedback-team-battle"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            4. Suggestions to improve Team Battles or any
                            complaints?
-                        </label>
+                        </Label>
                         <Textarea
+                           id="feedback-team-battle"
                            rows={3}
                            value={teamBattleFeedback}
                            onChange={(e) =>
@@ -302,12 +328,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q5: Work / School hours */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-work-school"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            5. Should we adjust targets to account for work or
                            school hours?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-work-school"
+                           className="grid gap-2"
+                        >
                            {workSchoolHoursOptions.map((option) => {
                               const selected = workSchoolHours === option;
                               return (
@@ -341,12 +374,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q6: Solo operating style */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-solo-style"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            6. How would you prefer the Solo Challenge to
                            operate?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-solo-style"
+                           className="grid gap-2"
+                        >
                            {soloStyleOptions.map((option) => {
                               const selected = soloStyle === option;
                               return (
@@ -380,12 +420,19 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q7: Punishment PFP System */}
                      <div className="flex flex-col gap-2.5">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           id="feedback-solo-punishment"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            7. Should we keep the punishment PFP system for the
                            Solo Challenge?{" "}
                            <span className="text-feedback-success">*</span>
-                        </label>
-                        <div className="grid gap-2">
+                        </Label>
+                        <div
+                           role="group"
+                           aria-labelledby="feedback-solo-punishment"
+                           className="grid gap-2"
+                        >
                            {soloPunishmentOptions.map((option) => {
                               const selected = soloPunishment === option;
                               return (
@@ -419,11 +466,15 @@ export function ChallengeFeedbackDialog({
 
                      {/* Q8: Ideas & Thoughts */}
                      <div className="flex flex-col gap-2">
-                        <label className="font-sans text-sm font-semibold text-text-primary">
+                        <Label
+                           htmlFor="feedback-solo-ideas"
+                           className="font-sans text-sm font-semibold text-text-primary"
+                        >
                            8. Any other ideas or thoughts for the upcoming Solo
                            Challenge?
-                        </label>
+                        </Label>
                         <Textarea
+                           id="feedback-solo-ideas"
                            rows={3}
                            value={soloIdeas}
                            onChange={(e) => setSoloIdeas(e.target.value)}

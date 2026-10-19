@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncUserYptStudy } from "./ypt-sync.service";
 import { prisma } from "@/core/db";
 import { YptConnectionStatus } from "@prisma/client";
-import {
-   restoreYptClientSession,
-   getYptUserStudyStatus,
-} from "../data/ypt-client.service";
+import { findYptServiceMember } from "../data/ypt-service-account";
 import { ingestYptActivity } from "./ypt-ingest.service";
 
 vi.mock("@/core/db", () => ({
@@ -14,6 +11,7 @@ vi.mock("@/core/db", () => ({
          findUnique: vi.fn(),
       },
       yptConnection: {
+         upsert: vi.fn(),
          updateMany: vi.fn(),
       },
       yptSyncRun: {
@@ -22,100 +20,86 @@ vi.mock("@/core/db", () => ({
    },
 }));
 
-vi.mock("@/core/security/encryption", () => ({
-   decryptSensitiveToken: vi.fn((cipher: string) => "decrypted-refresh-token"),
-}));
-
-vi.mock("../data/ypt-client.service", () => ({
-   restoreYptClientSession: vi.fn(),
-   getYptUserStudyStatus: vi.fn(),
+vi.mock("../data/ypt-service-account", () => ({
+   findYptServiceMember: vi.fn(),
 }));
 
 vi.mock("./ypt-ingest.service", () => ({
    ingestYptActivity: vi.fn(),
 }));
 
+const rosterMember = {
+   yptUserId: "11338944",
+   nickname: "Afnan Pathan",
+   avatarUrl: null,
+   todayStudySeconds: 7200,
+   isStudying: false,
+   currentSubject: "Chemistry",
+   studyDate: "2026-10-16",
+   groupIds: ["111"],
+};
+
 describe("features/ypt/api/ypt-sync.service", () => {
    beforeEach(() => {
       vi.clearAllMocks();
    });
 
-   it("rejects sync if user has no connection or is not VERIFIED", async () => {
+   it("rejects sync when the user has no verified yptId", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
          id: "user-1",
-         yptConnection: {
-            id: "conn-1",
-            status: YptConnectionStatus.PENDING_VERIFICATION,
-         },
+         yptId: null,
+         yptConnection: null,
       } as any);
 
       const result = await syncUserYptStudy("user-1");
 
       expect(result.ok).toBe(false);
       expect(result.code).toBe("YPT_NOT_VERIFIED");
+      expect(findYptServiceMember).not.toHaveBeenCalled();
       expect(ingestYptActivity).not.toHaveBeenCalled();
    });
 
-   it("handles session expiration by requesting reauthentication", async () => {
+   it("returns MEMBER_NOT_FOUND when the roster has no matching member", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
          id: "user-1",
+         yptId: "11338944",
          yptConnection: {
             id: "conn-1",
-            yptUserId: "11338944",
-            status: YptConnectionStatus.VERIFIED,
-            encryptedRefreshToken: "encrypted-token",
+            lastSyncedAt: null,
          },
       } as any);
-
-      vi.mocked(restoreYptClientSession).mockRejectedValue(
-         new Error("Session expired")
-      );
+      vi.mocked(findYptServiceMember).mockResolvedValue(null);
 
       const result = await syncUserYptStudy("user-1");
 
       expect(result.ok).toBe(false);
-      expect(result.code).toBe("REAUTHENTICATION_REQUIRED");
+      expect(result.code).toBe("MEMBER_NOT_FOUND");
       expect(prisma.yptConnection.updateMany).toHaveBeenCalledWith(
          expect.objectContaining({
             data: expect.objectContaining({
-               status: YptConnectionStatus.REAUTHENTICATION_REQUIRED,
+               status: YptConnectionStatus.SYNC_ERROR,
             }),
          })
       );
    });
 
-   it("successfully synchronizes study statistics and credits coins", async () => {
+   it("synchronizes study time from the service account and credits coins", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
          id: "user-1",
+         yptId: "11338944",
          yptConnection: {
             id: "conn-1",
-            yptUserId: "11338944",
-            status: YptConnectionStatus.VERIFIED,
-            encryptedRefreshToken: "encrypted-token",
+            lastSyncedAt: null,
          },
       } as any);
-
-      vi.mocked(restoreYptClientSession).mockResolvedValue({} as any);
-      vi.mocked(getYptUserStudyStatus).mockResolvedValue({
-         yptUserId: 11338944,
-         nickname: "Afnan Pathan",
-         todayStudyMs: 7200000,
-         liveStudyMs: 7200000,
-         todayStudySeconds: 7200, // 2 hours
-         liveStudySeconds: 7200,
-         isStudying: false,
-         isPaused: false,
-         currentSubject: "Chemistry",
-         studyDate: "2026-10-16",
-      });
-
+      vi.mocked(findYptServiceMember).mockResolvedValue(rosterMember as any);
       vi.mocked(ingestYptActivity).mockResolvedValue({
          ok: true,
          userId: "user-1",
          participantId: "part-1",
          studyLogId: "log-1",
          durationSeconds: 7200,
-         coinsCredited: 200, // 7200 / 36 = 200 coins
+         coinsCredited: 200,
          isDuplicate: false,
       });
 
@@ -124,12 +108,47 @@ describe("features/ypt/api/ypt-sync.service", () => {
       expect(result.ok).toBe(true);
       expect(result.importedDurationSeconds).toBe(7200);
       expect(result.coinsCredited).toBe(200);
+      expect(findYptServiceMember).toHaveBeenCalledWith("11338944");
+      expect(ingestYptActivity).toHaveBeenCalledWith(
+         expect.objectContaining({
+            yptId: "11338944",
+            date: "2026-10-16",
+            durationSeconds: 7200,
+         }),
+         "YPT_MANUAL"
+      );
       expect(prisma.yptSyncRun.create).toHaveBeenCalledWith(
          expect.objectContaining({
             data: expect.objectContaining({
                status: "SUCCESS",
                coinsCredited: 200,
                importedDurationSeconds: 7200,
+            }),
+         })
+      );
+   });
+
+   it("marks SYNC_ERROR when the roster cannot be fetched", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+         id: "user-1",
+         yptId: "11338944",
+         yptConnection: {
+            id: "conn-1",
+            lastSyncedAt: null,
+         },
+      } as any);
+      vi.mocked(findYptServiceMember).mockRejectedValue(
+         new Error("YPT unreachable")
+      );
+
+      const result = await syncUserYptStudy("user-1");
+
+      expect(result.ok).toBe(false);
+      expect(result.code).toBe("RETRIEVAL_FAILED");
+      expect(prisma.yptConnection.updateMany).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({
+               status: YptConnectionStatus.SYNC_ERROR,
             }),
          })
       );

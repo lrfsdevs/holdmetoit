@@ -107,15 +107,16 @@ layers (`requireDevUser`, `hasAdminPrivileges`).
 
 ## 6. Lifecycle & migration status
 
-| Slice                                           | Status                                                                                                                              |
-| :---------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — tiers defined in `globals.css`              | ✅ done                                                                                                                             |
-| 1 — hex → semantic tokens                       | ✅ done (2,703 utilities, 78 files; raw SVG/style hex → `var(--color-*)`)                                                           |
-| 2 — `obsidian-*` → semantic                     | ✅ done (894 usages, 38 files)                                                                                                      |
-| 3 — component tokens adopted by `components/ui` | ✅ done (button, badge, input, textarea, select, card, dialog, alert-dialog, sheet, dropdown-menu, popover, command, header)        |
-| 4 — `obsidian-*` alias layer deleted            | ✅ done (`tailwind.config.ts`)                                                                                                      |
-| 5 — ESLint enforcement + CI lint step           | ✅ done (4 rules, verified with a probe)                                                                                            |
-| 6 — typography + recurring-size tokenisation    | ✅ done (332 font sizes → 11 tokens; 9 recurring sizes → control/dropdown/artwork/panel tokens; layout math + one-offs allowlisted) |
+| Slice                                           | Status                                                                                                                                                               |
+| :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — tiers defined in `globals.css`              | ✅ done                                                                                                                                                              |
+| 1 — hex → semantic tokens                       | ✅ done (2,703 utilities, 78 files; raw SVG/style hex → `var(--color-*)`)                                                                                            |
+| 2 — `obsidian-*` → semantic                     | ✅ done (894 usages, 38 files)                                                                                                                                       |
+| 3 — component tokens adopted by `components/ui` | ✅ done (button, badge, input, textarea, select, card, dialog, alert-dialog, sheet, dropdown-menu, popover, command, header)                                         |
+| 4 — `obsidian-*` alias layer deleted            | ✅ done (`tailwind.config.ts`)                                                                                                                                       |
+| 5 — ESLint enforcement + CI lint step           | ✅ done (6 rules, verified with a probe)                                                                                                                             |
+| 6 — typography + recurring-size tokenisation    | ✅ done (332 font sizes → 11 tokens; 9 recurring sizes → control/dropdown/artwork/panel tokens; layout math + one-offs allowlisted)                                  |
+| 7 — missing UI primitives added (11 → 29)       | ✅ done (tabs, switch, tooltip, progress, avatar, separator, label, alert, radio-group, scroll-area, skeleton; `TooltipProvider` mounted; `primitives.test.tsx` 9/9) |
 
 **Enforcement is live** (`apps/web/.eslintrc.json`, core `no-restricted-syntax`):
 
@@ -123,6 +124,8 @@ layers (`requireDevUser`, `hasAdminPrivileges`).
 2. No raw hex in `fill`/`stroke`/`color` JSX attributes.
 3. No `var(--primitive-*)` outside `globals.css`.
 4. No legacy `obsidian-*` tokens.
+5. No arbitrary px font sizes (`text-[Npx]`).
+6. No re-introduced tokenised size literals (`min-h`/`h`/`min-w`/`max-w-[44|50|74|170|200|240|400|620|840px]`).
 
 `npm run lint -w @holdmetoit/web` is now an explicit CI step and lints
 `app · components · features · core · lib`.
@@ -131,10 +134,28 @@ Known allowlists (data, not theme tokens): `features/challenges/presentation/cha
 (preset team colours stored as `color: "#…"` object properties — not matched by the
 class/attribute rules) and test fixtures.
 
-Deferred: missing primitives (tabs, switch, tooltip, progress, avatar,
-separator, skeleton, label); page-by-page adoption + 9-state coverage; a11y/motion/
-responsive sweeps; DevBoard living styleguide. Arbitrary **layout math** and one-off
-dimensions remain intentional and are not linted.
+### 6.1 Phase D — primitive adoption (in progress)
+
+The kit is complete; adoption across the app is ~0%. Targets (verified 2026-10-18):
+
+| Primitive                          | Replacement targets                                                                           |
+| :--------------------------------- | :-------------------------------------------------------------------------------------------- |
+| `label`                            | ✅ done — 67 labels / 19 files (primitive neutralised; `htmlFor`/`id` + `role="group"` wired) |
+| `skeleton`                         | ~20 `animate-pulse` (10 `app/**/loading.tsx` + component-level)                               |
+| `scroll-area`                      | 9 feature containers (`overflow-y-auto`; 5 already inside `components/ui`)                    |
+| `avatar`                           | 31 `<Image>` across ~22 files (decide: wrap `next/image`?)                                    |
+| `tabs`                             | 🔶 DevBoard done; `cockpit-tasks-section` pending                                             |
+| `separator`                        | 3 `<hr>` (`challenge-overview-tab`)                                                           |
+| `progress`                         | 1 (`trophy-progress-bar`)                                                                     |
+| `switch` / `radio-group` / `alert` | 0 adopters — adopt on contact                                                                 |
+
+### 6.2 Phase E — sweeps (not started)
+
+a11y (focus-visible, ≥44px targets, full keyboard nav, modal focus trap/restore) ·
+360px responsive pass · motion vs `prefers-reduced-motion` · DevBoard "Design"
+living styleguide · real-browser visual pass (manual).
+
+Arbitrary **layout math** and one-off dimensions remain intentional and are not linted.
 
 **Decommission:** complete — the `obsidian-*` keys are gone from
 `tailwind.config.ts` and this document is the sole reference.

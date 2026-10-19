@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
    Wrench,
@@ -152,11 +153,15 @@ export function AdminTrophyAdjustmentDialog({
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                <div>
-                  <label className="text-xs font-semibold text-text-secondary block mb-1.5">
+                  <Label
+                     htmlFor="trophy-adjustment-amount"
+                     className="text-xs font-semibold text-text-secondary block mb-1.5"
+                  >
                      Adjustment Amount (+ or -)
-                  </label>
+                  </Label>
                   <div className="flex items-center gap-2">
                      <Input
+                        id="trophy-adjustment-amount"
                         type="number"
                         step={1}
                         value={amount}
@@ -197,10 +202,14 @@ export function AdminTrophyAdjustmentDialog({
                </div>
 
                <div>
-                  <label className="text-xs font-semibold text-text-secondary block mb-1.5">
+                  <Label
+                     htmlFor="trophy-adjustment-reason"
+                     className="text-xs font-semibold text-text-secondary block mb-1.5"
+                  >
                      Audit Reason (Required)
-                  </label>
+                  </Label>
                   <Input
+                     id="trophy-adjustment-reason"
                      type="text"
                      value={reason}
                      onChange={(e) => setReason(e.target.value)}

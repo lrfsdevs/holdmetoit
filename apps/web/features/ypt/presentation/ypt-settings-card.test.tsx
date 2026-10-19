@@ -7,13 +7,12 @@ import { YptConnectionStatus } from "@prisma/client";
 
 vi.mock("../api/ypt-connection.actions", () => ({
    getYptConnectionStatusAction: vi.fn(),
-   connectYptAccountAction: vi.fn(),
-   getRealYptGroupMembersAction: vi
-      .fn()
-      .mockResolvedValue({ ok: true, data: [] }),
-   submitYptSelectionAction: vi.fn(),
    syncYptStudyNowAction: vi.fn(),
-   disconnectYptAccountAction: vi.fn(),
+}));
+
+vi.mock("../api/ypt-claim.actions", () => ({
+   getYptRosterAction: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+   submitYptSelectionAction: vi.fn(),
 }));
 
 describe("features/ypt/presentation/ypt-settings-card", () => {
@@ -21,7 +20,7 @@ describe("features/ypt/presentation/ypt-settings-card", () => {
       vi.clearAllMocks();
    });
 
-   it("renders 'Connect Yeolpumta Account' and card title when not connected", () => {
+   it("renders the roster selector when not linked", () => {
       vi.mocked(getYptConnectionStatusAction).mockResolvedValue({
          ok: true,
          data: {
@@ -29,32 +28,30 @@ describe("features/ypt/presentation/ypt-settings-card", () => {
             yptUserId: "",
             yptNickname: null,
             status: YptConnectionStatus.NOT_CONNECTED,
-            hasSavedSession: false,
             lastSyncedAt: null,
             lastSyncError: null,
          },
       });
 
-      const element = <YptSettingsCard />;
-      const html = renderToStaticMarkup(element);
+      const html = renderToStaticMarkup(<YptSettingsCard />);
 
       expect(html).toContain("Yeolpumta (YPT) Study Integration");
-      expect(html).toContain("Connect Yeolpumta Account");
-      expect(html).toContain("Connect YPT");
-      expect(html).toContain("Not connected");
+      expect(html).toContain("Find your Yeolpumta account");
+      expect(html).toContain("Request Verification");
+      expect(html).toContain("Not linked");
+      // No credential collection anywhere.
+      expect(html).not.toContain("ypt-password");
+      expect(html).not.toContain("Yeolpumta Password");
    });
 
-   it("renders session inactive notice when verified but hasSavedSession is false (CASE 3)", () => {
-      const element = <YptSettingsCard initialYptId="11338944" />;
-      const html = renderToStaticMarkup(element);
+   it("renders the verified state with the refresh action", () => {
+      const html = renderToStaticMarkup(
+         <YptSettingsCard initialYptId="11338944" />
+      );
 
       expect(html).toContain("Verified Participant");
       expect(html).toContain("11338944");
-      expect(html).toContain("Verified • Session Inactive");
-      expect(html).toContain(
-         "Identity verified, but Yeolpumta session is not connected"
-      );
-      expect(html).toContain("Connect YPT Session");
-      expect(html).not.toContain("Study synchronization is active.");
+      expect(html).toContain("Refresh my hours");
+      expect(html).not.toContain("Find your Yeolpumta account");
    });
 });

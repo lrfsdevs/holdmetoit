@@ -34,16 +34,6 @@ export interface YptIngestResult {
    code?: string;
 }
 
-export const linkYptSchema = z.object({
-   yptId: z
-      .string()
-      .min(1, "YPT ID cannot be empty")
-      .max(64, "YPT ID too long")
-      .regex(/^[0-9a-zA-Z_-]+$/, "YPT ID contains invalid characters"),
-});
-
-export type LinkYptInput = z.infer<typeof linkYptSchema>;
-
 export const yptManualImportItemSchema = z.object({
    date: z
       .string()

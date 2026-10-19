@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-   linkYptSchema,
-   yptIngestSchema,
-   yptManualImportSchema,
-} from "./ypt.types";
+import { yptIngestSchema, yptManualImportSchema } from "./ypt.types";
 
 describe("yptIngestSchema", () => {
    it("accepts valid payload with discordId", () => {
@@ -58,23 +54,6 @@ describe("yptIngestSchema", () => {
          date: "15-10-2026",
          durationSeconds: 3600,
       });
-      expect(res.success).toBe(false);
-   });
-});
-
-describe("linkYptSchema", () => {
-   it("accepts valid alphanumeric yptId", () => {
-      const res = linkYptSchema.safeParse({ yptId: "StudyMaster_99" });
-      expect(res.success).toBe(true);
-   });
-
-   it("rejects empty yptId", () => {
-      const res = linkYptSchema.safeParse({ yptId: "" });
-      expect(res.success).toBe(false);
-   });
-
-   it("rejects yptId with illegal characters", () => {
-      const res = linkYptSchema.safeParse({ yptId: "user@domain.com" });
       expect(res.success).toBe(false);
    });
 });

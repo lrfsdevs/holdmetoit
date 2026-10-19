@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Flag, Plus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
    AlertDialog,
    AlertDialogAction,
@@ -316,53 +317,33 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
    return (
       <div className="space-y-6">
-         {/* Section Switcher: Feature Flags | YPT Verification */}
-         <div
-            role="tablist"
-            aria-label="DevBoard sections"
-            className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-surface-primary border border-border-default"
+         <Tabs
+            value={section}
+            onValueChange={(value) => setSection(value as "flags" | "ypt")}
+            className="space-y-6"
          >
-            <button
-               type="button"
-               role="tab"
-               aria-selected={section === "flags"}
-               id="devboard-tab-flags"
-               aria-controls="devboard-panel-flags"
-               onClick={() => setSection("flags")}
-               className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-                  section === "flags"
-                     ? "bg-surface-nested text-text-primary border border-border-strong"
-                     : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
-               }`}
+            {/* Section Switcher: Feature Flags | YPT Verification */}
+            <TabsList
+               aria-label="DevBoard sections"
+               className="inline-flex flex-wrap items-center justify-start gap-1.5 rounded-2xl! border border-border-default bg-surface-primary p-1"
             >
-               <Flag className="h-3.5 w-3.5" />
-               Feature Flags
-            </button>
-            <button
-               type="button"
-               role="tab"
-               aria-selected={section === "ypt"}
-               id="devboard-tab-ypt"
-               aria-controls="devboard-panel-ypt"
-               onClick={() => setSection("ypt")}
-               className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
-                  section === "ypt"
-                     ? "bg-surface-nested text-text-primary border border-border-strong"
-                     : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary"
-               }`}
-            >
-               <UserCheck className="h-3.5 w-3.5" />
-               YPT Verification
-            </button>
-         </div>
+               <TabsTrigger
+                  value="flags"
+                  className="inline-flex items-center gap-1.5 rounded-xl! px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 data-[state=active]:border data-[state=active]:border-border-strong data-[state=active]:bg-surface-nested data-[state=active]:text-text-primary data-[state=inactive]:hover:bg-surface-tertiary"
+               >
+                  <Flag className="h-3.5 w-3.5" />
+                  Feature Flags
+               </TabsTrigger>
+               <TabsTrigger
+                  value="ypt"
+                  className="inline-flex items-center gap-1.5 rounded-xl! px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 data-[state=active]:border data-[state=active]:border-border-strong data-[state=active]:bg-surface-nested data-[state=active]:text-text-primary data-[state=inactive]:hover:bg-surface-tertiary"
+               >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  YPT Verification
+               </TabsTrigger>
+            </TabsList>
 
-         {section === "flags" ? (
-            <div
-               id="devboard-panel-flags"
-               role="tabpanel"
-               aria-labelledby="devboard-tab-flags"
-               className="space-y-6"
-            >
+            <TabsContent value="flags" className="mt-0 space-y-6">
                {/* DevBoard Header with Status Pills, New Flag, and Search/Filters */}
                <DevBoardHeader
                   totalCount={totalCount}
@@ -426,16 +407,12 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                      onDelete={handleDelete}
                   />
                )}
-            </div>
-         ) : (
-            <div
-               id="devboard-panel-ypt"
-               role="tabpanel"
-               aria-labelledby="devboard-tab-ypt"
-            >
+            </TabsContent>
+
+            <TabsContent value="ypt" className="mt-0">
                <YptVerificationPanel />
-            </div>
-         )}
+            </TabsContent>
+         </Tabs>
 
          {/* Editor Modal */}
          <FlagEditorModal

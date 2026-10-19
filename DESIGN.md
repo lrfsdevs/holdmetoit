@@ -92,10 +92,11 @@ elevation, opacity and motion primitives are declared in the same `:root` block.
 | **Purple / Dusk**     | `bg-accent-bg`           | `border-accent`           | `text-accent-text`           |
 | **Crimson / Forfeit** | `bg-feedback-error-bg`   | `border-feedback-error`   | `text-feedback-error-text`   |
 
-### 2.4 Legacy alias layer (temporary)
+### 2.4 Legacy aliases (removed)
 
-`obsidian-*` still resolves (values kept in `tailwind.config.ts`) while migration slices
-2–4 run; it is removed in slice 4. Full guide: `docs/design-system/README.md`.
+The temporary `obsidian-*` alias layer was deleted in migration slice 4 and no longer
+resolves — `tailwind.config.ts` holds no `obsidian` block. Use Tier-2 semantic tokens
+only. Full guide: `docs/design-system/README.md`.
 
 ---
 

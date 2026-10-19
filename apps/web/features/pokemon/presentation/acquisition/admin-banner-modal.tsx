@@ -10,6 +10,7 @@ import { BannerViewModel } from "../../data/acquisition.repository";
 import { BannerStatus } from "../../domain/acquisition/banner-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -309,10 +310,14 @@ export function AdminBannerModal({
 
                      <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                           <label className="block text-text-tertiary mb-1 font-medium">
+                           <Label
+                              htmlFor="banner-name"
+                              className="block text-text-tertiary mb-1 font-medium"
+                           >
                               Banner Name
-                           </label>
+                           </Label>
                            <Input
+                              id="banner-name"
                               required
                               value={name}
                               onChange={(e) => {
@@ -329,10 +334,14 @@ export function AdminBannerModal({
                            />
                         </div>
                         <div>
-                           <label className="block text-text-tertiary mb-1 font-medium">
+                           <Label
+                              htmlFor="banner-slug"
+                              className="block text-text-tertiary mb-1 font-medium"
+                           >
                               Slug (URL)
-                           </label>
+                           </Label>
                            <Input
+                              id="banner-slug"
                               required
                               value={slug}
                               onChange={(e) =>
@@ -349,10 +358,14 @@ export function AdminBannerModal({
                      </div>
 
                      <div>
-                        <label className="block text-text-tertiary mb-1 font-medium text-xs">
+                        <Label
+                           htmlFor="banner-description"
+                           className="block text-text-tertiary mb-1 font-medium text-xs"
+                        >
                            Description
-                        </label>
+                        </Label>
                         <Textarea
+                           id="banner-description"
                            required
                            rows={2}
                            value={description}
@@ -364,10 +377,14 @@ export function AdminBannerModal({
 
                      <div className="grid grid-cols-3 gap-3 text-xs">
                         <div>
-                           <label className="block text-text-tertiary mb-1 font-medium">
+                           <Label
+                              htmlFor="banner-pull-cost"
+                              className="block text-text-tertiary mb-1 font-medium"
+                           >
                               Pull Cost (Coins)
-                           </label>
+                           </Label>
                            <Input
+                              id="banner-pull-cost"
                               type="number"
                               min={1}
                               value={pullCost}
@@ -378,10 +395,14 @@ export function AdminBannerModal({
                            />
                         </div>
                         <div>
-                           <label className="block text-text-tertiary mb-1 font-medium">
+                           <Label
+                              htmlFor="banner-hard-pity"
+                              className="block text-text-tertiary mb-1 font-medium"
+                           >
                               Hard Pity Pulls
-                           </label>
+                           </Label>
                            <Input
+                              id="banner-hard-pity"
                               type="number"
                               min={1}
                               value={hardPity}
@@ -392,14 +413,20 @@ export function AdminBannerModal({
                            />
                         </div>
                         <div>
-                           <label className="block text-text-tertiary mb-1 font-medium">
+                           <Label
+                              htmlFor="banner-target-rarity"
+                              className="block text-text-tertiary mb-1 font-medium"
+                           >
                               Pity Target Rarity
-                           </label>
+                           </Label>
                            <Select
                               value={targetRarity}
                               onValueChange={setTargetRarity}
                            >
-                              <SelectTrigger className="h-9 rounded-xl border-border-default bg-surface-elevated text-xs text-white">
+                              <SelectTrigger
+                                 id="banner-target-rarity"
+                                 className="h-9 rounded-xl border-border-default bg-surface-elevated text-xs text-white"
+                              >
                                  <SelectValue placeholder="LEGENDARY" />
                               </SelectTrigger>
                               <SelectContent>
@@ -436,10 +463,14 @@ export function AdminBannerModal({
 
                         <div className="grid grid-cols-3 gap-2 pt-1 text-meta">
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-normal"
+                                 className="text-text-tertiary"
+                              >
                                  Normal ({(normalRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-normal"
                                  type="number"
                                  value={normalRate}
                                  onChange={(e) =>
@@ -449,10 +480,14 @@ export function AdminBannerModal({
                               />
                            </div>
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-uncommon"
+                                 className="text-text-tertiary"
+                              >
                                  Uncommon ({(uncommonRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-uncommon"
                                  type="number"
                                  value={uncommonRate}
                                  onChange={(e) =>
@@ -464,10 +499,14 @@ export function AdminBannerModal({
                               />
                            </div>
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-rare"
+                                 className="text-text-tertiary"
+                              >
                                  Rare ({(rareRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-rare"
                                  type="number"
                                  value={rareRate}
                                  onChange={(e) =>
@@ -477,10 +516,14 @@ export function AdminBannerModal({
                               />
                            </div>
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-epic"
+                                 className="text-text-tertiary"
+                              >
                                  Epic ({(epicRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-epic"
                                  type="number"
                                  value={epicRate}
                                  onChange={(e) =>
@@ -490,10 +533,14 @@ export function AdminBannerModal({
                               />
                            </div>
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-legendary"
+                                 className="text-text-tertiary"
+                              >
                                  Legendary ({(legendaryRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-legendary"
                                  type="number"
                                  value={legendaryRate}
                                  onChange={(e) =>
@@ -505,10 +552,14 @@ export function AdminBannerModal({
                               />
                            </div>
                            <div>
-                              <label className="text-text-tertiary">
+                              <Label
+                                 htmlFor="banner-rate-mythical"
+                                 className="text-text-tertiary"
+                              >
                                  Mythical ({(mythicalRate / 100).toFixed(1)}%)
-                              </label>
+                              </Label>
                               <Input
+                                 id="banner-rate-mythical"
                                  type="number"
                                  value={mythicalRate}
                                  onChange={(e) =>

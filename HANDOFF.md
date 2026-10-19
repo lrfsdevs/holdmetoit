@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-18 (Session 134 — Feature Flags: rollout-only control, master switch removed, on `afnan`)
+> **Last Updated:** 2026-10-19 (Session 137 — YPT linking reworked to a shared service account; per-user credentials & tokens removed, on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -25,7 +25,7 @@
 | Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                                                                                                                                            |
 | Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
 | Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile                                                                                                                                                           |
-| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits                                                                                                                                                                |
+| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified (Session 137 rework): a shared YPT **service account** (`YPT_EMAIL`/`YPT_PASSWORD`/`YPT_GROUP_IDS`) reads the group roster; users pick their own account from the list (no email/password), DEV-only approval, and **no per-user tokens**. Live study-hour sync (1 coin / 36s, fractional carry) now runs through the service account.                                                |
 
 ### 1.1 Live Routes
 
@@ -36,7 +36,7 @@
 | `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
-| `/admin`                                      | Host management console for YPT claims verification, audited trophy adjustments, and challenge operations                                                  | `ADMIN` / `DEV`                        |
+| `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
@@ -165,6 +165,12 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > 5. Apply the Pokémon catalogue normalization migration on the hosted DB (**backup first** — it is a one-time, non-reversible backfill that drops `PokemonSpecies.metadata`), then seed the catalogue:
 >    - `npx prisma migrate deploy`
 >    - `npm run db:seed:pokemon`
+>
+> **DS PROGRAM TRACK (separate from the product gate above):**
+> Continue design-system Phase D/E — see `docs/design-system/README.md` §6.1–6.2.
+> Order: ✅ DevBoard `Tabs` · ✅ `Label` (67) → **next:** `Skeleton` (~20) →
+> `ScrollArea` (9) / `Avatar` (31, decide `next/image`) / `Separator` (3) / `Progress` (1)
+> → per-page 9-state coverage → a11y/360px/motion sweeps → DevBoard "Design" styleguide.
 
 ---
 
@@ -977,6 +983,47 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** `docs/feature-flags/README.md` §1–§3, §5–§7, §9 rewritten to the rollout-only model.
 - **NEXT STEP:** In `/devboard`, set `pokemon_system_v1` to **Global** and confirm `/pokemon` + the Pokédex nav appear immediately; repeat for betting and the global leaderboard. Then commit.
 
+### Session 136 — 2026-10-18 (Design System Phase 0 — Doc Drift Corrected & Phase D/E Scoped)
+
+- **Scope:** Pre-flight for the design-system Phase D/E program. No UI/token changes.
+- **`docs/design-system/README.md`:** enforcement count corrected **4 → 6** (added `text-[Npx]` and tokenised size literals); migration table gained **row 7** for the Session 132 primitive kit (11 added → 29); the stale "Deferred: missing primitives …" paragraph replaced with **§6.1 Phase D adoption targets** (verified counts) and **§6.2 Phase E sweeps**.
+- **`DESIGN.md` §2.4:** "Legacy alias layer (temporary)" → "Legacy aliases (removed)" — the `obsidian-*` block was deleted in slice 4.
+- **`components/ui/card.tsx`:** retained (not dead code — reserved for upcoming surfaces) and marked; inventory stays **29**.
+- **Branch status recorded:** `a48bd8f` is in `dev`/`origin/dev` (`dev == afnan-jr == c8f9447`); `main` trails. Header branch line refreshed.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` green.
+- **NEXT STEP:** Phase D — adopt `Tabs` in `devboard-view.tsx:321` first, then ship `Label` + `Skeleton`.
+
+### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
+
+- **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
+- **D1 — Tabs:** `devboard-view.tsx` hand-rolled switcher (2 buttons + manual `role`/`aria-selected` + ternary panels) → controlled Radix `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` bound to the existing `section` state; the exact look is preserved via `rounded-2xl!`/`rounded-xl!` overrides (−23 lines). The two `role="tablist"`/`aria-selected` test assertions are unchanged.
+- **D2 — Label (67 sites / 19 files):** `label.tsx` default neutralised (dropped `text-meta` + `leading-none`, kept `font-medium`/`text-text-secondary`) so adoption is visually neutral; every raw `<label>` → `<Label>`; **43** single-control `htmlFor`+`id` pairs added; **3** non-native controls wired (2 Radix `Select` triggers + 1 Popover trigger button); **16** group labels associated via `id` + `role="group" aria-labelledby` (button grids / HH:MM:SS input rows). The 5 pre-existing `htmlFor` sites are preserved.
+- **Finding:** `cn` (tailwind-merge) does not recognise this project's custom `rounded-*` scale, so a primitive's radius default survives a plain override — D1 therefore needed the first `/important` utilities in the repo. Candidate follow-up: an `extendTailwindMerge` config teaching it the custom scales, which would remove the need for `!`.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` **163 files / 1500 tests** green; raw `<label>` outside `components/ui` = **0**.
+- **NEXT STEP:** Phase D — `Skeleton` (~20 `animate-pulse`), then `ScrollArea` (9) / `Avatar` (31) / `Separator` (3) / `Progress` (1), then per-page 9-state coverage + Phase E sweeps.
+
+### Session 138 — 2026-10-19 (YPT Linking via Shared Service Account on `afnan-jr`)
+
+- **Decision:** Replace per-user YPT email/password linking with a **shared service account**. Participants pick their own account from the service account's group roster; **DEV-only** approval (no ADMIN); no per-user credentials or tokens. (Supersedes the credential/session model described in Sessions 116–117.)
+- **New module:** `features/ypt/data/ypt-service-account.ts` — authenticated service client (from `YPT_EMAIL`/`YPT_PASSWORD`), roster scoped to `YPT_GROUP_IDS` with a ~60s TTL cache + in-flight de-dup, plus `findYptServiceMember` for sync.
+- **Participant actions:** `getYptRosterAction` (labels `AVAILABLE`/`PENDING`/`VERIFIED`/`LINKED`) and `submitYptSelectionAction` now live in `api/ypt-claim.actions.ts`. Removed `connectYptAccountAction`, `getRealYptGroupMembersAction`, `disconnectYptAccountAction`, and the unmounted `adminConfirmYptClaimAction`/`adminRejectYptClaimAction`.
+- **Sync:** `syncUserYptStudy` reads study time from the service-account roster (no per-user token); `YptSyncRun` + 1 coin / 36s rewards unchanged.
+- **UI:** `ypt-settings-card.tsx` renders `YptMemberSelector` directly (no credential modal); the selector now sources `getYptRosterAction`. Approval stays **DEV-only** in the DevBoard (`ypt-verification-panel.tsx`); `/admin` untouched.
+- **Schema:** dropped `YptConnection.encryptedRefreshToken` (migration `20261024000000_ypt_shared_service_account`); Prisma client regenerated.
+- **Removed dead code:** `api/ypt.actions.ts` (legacy unverified `linkYptAccountAction` + `importYptLogsAction`), `ypt.repository.linkUserYptId`, `linkYptSchema` in `domain/ypt.types.ts`, `core/security/encryption.ts` (+ test), and the duplicate approval functions in `ypt-connection.repository.ts`.
+- **Env:** added `YPT_EMAIL`, `YPT_PASSWORD`, `YPT_GROUP_IDS`, `YPT_INGEST_API_KEY` to `apps/web/.env.example` (and `.env`).
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **163 files / 1497 tests** green · `npm run build:web` ✅ 17 routes + middleware (existing lint warnings only).
+- **Docs:** new `docs/ypt/README.md` (§9.4).
+- **NEXT STEP:** Set real `YPT_EMAIL`/`YPT_PASSWORD`/`YPT_GROUP_IDS` in the deployed web env (the service account must be a member of the challenge group), run `npm run db:migrate`, then verify end-to-end: participant picks their account in `/wallet` → DEV approves in the DevBoard → `User.yptId` set → "Refresh my hours" credits coins.
+
+### Session 138 — 2026-10-19 (YPT Roster De-dup & Selector Cleanup on `afnan-jr`)
+
+- **Problem:** the member selector showed the same person twice (same name, different YPT ids). `getYptServiceRoster` already merges by `yptUserId`, so the extra rows are distinct ids that share a display name.
+- **Roster de-dup:** `getYptRosterWithStatus` (`features/ypt/data/ypt-claim.repository.ts`) now collapses rows sharing a normalized `nickname + avatarUrl`, keeping the most-active account (`max todayStudySeconds`), unioning `groupIds`, with claim precedence `LINKED > VERIFIED > PENDING > AVAILABLE`. `getYptServiceRoster` is intentionally **not** collapsed so `findYptServiceMember` (sync) can resolve every id.
+- **Selector cleanup:** `ypt-member-selector.tsx` item is now avatar + nickname (+ `You`); removed the raw YPT id, the study status (`Studying`/`Today`), and the Available/Pending/Verified chips — only the `Already linked` lock renders (else nothing). The selected-value trigger likewise drops the id and study status, and search is nickname-only.
+- **Tests (+3):** same nickname+avatar collapses to one row (most-active canonical); different avatars stay separate; a collapsed row stays `LINKED` when any underlying id is linked to another user.
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · YPT suite ✅ **66 tests** green.
+- **NEXT STEP:** unchanged from Session 137 (set env, run the migration, verify end-to-end).
 ### Session 135 — 2026-10-19 (Route Security, Law L9 Boundaries, Edge Guard Expansion & Mobile Resilience on `krish`)
 
 - **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.

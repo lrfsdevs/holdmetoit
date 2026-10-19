@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
@@ -136,10 +137,14 @@ export function EnrollmentModal({
                </DialogTitle>
                <form onSubmit={handleEnroll} className="space-y-6">
                   <div className="space-y-3">
-                     <label className="block text-xl font-bold text-white tracking-tight">
+                     <Label
+                        htmlFor="enrollment-target-hours"
+                        className="block text-xl font-bold text-white tracking-tight"
+                     >
                         So how many hours can you put in?
-                     </label>
+                     </Label>
                      <Input
+                        id="enrollment-target-hours"
                         type="number"
                         min={1}
                         max={100}
@@ -152,10 +157,14 @@ export function EnrollmentModal({
                   </div>
 
                   <div className="space-y-3">
-                     <label className="block text-xl font-bold text-white tracking-tight">
+                     <Label
+                        htmlFor="enrollment-leave-days"
+                        className="block text-xl font-bold text-white tracking-tight"
+                     >
                         How many leaves you might take
-                     </label>
+                     </Label>
                      <Input
+                        id="enrollment-leave-days"
                         type="number"
                         min={0}
                         max={3}

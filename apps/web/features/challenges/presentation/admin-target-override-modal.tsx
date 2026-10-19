@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    captureLogRocketException,
@@ -285,10 +286,17 @@ export function AdminTargetOverrideModal({
             <form onSubmit={handleSubmit} className="space-y-5">
                {/* Clock Input (HH:MM:SS) */}
                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-text-secondary block">
+                  <Label
+                     id="target-override-clock"
+                     className="text-xs font-bold uppercase tracking-wider text-text-secondary block"
+                  >
                      New Target Commitment (HH:MM:SS)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  </Label>
+                  <div
+                     role="group"
+                     aria-labelledby="target-override-clock"
+                     className="grid grid-cols-3 gap-2 sm:gap-3"
+                  >
                      <div>
                         <span className="text-label text-text-tertiary uppercase font-bold block mb-1">
                            Hours (1–105)
@@ -417,10 +425,14 @@ export function AdminTargetOverrideModal({
 
                {/* Audit Reason */}
                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-text-secondary block">
+                  <Label
+                     htmlFor="target-override-reason"
+                     className="text-xs font-bold uppercase tracking-wider text-text-secondary block"
+                  >
                      Audit Reason
-                  </label>
+                  </Label>
                   <Input
+                     id="target-override-reason"
                      type="text"
                      value={reason}
                      onChange={(e) => setReason(e.target.value)}
