@@ -161,6 +161,9 @@ export function UserNav({
    );
 }
 
+/**
+ * Renders scrollable navigation and account controls using the effective preview role.
+ */
 export function AppHeader({
    user,
    isActualAdmin,

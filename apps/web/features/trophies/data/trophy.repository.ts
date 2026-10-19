@@ -185,6 +185,10 @@ export interface TrophyLeaderboardEntry {
    tierConfig: ReturnType<typeof getRankForTrophies>["tierConfig"];
 }
 
+/**
+ * Returns paginated or complete trophy standings with global ranks and match statistics.
+ * Trophy balances sort descending, with user IDs breaking ties in ascending order.
+ */
 export async function getTrophyLeaderboard(
    options: { page?: number; limit?: number; all?: boolean } = {}
 ) {

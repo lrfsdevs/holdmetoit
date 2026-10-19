@@ -27,6 +27,9 @@ export async function getYptConnectionStatusAction() {
    }
 }
 
+/**
+ * Syncs the signed-in user’s study time through the shared service account and refreshes affected pages.
+ */
 export async function syncYptStudyNowAction() {
    try {
       const user = await requireSessionUser();

@@ -27,6 +27,9 @@ export interface ChallengeFeedbackDialogProps {
    onSuccess?: () => void;
 }
 
+/**
+ * Collects post-challenge feedback and records successful submission in local wrapped state.
+ */
 export function ChallengeFeedbackDialog({
    isOpen,
    challengeId,

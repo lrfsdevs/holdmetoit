@@ -31,6 +31,9 @@ interface TrophyLeaderboardViewProps {
    hasActiveChallenge?: boolean;
 }
 
+/**
+ * Renders searchable, sortable trophy standings and hides the join link during active enrollment.
+ */
 export function TrophyLeaderboardView({
    initialEntries = [],
    currentUserId,

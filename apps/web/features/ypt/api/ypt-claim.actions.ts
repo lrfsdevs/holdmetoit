@@ -137,6 +137,10 @@ export async function submitYptClaimAction(input: SubmitYptClaimInput) {
    }
 }
 
+/**
+ * Returns searchable roster entries with claim status for the signed-in user.
+ * Limits roster lookups per user and returns sanitized upstream errors.
+ */
 export async function getYptRosterAction(search?: string) {
    try {
       const user = await requireSessionUser();
@@ -178,6 +182,9 @@ export async function getYptRosterAction(search?: string) {
    }
 }
 
+/**
+ * Validates and rate-limits the signed-in user’s roster selection before submitting a pending claim.
+ */
 export async function submitYptSelectionAction(input: SubmitYptSelectionInput) {
    try {
       const user = await requireSessionUser();

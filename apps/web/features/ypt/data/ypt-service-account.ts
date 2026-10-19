@@ -26,6 +26,9 @@ let inflightClient: Promise<YptJs> | null = null;
 let rosterCache: { data: YptRosterMember[]; at: number } | null = null;
 let inflightRoster: Promise<YptRosterMember[]> | null = null;
 
+/**
+ * Reads trimmed service-account credentials and throws when either value is missing.
+ */
 function getServiceCredentials(): { email: string; password: string } {
    const email = process.env.YPT_EMAIL?.trim();
    const password = process.env.YPT_PASSWORD?.trim();
@@ -39,6 +42,9 @@ function getServiceCredentials(): { email: string; password: string } {
    return { email, password };
 }
 
+/**
+ * Parses the comma-separated group scope, returning an empty list when no groups are configured.
+ */
 export function getConfiguredYptGroupIds(): string[] {
    return (process.env.YPT_GROUP_IDS || "")
       .split(",")
@@ -46,6 +52,9 @@ export function getConfiguredYptGroupIds(): string[] {
       .filter(Boolean);
 }
 
+/**
+ * Creates and eagerly authenticates a YPT client using the configured service account.
+ */
 async function buildServiceClient(): Promise<YptJs> {
    const credentials = getServiceCredentials();
    const client = new YptJs({ credentials });
@@ -77,14 +86,23 @@ export async function getYptServiceClient(): Promise<YptJs> {
    return inflightClient;
 }
 
+/**
+ * Clears the cached client so a later request can authenticate again; in-flight work is preserved.
+ */
 export function resetYptServiceClient(): void {
    cachedClient = null;
 }
 
+/**
+ * Clears the cached roster without cancelling an in-flight roster request.
+ */
 export function resetYptServiceRoster(): void {
    rosterCache = null;
 }
 
+/**
+ * Converts an upstream member into a roster entry with whole nonnegative study seconds and unique group IDs.
+ */
 function normalizeMember(
    member: GroupMember | UnifiedMember,
    groupIds: string[]
@@ -104,6 +122,9 @@ function normalizeMember(
    };
 }
 
+/**
+ * Merges a roster entry by YPT ID, combining group IDs and retaining the greatest study duration.
+ */
 function mergeMembers(
    map: Map<string, YptRosterMember>,
    member: YptRosterMember
@@ -129,6 +150,10 @@ function mergeMembers(
    });
 }
 
+/**
+ * Loads and merges configured group rosters, tolerating individual group failures.
+ * Throws if every configured group fails; without a group scope, loads all joined members.
+ */
 async function loadRoster(): Promise<YptRosterMember[]> {
    const client = await getYptServiceClient();
    const configuredGroupIds = getConfiguredYptGroupIds();

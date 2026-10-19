@@ -24,6 +24,9 @@ interface YptMemberSelectorProps {
    disabled?: boolean;
 }
 
+/**
+ * Loads a searchable shared-account roster and allows selection of identities not linked to another user.
+ */
 export function YptMemberSelector({
    selectedMember,
    onSelectMember,
@@ -56,6 +59,9 @@ export function YptMemberSelector({
       return m.nickname.toLowerCase().includes(q);
    });
 
+   /**
+    * Selects an available roster member and closes the picker, ignoring identities linked to another user.
+    */
    const handleSelect = (member: YptRosterEntry) => {
       if (member.claimStatus === "LINKED") return; // cannot select already verified by another
       onSelectMember(member);

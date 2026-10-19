@@ -15,6 +15,9 @@ export interface AdminAdjustmentDialogProps {
    onSuccess?: () => void;
 }
 
+/**
+ * Collects a target user, signed coin adjustment, and audit reason for admin submission.
+ */
 export function AdminAdjustmentDialog({
    isOpen,
    onClose,

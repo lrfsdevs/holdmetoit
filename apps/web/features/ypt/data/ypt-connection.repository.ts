@@ -19,6 +19,9 @@ export interface YptConnectionSummary {
    } | null;
 }
 
+/**
+ * Prioritizes a verified claim or stored YPT ID, then pending or rejected claims, over connection status.
+ */
 function deriveStatus({
    connectionStatus,
    claimStatus,

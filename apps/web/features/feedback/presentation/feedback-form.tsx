@@ -20,6 +20,9 @@ interface FeedbackFormProps {
    onCancel?: () => void;
 }
 
+/**
+ * Submits page feedback with optional bug session context and displays its tracking code.
+ */
 export function FeedbackForm({ onSuccess, onCancel }: FeedbackFormProps) {
    const pathname = usePathname();
    const [type, setType] = useState<FeedbackType>("bug");
