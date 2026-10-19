@@ -2,15 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import {
-   ChevronDown,
-   User as UserIcon,
-   CheckCircle2,
-   Lock,
-   Clock,
-   Loader2,
-   BookOpen,
-} from "lucide-react";
+import { ChevronDown, User as UserIcon, Lock, Loader2 } from "lucide-react";
 import {
    Popover,
    PopoverContent,
@@ -23,12 +15,12 @@ import {
    CommandItem,
    CommandList,
 } from "@/components/ui/command";
-import { getRealYptGroupMembersAction } from "../api/ypt-connection.actions";
-import type { YptRealGroupMemberItem } from "../data/ypt-connection.repository";
+import { getYptRosterAction } from "../api/ypt-claim.actions";
+import type { YptRosterEntry } from "../data/ypt-claim.repository";
 
 interface YptMemberSelectorProps {
-   selectedMember: YptRealGroupMemberItem | null;
-   onSelectMember: (member: YptRealGroupMemberItem) => void;
+   selectedMember: YptRosterEntry | null;
+   onSelectMember: (member: YptRosterEntry) => void;
    disabled?: boolean;
 }
 
@@ -39,13 +31,13 @@ export function YptMemberSelector({
 }: YptMemberSelectorProps) {
    const [isOpen, setIsOpen] = useState(false);
    const [searchQuery, setSearchQuery] = useState("");
-   const [members, setMembers] = useState<YptRealGroupMemberItem[]>([]);
+   const [members, setMembers] = useState<YptRosterEntry[]>([]);
    const [isLoading, setIsLoading] = useState(false);
 
    const loadMembers = React.useCallback(async () => {
       setIsLoading(true);
       try {
-         const res = await getRealYptGroupMembersAction();
+         const res = await getYptRosterAction();
          if (res.ok && res.data) {
             setMembers(res.data);
          }
@@ -61,14 +53,10 @@ export function YptMemberSelector({
    const filteredMembers = members.filter((m) => {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
-      return (
-         m.nickname.toLowerCase().includes(q) ||
-         m.yptUserId.includes(q) ||
-         (m.currentSubject && m.currentSubject.toLowerCase().includes(q))
-      );
+      return m.nickname.toLowerCase().includes(q);
    });
 
-   const handleSelect = (member: YptRealGroupMemberItem) => {
+   const handleSelect = (member: YptRosterEntry) => {
       if (member.claimStatus === "LINKED") return; // cannot select already verified by another
       onSelectMember(member);
       setIsOpen(false);
@@ -114,20 +102,9 @@ export function YptMemberSelector({
                               <UserIcon className="h-3.5 w-3.5 m-auto text-text-tertiary" />
                            )}
                         </div>
-                        <div className="truncate">
-                           <span className="font-semibold text-white">
-                              {selectedMember.nickname}
-                           </span>
-                           <span className="text-meta text-brand-1 font-mono pl-2">
-                              YPT ID: {selectedMember.yptUserId}
-                           </span>
-                           {selectedMember.isStudying && (
-                              <span className="text-label text-emerald-400 pl-2">
-                                 ● Studying{" "}
-                                 {selectedMember.currentSubject || ""}
-                              </span>
-                           )}
-                        </div>
+                        <span className="font-semibold text-white truncate">
+                           {selectedMember.nickname}
+                        </span>
                      </div>
                   ) : (
                      <span className="text-text-tertiary">
@@ -151,7 +128,7 @@ export function YptMemberSelector({
                   <CommandInput
                      value={searchQuery}
                      onValueChange={setSearchQuery}
-                     placeholder="Search members by nickname or YPT ID..."
+                     placeholder="Search members by nickname..."
                      autoFocus
                   />
                   <CommandList>
@@ -171,8 +148,6 @@ export function YptMemberSelector({
                            const isSelected =
                               selectedMember?.yptUserId === m.yptUserId;
                            const isLinked = m.claimStatus === "LINKED";
-                           const isPending = m.claimStatus === "PENDING";
-                           const isVerified = m.claimStatus === "VERIFIED";
 
                            return (
                               <CommandItem
@@ -203,67 +178,25 @@ export function YptMemberSelector({
                                           <UserIcon className="h-4 w-4 m-auto text-text-tertiary" />
                                        )}
                                     </div>
-                                    <div className="text-left truncate">
-                                       <div className="font-semibold text-white flex items-center gap-1.5 truncate">
-                                          <span className="truncate">
-                                             {m.nickname}
+                                    <div className="font-semibold text-white flex items-center gap-1.5 truncate">
+                                       <span className="truncate">
+                                          {m.nickname}
+                                       </span>
+                                       {m.isSelf && (
+                                          <span className="text-label bg-brand-1/15 text-brand-1 border border-brand-1/30 px-1.5 py-0.2 rounded font-mono">
+                                             You
                                           </span>
-                                          {m.isSelf && (
-                                             <span className="text-label bg-brand-1/15 text-brand-1 border border-brand-1/30 px-1.5 py-0.2 rounded font-mono">
-                                                You
-                                             </span>
-                                          )}
-                                          {m.isStudying && (
-                                             <span className="text-label text-emerald-400 bg-emerald-500/10 px-1 rounded flex items-center gap-1">
-                                                <BookOpen className="h-2.5 w-2.5" />
-                                                {m.currentSubject || "Studying"}
-                                             </span>
-                                          )}
-                                       </div>
-                                       <div className="text-meta text-text-tertiary flex items-center gap-2 font-mono">
-                                          <span>ID: {m.yptUserId}</span>
-                                          {m.todayStudySeconds > 0 && (
-                                             <span className="text-emerald-400">
-                                                Today:{" "}
-                                                {Math.floor(
-                                                   m.todayStudySeconds / 3600
-                                                )}
-                                                h{" "}
-                                                {Math.floor(
-                                                   (m.todayStudySeconds %
-                                                      3600) /
-                                                      60
-                                                )}
-                                                m
-                                             </span>
-                                          )}
-                                       </div>
+                                       )}
                                     </div>
                                  </div>
 
-                                 {/* Right: Status Tag */}
-                                 <div className="shrink-0 pl-2">
-                                    {isLinked ? (
-                                       <span className="inline-flex items-center gap-1 text-label text-zinc-500 font-medium px-2 py-0.5 rounded-md bg-zinc-800/60 border border-zinc-700/40">
-                                          <Lock className="h-2.5 w-2.5" />
-                                          Already linked
-                                       </span>
-                                    ) : isPending ? (
-                                       <span className="inline-flex items-center gap-1 text-label text-amber-400 font-medium px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30">
-                                          <Clock className="h-2.5 w-2.5" />
-                                          Pending
-                                       </span>
-                                    ) : isVerified ? (
-                                       <span className="inline-flex items-center gap-1 text-label text-emerald-400 font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30">
-                                          <CheckCircle2 className="h-2.5 w-2.5" />
-                                          Verified
-                                       </span>
-                                    ) : (
-                                       <span className="inline-flex items-center gap-1 text-label text-emerald-400/90 font-medium px-2 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/20">
-                                          ✓ Available
-                                       </span>
-                                    )}
-                                 </div>
+                                 {/* Right: lock only when already linked */}
+                                 {isLinked && (
+                                    <span className="inline-flex items-center gap-1 text-label text-zinc-500 font-medium px-2 py-0.5 rounded-md bg-zinc-800/60 border border-zinc-700/40 shrink-0">
+                                       <Lock className="h-2.5 w-2.5" />
+                                       Already linked
+                                    </span>
+                                 )}
                               </CommandItem>
                            );
                         })

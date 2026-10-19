@@ -31,13 +31,6 @@ export async function findUserByYptOrDiscordId(identifiers: {
    return null;
 }
 
-export async function linkUserYptId(userId: string, yptId: string) {
-   return prisma.user.update({
-      where: { id: userId },
-      data: { yptId },
-   });
-}
-
 export async function getUserYptId(userId: string): Promise<string | null> {
    const user = await prisma.user.findUnique({
       where: { id: userId },

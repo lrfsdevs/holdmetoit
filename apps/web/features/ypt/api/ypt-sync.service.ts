@@ -1,10 +1,6 @@
 import { prisma } from "@/core/db";
 import { YptConnectionStatus } from "@prisma/client";
-import { decryptSensitiveToken } from "@/core/security/encryption";
-import {
-   restoreYptClientSession,
-   getYptUserStudyStatus,
-} from "../data/ypt-client.service";
+import { findYptServiceMember } from "../data/ypt-service-account";
 import { ingestYptActivity } from "./ypt-ingest.service";
 import { updateYptConnectionStatus } from "../data/ypt-connection.repository";
 import { createLogger, logEvents } from "@/core/observability/logger";
@@ -22,13 +18,14 @@ export interface YptSyncResult {
 }
 
 /**
- * Synchronizes Yeolpumta study time for an authenticated and verified user.
- * Communicates with YPT API via ypt-js, ingests study activity, and awards virtual coins.
+ * Synchronizes Yeolpumta study time for a verified user.
+ * Study time is read from the shared YPT service account's group roster
+ * (no per-user session), ingested as a daily log, and rewarded with coins.
  */
 export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
    const now = new Date();
 
-   // 1. Load connection and user
+   // 1. Load the user and their YPT connection
    const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -48,10 +45,10 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
       };
    }
 
-   const conn = user.yptConnection;
+   const yptId = user.yptId;
 
-   // 2. Validate verification status
-   if (!conn || conn.status !== YptConnectionStatus.VERIFIED) {
+   // 2. The user must have a verified YPT identity
+   if (!yptId) {
       return {
          ok: false,
          code: "YPT_NOT_VERIFIED",
@@ -60,106 +57,42 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
          importedDurationSeconds: 0,
          coinsCredited: 0,
          isDuplicate: false,
-         lastSyncedAt: conn?.lastSyncedAt || null,
+         lastSyncedAt: user.yptConnection?.lastSyncedAt ?? null,
       };
    }
 
-   // 3. Check for saved session credentials
-   if (!conn.encryptedRefreshToken) {
-      return {
-         ok: false,
-         code: "NO_ACTIVE_SESSION",
-         message:
-            "No active YPT session found. Please re-authenticate your YPT account to enable automatic study synchronization.",
-         importedDurationSeconds: 0,
-         coinsCredited: 0,
-         isDuplicate: false,
-         lastSyncedAt: conn.lastSyncedAt,
-      };
-   }
-
-   let refreshToken: string;
-   try {
-      refreshToken = decryptSensitiveToken(conn.encryptedRefreshToken);
-   } catch {
-      await updateYptConnectionStatus({
-         userId,
-         status: YptConnectionStatus.REAUTHENTICATION_REQUIRED,
-         errorMessage: "Saved session token corrupted or expired.",
-      });
-      return {
-         ok: false,
-         code: "SESSION_CORRUPTED",
-         message:
-            "Your saved YPT session is corrupted. Please re-enter your YPT credentials.",
-         importedDurationSeconds: 0,
-         coinsCredited: 0,
-         isDuplicate: false,
-         lastSyncedAt: conn.lastSyncedAt,
-      };
-   }
-
-   // 4. Restore session using ypt-js
-   let yptClient;
-   try {
-      yptClient = await restoreYptClientSession(refreshToken);
-   } catch (error) {
-      logger.warn(logEvents.yptSyncFailed, {
-         context: {
-            action: "syncUserYptStudy",
-            reason: "Session restore failed",
+   // 3. Ensure a connection row exists so sync runs can be audited
+   const conn =
+      user.yptConnection ??
+      (await prisma.yptConnection.upsert({
+         where: { userId },
+         create: {
             userId,
+            yptUserId: yptId,
+            status: YptConnectionStatus.VERIFIED,
          },
-         error,
-      });
+         update: {
+            yptUserId: yptId,
+            status: YptConnectionStatus.VERIFIED,
+         },
+      }));
 
-      await updateYptConnectionStatus({
-         userId,
-         status: YptConnectionStatus.REAUTHENTICATION_REQUIRED,
-         errorMessage: "Session expired. Reauthentication required.",
-      });
-
-      return {
-         ok: false,
-         code: "REAUTHENTICATION_REQUIRED",
-         message:
-            "Your Yeolpumta session has expired. Please re-authenticate your account.",
-         importedDurationSeconds: 0,
-         coinsCredited: 0,
-         isDuplicate: false,
-         lastSyncedAt: conn.lastSyncedAt,
-      };
-   }
-
-   // 5. Query live study statistics from ypt-js
-   const yptNumId = Number(conn.yptUserId);
-   if (isNaN(yptNumId) || yptNumId <= 0) {
-      return {
-         ok: false,
-         code: "INVALID_YPT_ID",
-         message: "Invalid numeric Yeolpumta user ID.",
-         importedDurationSeconds: 0,
-         coinsCredited: 0,
-         isDuplicate: false,
-         lastSyncedAt: conn.lastSyncedAt,
-      };
-   }
-
-   let studyStatus;
+   // 4. Read live study time from the shared service account roster
+   let member;
    try {
-      studyStatus = await getYptUserStudyStatus(yptClient, yptNumId);
-   } catch (err) {
+      member = await findYptServiceMember(yptId);
+   } catch (error) {
       logger.error(logEvents.yptSyncFailed, {
-         context: { action: "syncUserYptStudy", yptNumId },
-         error: err,
+         context: { action: "syncUserYptStudy", yptId },
+         error,
       });
 
       await updateYptConnectionStatus({
          userId,
          status: YptConnectionStatus.SYNC_ERROR,
          errorMessage:
-            err instanceof Error
-               ? err.message
+            error instanceof Error
+               ? error.message
                : "Failed to retrieve YPT statistics.",
       });
 
@@ -175,23 +108,41 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
       };
    }
 
-   const todayDateStr =
-      studyStatus?.studyDate || new Date().toISOString().slice(0, 10);
-   const durationSeconds = studyStatus ? studyStatus.todayStudySeconds : 0;
+   if (!member) {
+      await updateYptConnectionStatus({
+         userId,
+         status: YptConnectionStatus.SYNC_ERROR,
+         errorMessage: "YPT member not found in the service account roster.",
+      });
 
-   // 6. Ingest study activity into daily log and economy reward ledger
+      return {
+         ok: false,
+         code: "MEMBER_NOT_FOUND",
+         message:
+            "We could not find your Yeolpumta account in the group roster. Please contact an administrator.",
+         importedDurationSeconds: 0,
+         coinsCredited: 0,
+         isDuplicate: false,
+         lastSyncedAt: conn.lastSyncedAt,
+      };
+   }
+
+   const studyDate = member.studyDate || new Date().toISOString().slice(0, 10);
+   const durationSeconds = member.todayStudySeconds;
+
+   // 5. Ingest study activity into the daily log and economy reward ledger
    const ingestResult = await ingestYptActivity(
       {
-         yptId: conn.yptUserId,
-         date: todayDateStr,
+         yptId,
+         date: studyDate,
          durationSeconds,
-         yptSubject: studyStatus?.currentSubject || undefined,
-         externalActivityId: `ypt_${conn.yptUserId}_${todayDateStr}`,
+         yptSubject: member.currentSubject || undefined,
+         externalActivityId: `ypt_${yptId}_${studyDate}`,
       },
       "YPT_MANUAL"
    );
 
-   // 7. Record YptSyncRun audit entry
+   // 6. Record the YptSyncRun audit entry
    await prisma.yptSyncRun.create({
       data: {
          connectionId: conn.id,
@@ -211,7 +162,7 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
       },
    });
 
-   // 8. Update connection state
+   // 7. Update connection state
    if (ingestResult.ok) {
       await updateYptConnectionStatus({
          userId,
