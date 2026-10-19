@@ -30,22 +30,36 @@ export function sortLeaderboardEntries<
       trophyBalance: number;
       winRate: number;
       wins: number;
+      rank?: number;
    },
 >(entries: T[], sortBy: LeaderboardSortKey, direction: SortDirection): T[] {
-   const sorted = [...entries].sort((a, b) => {
+   const isDescending = direction === "desc";
+
+   return [...entries].sort((a, b) => {
       if (sortBy === "name") {
-         return a.displayName.localeCompare(b.displayName);
+         const comparison = a.displayName.localeCompare(b.displayName);
+         return isDescending ? -comparison : comparison;
       }
       if (sortBy === "winRate") {
-         return a.winRate - b.winRate;
+         const comparison = a.winRate - b.winRate;
+         return isDescending ? -comparison : comparison;
       }
       if (sortBy === "wins") {
-         return a.wins - b.wins;
+         const comparison = a.wins - b.wins;
+         return isDescending ? -comparison : comparison;
       }
-      return a.trophyBalance - b.trophyBalance;
-   });
 
-   return direction === "desc" ? sorted.reverse() : sorted;
+      // Trophy standings: "desc" means best first, i.e. lowest rank number.
+      // Ranks are canonical (server-assigned from trophyBalance desc), so use
+      // them when present — page 1 must always start at rank #1.
+      if (typeof a.rank === "number" && typeof b.rank === "number") {
+         const comparison = a.rank - b.rank;
+         return isDescending ? comparison : -comparison;
+      }
+
+      const comparison = a.trophyBalance - b.trophyBalance;
+      return isDescending ? -comparison : comparison;
+   });
 }
 
 export interface PaginatedResult<T> {

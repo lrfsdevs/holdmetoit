@@ -5,6 +5,15 @@ Notable changes to HoldMeToIt, newest first — grouped by date, no version numb
 Entries tagged `[user]` are user-facing and shown to everyone. Untagged entries are
 internal (engineering, tooling, and infrastructure) and are shown to admins only.
 
+## 2026-10-19
+
+### Leaderboard ordering, hero cleanup, and join CTA state [user]
+
+The trophy leaderboard now always starts at rank #1 on page 1, regardless of how the
+underlying rows arrive. Removed the internal "Clash of Clans Style League" header pill,
+and the "Join Active Battles" button is now hidden while you are already enrolled in an
+ongoing challenge.
+
 ## 2026-10-15
 
 ### Participant preview hides all admin controls
