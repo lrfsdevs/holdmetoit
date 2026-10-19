@@ -85,3 +85,28 @@ describe("LeaderboardPage", () => {
       expect(getTrophyLeaderboard).not.toHaveBeenCalled();
    });
 });
+
+describe("Leaderboard Boundaries (Law L9)", () => {
+   it("renders LeaderboardLoading skeleton", async () => {
+      const { default: LeaderboardLoading } = await import("./loading");
+      const html = renderToStaticMarkup(<LeaderboardLoading />);
+
+      expect(html).toContain("animate-pulse");
+      expect(html).toContain("bg-surface-page");
+   });
+
+   it("renders LeaderboardError recovery UI", async () => {
+      const { default: LeaderboardError } = await import("./error");
+      const html = renderToStaticMarkup(
+         <LeaderboardError
+            error={new Error("Database connection timed out")}
+            reset={vi.fn()}
+         />
+      );
+
+      expect(html).toContain("Leaderboard Unavailable");
+      expect(html).toContain("Database connection timed out");
+      expect(html).toContain("Try again");
+      expect(html).toContain("Return to Challenges");
+   });
+});

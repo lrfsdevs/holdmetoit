@@ -8,12 +8,39 @@ import { sendFeedbackToDiscord } from "@/features/feedback/data/discord-feedback
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
 import { createFeedbackSchema } from "@/features/feedback/domain/feedback.schema";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { checkRateLimit } from "@/core/security/rate-limiter";
 
 const logger = createLogger("feedback");
 
 /** Persists feedback and attempts fail-soft Discord delivery. */
 export async function POST(req: NextRequest) {
    try {
+      const clientIp =
+         req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+         req.headers.get("x-real-ip") ||
+         "anonymous";
+
+      const rateLimit = checkRateLimit(`feedback:${clientIp}`, {
+         maxAttempts: 5,
+         windowMs: 5 * 60 * 1000,
+      });
+
+      if (!rateLimit.allowed) {
+         const retryAfter = Math.ceil(rateLimit.resetMs / 1000);
+         return NextResponse.json(
+            {
+               success: false,
+               error: "Too many feedback submissions. Please wait a few minutes before trying again.",
+            },
+            {
+               status: 429,
+               headers: {
+                  "Retry-After": String(retryAfter),
+               },
+            }
+         );
+      }
+
       const json = await req.json();
       const parsed = createFeedbackSchema.safeParse(json);
 

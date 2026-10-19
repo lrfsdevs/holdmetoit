@@ -21,8 +21,12 @@ describe("Edge Middleware", () => {
       return request;
    }
 
-   it("has matcher configured strictly for /admin and /devboard", () => {
-      expect(config.matcher).toEqual(["/admin/:path*", "/devboard/:path*"]);
+   it("has matcher configured for /admin, /devboard, and /profile", () => {
+      expect(config.matcher).toEqual([
+         "/admin/:path*",
+         "/devboard/:path*",
+         "/profile",
+      ]);
    });
 
    it("redirects unauthenticated requests to /admin to / in production", () => {
@@ -83,6 +87,24 @@ describe("Edge Middleware", () => {
       delete process.env.AUTH_DISCORD_ID;
 
       const request = createRequest("/admin/challenges/new");
+      const response = middleware(request);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+   });
+
+   it("redirects unauthenticated requests to /profile to /", () => {
+      const request = createRequest("/profile");
+      const response = middleware(request);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe("https://holdmetoit.com/");
+   });
+
+   it("allows /profile through when authjs.session-token is present", () => {
+      const request = createRequest("/profile", {
+         "authjs.session-token": "valid_user_session",
+      });
       const response = middleware(request);
 
       expect(response.status).toBe(200);

@@ -65,7 +65,6 @@ export async function placeWagerAction(input: PlaceWagerInput) {
 
       revalidatePath(`/challenge/${parsed.data.challengeId}`);
       revalidatePath("/wallet");
-      revalidatePath("/dashboard");
 
       return {
          ok: true,

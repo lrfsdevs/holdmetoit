@@ -40,9 +40,22 @@ export function middleware(request: NextRequest) {
       }
    }
 
+   if (pathname === "/profile") {
+      const hasSessionCookie = SESSION_COOKIE_NAMES.some(
+         (name) =>
+            request.cookies.has(name) &&
+            Boolean(request.cookies.get(name)?.value)
+      );
+
+      if (!hasSessionCookie) {
+         const redirectUrl = new URL("/", request.url);
+         return NextResponse.redirect(redirectUrl);
+      }
+   }
+
    return NextResponse.next();
 }
 
 export const config = {
-   matcher: ["/admin/:path*", "/devboard/:path*"],
+   matcher: ["/admin/:path*", "/devboard/:path*", "/profile"],
 };

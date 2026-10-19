@@ -187,10 +187,10 @@ export function AppHeader({
    return (
       <header className="sticky top-0 z-40 h-16 border-b border-border-subtle bg-nav-bg/95 backdrop-blur-md">
          <div className="mx-auto flex h-full max-w-6xl items-center justify-between gap-2 min-w-0 px-3 sm:px-6">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 overflow-x-auto scrollbar-none py-1">
                <Link
                   href="/"
-                  className="flex items-center gap-2 sm:gap-2.5 group"
+                  className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
                >
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-text-inverse shadow-sm shrink-0">
                      <Shield className="h-3.5 w-3.5 fill-current" />
@@ -202,14 +202,14 @@ export function AppHeader({
 
                <Link
                   href="/challenges"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                >
                   Challenges
                </Link>
 
                <Link
                   href="/changelog"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                >
                   Changelog
                </Link>
@@ -217,7 +217,7 @@ export function AppHeader({
                <Link
                   href="/wallet"
                   data-testid="wallet-nav-link"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                >
                   Wallet
                </Link>
@@ -226,7 +226,7 @@ export function AppHeader({
                   <Link
                      href="/leaderboard"
                      data-testid="trophy-leaderboard-nav-link"
-                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                   >
                      Leaderboard
                   </Link>
@@ -236,7 +236,7 @@ export function AppHeader({
                   <Link
                      href="/pokemon"
                      data-testid="pokemon-nav-link"
-                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                   >
                      Pokédex
                   </Link>
@@ -246,7 +246,7 @@ export function AppHeader({
                   <Link
                      href="/devboard"
                      data-testid="devboard-nav-link"
-                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                   >
                      DevBoard
                   </Link>
@@ -256,7 +256,7 @@ export function AppHeader({
                   <Link
                      href="/admin"
                      data-testid="admin-nav-link"
-                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
                   >
                      Admin
                   </Link>
