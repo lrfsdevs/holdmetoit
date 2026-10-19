@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -23,6 +22,8 @@ import {
 import { createChallengeAction } from "@/features/challenges/api/challenge-admin.actions";
 import { discardChallengeImageUploadAction } from "@/features/challenges/api/punishment-pfp.actions";
 import { ChallengeImageInput } from "@/features/challenges/presentation/challenge-image-input";
+import { ChallengeDescriptionEditor } from "@/features/challenges/presentation/challenge-description-editor";
+import { DEFAULT_CHALLENGE_DESCRIPTION } from "@/features/challenges/domain/challenge-description";
 import {
    formatDateToUtcInputString,
    isUtcDateRangeValid,
@@ -85,9 +86,6 @@ const PRESET_THEMES: Record<string, { label: string; teams: TeamConfig[] }> = {
       ],
    },
 };
-
-const DEFAULT_CHALLENGE_DESCRIPTION =
-   "An automated study battle governed by the HoldMeToIt three-condition accountability system. All scholars declare their individual target hours and weekly milestone intentions before kickoff, commit to daily study sessions, solve their deficits with the catch-up model, and compete for victory.";
 
 /** Renders the multi-step host challenge creation wizard. */
 export function ChallengeCreatorWizard() {
@@ -355,13 +353,11 @@ export function ChallengeCreatorWizard() {
                >
                   Challenge Description
                </Label>
-               <Textarea
+               <ChallengeDescriptionEditor
                   id="wizard-challenge-description"
-                  rows={4}
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. October Team Battle is an automated study battle governed by the HoldMeToIt three-condition accountability system..."
-                  className="bg-input-bg border-input-border text-text-primary placeholder:text-text-secondary rounded-xl p-3 text-xs leading-relaxed focus:bg-input-bg"
+                  onChange={setDescription}
+                  disabled={isSubmitting}
                />
             </div>
 

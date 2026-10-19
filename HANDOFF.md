@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-19 (Session 142 — Automatic Jira ticket creation from feedback on `afnan-jr`)
+> **Last Updated:** 2026-10-19 (Session 144 — Minimal custom challenge description parser on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1117,3 +1117,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run test:web`: ✅ 166 test files passed (1516/1516 tests green).
    - `npm run build:web`: ✅ 18 routes + Edge Middleware compiled cleanly.
 - **NEXT STEP:** Review working tree and commit changes (`feat(routing): secure routes, add law l9 boundaries and mobile optimization`).
+
+### Session 144 — 2026-10-19 (Minimal Custom Challenge Description Parser on `afnan-jr`)
+
+- **Scope:** The challenge overview body (intro, `How it works`, `Prizes & Rewards`) is fully host-authored through a small custom syntax in the existing `Challenge.description` column. The `Welcome to the {title}!` heading stays title-derived.
+- **Syntax:** `#` / `##` headings, `---` divider, `[label](https://...)` links, plain paragraphs; single newlines render as `<br/>`. No Markdown dependency, no lists/bold/HTML. Unsupported syntax is shown literally.
+- **Domain:** New pure `features/challenges/domain/challenge-description.ts` with typed AST blocks, `parseChallengeDescription()`, `DEFAULT_CHALLENGE_DESCRIPTION`, and `resolveChallengeDescription()`.
+- **Renderer:** New `challenge-description-content.tsx` maps the AST to headings, paragraphs, `<hr>`, and safe anchors. Only `http(s)` and `/` links are accepted; external links get `target="_blank"` + `rel="noreferrer noopener"`; raw HTML is escaped.
+- **Editor:** New shared `ChallengeDescriptionEditor` (Preview/Write tabs, Preview default, 5,000-char counter, `break-words`) used by `challenge-creator-wizard.tsx` and `challenge-manage-tab.tsx`.
+- **No migration / dependency / API change:** `description` plumbing and the 5,000-character Zod cap are unchanged.
+- **Tests:** New parser, renderer, and editor suites; `challenge-overview-tab.test.tsx` updated for the default fallback and custom syntax.
+- **Docs:** New `docs/challenges/README.md` (§9.4).
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **180 files / 1697 tests** green · `npm run build:web` ✅ 17 routes + Edge Middleware compiled (existing warnings only).
+- **NEXT STEP:** Manually verify create/preview/save, the default fallback, unsafe-link handling, and 360px overview rendering; then commit (`feat(challenges): add minimal custom description parser`).

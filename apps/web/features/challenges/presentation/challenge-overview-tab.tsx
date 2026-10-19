@@ -4,11 +4,9 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-   ExternalLink,
    Users,
    CheckCircle,
    Shield,
-   Award,
    Clock,
    Search,
    X,
@@ -37,6 +35,7 @@ import type {
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
 import { PunishmentWall } from "@/features/accountability/presentation/punishment-wall";
 import { ChallengeBettingCard } from "./challenge-betting-card";
+import { ChallengeDescriptionContent } from "./challenge-description-content";
 
 interface ChallengeOverviewTabProps {
    challenge: ChallengeScoreboardViewModel;
@@ -130,90 +129,7 @@ export function ChallengeOverviewTab({
                   <h2 className="text-2xl font-extrabold text-white tracking-tight">
                      Welcome to the {challenge.title}!
                   </h2>
-                  <p className="text-sm leading-relaxed text-text-secondary whitespace-pre-line">
-                     {challenge.description?.trim() || (
-                        <>
-                           {challenge.title} is an automated study battle
-                           governed by the HoldMeToIt three-condition
-                           accountability system. All scholars declare their
-                           individual target hours and weekly milestone
-                           intentions before kickoff, commit to daily study
-                           sessions, solve their deficits with the catch-up
-                           model, and compete for victory.
-                        </>
-                     )}
-                  </p>
-               </div>
-
-               <hr className="border-border-default" />
-
-               {/* How it works */}
-               <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-white">How it works</h3>
-                  <ul className="space-y-2.5 text-xs text-text-secondary">
-                     <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
-                           1
-                        </span>
-                        <span>
-                           Make sure you are in the Yeolpumta (YPT) group
-                           because hours are verified to the second:{" "}
-                           <a
-                              href="https://link.yeolpumta.com"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-feedback-info hover:underline inline-flex items-center gap-1 font-medium"
-                           >
-                              Open YPT Group Link{" "}
-                              <ExternalLink className="h-3 w-3 inline" />
-                           </a>
-                        </span>
-                     </li>
-                     <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
-                           2
-                        </span>
-                        <span>
-                           Register and declare your mandatory target hours and
-                           weekly milestone intentions.
-                        </span>
-                     </li>
-                     <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
-                           3
-                        </span>
-                        <span>
-                           Participants are divided fairly into competing
-                           houses. Cumulative team scores update live with every
-                           logged session.
-                        </span>
-                     </li>
-                     <li className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-surface-elevated border border-border-strong flex items-center justify-center font-bold text-label text-white shrink-0 mt-0.5">
-                           4
-                        </span>
-                        <span>
-                           The team that falls behind, or any individual scholar
-                           who fails their declared hours or declared goals,
-                           wears the assigned forfeit PFP for one week.
-                        </span>
-                     </li>
-                  </ul>
-               </div>
-
-               <hr className="border-border-default" />
-
-               {/* Prizes & Consequences */}
-               <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                     <Award className="h-5 w-5 text-feedback-success" />
-                     Prizes & Rewards
-                  </h3>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                     The winning house earns special shiny Discord roles and
-                     custom highlight badges for top contributors. Scholars who
-                     maintain commitments preserve their standard avatar honor.
-                  </p>
+                  <ChallengeDescriptionContent source={challenge.description} />
                </div>
 
                <hr className="border-border-default" />

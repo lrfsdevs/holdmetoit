@@ -36,7 +36,6 @@ import {
    AlertDialogHeader,
    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
 import {
    Select,
    SelectContent,
@@ -60,6 +59,7 @@ import {
 } from "@/features/challenges/api/challenge-admin.actions";
 import { discardChallengeImageUploadAction } from "@/features/challenges/api/punishment-pfp.actions";
 import { ChallengeImageInput } from "@/features/challenges/presentation/challenge-image-input";
+import { ChallengeDescriptionEditor } from "@/features/challenges/presentation/challenge-description-editor";
 import {
    AdminHoursOverrideModal,
    type AdminHoursOverrideParticipant,
@@ -870,13 +870,12 @@ export function ChallengeManageTab({
                      >
                         Challenge Description
                      </Label>
-                     <Textarea
+                     <ChallengeDescriptionEditor
                         id="manage-challenge-description"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Explain the challenge rules and accountability system..."
-                        rows={4}
-                        className="rounded-2xl bg-surface-nested border-border-strong text-white p-3 text-xs leading-relaxed focus:border-input-bg focus:bg-surface-nested"
+                        onChange={setDescription}
+                        disabled={isBusy}
+                        textareaClassName="rounded-2xl bg-surface-nested border-border-strong text-white p-3 text-xs leading-relaxed focus:border-input-bg focus:bg-surface-nested"
                      />
                   </div>
 
