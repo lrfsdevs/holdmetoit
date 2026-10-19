@@ -295,6 +295,10 @@ export interface SubmitYptClaimInput {
    actor: { id: string; username: string };
 }
 
+/**
+ * Creates or updates a pending identity claim and records an audit event.
+ * Rejects identities already verified or stored on another user; approval is handled separately.
+ */
 export async function submitYptClaim({
    userId,
    yptId,
@@ -532,6 +536,10 @@ export async function adminRejectYptClaim({
    });
 }
 
+/**
+ * Revokes a claim, clears the user’s YPT ID, and disconnects their sync status in a transaction.
+ * Records the administrator’s reason in an audit event; callers must enforce authorization.
+ */
 export async function adminRevokeYptClaim({
    claimId,
    admin,

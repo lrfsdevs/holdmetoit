@@ -26,6 +26,9 @@ interface YptSettingsCardProps {
    initialYptId?: string | null;
 }
 
+/**
+ * Displays YPT claim status, roster selection for verification, and manual study synchronization.
+ */
 export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
    const [connection, setConnection] = useState<YptConnectionSummary | null>(
       null
@@ -67,6 +70,9 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
    }, []);
 
    // Select Member & Submit Verification Request
+   /**
+    * Submits the selected roster identity for verification and refreshes link status on success.
+    */
    const handleSubmitClaim = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!selectedMember) {
@@ -116,6 +122,9 @@ export function YptSettingsCard({ initialYptId }: YptSettingsCardProps) {
    };
 
    // Manual Study Synchronization Handler
+   /**
+    * Requests a study sync, displays imported time and coin rewards, and refreshes link status on success.
+    */
    const handleSyncNow = async () => {
       setIsSyncing(true);
       setSyncFeedback(null);

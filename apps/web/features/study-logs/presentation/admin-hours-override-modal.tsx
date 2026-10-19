@@ -56,6 +56,9 @@ export interface AdminHoursOverrideModalProps {
    onOpenTargetOverride?: () => void;
 }
 
+/**
+ * Edits a participant’s study duration for a selected challenge day with an audit reason.
+ */
 export function AdminHoursOverrideModal({
    isOpen,
    onClose,

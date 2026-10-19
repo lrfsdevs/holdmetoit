@@ -14,6 +14,9 @@ export const metadata = {
       "Competitive ranking and trophy standings for the HoldMeToIt community.",
 };
 
+/**
+ * Renders the feature-gated trophy leaderboard with the viewer’s active enrollment.
+ */
 export default async function LeaderboardPage() {
    const leaderboardEnabled = await isFeatureEnabled(
       FEATURE_FLAG_KEYS.globalLeaderboard

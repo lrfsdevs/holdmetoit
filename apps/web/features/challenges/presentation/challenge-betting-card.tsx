@@ -19,6 +19,9 @@ interface ChallengeBettingCardProps {
    challenge: ChallengeScoreboardViewModel;
 }
 
+/**
+ * Displays challenge rewards, wager history, and a wager form before kickoff.
+ */
 export function ChallengeBettingCard({ challenge }: ChallengeBettingCardProps) {
    const [selectedTeamId, setSelectedTeamId] = useState<string>(
       challenge.teams?.[0]?.id || ""

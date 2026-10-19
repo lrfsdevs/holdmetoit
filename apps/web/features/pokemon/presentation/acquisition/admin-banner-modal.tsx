@@ -36,6 +36,9 @@ interface AdminBannerModalProps {
    onBannersChanged?: () => void;
 }
 
+/**
+ * Lists acquisition banners and provides controls to create them or change their status.
+ */
 export function AdminBannerModal({
    isOpen,
    onClose,

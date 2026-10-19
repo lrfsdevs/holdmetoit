@@ -27,6 +27,9 @@ interface AdminTrophyAdjustmentDialogProps {
    onSuccess?: () => void;
 }
 
+/**
+ * Submits a trophy adjustment for the selected user with a required audit reason.
+ */
 export function AdminTrophyAdjustmentDialog({
    isOpen,
    onClose,

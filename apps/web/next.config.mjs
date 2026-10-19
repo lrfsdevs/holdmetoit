@@ -51,6 +51,9 @@ const nextConfig = {
          "/changelog": ["../../CHANGELOG.md"],
       },
    },
+   /**
+    * Returns permanent mappings from legacy URLs to the current application routes.
+    */
    async redirects() {
       return [
          {
