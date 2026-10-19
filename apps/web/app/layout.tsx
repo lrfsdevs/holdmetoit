@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Inter, Outfit } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 import { AppHeader } from "@/components/ui/header";
 import { Toaster } from "@/components/ui/sonner";
@@ -87,6 +88,7 @@ export default async function RootLayout({
                <FeedbackTriggerButton />
                <Toaster />
             </TooltipProvider>
+            <Analytics />
          </body>
       </html>
    );
