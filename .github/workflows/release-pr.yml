@@ -1,0 +1,90 @@
+name: Release PR
+
+on:
+   schedule:
+      - cron: "0 */12 * * *"
+   workflow_dispatch:
+
+permissions:
+   contents: read
+   pull-requests: write
+
+concurrency:
+   group: holdmetoit-release-pr
+   cancel-in-progress: false
+
+jobs:
+   create-release-pr:
+      name: Open or refresh dev → main PR
+      runs-on: ubuntu-latest
+      steps:
+         - name: Check out dev and fetch full history
+           uses: actions/checkout@v4
+           with:
+              ref: dev
+              fetch-depth: 0
+
+         - name: Check for changes to release
+           id: changes
+           shell: bash
+           run: |
+              set -euo pipefail
+              git fetch origin main dev --quiet
+              count="$(git rev-list --count origin/main..origin/dev)"
+              echo "count=$count" >> "$GITHUB_OUTPUT"
+              if [[ "$count" -gt 0 ]]; then
+                {
+                  echo 'summary<<EOF'
+                  git log origin/main..origin/dev --pretty=format:'- %s (%h)' -n 50
+                  echo
+                  echo 'EOF'
+                } >> "$GITHUB_OUTPUT"
+              fi
+
+         - name: Skip when dev has no unreleased commits
+           if: steps.changes.outputs.count == '0'
+           run: echo 'dev has no commits ahead of main; no release PR needed.'
+
+         - name: Create release PR if one does not exist
+           if: steps.changes.outputs.count != '0'
+           env:
+              GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
+              CHANGE_SUMMARY: ${{ steps.changes.outputs.summary }}
+           shell: bash
+           run: |
+              set -euo pipefail
+              if [[ -z "${GH_TOKEN:-}" ]]; then
+                echo 'Missing RELEASE_PR_TOKEN secret. Configure a fine-grained PAT or GitHub App token with repository Contents: read and Pull requests: write permissions.' >&2
+                exit 1
+              fi
+
+              existing_pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head dev --base main --state open --json number --jq '.[0].number // empty')"
+              if [[ -n "$existing_pr" ]]; then
+                echo "Release PR #$existing_pr already exists. New commits on dev will update its diff automatically."
+                exit 0
+              fi
+
+              body_file="$(mktemp)"
+              trap 'rm -f "$body_file"' EXIT
+              cat > "$body_file" <<BODY
+              ## Scheduled release review
+
+              This PR proposes promoting the current \\`dev\\` branch to \\`main\\`. It is opened automatically every 12 hours when \\`dev\\` is ahead of \\`main\\`.
+
+              ### Included commits
+              ${CHANGE_SUMMARY}
+
+              ### Before merging
+              - [ ] Review the complete diff and included commits.
+              - [ ] Confirm required CI checks pass.
+              - [ ] Confirm every release-worthy change uses a Conventional Commit / PR title.
+
+              After this PR is merged, the Release workflow calculates the next SemVer version from merged commits and creates the Git tag and GitHub Release if eligible changes exist.
+              BODY
+
+              gh pr create \
+                --repo "$GITHUB_REPOSITORY" \
+                --base main \
+                --head dev \
+                --title 'chore(release): promote dev to main' \
+                --body-file "$body_file"
