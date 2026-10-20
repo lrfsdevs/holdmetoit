@@ -475,9 +475,10 @@ set_conn_env() {
 }
 
 clear_conn_env() {
-   unset PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGSSLMODE \
-      PGCONNECT_TIMEOUT PGAPPNAME PGSSLROOTCERT PGSSLCERT PGSSLKEY \
-      PGOPTIONS PGTARGETSESSIONATTRS
+   unset PGHOST PGHOSTADDR PGPORT PGUSER PGPASSWORD PGPASSFILE PGDATABASE \
+      PGSSLMODE PGREQUIRESSL PGSSLROOTCERT PGSSLCERT PGSSLKEY PGSSLCRL \
+      PGSSLCRLDIR PGOPTIONS PGTARGETSESSIONATTRS PGLOADBALANCEHOSTS \
+      PGREQUIREAUTH PGCONNECT_TIMEOUT PGAPPNAME
 }
 
 # Never let ambient libpq state silently retarget a connection.
@@ -753,7 +754,7 @@ else
       if ! run_pg psql -X -w -q -v ON_ERROR_STOP=0 -f "$SQL_FILE_ARG" >>"$RESTORE_LOG" 2>&1; then
          restore_failed=1
       fi
-      if grep -qE '^ERROR:' "$RESTORE_LOG"; then
+      if grep -qE '(^|: )ERROR:' "$RESTORE_LOG"; then
          restore_failed=1
       fi
       rm -f "$SQL_FILE"
@@ -763,7 +764,7 @@ fi
 if ((restore_failed != 0)); then
    say ""
    say "${YELLOW}Restore reported errors:${RESET}"
-   grep -m 20 -E 'pg_restore: error:|^ERROR:' "$RESTORE_LOG" >&2 ||
+   grep -m 20 -E 'pg_restore: error:|(^|: )ERROR:' "$RESTORE_LOG" >&2 ||
       tail -n 20 "$RESTORE_LOG" >&2 || true
    say "${DIM}Full log: $RESTORE_LOG${RESET}"
    if grep -qiE 'extension|schema "(auth|storage|extensions|realtime|vault)"' "$RESTORE_LOG"; then
