@@ -28,6 +28,7 @@
       "db:seed": "npm run db:seed -w @holdmetoit/database",
       "db:seed:flags": "npm run db:seed:flags -w @holdmetoit/database",
       "db:seed:pokemon": "npm run db:seed:pokemon -w @holdmetoit/web",
+      "db:copy": "bash scripts/copy-db.sh",
       "postinstall": "npm run db:generate",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
