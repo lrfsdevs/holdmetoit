@@ -60,6 +60,9 @@ Options:
       --no-keep-dump          Delete the dump file after a successful copy
       --public-only           Dump only the public schema
       --exclude-schema NAME   Exclude a schema from the dump (repeatable)
+      --exclude-extension NAME
+                              Exclude an extension from the dump (repeatable,
+                              requires pg_dump 17+)
       --ignore-restore-errors Continue to verification despite pg_restore errors
       --docker[=IMAGE]        Run pg_dump/pg_restore/psql inside Docker
                               (default image: postgres:17-alpine)
@@ -94,6 +97,7 @@ JOBS=""
 DOCKER_IMAGE="${COPY_DB_DOCKER_IMAGE:-postgres:17-alpine}"
 POSITIONAL=()
 EXCLUDE_SCHEMAS=()
+EXCLUDE_EXTENSIONS=()
 
 while (($# > 0)); do
    case "$1" in
@@ -108,6 +112,12 @@ while (($# > 0)); do
          shift
          ;;
       --exclude-schema=*) EXCLUDE_SCHEMAS+=("${1#*=}") ;;
+      --exclude-extension)
+         [[ $# -ge 2 ]] || die "--exclude-extension requires a value" "$EXIT_USAGE"
+         EXCLUDE_EXTENSIONS+=("$2")
+         shift
+         ;;
+      --exclude-extension=*) EXCLUDE_EXTENSIONS+=("${1#*=}") ;;
       --ignore-restore-errors) IGNORE_RESTORE_ERRORS=1 ;;
       --docker) FORCE_DOCKER=1 ;;
       --docker=*)
@@ -422,7 +432,18 @@ fi
 set_conn_env() {
    local prefix="$1"
 
-   export PGHOST="$(getv "$prefix" HOST)"
+   local conn_host conn_is_local=0
+   conn_host="$(getv "$prefix" HOST)"
+   if is_loopback_host "$conn_host"; then
+      conn_is_local=1
+      # Docker containers cannot reach the host's loopback; bridge networking
+      # plus host-gateway is used instead of --network host so external DNS
+      # (hosted sources) keeps working through Docker's embedded resolver.
+      if ((USE_DOCKER)); then
+         conn_host="host.docker.internal"
+      fi
+   fi
+   export PGHOST="$conn_host"
    export PGPORT="$(getv "$prefix" PORT)"
    export PGUSER="$(getv "$prefix" USER)"
    export PGDATABASE="$(getv "$prefix" NAME)"
@@ -441,7 +462,7 @@ set_conn_env() {
    local sslmode
    sslmode="$(getv "$prefix" SSLMODE)"
    if [[ -z "$sslmode" ]]; then
-      if is_loopback_host "$(getv "$prefix" HOST)"; then
+      if ((conn_is_local)); then
          sslmode="prefer"
       else
          sslmode="require"
@@ -488,7 +509,8 @@ unset PGSERVICE PGSERVICEFILE
 run_pg() {
    local image="${RUN_PG_IMAGE:-$DOCKER_IMAGE}"
    if ((USE_DOCKER)); then
-      docker run --rm --network host \
+      docker run --rm \
+         --add-host=host.docker.internal:host-gateway \
          --user "$(id -u):$(id -g)" \
          -e PGPASSWORD -e PGHOST -e PGPORT -e PGUSER -e PGDATABASE \
          -e PGSSLMODE -e PGCONNECT_TIMEOUT -e PGAPPNAME \
@@ -605,6 +627,10 @@ if ((RESTORE_CLIENT_MAJOR > DST_MAJOR || RESTORE_CLIENT_MAJOR < SRC_MAJOR)); the
    RESTORE_VIA_SQL=1
 fi
 
+if ((${#EXCLUDE_EXTENSIONS[@]} > 0)) && ((DUMP_CLIENT_MAJOR < 17)); then
+   die "--exclude-extension requires pg_dump 17 or newer (using client $DUMP_CLIENT_MAJOR). Re-run with --docker=postgres:17-alpine" "$EXIT_PREFLIGHT"
+fi
+
 say "Source server: PostgreSQL $SRC_MAJOR"
 say "Target server: PostgreSQL $DST_MAJOR"
 if ((USE_DOCKER)); then
@@ -653,6 +679,9 @@ dump_cmd=(
 ((PUBLIC_ONLY)) && dump_cmd+=(--schema=public)
 for schema in "${EXCLUDE_SCHEMAS[@]}"; do
    dump_cmd+=(--exclude-schema="$schema")
+done
+for extension in "${EXCLUDE_EXTENSIONS[@]}"; do
+   dump_cmd+=(--exclude-extension="$extension")
 done
 
 if ((VERBOSE)); then
