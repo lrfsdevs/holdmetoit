@@ -16,6 +16,11 @@ export const createFeedbackSchema = z.object({
       .max(2000, "Description cannot exceed 2000 characters"),
    url: z.string().trim().max(1024, "URL cannot exceed 1024 characters"),
    logrocketSessionId: z.string().trim().max(1024).optional().nullable(),
+   attachments: z
+      .array(z.string().trim().min(1).max(512))
+      .max(3, "You can attach at most 3 files")
+      .optional()
+      .default([]),
 });
 
 export type CreateFeedbackSchemaInput = z.infer<typeof createFeedbackSchema>;

@@ -5,6 +5,7 @@ import {
    YptClaimStatus,
 } from "../domain/ypt-claim-state-machine";
 import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
+import { getYptServiceRoster } from "./ypt-service-account";
 
 export interface EligibleYptMember {
    id: string;
@@ -122,6 +123,135 @@ export async function getEligibleYptMembers({
    });
 }
 
+export type YptRosterLinkStatus =
+   "AVAILABLE" | "PENDING" | "VERIFIED" | "LINKED";
+
+export interface YptRosterEntry {
+   yptUserId: string;
+   nickname: string;
+   avatarUrl: string | null;
+   todayStudySeconds: number;
+   isStudying: boolean;
+   currentSubject: string | null;
+   studyDate: string | null;
+   groupIds: string[];
+   claimStatus: YptRosterLinkStatus;
+   isSelf: boolean;
+}
+
+export interface GetYptRosterOptions {
+   currentUserId: string;
+   search?: string;
+   limit?: number;
+}
+
+const CLAIM_STATUS_PRIORITY: Record<YptRosterLinkStatus, number> = {
+   AVAILABLE: 0,
+   PENDING: 1,
+   VERIFIED: 2,
+   LINKED: 3,
+};
+
+/**
+ * Collapses roster rows that represent the same person (same normalized
+ * nickname and avatar) so the selector never shows one account twice.
+ */
+function collapseRosterDuplicates(entries: YptRosterEntry[]): YptRosterEntry[] {
+   const byKey = new Map<string, YptRosterEntry>();
+
+   for (const entry of entries) {
+      const key = `${entry.nickname.trim().toLowerCase()}::${entry.avatarUrl ?? ""}`;
+      const existing = byKey.get(key);
+
+      if (!existing) {
+         byKey.set(key, entry);
+         continue;
+      }
+
+      const canonical =
+         entry.todayStudySeconds > existing.todayStudySeconds
+            ? entry
+            : existing;
+
+      byKey.set(key, {
+         ...canonical,
+         groupIds: Array.from(
+            new Set([...existing.groupIds, ...entry.groupIds])
+         ),
+         claimStatus:
+            CLAIM_STATUS_PRIORITY[entry.claimStatus] >
+            CLAIM_STATUS_PRIORITY[existing.claimStatus]
+               ? entry.claimStatus
+               : existing.claimStatus,
+         isSelf: existing.isSelf || entry.isSelf,
+      });
+   }
+
+   return Array.from(byKey.values());
+}
+
+/**
+ * Reads the shared service account's group roster and labels each member with
+ * its HoldMeToIt link status ("LINKED" = already claimed by another participant).
+ */
+export async function getYptRosterWithStatus({
+   currentUserId,
+   search,
+   limit = 200,
+}: GetYptRosterOptions): Promise<YptRosterEntry[]> {
+   const [roster, user, activeClaims] = await Promise.all([
+      getYptServiceRoster(),
+      prisma.user.findUnique({
+         where: { id: currentUserId },
+         select: { yptId: true },
+      }),
+      prisma.yptIdentityClaim.findMany({
+         where: { status: { in: ["VERIFIED", "PENDING"] } },
+         select: { yptId: true, userId: true, status: true },
+      }),
+   ]);
+
+   const claimMap = new Map<string, { userId: string; status: string }>();
+   for (const claim of activeClaims) {
+      claimMap.set(claim.yptId, {
+         userId: claim.userId,
+         status: claim.status,
+      });
+   }
+
+   const query = search?.trim().toLowerCase();
+
+   const labelled = roster
+      .filter((member) => {
+         if (!query) return true;
+         return (
+            member.nickname.toLowerCase().includes(query) ||
+            member.yptUserId.includes(query)
+         );
+      })
+      .map((member) => {
+         const claim = claimMap.get(member.yptUserId);
+         let claimStatus: YptRosterLinkStatus = "AVAILABLE";
+
+         if (claim) {
+            if (claim.userId === currentUserId) {
+               claimStatus =
+                  claim.status === "VERIFIED" ? "VERIFIED" : "PENDING";
+            } else {
+               claimStatus = "LINKED";
+            }
+         }
+
+         return {
+            ...member,
+            claimStatus,
+            isSelf: user?.yptId === member.yptUserId,
+         };
+      });
+
+   return collapseRosterDuplicates(labelled).slice(0, limit);
+}
+
 export async function getUserActiveClaim(userId: string) {
    return prisma.yptIdentityClaim.findFirst({
       where: { userId },
@@ -161,14 +291,20 @@ export interface SubmitYptClaimInput {
    yptId: string;
    yptName?: string;
    selectedUserId?: string;
+   groupId?: string;
    actor: { id: string; username: string };
 }
 
+/**
+ * Creates or updates a pending identity claim and records an audit event.
+ * Rejects identities already verified or stored on another user; approval is handled separately.
+ */
 export async function submitYptClaim({
    userId,
    yptId,
    yptName,
    selectedUserId,
+   groupId,
    actor,
 }: SubmitYptClaimInput) {
    const normalizedYptId = yptId.trim();
@@ -209,6 +345,7 @@ export async function submitYptClaim({
             yptId: normalizedYptId,
             yptName: yptName?.trim() || null,
             selectedUserId: selectedUserId || null,
+            groupId: groupId || null,
             rejectionReason: null,
             reviewedById: null,
             reviewedAt: null,
@@ -221,6 +358,7 @@ export async function submitYptClaim({
             yptId: normalizedYptId,
             yptName: yptName?.trim() || null,
             selectedUserId: selectedUserId || null,
+            groupId: groupId || null,
             status: "PENDING",
          },
       });
@@ -398,6 +536,10 @@ export async function adminRejectYptClaim({
    });
 }
 
+/**
+ * Revokes a claim, clears the user’s YPT ID, and disconnects their sync status in a transaction.
+ * Records the administrator’s reason in an audit event; callers must enforce authorization.
+ */
 export async function adminRevokeYptClaim({
    claimId,
    admin,
@@ -435,7 +577,6 @@ export async function adminRevokeYptClaim({
          where: { userId: claim.userId },
          data: {
             status: "NOT_CONNECTED",
-            encryptedRefreshToken: null,
          },
       });
 

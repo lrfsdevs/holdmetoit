@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration Branch:** `main` (latest: `c174a58`, PR #12) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-18 (Session 134 — Feature Flags: rollout-only control, master switch removed, on `afnan`)
+> **Last Updated:** 2026-10-19 (Session 144 — Minimal custom challenge description parser on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,8 +15,8 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 157 files green (1466/1466 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
-| `npm run build`                                              | ✅ 17 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`)                                                                                                                                                                                                                                                              |
+| `npm test`                                                   | ✅ 166 files green (1516/1516 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
 | Phase 1 (Economy Foundation)                                 | ✅ 100% Shipped & Verified: Wallets, immutable append-only ledger, study rewards (100 coins/hr with fractional carry), available vs. reserved balance tracking                                                                                                                                                                                                                                                   |
@@ -25,7 +25,7 @@
 | Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                                                                                                                                            |
 | Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
 | Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile                                                                                                                                                           |
-| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified: Official ypt-js client, AES-256 encrypted refresh tokens, real group member discovery, explicit 8 connection states, live study-hour sync with 1 coin / 36s rewards and fractional carry, admin verification & audits                                                                                                                                                                |
+| Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified (Session 137 rework): a shared YPT **service account** (`YPT_EMAIL`/`YPT_PASSWORD`/`YPT_GROUP_IDS`) reads the group roster; users pick their own account from the list (no email/password), DEV-only approval, and **no per-user tokens**. Live study-hour sync (1 coin / 36s, fractional carry) now runs through the service account.                                                |
 
 ### 1.1 Live Routes
 
@@ -36,7 +36,7 @@
 | `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
-| `/admin`                                      | Host management console for YPT claims verification, audited trophy adjustments, and challenge operations                                                  | `ADMIN` / `DEV`                        |
+| `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
@@ -90,19 +90,19 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ### 2.1 Shipped Beyond the Original P0 Spec
 
-| Capability                                            | Location                                                            | Notes                                                                                                                                                                                                              |
-| :---------------------------------------------------- | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                |
-| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                             |
-| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, Discord bot embeds, LogRocket session link                                                                                                                                 |
-| LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                        |
-| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                 |
-| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`           | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                                            |
-| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`                    | Matches the Figma                                                                                                                                                                                                  |
-| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                         | Grants full admin plus developer access                                                                                                                                                                            |
-| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`         | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                                              |
-| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`             | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                                        |
-| Challenge Wrapped & Three-Condition lock              | `features/wrapped/`, `features/accountability/domain/punishment.ts` | Post-lock wrapped (`?tab=summary` + auto-popup, localStorage-first flags, 3-day auto-seen); challenge-linked tasks + soft delete; `evaluateLockOutcome` saves only on tasks+hours+winning team (ties never punish) |
+| Capability                                            | Location                                                            | Notes                                                                                                                                                                                                                  |
+| :---------------------------------------------------- | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Categorized Daily/Weekly to-do board with drag & drop | `features/tasks/`, `cockpit-tasks-section.tsx`                      | Offline-first IndexedDB (`holdmetoit_db`), debounced background sync, guest→user migration on login                                                                                                                    |
+| Global Participant Preview Mode                       | `components/ui/header.tsx`, `preview-mode.ts`                       | 1-click header toggle for mods/devs to view all pages as regular participants globally                                                                                                                                 |
+| Feedback & bug reporting                              | `features/feedback/`, `app/api/feedback/route.ts`                   | Floating trigger button, `FB-XX` codes, bug-report image/video attachments (Supabase `feedback-attachments/`), Discord embeds, GitHub issues (fine-grained PAT), Jira Cloud issues (API token), LogRocket session link |
+| LogRocket observability                               | `core/observability/`                                               | Session replay, `error.tsx` / `global-error.tsx` boundaries                                                                                                                                                            |
+| Structured diagnostics logging                        | `core/observability/logger.ts`, `core/observability/domain/`        | Unified server/client logger (pure `domain/` model + Vitest), `LOG_LEVEL` filtering, one-line JSON on the server; instrumented across all server actions, routes, auth events and error boundaries                     |
+| Manual weekly slot leaderboard                        | `features/leaderboard/*manual*`, `/challenge/[id]/manual`           | ⚠️ Stores `sessionHours` as `Decimal(6,2)`, which violates **Law L8** (integer seconds)                                                                                                                                |
+| Dynamic cockpit banner (7 variants) & hero banner     | `cockpit-banner.ts`, `challenge-hero-banner.tsx`                    | Matches the Figma                                                                                                                                                                                                      |
+| `DEV` role                                            | `auth-roles.ts`, `discord-guild.service.ts`                         | Grants full admin plus developer access                                                                                                                                                                                |
+| Admin roster participant removal                      | `challenge-manage-tab.tsx`, `challenge-admin.repository.ts`         | Host removes a participant (`UPCOMING`/`ACTIVE` only) with a mandatory audit reason; purges logs, punishment, leaderboard entry, and team-member rows                                                                  |
+| Public date-based changelog                           | `CHANGELOG.md`, `features/changelog/`, `app/changelog/`             | `/changelog` renders the root `CHANGELOG.md` (parsed dep-free); `[user]` entries are public, untagged are admin-only; unlinked public route                                                                            |
+| Challenge Wrapped & Three-Condition lock              | `features/wrapped/`, `features/accountability/domain/punishment.ts` | Post-lock wrapped (`?tab=summary` + auto-popup, localStorage-first flags, 3-day auto-seen); challenge-linked tasks + soft delete; `evaluateLockOutcome` saves only on tasks+hours+winning team (ties never punish)     |
 
 ---
 
@@ -165,10 +165,23 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > 5. Apply the Pokémon catalogue normalization migration on the hosted DB (**backup first** — it is a one-time, non-reversible backfill that drops `PokemonSpecies.metadata`), then seed the catalogue:
 >    - `npx prisma migrate deploy`
 >    - `npm run db:seed:pokemon`
+>
+> **DS PROGRAM TRACK (separate from the product gate above):**
+> Continue design-system Phase D/E — see `docs/design-system/README.md` §6.1–6.2.
+> Order: ✅ DevBoard `Tabs` · ✅ `Label` (67) → **next:** `Skeleton` (~20) →
+> `ScrollArea` (9) / `Avatar` (31, decide `next/image`) / `Separator` (3) / `Progress` (1)
+> → per-page 9-state coverage → a11y/360px/motion sweeps → DevBoard "Design" styleguide.
 
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### PR #133 — 2026-10-19 (Docstring Coverage)
+
+- Confirmed the checkout matches PR head `d3c72917286eded1d03613baf41792e578891408`.
+- Added JSDoc to 32 undocumented functions touched by the PR, covering roster helpers, server actions, navigation, forms, and leaderboard rendering. Runtime behavior is unchanged.
+- **Validation:** Local inventory finds 61/65 named functions documented (93.85%, including test helpers); web typecheck, lint, 1,528 tests, production build, schema migration guard, and emitted-code equivalence pass. Hosted coverage still needs confirmation.
+- **NEXT STEP:** Re-run the hosted Docstring Coverage check after these documentation changes are published. Existing product milestones and deployment requirements remain as recorded below.
 
 ### Sessions 1–84 (Summarized)
 
@@ -976,3 +989,151 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Quality Gates:** `npm run typecheck` 0; `npm run lint` 0 errors; web Vitest **163 files / 1500 tests** green; `next build` clean. Migration applied to local `holdmetoit3`.
 - **Docs:** `docs/feature-flags/README.md` §1–§3, §5–§7, §9 rewritten to the rollout-only model.
 - **NEXT STEP:** In `/devboard`, set `pokemon_system_v1` to **Global** and confirm `/pokemon` + the Pokédex nav appear immediately; repeat for betting and the global leaderboard. Then commit.
+
+### Session 136 — 2026-10-18 (Design System Phase 0 — Doc Drift Corrected & Phase D/E Scoped)
+
+- **Scope:** Pre-flight for the design-system Phase D/E program. No UI/token changes.
+- **`docs/design-system/README.md`:** enforcement count corrected **4 → 6** (added `text-[Npx]` and tokenised size literals); migration table gained **row 7** for the Session 132 primitive kit (11 added → 29); the stale "Deferred: missing primitives …" paragraph replaced with **§6.1 Phase D adoption targets** (verified counts) and **§6.2 Phase E sweeps**.
+- **`DESIGN.md` §2.4:** "Legacy alias layer (temporary)" → "Legacy aliases (removed)" — the `obsidian-*` block was deleted in slice 4.
+- **`components/ui/card.tsx`:** retained (not dead code — reserved for upcoming surfaces) and marked; inventory stays **29**.
+- **Branch status recorded:** `a48bd8f` is in `dev`/`origin/dev` (`dev == afnan-jr == c8f9447`); `main` trails. Header branch line refreshed.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` green.
+- **NEXT STEP:** Phase D — adopt `Tabs` in `devboard-view.tsx:321` first, then ship `Label` + `Skeleton`.
+
+### Session 139 — 2026-10-19 (Leaderboard Rank Ordering, Pill Removal & Join CTA State on `afnan-jr`)
+
+- **Scope:** `/leaderboard` fixes — page 1 now always starts at rank #1, the internal "Clash of Clans Style League" hero pill is removed, and "Join Active Battles" hides while the viewer is already in an ongoing challenge.
+- **Ranking (data):** `getTrophyLeaderboard` (`features/trophies/data/trophy.repository.ts`) now uses a stable `orderBy: [{ trophyBalance: "desc" }, { id: "asc" }]` and assigns ranks from an explicitly re-sorted array, so rank 1 is always the highest balance.
+- **Ranking (domain/UI):** `sortLeaderboardEntries` (`features/trophies/domain/leaderboard-query.ts`) no longer sorts ascending then reverses; trophy `desc` sorts by canonical `rank` ascending, with an explicit direction multiplier for every key.
+- **Hero:** removed the labelled pill + unused `Trophy` import from `trophy-leaderboard-view.tsx`; per-row `TrophyRoleBadge` pills remain.
+- **CTA:** new lightweight `findActiveChallengeEnrollment` (`features/challenges/data/participant.repository.ts`) probes `startAt <= now < endAt`, `isDeleted = false`, `resultsLockedAt = null`; `/leaderboard` passes `hasActiveChallenge` and the view suppresses the CTA when true.
+- **Tests:** repository rank-order/orderBy tests; scrambled-input domain sort tests; view ordering, pill-removal and CTA visibility tests; participant helper tests; page membership wiring tests.
+- **Docs:** new `docs/leaderboard/README.md` (§9.4); `CHANGELOG.md` user-facing entry.
+- **NEXT STEP:** none.
+
+### Session 140 — 2026-10-19 (Bug Feedback Image/Video Attachments on `afnan-jr`)
+
+- **Scope:** Bug reports now accept up to **3 media attachments** (PNG/JPEG/WebP/GIF ≤5 MB; MP4/WebM/MOV ≤50 MB). Suggestions remain text-only.
+- **Upload architecture:** Signed direct-to-Storage uploads (`createSignedUploadUrl`) so large videos bypass Vercel's ~4.5 MB request cap. Flow: `requestFeedbackAttachmentUploadAction` → browser XHR `PUT` → `confirmFeedbackAttachmentAction` (existence + size + magic-byte sniff, deleting invalid objects) → `POST /api/feedback` re-verifies each path before persisting.
+- **Storage:** bucket `SUPABASE_STORAGE_BUCKET` (`holdmetoit-bucket`), folder `SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER` (default `feedback-attachments`), object path `<folder>/<uuid>.<ext>`. New generic core helpers: `createSignedStorageUpload`, `getStorageObjectInfo`, `getStoragePublicUrl`, `deleteStorageObject`.
+- **Data:** new `FeedbackAttachment` model + `FeedbackAttachmentKind` enum (migration `20261019000000_add_feedback_attachments`); nested create through `createFeedbackRecord`; `isFeedbackAttachmentReferenced` guards cleanup.
+- **Domain:** new pure `feedback-attachment.ts` (limits, MIME/extension maps, magic-byte sniffing incl. MP4/MOV `ftyp` and WebM EBML, managed-path parsing). Zod schema accepts `attachments: string[]` (max 3) and the route rejects them for enhancements.
+- **UI:** `FeedbackAttachmentInput` (previews, progress, retry, 3-file cap, 360px-safe rows) rendered only for bugs; submit is blocked while uploading or while a failed item remains; removal/close discards unreferenced objects.
+- **Discord:** first image renders in `embed.image`; all attachments are linked in an `📎 Attachments (N)` field.
+- **Rate limits:** 30 requests / 10 min per IP for request, confirm, and discard actions.
+- **Docs:** new `docs/feedback/README.md` (§9.4); `FEATURES.md` §13.1 + matrix; `.env.example` / `README.md`; migrations README.
+- **NEXT STEP:** Apply `20261019000000_add_feedback_attachments` (`npm run db:migrate`), confirm the `holdmetoit-bucket` per-object limit is ≥50 MB and Storage CORS allows `PUT` from the web origin, then run the manual E2E in `docs/feedback/README.md` (image + video upload, remove-before-submit cleanup, Discord preview).
+
+### Session 141 — 2026-10-19 (Automatic GitHub Issue Creation from Feedback on `afnan-jr`)
+
+- **Scope:** Every bug report and suggestion now creates a GitHub issue alongside the Discord embed, using a repo-scoped **fine-grained PAT** via the REST Issues API. Enabled only when `GITHUB_TOKEN` + `GITHUB_REPO` are present; otherwise `SKIPPED`.
+- **Dispatch:** `POST /api/feedback` now runs Discord and GitHub in parallel (`Promise.allSettled`) after the DB commit. Neither can fail the submission. Results are persisted as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
+- **Issue content:** `[FB-N] title`, hidden `<!-- holdmetoit-feedback:FB-N -->` marker, type/page/reporter/LogRocket, description, and attachments (images as inline markdown, videos as links). Labels default to `bug` / `enhancement`; a GitHub `422` triggers one retry without labels. 10s request timeout; no automatic retry after a failure.
+- **Domain/data:** pure `features/feedback/domain/github-issue.ts` (title/body builder, limits 256/65,536, label/assignee normalization) and fail-soft `features/feedback/data/github-issue.service.ts` (`createGitHubIssue`, config resolution, error mapping).
+- **Schema:** `20261019010000_add_feedback_github_issue` adds `GitHubDeliveryStatus` and the four `Feedback` columns + index.
+- **Env:** `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_ISSUE_LABELS_BUG`, `GITHUB_ISSUE_LABELS_ENHANCEMENT`, `GITHUB_ISSUE_ASSIGNEES`, optional `GITHUB_API_URL`.
+- **Docs:** `docs/feedback/README.md` §2.4/§3/§4.7/§5/§6 updated; `FEATURES.md` §13.1 + matrix; `README.md`; migrations README.
+- **NEXT STEP:** Create the fine-grained PAT (Issues read/write on `Afnanpathan2004/holdmetoit`), set `GITHUB_TOKEN`/`GITHUB_REPO` in the deployed environment, ensure `bug`/`enhancement` labels exist, apply `20261019000000_add_feedback_github_issue` and `20261019010000_add_feedback_github_issue` after reconciling the local migration-history divergence, then run the GitHub E2E in `docs/feedback/README.md` §4.6.
+
+### Session 142 — 2026-10-19 (Automatic Jira Ticket Creation from Feedback on `afnan-jr`)
+
+- **Scope:** Every bug report and suggestion now creates a **Jira Cloud** issue alongside Discord and GitHub, using a server-side API token (Basic auth). Enabled only when `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` are present; otherwise `SKIPPED`.
+- **Dispatch:** `POST /api/feedback` runs Discord, GitHub, and Jira in parallel (`Promise.allSettled`). None can fail the submission. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
+- **Mapping:** `bug → Task`, `enhancement → Story` (fixed). The target KAN project has no `Bug` issue type, so bugs use `Task` and remain distinguishable by the appended `bug` label. `JIRA_LABELS` defaults to `holdmetoit,feedback`; the type label is appended. Optional `JIRA_ASSIGNEE_ACCOUNT_ID`.
+- **Description:** Atlassian Document Format via a pure builder — plain-text marker `holdmetoit-feedback:FB-N`, type/page/reporter/LogRocket, description paragraphs, and attachment links (images and videos are links; Jira does not inline remote media).
+- **Domain/data:** `features/feedback/domain/jira-issue.ts` (summary 255, description text 30k, ADF helpers, labels) and fail-soft `features/feedback/data/jira-issue.service.ts` (config resolution, REST v3 POST, Jira `errors` extraction).
+- **Schema:** `20261019020000_add_feedback_jira_issue` adds `JiraDeliveryStatus` and the four `Feedback` columns + index.
+- **Env:** `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`, `JIRA_ASSIGNEE_ACCOUNT_ID`, `JIRA_LABELS`.
+- **Docs:** `docs/feedback/README.md` §2.4/§3/§4.4/§4.6/§4.8/§5/§6; `FEATURES.md` §13.1 + matrix; `README.md`; migrations README.
+- **NEXT STEP:** Ensure project KAN has the `Task` and `Story` issue types (it does), set `JIRA_*` in the deployed environment, apply `20261019020000_add_feedback_jira_issue` after reconciling the local migration-history divergence, then run the Jira E2E in `docs/feedback/README.md` §4.6. Existing `FAILED` rows do not auto-retry; new submissions will create `Task`/`Story` issues.
+
+### Session 143 — 2026-10-19 (Feedback Dialog Accidental-Dismiss Guards on `afnan-jr`)
+
+- **Problem:** Radix `Dialog` (adopted in `a48bd8f`) dismisses on outside pointer-down, focus-outside, and Escape. The feedback dialog had no guards, and its `z-50` sat below the wrapped shy card (`z-[55]`/`z-[60]`), wrapped modal (`z-[60]`), and challenge feedback dialog (`z-[70]`), so near-misses and overlay interception could discard a draft and delete uploaded attachments.
+- **Dismiss policy:** A pristine form still closes on backdrop/Escape. Once title/description/attachment content exists, `onInteractOutside`/`onPointerDownOutside` and Escape are ignored; IME-composition Escape (`isComposing`/`keyCode 229`) is always ignored. X/Cancel remain the explicit close paths.
+- **Stacking:** `DialogContent` gained an optional `overlayClassName`; the feedback dialog now renders overlay + content at `z-[80]` above every app overlay.
+- **Tests:** `feedback-dialog.test.tsx` covers pristine/dirty backdrop, pristine/dirty/IME Escape, and stacking; new `components/ui/dialog.test.tsx` covers `overlayClassName`.
+- **Docs:** `docs/feedback/README.md` §2.3 records the dismissal policy.
+- **NEXT STEP:** Run the manual checklist in `/home/afnan/.commandcode/plans/feedback-dialog-accidental-close.md` on a 360 px viewport with the wrapped shy card present; verify the 3-day wrapped flow still behaves.
+
+### Session 137 — 2026-10-18 (Design System Phase D: DevBoard Tabs + Label Adoption on `afnan-jr`)
+
+- **Scope:** Phase D primitive adoption. Slice D1 (Tabs) + D2 (Label) shipped; no token changes.
+- **D1 — Tabs:** `devboard-view.tsx` hand-rolled switcher (2 buttons + manual `role`/`aria-selected` + ternary panels) → controlled Radix `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` bound to the existing `section` state; the exact look is preserved via `rounded-2xl!`/`rounded-xl!` overrides (−23 lines). The two `role="tablist"`/`aria-selected` test assertions are unchanged.
+- **D2 — Label (67 sites / 19 files):** `label.tsx` default neutralised (dropped `text-meta` + `leading-none`, kept `font-medium`/`text-text-secondary`) so adoption is visually neutral; every raw `<label>` → `<Label>`; **43** single-control `htmlFor`+`id` pairs added; **3** non-native controls wired (2 Radix `Select` triggers + 1 Popover trigger button); **16** group labels associated via `id` + `role="group" aria-labelledby` (button grids / HH:MM:SS input rows). The 5 pre-existing `htmlFor` sites are preserved.
+- **Finding:** `cn` (tailwind-merge) does not recognise this project's custom `rounded-*` scale, so a primitive's radius default survives a plain override — D1 therefore needed the first `/important` utilities in the repo. Candidate follow-up: an `extendTailwindMerge` config teaching it the custom scales, which would remove the need for `!`.
+- **Quality Gates:** `npm run typecheck:web` 0 · `npm run lint:web` 0 errors · `npm run test:web` **163 files / 1500 tests** green; raw `<label>` outside `components/ui` = **0**.
+- **NEXT STEP:** Phase D — `Skeleton` (~20 `animate-pulse`), then `ScrollArea` (9) / `Avatar` (31) / `Separator` (3) / `Progress` (1), then per-page 9-state coverage + Phase E sweeps.
+
+### Session 138 — 2026-10-19 (YPT Linking via Shared Service Account on `afnan-jr`)
+
+- **Decision:** Replace per-user YPT email/password linking with a **shared service account**. Participants pick their own account from the service account's group roster; **DEV-only** approval (no ADMIN); no per-user credentials or tokens. (Supersedes the credential/session model described in Sessions 116–117.)
+- **New module:** `features/ypt/data/ypt-service-account.ts` — authenticated service client (from `YPT_EMAIL`/`YPT_PASSWORD`), roster scoped to `YPT_GROUP_IDS` with a ~60s TTL cache + in-flight de-dup, plus `findYptServiceMember` for sync.
+- **Participant actions:** `getYptRosterAction` (labels `AVAILABLE`/`PENDING`/`VERIFIED`/`LINKED`) and `submitYptSelectionAction` now live in `api/ypt-claim.actions.ts`. Removed `connectYptAccountAction`, `getRealYptGroupMembersAction`, `disconnectYptAccountAction`, and the unmounted `adminConfirmYptClaimAction`/`adminRejectYptClaimAction`.
+- **Sync:** `syncUserYptStudy` reads study time from the service-account roster (no per-user token); `YptSyncRun` + 1 coin / 36s rewards unchanged.
+- **UI:** `ypt-settings-card.tsx` renders `YptMemberSelector` directly (no credential modal); the selector now sources `getYptRosterAction`. Approval stays **DEV-only** in the DevBoard (`ypt-verification-panel.tsx`); `/admin` untouched.
+- **Schema:** dropped `YptConnection.encryptedRefreshToken` (migration `20261024000000_ypt_shared_service_account`); Prisma client regenerated.
+- **Removed dead code:** `api/ypt.actions.ts` (legacy unverified `linkYptAccountAction` + `importYptLogsAction`), `ypt.repository.linkUserYptId`, `linkYptSchema` in `domain/ypt.types.ts`, `core/security/encryption.ts` (+ test), and the duplicate approval functions in `ypt-connection.repository.ts`.
+- **Env:** added `YPT_EMAIL`, `YPT_PASSWORD`, `YPT_GROUP_IDS`, `YPT_INGEST_API_KEY` to `apps/web/.env.example` (and `.env`).
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **163 files / 1497 tests** green · `npm run build:web` ✅ 17 routes + middleware (existing lint warnings only).
+- **Docs:** new `docs/ypt/README.md` (§9.4).
+- **NEXT STEP:** Set real `YPT_EMAIL`/`YPT_PASSWORD`/`YPT_GROUP_IDS` in the deployed web env (the service account must be a member of the challenge group), run `npm run db:migrate`, then verify end-to-end: participant picks their account in `/wallet` → DEV approves in the DevBoard → `User.yptId` set → "Refresh my hours" credits coins.
+
+### Session 138 — 2026-10-19 (YPT Roster De-dup & Selector Cleanup on `afnan-jr`)
+
+- **Problem:** the member selector showed the same person twice (same name, different YPT ids). `getYptServiceRoster` already merges by `yptUserId`, so the extra rows are distinct ids that share a display name.
+- **Roster de-dup:** `getYptRosterWithStatus` (`features/ypt/data/ypt-claim.repository.ts`) now collapses rows sharing a normalized `nickname + avatarUrl`, keeping the most-active account (`max todayStudySeconds`), unioning `groupIds`, with claim precedence `LINKED > VERIFIED > PENDING > AVAILABLE`. `getYptServiceRoster` is intentionally **not** collapsed so `findYptServiceMember` (sync) can resolve every id.
+- **Selector cleanup:** `ypt-member-selector.tsx` item is now avatar + nickname (+ `You`); removed the raw YPT id, the study status (`Studying`/`Today`), and the Available/Pending/Verified chips — only the `Already linked` lock renders (else nothing). The selected-value trigger likewise drops the id and study status, and search is nickname-only.
+- **Tests (+3):** same nickname+avatar collapses to one row (most-active canonical); different avatars stay separate; a collapsed row stays `LINKED` when any underlying id is linked to another user.
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · YPT suite ✅ **66 tests** green.
+- **NEXT STEP:** unchanged from Session 137 (set env, run the migration, verify end-to-end).
+
+### Session 135 — 2026-10-19 (Route Security, Law L9 Boundaries, Edge Guard Expansion & Mobile Resilience on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent, Participant UI Agent.
+- **Scope & Objectives:**
+   - Audit new paths, routes, and guards introduced from the recent `dev` branch pull (`/leaderboard`, `/pokemon`, `/pokedex`, `/wallet`, `/api/feedback`).
+   - Relocate orphaned monorepo test suites into `apps/web/`.
+   - Implement canonical HTTP 308 redirects and expand Edge Middleware to deflect unauthenticated `/profile` requests.
+   - Enforce Law L9 by building missing loading skeletons and error boundaries for `/leaderboard` and `/pokemon`.
+   - Purge dead `/dashboard`, `/pokedex`, and `/admin/challenges/[id]/roster` cache revalidations in non-YPT actions.
+   - Add sliding-window rate limiting to public `POST /api/feedback`.
+   - Optimize navigation header container for 360px mobile viewports.
+- **Implementation Details:**
+   1. **Test Suite & Monorepo Alignment:**
+      - Relocated `middleware.test.ts` and `next.config.test.ts` from repository root to `apps/web/middleware.test.ts` and `apps/web/next.config.test.ts`. Purged root duplicates.
+   2. **Canonical Redirects & Edge Middleware:**
+      - Added HTTP 308 permanent redirects in `apps/web/next.config.mjs`: `/pokedex` and `/pokedex/:path*` -> `/pokemon`, `/leaderboards` -> `/leaderboard`, `/wallets` -> `/wallet`, `/pokemons` -> `/pokemon`, `/changelogs` -> `/changelog`.
+      - Expanded Edge Middleware (`apps/web/middleware.ts`) matcher to include `/profile`, deflecting unauthenticated traffic to `/` before Server Components run.
+   3. **Law L9 Route Boundaries:**
+      - Created `apps/web/app/leaderboard/loading.tsx` and `apps/web/app/leaderboard/error.tsx`.
+      - Created `apps/web/app/pokemon/loading.tsx` and `apps/web/app/pokemon/error.tsx`.
+      - Tested with `app/leaderboard/page.test.tsx` and `app/pokemon/page.test.tsx`.
+   4. **Ghost Revalidation Purge (Non-YPT):**
+      - Purged dead `revalidatePath("/dashboard")` from `admin-override.actions.ts` and `wager.actions.ts`.
+      - Purged dead `revalidatePath("/admin/challenges/*")` from `admin-override.actions.ts`.
+      - Purged redundant `revalidatePath("/pokedex")` from `pokemon.actions.ts`.
+      - Skipped all YPT-specific code per user instruction.
+   5. **Feedback Route Abuse Prevention:**
+      - Implemented sliding-window rate limiting in `POST /api/feedback` using `checkRateLimit` (max 5 submissions per 5-min window per IP). Returns HTTP 429 with `Retry-After`.
+      - Created comprehensive test suite `apps/web/app/api/feedback/route.test.ts`.
+   6. **Mobile Header Responsiveness:**
+      - Updated `AppHeader` in `apps/web/components/ui/header.tsx` with `overflow-x-auto scrollbar-none py-1` on the links container and `shrink-0` on nav links to guarantee clean, unclipped horizontal rendering on 360px viewports.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test:web`: ✅ 166 test files passed (1516/1516 tests green).
+   - `npm run build:web`: ✅ 18 routes + Edge Middleware compiled cleanly.
+- **NEXT STEP:** Review working tree and commit changes (`feat(routing): secure routes, add law l9 boundaries and mobile optimization`).
+
+### Session 144 — 2026-10-19 (Minimal Custom Challenge Description Parser on `afnan-jr`)
+
+- **Scope:** The challenge overview body (intro, `How it works`, `Prizes & Rewards`) is fully host-authored through a small custom syntax in the existing `Challenge.description` column. The `Welcome to the {title}!` heading stays title-derived.
+- **Syntax:** `#` / `##` headings, `---` divider, `[label](https://...)` links, plain paragraphs; single newlines render as `<br/>`. No Markdown dependency, no lists/bold/HTML. Unsupported syntax is shown literally.
+- **Domain:** New pure `features/challenges/domain/challenge-description.ts` with typed AST blocks, `parseChallengeDescription()`, `DEFAULT_CHALLENGE_DESCRIPTION`, and `resolveChallengeDescription()`.
+- **Renderer:** New `challenge-description-content.tsx` maps the AST to headings, paragraphs, `<hr>`, and safe anchors. Only `http(s)` and `/` links are accepted; external links get `target="_blank"` + `rel="noreferrer noopener"`; raw HTML is escaped.
+- **Editor:** New shared `ChallengeDescriptionEditor` (Preview/Write tabs, Preview default, 5,000-char counter, `break-words`) used by `challenge-creator-wizard.tsx` and `challenge-manage-tab.tsx`.
+- **No migration / dependency / API change:** `description` plumbing and the 5,000-character Zod cap are unchanged.
+- **Tests:** New parser, renderer, and editor suites; `challenge-overview-tab.test.tsx` updated for the default fallback and custom syntax.
+- **Docs:** New `docs/challenges/README.md` (§9.4).
+- **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **180 files / 1697 tests** green · `npm run build:web` ✅ 17 routes + Edge Middleware compiled (existing warnings only).
+- **NEXT STEP:** Manually verify create/preview/save, the default fallback, unsafe-link handling, and 360px overview rendering; then commit (`feat(challenges): add minimal custom description parser`).

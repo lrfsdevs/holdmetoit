@@ -30,6 +30,7 @@ import {
 } from "@/features/tasks/domain/task-reorder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
    AlertDialog,
@@ -4611,10 +4612,14 @@ export function CockpitTasksSection({
 
                <form onSubmit={handleAddTodoSubmit} className="space-y-4">
                   <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                     <Label
+                        htmlFor="add-todo-content"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Todo Content
-                     </label>
+                     </Label>
                      <Input
+                        id="add-todo-content"
                         type="text"
                         placeholder="What needs to get done?"
                         value={newTodoText}
@@ -4625,10 +4630,13 @@ export function CockpitTasksSection({
                      />
                   </div>
 
-                  <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <div role="group" aria-labelledby="add-todo-category">
+                     <Label
+                        id="add-todo-category"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Todo Category
-                     </label>
+                     </Label>
                      {!isCreatingCategory ? (
                         <div className="flex gap-2">
                            <Select
@@ -4752,13 +4760,16 @@ export function CockpitTasksSection({
                   </div>
 
                   {addModalType === "daily" && (
-                     <div>
-                        <label className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between">
+                     <div role="group" aria-labelledby="add-todo-day">
+                        <Label
+                           id="add-todo-day"
+                           className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
+                        >
                            <span>Assigned Challenge Day</span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(addTodoDateKey || selectedDateKey)}
                            </span>
-                        </label>
+                        </Label>
                         <div className="grid grid-cols-7 gap-1 w-full pb-1">
                            {dayOptions.map((opt) => {
                               const isSelected =
@@ -4839,10 +4850,13 @@ export function CockpitTasksSection({
                      </div>
                   )}
 
-                  <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <div role="group" aria-labelledby="add-todo-status">
+                     <Label
+                        id="add-todo-status"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Initial Status
-                     </label>
+                     </Label>
                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <button
                            type="button"
@@ -4964,10 +4978,14 @@ export function CockpitTasksSection({
                   className="space-y-4"
                >
                   <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                     <Label
+                        htmlFor="edit-task-title"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Task Title
-                     </label>
+                     </Label>
                      <Input
+                        id="edit-task-title"
                         type="text"
                         value={editTaskInputText}
                         onChange={(e) => setEditTaskInputText(e.target.value)}
@@ -4978,13 +4996,16 @@ export function CockpitTasksSection({
                   </div>
 
                   {editTaskModal?.taskType === "daily" && (
-                     <div>
-                        <label className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between">
+                     <div role="group" aria-labelledby="edit-task-day">
+                        <Label
+                           id="edit-task-day"
+                           className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
+                        >
                            <span>Assigned Challenge Day</span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(editTaskInputDueDate)}
                            </span>
-                        </label>
+                        </Label>
                         <div className="grid grid-cols-7 gap-1 w-full pb-1">
                            {dayOptions.map((opt) => {
                               const isSelected =
@@ -5075,10 +5096,13 @@ export function CockpitTasksSection({
                      </div>
                   )}
 
-                  <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <div role="group" aria-labelledby="edit-task-status">
+                     <Label
+                        id="edit-task-status"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Task Status
-                     </label>
+                     </Label>
                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <button
                            type="button"
@@ -5196,10 +5220,14 @@ export function CockpitTasksSection({
                   className="space-y-4"
                >
                   <div>
-                     <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                     <Label
+                        htmlFor="edit-category-name"
+                        className="block text-xs font-medium text-text-secondary mb-1.5"
+                     >
                         Category Name
-                     </label>
+                     </Label>
                      <Input
+                        id="edit-category-name"
                         type="text"
                         value={editCategoryInputName}
                         onChange={(e) =>

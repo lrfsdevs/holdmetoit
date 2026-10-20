@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { AlertCircle, ImagePlus, Loader2, RefreshCw } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 import {
    discardChallengeImageUploadAction,
@@ -220,9 +221,9 @@ export function ChallengeImageInput({
             </div>
 
             <div className="min-w-0 flex-1 space-y-1">
-               <label htmlFor={inputId} className="sr-only">
+               <Label htmlFor={inputId} className="sr-only">
                   {label}
-               </label>
+               </Label>
                <input
                   id={inputId}
                   ref={fileRef}

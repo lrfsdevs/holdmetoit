@@ -15,6 +15,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -227,13 +228,13 @@ export function AdminPardonModal({
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
                <div>
-                  <label
+                  <Label
                      htmlFor="pardon-reason"
                      className="block text-xs font-semibold text-text-secondary mb-1.5"
                   >
                      Pardon / Excuse Rationale{" "}
                      <span className="text-feedback-error">*</span>
-                  </label>
+                  </Label>
                   <Input
                      id="pardon-reason"
                      type="text"

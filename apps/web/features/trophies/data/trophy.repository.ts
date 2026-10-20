@@ -185,6 +185,10 @@ export interface TrophyLeaderboardEntry {
    tierConfig: ReturnType<typeof getRankForTrophies>["tierConfig"];
 }
 
+/**
+ * Returns paginated or complete trophy standings with global ranks and match statistics.
+ * Trophy balances sort descending, with user IDs breaking ties in ascending order.
+ */
 export async function getTrophyLeaderboard(
    options: { page?: number; limit?: number; all?: boolean } = {}
 ) {
@@ -194,7 +198,7 @@ export async function getTrophyLeaderboard(
 
    const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
-         orderBy: { trophyBalance: "desc" },
+         orderBy: [{ trophyBalance: "desc" }, { id: "asc" }],
          skip,
          take,
          select: {
@@ -212,7 +216,12 @@ export async function getTrophyLeaderboard(
       prisma.user.count(),
    ]);
 
-   const entries: TrophyLeaderboardEntry[] = users.map((u, index) => {
+   // Canonical standing: never trust the DB row order for rank numbers.
+   const orderedUsers = [...users].sort(
+      (a, b) => b.trophyBalance - a.trophyBalance || a.id.localeCompare(b.id)
+   );
+
+   const entries: TrophyLeaderboardEntry[] = orderedUsers.map((u, index) => {
       const wins = u.trophyTransactions.filter(
          (t) => t.type === "CHALLENGE_WIN"
       ).length;

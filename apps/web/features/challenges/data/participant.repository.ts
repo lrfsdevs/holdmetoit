@@ -88,6 +88,43 @@ export async function findOwnedParticipant(
    });
 }
 
+export interface ActiveChallengeEnrollment {
+   challengeId: string;
+   challengeTitle: string;
+}
+
+/**
+ * Lightweight membership probe for surfaces that only need to know whether the
+ * user is currently inside an ongoing (date-active, not-yet-locked) challenge.
+ */
+export async function findActiveChallengeEnrollment(
+   userId: string,
+   now = new Date()
+): Promise<ActiveChallengeEnrollment | null> {
+   const participant = await prisma.challengeParticipant.findFirst({
+      where: {
+         userId,
+         challenge: {
+            isDeleted: false,
+            resultsLockedAt: null,
+            startAt: { lte: now },
+            endAt: { gt: now },
+         },
+      },
+      select: {
+         challenge: { select: { id: true, title: true } },
+      },
+      orderBy: { enrolledAt: "desc" },
+   });
+
+   return participant
+      ? {
+           challengeId: participant.challenge.id,
+           challengeTitle: participant.challenge.title,
+        }
+      : null;
+}
+
 export async function enrollParticipantInChallenge(params: {
    userId: string;
    challengeId: string;

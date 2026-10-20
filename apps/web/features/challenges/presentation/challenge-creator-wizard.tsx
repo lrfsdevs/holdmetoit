@@ -14,7 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
    captureLogRocketException,
    trackLogRocketEvent,
@@ -22,6 +22,8 @@ import {
 import { createChallengeAction } from "@/features/challenges/api/challenge-admin.actions";
 import { discardChallengeImageUploadAction } from "@/features/challenges/api/punishment-pfp.actions";
 import { ChallengeImageInput } from "@/features/challenges/presentation/challenge-image-input";
+import { ChallengeDescriptionEditor } from "@/features/challenges/presentation/challenge-description-editor";
+import { DEFAULT_CHALLENGE_DESCRIPTION } from "@/features/challenges/domain/challenge-description";
 import {
    formatDateToUtcInputString,
    isUtcDateRangeValid,
@@ -84,9 +86,6 @@ const PRESET_THEMES: Record<string, { label: string; teams: TeamConfig[] }> = {
       ],
    },
 };
-
-const DEFAULT_CHALLENGE_DESCRIPTION =
-   "An automated study battle governed by the HoldMeToIt three-condition accountability system. All scholars declare their individual target hours and weekly milestone intentions before kickoff, commit to daily study sessions, solve their deficits with the catch-up model, and compete for victory.";
 
 /** Renders the multi-step host challenge creation wizard. */
 export function ChallengeCreatorWizard() {
@@ -328,10 +327,14 @@ export function ChallengeCreatorWizard() {
             </h3>
 
             <div>
-               <label className="block text-xs font-medium text-text-primary mb-1.5">
+               <Label
+                  htmlFor="wizard-challenge-title"
+                  className="block text-xs font-medium text-text-primary mb-1.5"
+               >
                   Challenge Title
-               </label>
+               </Label>
                <Input
+                  id="wizard-challenge-title"
                   type="text"
                   placeholder="e.g. Midterm Reading Week Sprint"
                   value={title}
@@ -344,25 +347,31 @@ export function ChallengeCreatorWizard() {
             </div>
 
             <div>
-               <label className="block text-xs font-medium text-text-primary mb-1.5">
+               <Label
+                  htmlFor="wizard-challenge-description"
+                  className="block text-xs font-medium text-text-primary mb-1.5"
+               >
                   Challenge Description
-               </label>
-               <Textarea
-                  rows={4}
+               </Label>
+               <ChallengeDescriptionEditor
+                  id="wizard-challenge-description"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. October Team Battle is an automated study battle governed by the HoldMeToIt three-condition accountability system..."
-                  className="bg-input-bg border-input-border text-text-primary placeholder:text-text-secondary rounded-xl p-3 text-xs leading-relaxed focus:bg-input-bg"
+                  onChange={setDescription}
+                  disabled={isSubmitting}
                />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
-                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                  <Label
+                     htmlFor="wizard-start-at"
+                     className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5"
+                  >
                      <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>Start Date & Time (UTC)</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="wizard-start-at"
                      type="datetime-local"
                      value={startAt}
                      onChange={(e) => setStartAt(e.target.value)}
@@ -371,11 +380,15 @@ export function ChallengeCreatorWizard() {
                   />
                </div>
                <div>
-                  <label className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5">
+                  <Label
+                     htmlFor="wizard-end-at"
+                     className="block text-xs font-medium text-text-primary mb-1.5 flex items-center gap-1.5"
+                  >
                      <Calendar className="h-3.5 w-3.5 text-text-secondary" />
                      <span>End Date & Time (UTC)</span>
-                  </label>
+                  </Label>
                   <Input
+                     id="wizard-end-at"
                      type="datetime-local"
                      value={endAt}
                      onChange={(e) => setEndAt(e.target.value)}

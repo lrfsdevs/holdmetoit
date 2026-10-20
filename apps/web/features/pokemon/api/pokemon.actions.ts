@@ -287,7 +287,6 @@ export async function adminUpsertPokemonSpeciesAction(
 
       const species = await adminUpsertPokemonSpecies(validated.data, admin.id);
       revalidatePath("/pokemon");
-      revalidatePath("/pokedex");
 
       return { ok: true, data: species };
    } catch (error: any) {

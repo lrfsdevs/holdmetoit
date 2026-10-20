@@ -1,9 +1,19 @@
 import { prisma } from "@/core/db";
-import { DiscordDeliveryStatus, FeedbackType } from "@prisma/client";
-import type { CreateFeedbackInput } from "@/features/feedback/domain/feedback.types";
+import {
+   DiscordDeliveryStatus,
+   FeedbackAttachmentKind,
+   FeedbackType,
+   GitHubDeliveryStatus,
+   JiraDeliveryStatus,
+} from "@prisma/client";
+import type {
+   CreateFeedbackInput,
+   VerifiedFeedbackAttachment,
+} from "@/features/feedback/domain/feedback.types";
 
 export interface CreateFeedbackParams extends CreateFeedbackInput {
    userId?: string | null;
+   attachments?: VerifiedFeedbackAttachment[];
 }
 
 export async function createFeedbackRecord(params: CreateFeedbackParams) {
@@ -18,6 +28,19 @@ export async function createFeedbackRecord(params: CreateFeedbackParams) {
          url: params.url,
          logrocketSessionId: params.logrocketSessionId ?? null,
          userId: params.userId ?? null,
+         attachments: {
+            create: (params.attachments ?? []).map((attachment, index) => ({
+               url: attachment.url,
+               path: attachment.path,
+               kind:
+                  attachment.kind === "image"
+                     ? FeedbackAttachmentKind.IMAGE
+                     : FeedbackAttachmentKind.VIDEO,
+               mimeType: attachment.mimeType,
+               sizeBytes: attachment.sizeBytes,
+               sortOrder: index,
+            })),
+         },
       },
       include: {
          user: {
@@ -27,6 +50,9 @@ export async function createFeedbackRecord(params: CreateFeedbackParams) {
                displayName: true,
                discordId: true,
             },
+         },
+         attachments: {
+            orderBy: { sortOrder: "asc" },
          },
       },
    });
@@ -50,6 +76,46 @@ export async function updateFeedbackDiscordStatus(
    });
 }
 
+export async function updateFeedbackGitHubStatus(
+   id: string,
+   update: {
+      status: GitHubDeliveryStatus;
+      issueNumber?: number | null;
+      issueUrl?: string | null;
+      syncedAt?: Date | null;
+   }
+) {
+   return prisma.feedback.update({
+      where: { id },
+      data: {
+         githubStatus: update.status,
+         githubIssueNumber: update.issueNumber,
+         githubIssueUrl: update.issueUrl,
+         githubSyncedAt: update.syncedAt,
+      },
+   });
+}
+
+export async function updateFeedbackJiraStatus(
+   id: string,
+   update: {
+      status: JiraDeliveryStatus;
+      issueKey?: string | null;
+      issueUrl?: string | null;
+      syncedAt?: Date | null;
+   }
+) {
+   return prisma.feedback.update({
+      where: { id },
+      data: {
+         jiraStatus: update.status,
+         jiraIssueKey: update.issueKey,
+         jiraIssueUrl: update.issueUrl,
+         jiraSyncedAt: update.syncedAt,
+      },
+   });
+}
+
 export async function getFeedbackById(id: string) {
    return prisma.feedback.findUnique({
       where: { id },
@@ -61,6 +127,9 @@ export async function getFeedbackById(id: string) {
                displayName: true,
                discordId: true,
             },
+         },
+         attachments: {
+            orderBy: { sortOrder: "asc" },
          },
       },
    });

@@ -112,18 +112,24 @@ cp apps/web/.env.example apps/web/.env
 # The bot reads apps/ypt-bot/.env (DATABASE_URL + YPT credentials)
 ```
 
-| Variable                                                                      | Purpose                                                                 |
-| :---------------------------------------------------------------------------- | :---------------------------------------------------------------------- |
-| `DATABASE_URL`, `DIRECT_URL`                                                  | Pooled and direct Postgres connections                                  |
-| `AUTH_SECRET`, `AUTH_URL`                                                     | Auth.js session secret and base URL                                     |
-| `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`                                      | Discord OAuth app (`identify` scope)                                    |
-| `DISCORD_GUILD_ID`, `DISCORD_BOT_TOKEN`                                       | Guild + bot used to read member roles                                   |
-| `DISCORD_ADMIN_ROLE_IDS`                                                      | Comma-separated guild role IDs that map to `ADMIN`                      |
-| `DEV_DISCORD_IDS`                                                             | JSON array of Discord snowflakes that map to `DEV` (full access)        |
-| `DISCORD_FEEDBACK_CHANNEL_ID` / `_BUG_CHANNEL_ID` / `_SUGGESTIONS_CHANNEL_ID` | Feedback embed destinations (optional; falls back to a default channel) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                                   | Server-only storage client (never prefix with `NEXT_PUBLIC_`)           |
-| `SUPABASE_STORAGE_BUCKET`                                                     | Public bucket name                                                      |
-| `SUPABASE_EVENT_BANNERS_FOLDER`, `SUPABASE_PUNISHMENT_PFPS_FOLDER`            | Separate directories for event headers and punishment PFPs              |
+| Variable                                                                      | Purpose                                                                    |
+| :---------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| `DATABASE_URL`, `DIRECT_URL`                                                  | Pooled and direct Postgres connections                                     |
+| `AUTH_SECRET`, `AUTH_URL`                                                     | Auth.js session secret and base URL                                        |
+| `AUTH_DISCORD_ID`, `AUTH_DISCORD_SECRET`                                      | Discord OAuth app (`identify` scope)                                       |
+| `DISCORD_GUILD_ID`, `DISCORD_BOT_TOKEN`                                       | Guild + bot used to read member roles                                      |
+| `DISCORD_ADMIN_ROLE_IDS`                                                      | Comma-separated guild role IDs that map to `ADMIN`                         |
+| `DEV_DISCORD_IDS`                                                             | JSON array of Discord snowflakes that map to `DEV` (full access)           |
+| `DISCORD_FEEDBACK_CHANNEL_ID` / `_BUG_CHANNEL_ID` / `_SUGGESTIONS_CHANNEL_ID` | Feedback embed destinations (optional; falls back to a default channel)    |
+| `GITHUB_TOKEN`, `GITHUB_REPO`                                                 | Optional GitHub issue sync (fine-grained PAT with Issues read/write)       |
+| `GITHUB_ISSUE_LABELS_BUG`, `GITHUB_ISSUE_LABELS_ENHANCEMENT`                  | Comma-separated labels for auto-created issues                             |
+| `GITHUB_ISSUE_ASSIGNEES`, `GITHUB_API_URL`                                    | Optional assignees and API base URL (defaults to `https://api.github.com`) |
+| `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY`           | Optional Jira Cloud issue sync (API token Basic auth)                      |
+| `JIRA_LABELS`, `JIRA_ASSIGNEE_ACCOUNT_ID`                                     | Optional base labels and assignee for auto-created Jira issues             |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`                                   | Server-only storage client (never prefix with `NEXT_PUBLIC_`)              |
+| `SUPABASE_STORAGE_BUCKET`                                                     | Public bucket name                                                         |
+| `SUPABASE_EVENT_BANNERS_FOLDER`, `SUPABASE_PUNISHMENT_PFPS_FOLDER`            | Separate directories for event headers and punishment PFPs                 |
+| `SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER`                                        | Feedback media directory (optional; defaults to `feedback-attachments`)    |
 
 ### 3. Database Setup and Local Development
 
