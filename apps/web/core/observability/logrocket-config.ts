@@ -1,14 +1,40 @@
+declare global {
+   interface Window {
+      __HMI_LOGROCKET_ENABLED__?: boolean;
+   }
+}
+
+/**
+ * Applies the server-evaluated `logrocket_v1` flag to this browser tab.
+ *
+ * Setting it to `false` prevents future initialization and suppresses new
+ * LogRocket wrapper calls, but it does not stop an SDK session that is already
+ * recording: LogRocket 12 exposes no public teardown API.
+ *
+ * The setter is a no-op during SSR, so module state never leaks across requests.
+ */
+export function setLogRocketEnabled(enabled: boolean): void {
+   if (typeof window === "undefined") {
+      return;
+   }
+
+   window.__HMI_LOGROCKET_ENABLED__ = enabled;
+}
+
 /**
  * Single source of truth for whether LogRocket is active.
  *
- * Enabled only in production builds, so local development stays quiet.
- * Safe to import from both server and client modules: it never pulls in the
- * `logrocket` browser package and returns false when there is no window.
+ * Requires a production build AND the runtime feature flag applied by
+ * `LogRocketProvider`. Defaults to off until the flag is known.
  */
 export function isLogRocketEnabled(): boolean {
    if (typeof window === "undefined") {
       return false;
    }
 
-   return process.env.NODE_ENV === "production";
+   if (process.env.NODE_ENV !== "production") {
+      return false;
+   }
+
+   return window.__HMI_LOGROCKET_ENABLED__ === true;
 }

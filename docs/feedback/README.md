@@ -10,8 +10,10 @@
 
 The floating feedback button (global in `app/layout.tsx`) opens a dialog that accepts:
 
-- **Bug reports** — category, title, description, auto-captured route, LogRocket session URL, and up to **3 image/video attachments**.
-- **Suggestions** — category, title, description, route, and LogRocket session URL (text only).
+- **Bug reports** — category, title, description, auto-captured route, optional LogRocket session URL, and up to **3 image/video attachments**.
+- **Suggestions** — category, title, description, route, and optional LogRocket session URL (text only).
+
+The session URL is only attached when the `logrocket_v1` feature flag is enabled in production; otherwise `logrocketSessionId` is submitted as `null`.
 
 Every submission is persisted to PostgreSQL first (source of truth), assigned a sequential `FB-N` code, then dispatched to Discord, GitHub, and Jira as fail-soft side effects (GitHub and Jira only when configured). Attachments live in the public Supabase Storage bucket under `feedback-attachments/`, and their validated object paths are linked through `FeedbackAttachment` rows.
 

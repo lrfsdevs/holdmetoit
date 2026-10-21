@@ -20,6 +20,8 @@ import {
    type DraftFeedbackAttachment,
 } from "@/features/feedback/presentation/feedback-attachment-input";
 
+const SUBMIT_TIMEOUT_MS = 30_000;
+
 interface FeedbackFormProps {
    onSuccess?: (code: string) => void;
    onCancel?: () => void;
@@ -133,38 +135,71 @@ export function FeedbackForm({
                     .map((attachment) => attachment.path as string)
                : [];
 
-         const res = await fetch("/api/feedback", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-               type,
-               title: title.trim(),
-               description: description.trim(),
-               url: pathname || window.location.pathname || "/",
-               logrocketSessionId,
-               attachments: attachmentPaths,
-            }),
-         });
+         const controller = new AbortController();
+         const fetchTimer = setTimeout(
+            () => controller.abort(),
+            SUBMIT_TIMEOUT_MS
+         );
 
-         const data = await res.json();
+         try {
+            const res = await fetch("/api/feedback", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               signal: controller.signal,
+               body: JSON.stringify({
+                  type,
+                  title: title.trim(),
+                  description: description.trim(),
+                  url: pathname || window.location.pathname || "/",
+                  logrocketSessionId,
+                  attachments: attachmentPaths,
+               }),
+            });
 
-         if (!res.ok || !data.success) {
-            throw new Error(data.error || "Failed to submit feedback.");
-         }
+            const rawBody = await res.text();
 
-         const code = data.data?.code || "FB-OK";
-         const sentPaths = new Set(attachmentPaths);
-         submittedRef.current = true;
-         for (const attachment of attachments) {
-            if (attachment.path && !sentPaths.has(attachment.path)) {
-               void discardFeedbackAttachmentAction({
-                  path: attachment.path,
-               }).catch(() => {});
+            let data: {
+               success?: boolean;
+               error?: string;
+               data?: { code?: string };
+            };
+            try {
+               data = rawBody
+                  ? (JSON.parse(rawBody) as typeof data)
+                  : { success: false };
+            } catch {
+               throw new Error(
+                  `Server returned an invalid response (HTTP ${res.status}).`
+               );
             }
-         }
-         setSubmittedCode(code);
-         if (onSuccess) {
-            onSuccess(code);
+
+            if (!res.ok || !data.success) {
+               throw new Error(data.error || "Failed to submit feedback.");
+            }
+
+            const code = data.data?.code || "FB-OK";
+            const sentPaths = new Set(attachmentPaths);
+            submittedRef.current = true;
+            for (const attachment of attachments) {
+               if (attachment.path && !sentPaths.has(attachment.path)) {
+                  void discardFeedbackAttachmentAction({
+                     path: attachment.path,
+                  }).catch(() => {});
+               }
+            }
+            setSubmittedCode(code);
+            if (onSuccess) {
+               onSuccess(code);
+            }
+         } catch (err) {
+            if (err instanceof Error && err.name === "AbortError") {
+               throw new Error(
+                  "Feedback submission timed out. Please try again."
+               );
+            }
+            throw err;
+         } finally {
+            clearTimeout(fetchTimer);
          }
       } catch (err) {
          const msg =

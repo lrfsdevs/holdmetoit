@@ -5,6 +5,8 @@ import {
 import { validateFeedbackAttachmentMeta } from "@/features/feedback/domain/feedback-attachment";
 import type { VerifiedFeedbackAttachment } from "@/features/feedback/domain/feedback.types";
 
+const UPLOAD_TIMEOUT_MS = 30_000;
+
 function putToSignedUrl(
    signedUrl: string,
    file: File,
@@ -16,6 +18,7 @@ function putToSignedUrl(
       request.open("PUT", signedUrl);
       request.setRequestHeader("Content-Type", contentType);
       request.setRequestHeader("x-upsert", "false");
+      request.timeout = UPLOAD_TIMEOUT_MS;
 
       request.upload.onprogress = (event) => {
          if (event.lengthComputable) {
@@ -34,6 +37,13 @@ function putToSignedUrl(
          reject(
             new Error(
                "Could not upload the file. Please check your connection."
+            )
+         );
+      };
+      request.ontimeout = () => {
+         reject(
+            new Error(
+               "The upload timed out. Please check your connection and try again."
             )
          );
       };
