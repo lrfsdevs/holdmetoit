@@ -6,7 +6,10 @@ import {
    identifyLogRocketUser,
    initLogRocket,
 } from "@/core/observability/logrocket";
-import { isLogRocketEnabled } from "@/core/observability/logrocket-config";
+import {
+   isLogRocketEnabled,
+   setLogRocketEnabled,
+} from "@/core/observability/logrocket-config";
 
 export type LogRocketSessionUser = {
    id?: string | null;
@@ -16,7 +19,17 @@ export type LogRocketSessionUser = {
    discordId?: string | null;
 } | null;
 
-export function LogRocketProvider({ user }: { user?: LogRocketSessionUser }) {
+export function LogRocketProvider({
+   user,
+   enabled,
+}: {
+   user?: LogRocketSessionUser;
+   enabled: boolean;
+}) {
+   // Apply the feature flag before children render so client event handlers and
+   // logger forwarding see the correct value immediately after hydration.
+   setLogRocketEnabled(enabled);
+
    useEffect(() => {
       if (!isLogRocketEnabled()) {
          return;
