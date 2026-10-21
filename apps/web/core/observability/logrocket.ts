@@ -132,7 +132,7 @@ export function captureLogRocketMessage(
 
 /** Resolves the current LogRocket session URL when one is available. */
 export function getLogRocketSessionURL(): Promise<string | null> {
-   if (typeof window === "undefined" || !initialized) {
+   if (typeof window === "undefined" || !initialized || !isLogRocketEnabled()) {
       return Promise.resolve(null);
    }
 

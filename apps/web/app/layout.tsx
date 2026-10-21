@@ -58,6 +58,7 @@ export default async function RootLayout({
    const flags = await getFeatureFlags([
       FEATURE_FLAG_KEYS.pokemon,
       FEATURE_FLAG_KEYS.globalLeaderboard,
+      FEATURE_FLAG_KEYS.logrocket,
    ]);
 
    return (
@@ -67,7 +68,10 @@ export default async function RootLayout({
       >
          <body className="min-h-screen overflow-x-clip bg-surface-page text-text-primary font-sans antialiased selection:bg-surface-nested selection:text-white">
             <TooltipProvider delayDuration={200}>
-               <LogRocketProvider user={session?.user ?? null} />
+               <LogRocketProvider
+                  user={session?.user ?? null}
+                  enabled={flags[FEATURE_FLAG_KEYS.logrocket] ?? false}
+               />
                <Suspense
                   fallback={
                      <div className="h-16 border-b border-border-subtle bg-surface-page" />
