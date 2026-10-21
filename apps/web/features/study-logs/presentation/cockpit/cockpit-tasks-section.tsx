@@ -1588,17 +1588,19 @@ export function CockpitTasksSection({
          weeklyCategories.find((c) => c.name === targetName)?.id;
 
       const allRelevantCats =
-         catType === "daily"
-            ? dailyCategories
-            : [...dailyCategories, ...weeklyCategories];
+         catType === "daily" ? dailyCategories : weeklyCategories;
       const targetCat = allRelevantCats.find((c) =>
          catId ? c.id === catId : c.name === targetName
       );
-      const hasPastTasks = targetCat?.tasks.some((t) => {
-         const dateKey = getTaskDateKey(t);
-         const opt = dayOptions.find((d) => d.dateKey === dateKey);
-         return opt?.isPast ?? dateKey < effectiveTodayDate;
-      });
+      const hasPastTasks =
+         catType === "daily" &&
+         Boolean(
+            targetCat?.tasks.some((t) => {
+               const dateKey = getTaskDateKey(t);
+               const opt = dayOptions.find((d) => d.dateKey === dateKey);
+               return opt?.isPast ?? dateKey < effectiveTodayDate;
+            })
+         );
 
       if (hasPastTasks) {
          setDeleteCategoryModal(null);
