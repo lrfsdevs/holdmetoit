@@ -6,6 +6,11 @@ declare global {
 
 /**
  * Applies the server-evaluated `logrocket_v1` flag to this browser tab.
+ *
+ * Setting it to `false` prevents future initialization and suppresses new
+ * LogRocket wrapper calls, but it does not stop an SDK session that is already
+ * recording: LogRocket 12 exposes no public teardown API.
+ *
  * The setter is a no-op during SSR, so module state never leaks across requests.
  */
 export function setLogRocketEnabled(enabled: boolean): void {

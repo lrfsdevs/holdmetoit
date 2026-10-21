@@ -30,8 +30,11 @@ export function LogRocketProvider({
    // logger forwarding see the correct value immediately after hydration.
    setLogRocketEnabled(enabled);
 
+   // LogRocket 12 has no public shutdown API. Turning the flag off prevents
+   // initialization in newly loaded tabs; an already-initialized session keeps
+   // recording until the tab reloads.
    useEffect(() => {
-      if (!isLogRocketEnabled()) {
+      if (!enabled || !isLogRocketEnabled()) {
          return;
       }
 
@@ -46,7 +49,14 @@ export function LogRocketProvider({
          role: user.role ?? null,
          discordId: user.discordId ?? null,
       });
-   }, [user?.id, user?.name, user?.displayName, user?.role, user?.discordId]);
+   }, [
+      enabled,
+      user?.id,
+      user?.name,
+      user?.displayName,
+      user?.role,
+      user?.discordId,
+   ]);
 
    return null;
 }
