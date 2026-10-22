@@ -302,11 +302,11 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
                id: "admin_1",
                username: "HostAdmin",
             },
-            { settleTrophies: true }
+            { settleTrophies: true, settleRewards: true }
          );
       });
 
-      it("skips trophy settlement when the leaderboard flag is off", async () => {
+      it("skips trophy and reward settlement when the leaderboard flag is off", async () => {
          vi.mocked(requireAdminModule.requireAdminUser).mockResolvedValue({
             id: "admin_1",
             username: "HostAdmin",
@@ -322,7 +322,7 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(challengeAdminRepo.lockChallengeResults).toHaveBeenCalledWith(
             "c_1",
             { id: "admin_1", username: "HostAdmin" },
-            { settleTrophies: false }
+            { settleTrophies: false, settleRewards: false }
          );
       });
    });

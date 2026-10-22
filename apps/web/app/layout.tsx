@@ -81,6 +81,7 @@ export default async function RootLayout({
                      showLeaderboardNav={
                         flags[FEATURE_FLAG_KEYS.globalLeaderboard]
                      }
+                     showWalletNav={flags[FEATURE_FLAG_KEYS.globalLeaderboard]}
                   />
                </Suspense>
                {children}

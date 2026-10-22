@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-19 (Session 144 — Minimal custom challenge description parser on `afnan-jr`)
+> **Last Updated:** 2026-10-22 (Session 146 — Wallet gated under `global_leaderboard_v1` on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1137,3 +1137,11 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** New `docs/challenges/README.md` (§9.4).
 - **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **180 files / 1697 tests** green · `npm run build:web` ✅ 17 routes + Edge Middleware compiled (existing warnings only).
 - **NEXT STEP:** Manually verify create/preview/save, the default fallback, unsafe-link handling, and 360px overview rendering; then commit (`feat(challenges): add minimal custom description parser`).
+
+### Session 146 — 2026-10-22 (Wallet gated under `global_leaderboard_v1` on `afnan-jr`)
+
+- **Page/nav:** `/wallet` renders the locked `EmptyState` when `global_leaderboard_v1` is off; the header Wallet link follows the same flag via `showWalletNav`.
+- **Actions:** `getWalletSummaryAction`, `getTransactionHistoryAction`, `adminAdjustBalanceAction`, `reconcileWalletAction`, and `reverseTransactionAction` return `FEATURE_DISABLED` before auth/DB work when the flag is off.
+- **Rewards paused:** `processStudyReward` skips study/YPT rewards; `lockChallengeResults` accepts `settleRewards` and skips challenge win rewards when false. `lockChallengeResultsAction` passes the flag for both trophies and rewards.
+- **Non-retroactive:** rewards skipped while disabled are not backfilled when re-enabled. Pokémon and betting keep their own flags and existing balances.
+- **Quality Gates:** `npm run typecheck:web` ✅ · targeted wallet/economy/challenge suites ✅ · full `npm run test:web` + `npm run build:web` run before commit.

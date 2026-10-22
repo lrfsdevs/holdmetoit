@@ -193,7 +193,7 @@ export async function kickoffChallenge(
 export async function lockChallengeResults(
    challengeId: string,
    actor: { id: string; username: string },
-   options?: { settleTrophies?: boolean }
+   options?: { settleTrophies?: boolean; settleRewards?: boolean }
 ) {
    const challenge = await prisma.challenge.findUnique({
       where: { id: challengeId },
@@ -331,6 +331,7 @@ export async function lockChallengeResults(
 
       // 3. Challenge economic rewards settlement (Stage 3)
       if (
+         options?.settleRewards !== false &&
          Boolean(challenge.rewardCoins) &&
          challenge.rewardCoins > 0 &&
          !challenge.isRewardSettled &&

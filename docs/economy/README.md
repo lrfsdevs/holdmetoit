@@ -170,7 +170,21 @@ npm run test
 
 ---
 
-## 9. Future Phase Deferrals
+## 9. Feature Flag Gating (`global_leaderboard_v1`)
+
+The wallet is gated by the existing `global_leaderboard_v1` system flag. When it is `DISABLED` or an unmatched `TARGETED` flag:
+
+- `/wallet` renders a locked empty state and loads no wallet/ledger data.
+- The header **Wallet** link is hidden.
+- `getWalletSummaryAction`, `getTransactionHistoryAction`, `adminAdjustBalanceAction`, `reconcileWalletAction`, and `reverseTransactionAction` return `FEATURE_DISABLED`.
+- `processStudyReward` skips crediting, so manual study logs and YPT ingest create no coins or `StudyRewardRecord` rows.
+- Challenge win rewards are skipped at lock (`settleRewards: false`); `isRewardSettled` remains false.
+
+Rewards are **not retroactive**: logs/challenges processed while the flag is off are not backfilled when it is re-enabled. Pokémon and betting remain controlled by their own flags and may still use existing wallet balances.
+
+---
+
+## 10. Future Phase Deferrals
 
 The following systems are intentionally deferred to future phases:
 

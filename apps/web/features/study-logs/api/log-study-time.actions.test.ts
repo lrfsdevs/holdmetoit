@@ -29,6 +29,10 @@ vi.mock("@/features/study-logs/data/daily-study-log.repository", () => ({
    upsertDailyStudyLog: vi.fn(),
 }));
 
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn().mockResolvedValue(true),
+}));
+
 describe("logStudyTimeAction", () => {
    beforeEach(() => {
       vi.clearAllMocks();

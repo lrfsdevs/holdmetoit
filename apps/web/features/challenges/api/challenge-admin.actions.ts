@@ -205,13 +205,16 @@ export async function lockChallengeResultsAction(
 ): Promise<AdminActionResult> {
    try {
       const admin = await requireAdminUser();
-      const settleTrophies = await isFeatureEnabled(
+      const economyEnabled = await isFeatureEnabled(
          FEATURE_FLAG_KEYS.globalLeaderboard
       );
       await lockChallengeResults(
          challengeId,
          { id: admin.id, username: admin.username },
-         { settleTrophies }
+         {
+            settleTrophies: economyEnabled,
+            settleRewards: economyEnabled,
+         }
       );
 
       invalidateTags([

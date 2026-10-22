@@ -1,5 +1,7 @@
 import { prisma } from "@/core/db";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { recordStudyRewardTransaction } from "../data/study-reward.repository";
 
 const logger = createLogger("economy.study-reward");
@@ -28,6 +30,27 @@ export async function processStudyReward(
    const { studyLogId, userId } = params;
 
    try {
+      const economyEnabled = await isFeatureEnabled(
+         FEATURE_FLAG_KEYS.globalLeaderboard
+      );
+      if (!economyEnabled) {
+         logger.info(logEvents.economyRewardSkipped, {
+            context: {
+               studyLogId,
+               userId,
+               reason: "Wallet economy disabled",
+            },
+         });
+         return {
+            ok: true,
+            coinsCredited: 0,
+            fractionalSecondsRemaining: 0,
+            isDuplicate: false,
+            eligibleSeconds: 0,
+            message: "Wallet economy is temporarily disabled.",
+         };
+      }
+
       // 1. Load authoritative study log with participant and challenge context
       const log = await prisma.dailyStudyLog.findUnique({
          where: { id: studyLogId },

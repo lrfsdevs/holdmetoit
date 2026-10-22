@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { processStudyReward } from "./study-reward.service";
 import { prisma } from "@/core/db";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import * as rewardRepo from "../data/study-reward.repository";
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn(),
+}));
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -18,6 +23,21 @@ vi.mock("../data/study-reward.repository", () => ({
 describe("study-reward.service", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+   });
+
+   it("skips reward processing when the wallet flag is off", async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValue(false);
+
+      const result = await processStudyReward({
+         studyLogId: "log_123",
+         userId: "usr_123",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.coinsCredited).toBe(0);
+      expect(rewardRepo.recordStudyRewardTransaction).not.toHaveBeenCalled();
+      expect(prisma.dailyStudyLog.findUnique).not.toHaveBeenCalled();
    });
 
    it("1. successfully processes an eligible study log and awards coins", async () => {
