@@ -53,14 +53,17 @@ export interface QueuedMutation<TPayload = Record<string, unknown>> {
    retryCount: number;
 }
 
+/** Batch synchronization request payload sent from offline client. */
 export interface BatchSyncRequest {
    lastSyncTimestamp?: string;
    mutations: QueuedMutation[];
 }
 
+/** Response payload returned from batch synchronization endpoint. */
 export interface BatchSyncResponse {
    success: boolean;
    processedMutationIds: string[];
+   authenticatedUserId?: string;
    serverChanges?: {
       categories: CategoryItem[];
       tasks: TaskItem[];
