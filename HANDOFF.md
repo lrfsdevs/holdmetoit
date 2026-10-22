@@ -176,6 +176,36 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
+### Session 146 — 2026-10-22 (Fix GH-166 / FB-19: Offline IndexedDB sync resilience, periodic polling & bi-directional reconciliation)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Data & Identity Agent.
+- **Scope & Objectives:** Resolve GH-166 [FB-19]: Sync issue between client IndexedDB and hosted PostgreSQL DB where local tasks failed to update to the remote database when connection was interrupted and restored, and hosted website didn't sync changes made on other clients.
+- **Root Causes:**
+   1. `task-sync.service.ts` had zero retry mechanism or periodic polling loop; failed `fetch` calls exited permanently until next user action. `window.online` event is flaky on real-world networks (doesn't fire on router WAN drops, sleep/wake, or DNS blips).
+   2. In `task-sync.repository.ts`, the entire batch of mutations was enclosed in a single `prisma.$transaction`. Any individual failure (constraint violation, invalid ID) caused Postgres to abort the transaction, rolling back all other valid mutations in the batch and jamming the queue.
+   3. `CockpitTasksSection` hydration only seeded IndexedDB when local stores were completely empty. Once populated, it never pulled newly created categories or tasks from `userTasks`, causing the hosted site to display stale local data.
+   4. Background sync completion in `task-sync.service.ts` updated IndexedDB without dispatching any notification or state update to the React view.
+- **Code & Test Fixes:**
+   - In `task-sync.service.ts`:
+      - Added auto-retry with exponential backoff on HTTP and network errors (`INITIAL_RETRY_DELAY_MS = 2000`, `MAX_RETRY_DELAY_MS = 30000`).
+      - Added 15-second background interval ticker in `initTaskSync` to detect and flush pending mutations.
+      - Enabled pulling cloud updates via `syncNow(userId, { forcePull: true })` on tab visibility change, online reconnect, and initial mount.
+      - Avoided overwriting pending local entity edits during server change reconciliation.
+      - Dispatched custom window event `TASKS_SYNCED_EVENT` (`holdmetoit:task-synced`) upon server reconciliation.
+   - In `task-sync.repository.ts`:
+      - Isolated each mutation inside its own `prisma.$transaction` so a single failing mutation does not roll back or abort the rest of the batch.
+   - In `cockpit-tasks-section.tsx`:
+      - Reconciled incoming server categories and tasks into local IndexedDB even when local data already exists.
+      - Pruned synced tasks that were deleted remotely (while preserving all pending local edits).
+      - Subscribed to `TASKS_SYNCED_EVENT` to automatically re-hydrate the React board when background sync finishes.
+   - Tests:
+      - Added unit tests in `apps/web/features/tasks/data/local/task-sync.service.test.ts` covering retry backoff, force pull, conflict avoidance, and event dispatch.
+      - Added batch failure isolation test in `apps/web/features/tasks/data/task-sync.repository.test.ts`.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exit 0).
+   - `npm run test:web`: ✅ 182 test files passed (1,717/1,717 tests green).
+   - `npm run build:web`: ✅ Production build succeeded (18 routes + Edge Middleware compiled cleanly).
+
 ### Session 145 — 2026-10-22 (Fix GH-130: Prevent false-positive past task lock for weekly challenge categories)
 
 - **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
