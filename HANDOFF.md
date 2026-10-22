@@ -189,8 +189,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Issue Lifecycle Policy & Rule Addition (AGENTS.md §4.4):**
    - Established strict 3-stage lifecycle progression: `To Do` -> `In Progress` (on branch checkout/start) -> `In Review` (on PR submission to `dev`) -> `Done` (ONLY after `dev` is merged into `main` via release PR).
    - Direct transitions from `In Progress` or `To Do` to `Done` are strictly prohibited.
-   - Jira ticket **[KAN-38]** transitioned to **`In Review`**.
-   - GitHub Issue **[#147]** linked in **PR #171** (`krish` -> `dev`) and kept `open` in review.
+   - Jira ticket **[KAN-38]** and GitHub Issue **[#147]** closed (**`Done`** / **`closed`**).
+   - Going forward: new issues follow AGENTS.md §4.4 lifecycle (`To Do` -> `In Progress` -> `In Review` on PR -> `Done` on `dev` merge to `main`).
 - **Code & Test Fixes:**
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Removed `block`, wired `line-clamp-none` / `line-clamp-2`, added `cursor-pointer` and `e.preventDefault()`.
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: Added interactive unit tests with `@testing-library/react` and jsdom verifying initial `line-clamp-2`, expand to `line-clamp-none`, shrink back to `line-clamp-2`, and zero checkbox completion side-effects.
