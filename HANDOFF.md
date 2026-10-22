@@ -176,6 +176,25 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
+### Session 145 — 2026-10-22 (Fix GH-130: Prevent false-positive past task lock for weekly challenge categories)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Resolve GH-130: Prevent false-positive past task lock when deleting weekly challenge categories in `cockpit-task-menu.tsx` and `cockpit-tasks-section.tsx`.
+- **Root Cause:**
+   1. `CategoryMenuItems` checked `hasPastTasks` without restricting the check to `catType === "daily"`. Weekly tasks without a `dueDate` defaulted to `t.createdAt`, so any weekly goal created on an earlier day was mistakenly flagged as a past task (`opt?.isPast ?? dateKey < effectiveTodayDate`), falsely disabling category deletion.
+   2. When resolving target categories, `[...dailyCategories, ...weeklyCategories].find(...)` prioritized daily categories over weekly categories when names or IDs matched.
+   3. `handleConfirmDeleteCategory` in `cockpit-tasks-section.tsx` evaluated the same past-task check and silently aborted weekly category deletions.
+- **Code & Test Fixes:**
+   - In `cockpit-task-menu.tsx`: Restrict `hasPastTasks` to check matching daily category tasks with the same `id` (or name fallback for daily categories), protecting past daily tasks if a category spans boards while ensuring pure weekly goals remain unlocked.
+   - In `cockpit-tasks-section.tsx`: Check `dailyTargetCat` matching `catId` before confirming category deletion, preventing soft-deletion of past daily study tasks.
+   - In `cockpit-task-menu.test.tsx`: Added unit tests verifying (1) weekly categories with past-dated tasks or matching daily names do not falsely lock deletion, and (2) weekly categories sharing an ID with past daily tasks correctly remain locked.
+   - In `cockpit-tasks-section.test.tsx`: Added unit test asserting weekly categories with past tasks render valid options and menus.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web` passed (0 errors).
+   - `npm run test -w @holdmetoit/web` passed (181 test files, 1,708/1,708 tests green).
+   - `npm run lint:web` passed (0 errors).
+   - `npm run build:web` passed (production build clean).
+
 ### PR #133 — 2026-10-19 (Docstring Coverage)
 
 - Confirmed the checkout matches PR head `d3c72917286eded1d03613baf41792e578891408`.

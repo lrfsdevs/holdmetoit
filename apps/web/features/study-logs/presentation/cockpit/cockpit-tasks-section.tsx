@@ -1587,18 +1587,16 @@ export function CockpitTasksSection({
          dailyCategories.find((c) => c.name === targetName)?.id ||
          weeklyCategories.find((c) => c.name === targetName)?.id;
 
-      const allRelevantCats =
-         catType === "daily"
-            ? dailyCategories
-            : [...dailyCategories, ...weeklyCategories];
-      const targetCat = allRelevantCats.find((c) =>
-         catId ? c.id === catId : c.name === targetName
+      const dailyTargetCat = dailyCategories.find((c) =>
+         catId ? c.id === catId : catType === "daily" && c.name === targetName
       );
-      const hasPastTasks = targetCat?.tasks.some((t) => {
-         const dateKey = getTaskDateKey(t);
-         const opt = dayOptions.find((d) => d.dateKey === dateKey);
-         return opt?.isPast ?? dateKey < effectiveTodayDate;
-      });
+      const hasPastTasks = Boolean(
+         dailyTargetCat?.tasks.some((t) => {
+            const dateKey = getTaskDateKey(t);
+            const opt = dayOptions.find((d) => d.dateKey === dateKey);
+            return opt?.isPast ?? dateKey < effectiveTodayDate;
+         })
+      );
 
       if (hasPastTasks) {
          setDeleteCategoryModal(null);
