@@ -96,6 +96,7 @@ import {
 import {
    initTaskSync,
    scheduleSync,
+   TASKS_SYNCED_EVENT,
 } from "@/features/tasks/data/local/task-sync.service";
 import type {
    LocalCategoryRecord,
@@ -430,6 +431,17 @@ export function CockpitTasksSection({
       const cleanup = initTaskSync(userId);
       let isCancelled = false;
 
+      const handleSyncEvent = () => {
+         if (!isCancelled) {
+            logTaskSync("Live task sync event received, re-hydrating view...");
+            hydrateFromIndexedDB();
+         }
+      };
+
+      if (typeof window !== "undefined") {
+         window.addEventListener(TASKS_SYNCED_EVENT, handleSyncEvent);
+      }
+
       async function hydrateFromIndexedDB() {
          try {
             const localTasks = await getAllLocalTasks(userId ?? null);
@@ -468,6 +480,75 @@ export function CockpitTasksSection({
                            status: t.status,
                            sortOrder: t.sortOrder,
                         });
+                     }
+                  }
+
+                  // Reconcile categories from server not yet in local IndexedDB
+                  const localCatIdSet = new Set(localCats.map((c) => c.id));
+                  const missingCats: LocalCategoryRecord[] =
+                     userTasks.categories
+                        .filter((c) => !c.isDeleted && !localCatIdSet.has(c.id))
+                        .map((c) => ({
+                           id: c.id,
+                           userId: userId || null,
+                           name: c.name,
+                           taskType: c.taskType,
+                           sortOrder: c.sortOrder ?? 0,
+                           createdAt: new Date(c.createdAt).toISOString(),
+                           updatedAt: new Date(c.updatedAt).toISOString(),
+                           syncState: "synced",
+                        }));
+
+                  if (missingCats.length > 0) {
+                     localCats.push(...missingCats);
+                     putLocalCategories(missingCats).catch(() => {});
+                  }
+
+                  // Reconcile tasks from server not yet in local IndexedDB
+                  const localTaskIdSet = new Set(localTasks.map((t) => t.id));
+                  const serverFlatTasks = [
+                     ...userTasks.dailyCategories.flatMap((c) => c.tasks),
+                     ...userTasks.weeklyCategories.flatMap((c) => c.tasks),
+                  ];
+                  const missingTasks: LocalTaskRecord[] = serverFlatTasks
+                     .filter((t) => !t.isDeleted && !localTaskIdSet.has(t.id))
+                     .map((t) => ({
+                        id: t.id,
+                        userId: userId || null,
+                        categoryId: t.categoryId,
+                        challengeId: t.challengeId ?? null,
+                        title: t.title,
+                        taskType: t.taskType,
+                        sortOrder: t.sortOrder ?? 0,
+                        isComplete: t.isComplete,
+                        status:
+                           (t.status as TaskStatus) ||
+                           (t.isComplete ? "COMPLETED" : "TODO"),
+                        dueDate: t.dueDate ?? null,
+                        createdAt: new Date(t.createdAt).toISOString(),
+                        updatedAt: new Date(t.updatedAt).toISOString(),
+                        completedAt: t.completedAt
+                           ? new Date(t.completedAt).toISOString()
+                           : null,
+                        syncState: "synced",
+                     }));
+
+                  if (missingTasks.length > 0) {
+                     localTasks.push(...missingTasks);
+                     putLocalTasks(missingTasks).catch(() => {});
+                  }
+
+                  // Prune local tasks that were deleted remotely (only if synced, never pending)
+                  if (userTasks.categories.length > 0) {
+                     const deletedRemoteTasks = localTasks.filter(
+                        (t) =>
+                           t.syncState === "synced" &&
+                           !serverTaskMap.has(t.id) &&
+                           !t.isDeleted
+                     );
+                     for (const del of deletedRemoteTasks) {
+                        del.isDeleted = true;
+                        deleteLocalTask(del.id).catch(() => {});
                      }
                   }
                }
@@ -646,6 +727,9 @@ export function CockpitTasksSection({
 
       return () => {
          isCancelled = true;
+         if (typeof window !== "undefined") {
+            window.removeEventListener(TASKS_SYNCED_EVENT, handleSyncEvent);
+         }
          cleanup();
       };
    }, [userId, userTasks]);
