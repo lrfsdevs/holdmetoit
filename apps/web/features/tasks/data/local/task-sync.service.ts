@@ -1,4 +1,8 @@
 import {
+   deleteLocalCategory,
+   deleteLocalTask,
+   getAllLocalCategories,
+   getAllLocalTasks,
    getAllQueuedMutations,
    logTaskSync,
    migrateGuestDataToUser,
@@ -8,10 +12,13 @@ import {
 } from "./task-idb";
 import type { BatchSyncResponse } from "@/features/tasks/domain/task-sync.types";
 
+/** Options controlling sync execution behavior. */
 export interface SyncOptions {
+   /** When true, fetches remote server changes even if the local mutation queue is empty. */
    forcePull?: boolean;
 }
 
+/** Custom DOM event dispatched when task synchronization reconciles server changes. */
 export const TASKS_SYNCED_EVENT = "holdmetoit:task-synced";
 
 let isSyncing = false;
@@ -20,7 +27,13 @@ let retryAttempts = 0;
 const INITIAL_RETRY_DELAY_MS = 2000;
 const MAX_RETRY_DELAY_MS = 30000;
 
-function scheduleRetry(userId: string | null): void {
+/**
+ * Schedules an exponential-backoff retry attempt for synchronization failures.
+ *
+ * @param userId - Authenticated user identifier.
+ * @param options - Optional sync configuration flags preserving forcePull across retries.
+ */
+function scheduleRetry(userId: string | null, options?: SyncOptions): void {
    if (!userId || typeof window === "undefined") return;
    retryAttempts++;
    const delayMs = Math.min(
@@ -28,11 +41,20 @@ function scheduleRetry(userId: string | null): void {
       INITIAL_RETRY_DELAY_MS * Math.pow(1.5, retryAttempts - 1)
    );
    logTaskSync(
-      `Scheduling sync retry #${retryAttempts} in ${Math.round(delayMs)}ms`
+      `Scheduling sync retry #${retryAttempts} in ${Math.round(delayMs)}ms${options?.forcePull ? " (forced pull)" : ""}`
    );
-   scheduleSync(userId, delayMs);
+   scheduleSync(userId, delayMs, options);
 }
 
+/**
+ * Executes immediate batch synchronization between client IndexedDB and server.
+ * Flushes queued mutations or pulls fresh server changes when forcePull is enabled.
+ * Reconciles remote updates and cleans up remotely deleted entities without clobbering pending local edits.
+ *
+ * @param userId - Authenticated user identifier.
+ * @param options - Configuration options controlling forcePull behavior.
+ * @returns BatchSyncResponse if successful, or null on rejection/network failure.
+ */
 export async function syncNow(
    userId: string | null,
    options?: SyncOptions
@@ -77,7 +99,7 @@ export async function syncNow(
          const errorData = await res.json().catch(() => ({}));
          const errorMsg = errorData.error || `HTTP ${res.status}`;
          logTaskSync(`Batch sync error: ${errorMsg}`);
-         scheduleRetry(userId);
+         scheduleRetry(userId, options);
          return null;
       }
 
@@ -86,6 +108,22 @@ export async function syncNow(
 
       if (data.success) {
          retryAttempts = 0;
+
+         // Cross-account boundary check: verify authenticated user matches client state
+         if (
+            data.authenticatedUserId &&
+            userId &&
+            data.authenticatedUserId !== userId
+         ) {
+            logTaskSync(
+               `Session user mismatch detected (client: ${userId}, server: ${data.authenticatedUserId}). Aborting local mutation write.`
+            );
+            if (typeof window !== "undefined") {
+               window.location.reload();
+            }
+            return data;
+         }
+
          if (data.processedMutationIds.length > 0) {
             await removeQueuedMutations(data.processedMutationIds);
          }
@@ -144,6 +182,36 @@ export async function syncNow(
             await putLocalCategories(localCategories);
             await putLocalTasks(localTasks);
 
+            // Prune local synced tasks that were deleted remotely
+            const serverTaskIdSet = new Set(
+               data.serverChanges.tasks.map((t) => t.id)
+            );
+            const existingTasks = await getAllLocalTasks(userId);
+            for (const lt of existingTasks) {
+               if (
+                  lt.syncState === "synced" &&
+                  !serverTaskIdSet.has(lt.id) &&
+                  !pendingEntityIds.has(lt.id)
+               ) {
+                  await deleteLocalTask(lt.id);
+               }
+            }
+
+            // Prune local synced categories that were deleted remotely
+            const serverCatIdSet = new Set(
+               data.serverChanges.categories.map((c) => c.id)
+            );
+            const existingCats = await getAllLocalCategories(userId);
+            for (const lc of existingCats) {
+               if (
+                  lc.syncState === "synced" &&
+                  !serverCatIdSet.has(lc.id) &&
+                  !pendingEntityIds.has(lc.id)
+               ) {
+                  await deleteLocalCategory(lc.id);
+               }
+            }
+
             if (typeof window !== "undefined") {
                window.dispatchEvent(
                   new CustomEvent(TASKS_SYNCED_EVENT, {
@@ -159,19 +227,30 @@ export async function syncNow(
          return data;
       } else {
          logTaskSync(`Batch sync rejected: ${data.error || "Unknown error"}`);
-         scheduleRetry(userId);
+         scheduleRetry(userId, options);
          return null;
       }
    } catch (err) {
       logTaskSync("Network error during sync flush:", err);
-      scheduleRetry(userId);
+      scheduleRetry(userId, options);
       return null;
    } finally {
       isSyncing = false;
    }
 }
 
-export function scheduleSync(userId: string | null, delayMs = 1500): void {
+/**
+ * Schedules a debounced sync invocation after a specified delay.
+ *
+ * @param userId - Authenticated user identifier.
+ * @param delayMs - Delay in milliseconds before executing syncNow (default 1500ms).
+ * @param options - Optional sync configuration flags such as forcePull.
+ */
+export function scheduleSync(
+   userId: string | null,
+   delayMs = 1500,
+   options?: SyncOptions
+): void {
    if (typeof window === "undefined" || !userId) return;
 
    if (syncTimeout) {
@@ -179,10 +258,17 @@ export function scheduleSync(userId: string | null, delayMs = 1500): void {
    }
 
    syncTimeout = setTimeout(() => {
-      syncNow(userId).catch(() => {});
+      syncNow(userId, options).catch(() => {});
    }, delayMs);
 }
 
+/**
+ * Initializes browser background sync listeners for network online transitions,
+ * tab visibility changes, and periodic polling.
+ *
+ * @param userId - Current authenticated user ID, or null/undefined if guest.
+ * @returns Cleanup function removing all registered event listeners and timers.
+ */
 export function initTaskSync(userId?: string | null): () => void {
    if (typeof window === "undefined") {
       return () => {};

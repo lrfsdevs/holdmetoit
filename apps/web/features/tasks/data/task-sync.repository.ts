@@ -16,6 +16,15 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("tasks.sync");
 
+/**
+ * Processes a queued batch of offline task and category mutations for a user.
+ * Each mutation is isolated in its own transaction so individual failures do not
+ * prevent remaining valid mutations from committing.
+ *
+ * @param userId - ID of the authenticated user performing the sync.
+ * @param rawMutations - Array of pending offline mutations to apply.
+ * @returns BatchSyncResponse with processed mutation IDs, authenticated user ID, and latest server changes.
+ */
 export async function processBatchSync(
    userId: string,
    rawMutations: QueuedMutation[]
@@ -177,15 +186,19 @@ export async function processBatchSync(
                if (m.action === "CREATE") {
                   if (taskId && title) {
                      // Ensure category exists and belongs to user
-                     let cat = categoryId
-                        ? await tx.category.findFirst({
-                             where: { id: categoryId, userId },
-                          })
-                        : null;
-
-                     if (!cat) {
+                     let cat = null;
+                     if (categoryId) {
                         cat = await tx.category.findFirst({
-                           where: { userId, taskType },
+                           where: { id: categoryId, userId, isDeleted: false },
+                        });
+                        if (!cat) {
+                           throw new Error(
+                              `Category ${categoryId} not found for user ${userId}`
+                           );
+                        }
+                     } else {
+                        cat = await tx.category.findFirst({
+                           where: { userId, taskType, isDeleted: false },
                         });
                         if (!cat) {
                            cat = await tx.category.create({
@@ -257,7 +270,17 @@ export async function processBatchSync(
                   if (taskId) {
                      const dataToUpdate: Record<string, unknown> = {};
                      if (title) dataToUpdate.title = title;
-                     if (categoryId) dataToUpdate.categoryId = categoryId;
+                     if (categoryId) {
+                        const targetCat = await tx.category.findFirst({
+                           where: { id: categoryId, userId, isDeleted: false },
+                        });
+                        if (!targetCat) {
+                           throw new Error(
+                              `Target category ${categoryId} not found for user ${userId}`
+                           );
+                        }
+                        dataToUpdate.categoryId = categoryId;
+                     }
                      if (payload.taskType) dataToUpdate.taskType = taskType;
                      if (typeof payload.sortOrder === "number")
                         dataToUpdate.sortOrder = payload.sortOrder;
@@ -356,6 +379,7 @@ export async function processBatchSync(
    return {
       success: true,
       processedMutationIds,
+      authenticatedUserId: userId,
       serverChanges: {
          categories: latest.categories,
          tasks: flatTasks,

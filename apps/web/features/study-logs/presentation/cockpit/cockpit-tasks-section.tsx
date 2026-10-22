@@ -455,104 +455,6 @@ export function CockpitTasksSection({
                   tasks: localTasks.length,
                });
 
-               const serverTaskMap = new Map<
-                  string,
-                  {
-                     dueDate?: string | null;
-                     status?: TaskStatus;
-                     sortOrder?: number;
-                  }
-               >();
-               if (userTasks) {
-                  for (const cat of [
-                     ...userTasks.dailyCategories,
-                     ...userTasks.weeklyCategories,
-                  ]) {
-                     for (const t of cat.tasks) {
-                        serverTaskMap.set(t.id, {
-                           dueDate: t.dueDate
-                              ? typeof t.dueDate === "string"
-                                 ? t.dueDate.slice(0, 10)
-                                 : new Date(t.dueDate)
-                                      .toISOString()
-                                      .slice(0, 10)
-                              : null,
-                           status: t.status,
-                           sortOrder: t.sortOrder,
-                        });
-                     }
-                  }
-
-                  // Reconcile categories from server not yet in local IndexedDB
-                  const localCatIdSet = new Set(localCats.map((c) => c.id));
-                  const missingCats: LocalCategoryRecord[] =
-                     userTasks.categories
-                        .filter((c) => !c.isDeleted && !localCatIdSet.has(c.id))
-                        .map((c) => ({
-                           id: c.id,
-                           userId: userId || null,
-                           name: c.name,
-                           taskType: c.taskType,
-                           sortOrder: c.sortOrder ?? 0,
-                           createdAt: new Date(c.createdAt).toISOString(),
-                           updatedAt: new Date(c.updatedAt).toISOString(),
-                           syncState: "synced",
-                        }));
-
-                  if (missingCats.length > 0) {
-                     localCats.push(...missingCats);
-                     putLocalCategories(missingCats).catch(() => {});
-                  }
-
-                  // Reconcile tasks from server not yet in local IndexedDB
-                  const localTaskIdSet = new Set(localTasks.map((t) => t.id));
-                  const serverFlatTasks = [
-                     ...userTasks.dailyCategories.flatMap((c) => c.tasks),
-                     ...userTasks.weeklyCategories.flatMap((c) => c.tasks),
-                  ];
-                  const missingTasks: LocalTaskRecord[] = serverFlatTasks
-                     .filter((t) => !t.isDeleted && !localTaskIdSet.has(t.id))
-                     .map((t) => ({
-                        id: t.id,
-                        userId: userId || null,
-                        categoryId: t.categoryId,
-                        challengeId: t.challengeId ?? null,
-                        title: t.title,
-                        taskType: t.taskType,
-                        sortOrder: t.sortOrder ?? 0,
-                        isComplete: t.isComplete,
-                        status:
-                           (t.status as TaskStatus) ||
-                           (t.isComplete ? "COMPLETED" : "TODO"),
-                        dueDate: t.dueDate ?? null,
-                        createdAt: new Date(t.createdAt).toISOString(),
-                        updatedAt: new Date(t.updatedAt).toISOString(),
-                        completedAt: t.completedAt
-                           ? new Date(t.completedAt).toISOString()
-                           : null,
-                        syncState: "synced",
-                     }));
-
-                  if (missingTasks.length > 0) {
-                     localTasks.push(...missingTasks);
-                     putLocalTasks(missingTasks).catch(() => {});
-                  }
-
-                  // Prune local tasks that were deleted remotely (only if synced, never pending)
-                  if (userTasks.categories.length > 0) {
-                     const deletedRemoteTasks = localTasks.filter(
-                        (t) =>
-                           t.syncState === "synced" &&
-                           !serverTaskMap.has(t.id) &&
-                           !t.isDeleted
-                     );
-                     for (const del of deletedRemoteTasks) {
-                        del.isDeleted = true;
-                        deleteLocalTask(del.id).catch(() => {});
-                     }
-                  }
-               }
-
                const sortedCats = [...localCats]
                   .filter((c) => !c.isDeleted)
                   .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -581,23 +483,18 @@ export function CockpitTasksSection({
                               t.categoryId === c.id && t.taskType === "DAILY"
                         )
                         .map((t) => {
-                           const serverInfo = serverTaskMap.get(t.id);
-                           const effectiveDueDate =
-                              (t.dueDate
-                                 ? typeof t.dueDate === "string"
-                                    ? t.dueDate.slice(0, 10)
-                                    : new Date(t.dueDate)
-                                         .toISOString()
-                                         .slice(0, 10)
-                                 : null) ??
-                              serverInfo?.dueDate ??
-                              null;
+                           const effectiveDueDate = t.dueDate
+                              ? typeof t.dueDate === "string"
+                                 ? t.dueDate.slice(0, 10)
+                                 : new Date(t.dueDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                              : null;
                            const effectiveStatus =
                               (t.status as TaskStatus) ||
-                              serverInfo?.status ||
                               (t.isComplete ? "COMPLETED" : "TODO");
 
-                           if (t.dueDate !== effectiveDueDate || !t.status) {
+                           if (!t.status) {
                               tasksToHeal.push({
                                  ...t,
                                  dueDate: effectiveDueDate,
@@ -628,23 +525,18 @@ export function CockpitTasksSection({
                               t.categoryId === c.id && t.taskType === "WEEKLY"
                         )
                         .map((t) => {
-                           const serverInfo = serverTaskMap.get(t.id);
-                           const effectiveDueDate =
-                              (t.dueDate
-                                 ? typeof t.dueDate === "string"
-                                    ? t.dueDate.slice(0, 10)
-                                    : new Date(t.dueDate)
-                                         .toISOString()
-                                         .slice(0, 10)
-                                 : null) ??
-                              serverInfo?.dueDate ??
-                              null;
+                           const effectiveDueDate = t.dueDate
+                              ? typeof t.dueDate === "string"
+                                 ? t.dueDate.slice(0, 10)
+                                 : new Date(t.dueDate)
+                                      .toISOString()
+                                      .slice(0, 10)
+                              : null;
                            const effectiveStatus =
                               (t.status as TaskStatus) ||
-                              serverInfo?.status ||
                               (t.isComplete ? "COMPLETED" : "TODO");
 
-                           if (t.dueDate !== effectiveDueDate || !t.status) {
+                           if (!t.status) {
                               tasksToHeal.push({
                                  ...t,
                                  dueDate: effectiveDueDate,
@@ -667,12 +559,8 @@ export function CockpitTasksSection({
                   putLocalTasks(tasksToHeal).catch(() => {});
                }
 
-               if (dailyCats.length > 0) {
-                  setDailyCategories(dailyCats);
-               }
-               if (weeklyCats.length > 0) {
-                  setWeeklyCategories(weeklyCats);
-               }
+               setDailyCategories(dailyCats);
+               setWeeklyCategories(weeklyCats);
             } else if (userTasks && userTasks.categories.length > 0) {
                logTaskSync("Seeding IndexedDB from server userTasks...");
                const seedCats: LocalCategoryRecord[] = userTasks.categories

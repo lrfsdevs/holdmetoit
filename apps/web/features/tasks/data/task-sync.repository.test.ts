@@ -221,6 +221,29 @@ describe("processBatchSync (task-sync.repository)", () => {
       expect(res.processedMutationIds).toContain("mut-good");
    });
 
+   it("fails and leaves task mutation unacknowledged when explicit categoryId does not exist", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValueOnce(null);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-task-orphan",
+            entityType: "TASK",
+            action: "CREATE",
+            payload: {
+               id: "task-orphan",
+               title: "Task with missing cat",
+               categoryId: "cat-missing",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.success).toBe(true);
+      expect(res.processedMutationIds).not.toContain("mut-task-orphan");
+      expect(prisma.task.upsert).not.toHaveBeenCalled();
+   });
+
    it("soft-deletes a task on DELETE mutations instead of removing the row", async () => {
       const res = await processBatchSync(userId, [
          {

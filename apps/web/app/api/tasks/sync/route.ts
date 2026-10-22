@@ -10,7 +10,12 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("tasks.sync");
 
-/** Authenticates and processes a queued offline task-sync batch. */
+/**
+ * Authenticates the current user session and processes a queued offline task-sync batch.
+ *
+ * @param request - Next.js Request object containing the JSON BatchSyncRequest payload.
+ * @returns JSON response with BatchSyncResponse containing processed mutation IDs, authenticated user ID, and server changes.
+ */
 export async function POST(request: Request) {
    try {
       const user = await requireSessionUser();
