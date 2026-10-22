@@ -69,6 +69,7 @@ export async function findActiveParticipantForUserOnDate(
    const participants = await prisma.challengeParticipant.findMany({
       where: {
          userId,
+         isWithdrawn: false,
          challenge: {
             isDeleted: false,
             resultsLockedAt: null,

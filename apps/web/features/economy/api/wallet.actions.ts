@@ -19,9 +19,21 @@ import {
 import { getAllRewardRecordsForWallet } from "../data/study-reward.repository";
 import { reconcileWalletState } from "../domain/reconciliation";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { TransactionTypeValue } from "../domain/economy-constants";
 
 const logger = createLogger("economy.actions");
+
+const WALLET_DISABLED = {
+   ok: false as const,
+   code: "FEATURE_DISABLED",
+   message: "Wallet is currently unavailable.",
+};
+
+async function isWalletEnabled(): Promise<boolean> {
+   return isFeatureEnabled(FEATURE_FLAG_KEYS.globalLeaderboard);
+}
 
 const getHistorySchema = z.object({
    page: z.number().int().min(1).optional().default(1),
@@ -31,6 +43,10 @@ const getHistorySchema = z.object({
 
 export async function getWalletSummaryAction() {
    try {
+      if (!(await isWalletEnabled())) {
+         return WALLET_DISABLED;
+      }
+
       const user = await requireSessionUser();
       const summary = await getWalletSummary(user.id);
       return { ok: true as const, data: summary };
@@ -50,6 +66,10 @@ export async function getTransactionHistoryAction(
    rawInput?: z.infer<typeof getHistorySchema>
 ) {
    try {
+      if (!(await isWalletEnabled())) {
+         return WALLET_DISABLED;
+      }
+
       const user = await requireSessionUser();
       const parsed = getHistorySchema.safeParse(rawInput ?? {});
       if (!parsed.success) {
@@ -101,6 +121,10 @@ export async function adminAdjustBalanceAction(
    rawInput: z.infer<typeof adminAdjustSchema>
 ) {
    try {
+      if (!(await isWalletEnabled())) {
+         return WALLET_DISABLED;
+      }
+
       const admin = await requireAdminUser();
       const parsed = adminAdjustSchema.safeParse(rawInput);
       if (!parsed.success) {
@@ -192,6 +216,10 @@ export async function reconcileWalletAction(
    rawInput?: z.infer<typeof reconcileSchema>
 ) {
    try {
+      if (!(await isWalletEnabled())) {
+         return WALLET_DISABLED;
+      }
+
       const sessionUser = await requireSessionUser();
       const parsed = reconcileSchema.safeParse(rawInput ?? {});
       const targetUserId =
@@ -251,6 +279,10 @@ export async function reverseTransactionAction(
    rawInput: z.infer<typeof reversalSchema>
 ) {
    try {
+      if (!(await isWalletEnabled())) {
+         return WALLET_DISABLED;
+      }
+
       const admin = await requireAdminUser();
       const parsed = reversalSchema.safeParse(rawInput);
       if (!parsed.success) {

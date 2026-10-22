@@ -36,12 +36,15 @@ import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
 import { PunishmentWall } from "@/features/accountability/presentation/punishment-wall";
 import { ChallengeBettingCard } from "./challenge-betting-card";
 import { ChallengeDescriptionContent } from "./challenge-description-content";
+import { WithdrawChallengeButton } from "./withdraw-challenge-modal";
 
 interface ChallengeOverviewTabProps {
    challenge: ChallengeScoreboardViewModel;
    isAdmin?: boolean;
    /** Server-evaluated `betting_system_v1`. */
    isBettingEnabled?: boolean;
+   /** Server-evaluated `challenge_withdrawal_v1`. */
+   isWithdrawalEnabled?: boolean;
 }
 
 /** Renders challenge overview details and participant actions. */
@@ -49,6 +52,7 @@ export function ChallengeOverviewTab({
    challenge,
    isAdmin = false,
    isBettingEnabled = true,
+   isWithdrawalEnabled = false,
 }: ChallengeOverviewTabProps) {
    const [searchQuery, setSearchQuery] = useState("");
    const [selectedTeamId, setSelectedTeamId] = useState("ALL");
@@ -173,7 +177,7 @@ export function ChallengeOverviewTab({
          </div>
 
          {/* 2. Right Column: Participants List (Challenge/Default 64:1806) */}
-         <div className="lg:col-span-5">
+         <div className="lg:col-span-5 space-y-4">
             <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-6 shadow-lg space-y-4">
                <div className="flex items-center justify-between pb-2 border-b border-border-default">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -369,6 +373,16 @@ export function ChallengeOverviewTab({
                   compact={true}
                />
             </div>
+
+            {isWithdrawalEnabled &&
+               challenge.currentUser.isEnrolled &&
+               challenge.status !== "COMPLETED" &&
+               !challenge.resultsLockedAt && (
+                  <WithdrawChallengeButton
+                     challengeId={challenge.id}
+                     challengeTitle={challenge.title}
+                  />
+               )}
          </div>
 
          {/* Admin Hours Override Modal (FEAT-LOG-04) */}

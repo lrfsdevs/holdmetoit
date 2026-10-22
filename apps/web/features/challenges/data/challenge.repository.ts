@@ -81,7 +81,7 @@ export async function listAllChallenges() {
          },
          _count: {
             select: {
-               participants: true,
+               participants: { where: { isWithdrawn: false } },
             },
          },
       },
@@ -108,6 +108,7 @@ export async function findLatestCompletedChallengeForWrapped(
       const userParticipation = await prisma.challengeParticipant.findFirst({
          where: {
             userId,
+            isWithdrawn: false,
             challenge: {
                isDeleted: false,
                OR: [

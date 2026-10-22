@@ -11,7 +11,10 @@ import { findTransactionsByUserId } from "@/features/economy/data/ledger.reposit
 import { getUserYptId } from "@/features/ypt/data/ypt.repository";
 import { getUserTrophyBalance } from "@/features/trophies/data/trophy.repository";
 import { SignInWithDiscordButton } from "@/components/ui/header";
+import { EmptyState } from "@/components/state/empty-state";
 import { CoinsIcon } from "@/features/economy/presentation/coins-icon";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,23 @@ interface WalletPageProps {
 }
 
 export default async function WalletPage({ searchParams }: WalletPageProps) {
+   const walletEnabled = await isFeatureEnabled(
+      FEATURE_FLAG_KEYS.globalLeaderboard
+   );
+
+   if (!walletEnabled) {
+      return (
+         <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
+            <main className="mx-auto max-w-5xl px-3 sm:px-6 py-8">
+               <EmptyState
+                  title="Wallet is currently unavailable"
+                  description="The virtual economy is temporarily locked. Please check back later."
+               />
+            </main>
+         </div>
+      );
+   }
+
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;

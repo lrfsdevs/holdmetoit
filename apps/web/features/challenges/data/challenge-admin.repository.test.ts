@@ -320,6 +320,56 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
       });
 
+      it("skips withdrawn participants during lock evaluation", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
+               }),
+               mockParticipant({
+                  id: "p_withdrawn",
+                  userId: "u_withdrawn",
+                  isWithdrawn: true,
+                  dailyStudyLogs: [],
+               }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.task.findMany).toHaveBeenCalledWith({
+            where: {
+               challengeId: "c_act",
+               taskType: "WEEKLY",
+               userId: { in: ["u_1"] },
+            },
+            select: { userId: true, status: true },
+         });
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+         expect(auditRepo.recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "CHALLENGE_LOCKED",
+               newValue: expect.objectContaining({
+                  withdrawnParticipants: 1,
+                  participantsEvaluated: 1,
+               }),
+            })
+         );
+      });
+
       it("punishes a winning-team participant when a weekly task is incomplete", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
@@ -1148,14 +1198,15 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
    });
 
    describe("removeChallengeParticipant", () => {
-      it("removes participant and all dependent rows, then records audit (Law L5)", async () => {
-         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+      function mockParticipant(overrides: Record<string, unknown> = {}) {
+         return {
             id: "p_1",
             userId: "u_1",
             challengeId: "c_1",
             teamId: "t_1",
             targetSeconds: 126000,
             status: "NORMAL",
+            isWithdrawn: false,
             user: { id: "u_1", displayName: "Afnan", username: "afnan" },
             team: { id: "t_1", name: "Bees" },
             challenge: {
@@ -1163,10 +1214,19 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                title: "Battle",
                startAt: new Date(Date.now() + 86400000),
                endAt: new Date(Date.now() + 7 * 86400000),
+               resultsLockedAt: null,
             },
-         } as never);
-         vi.mocked(prisma.challengeParticipant.delete).mockResolvedValue({
-            id: "p_1",
+            dailyStudyLogs: [{ durationSeconds: 3600 }],
+            ...overrides,
+         };
+      }
+
+      it("soft-withdraws the participant and records PARTICIPANT_REMOVED", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            mockParticipant() as never
+         );
+         vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
+            count: 1,
          } as never);
 
          const result = await removeChallengeParticipant({
@@ -1179,22 +1239,25 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             participantId: "p_1",
             removedName: "Afnan",
          });
-         expect(prisma.dailyStudyLog.deleteMany).toHaveBeenCalledWith({
-            where: { participantId: "p_1" },
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: "p_1",
+               isWithdrawn: false,
+               challenge: { resultsLockedAt: null },
+            },
+            data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
          });
-         expect(prisma.punishmentRecord.deleteMany).toHaveBeenCalledWith({
-            where: { participantId: "p_1" },
-         });
-         expect(prisma.challengeParticipant.delete).toHaveBeenCalledWith({
-            where: { id: "p_1" },
-         });
+         expect(prisma.dailyStudyLog.deleteMany).not.toHaveBeenCalled();
+         expect(prisma.punishmentRecord.deleteMany).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.delete).not.toHaveBeenCalled();
          expect(auditRepo.recordAuditEvent).toHaveBeenCalledWith(
             expect.objectContaining({
-               actionType: "ROSTER_EDIT",
+               actorId: "admin_1",
+               actionType: "PARTICIPANT_REMOVED",
                targetEntityType: "PARTICIPANT",
                challengeId: "c_1",
                auditReason: "Duplicate enrollment",
-               newValue: null,
+               newValue: expect.objectContaining({ isWithdrawn: true }),
             })
          );
       });
@@ -1214,22 +1277,40 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
       });
 
       it("rejects when the challenge is COMPLETED", async () => {
-         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
-            id: "p_1",
-            userId: "u_1",
-            challengeId: "c_1",
-            teamId: "t_1",
-            targetSeconds: 126000,
-            status: "NORMAL",
-            user: { id: "u_1", displayName: "Afnan", username: "afnan" },
-            team: { id: "t_1", name: "Bees" },
-            challenge: {
-               id: "c_1",
-               title: "Battle",
-               startAt: new Date(Date.now() - 14 * 86400000),
-               endAt: new Date(Date.now() - 7 * 86400000),
-            },
-         } as never);
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            mockParticipant({
+               challenge: {
+                  id: "c_1",
+                  title: "Battle",
+                  startAt: new Date(Date.now() - 14 * 86400000),
+                  endAt: new Date(Date.now() - 7 * 86400000),
+                  resultsLockedAt: null,
+               },
+            }) as never
+         );
+
+         await expect(
+            removeChallengeParticipant({
+               participantId: "p_1",
+               reason: "Too late",
+               admin: { id: "admin_1", username: "HostAdmin" },
+            })
+         ).rejects.toThrow("This challenge has already concluded.");
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("rejects when results are locked", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            mockParticipant({
+               challenge: {
+                  id: "c_1",
+                  title: "Battle",
+                  startAt: new Date(Date.now() - 86400000),
+                  endAt: new Date(Date.now() + 86400000),
+                  resultsLockedAt: new Date(),
+               },
+            }) as never
+         );
 
          await expect(
             removeChallengeParticipant({
@@ -1238,9 +1319,23 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                admin: { id: "admin_1", username: "HostAdmin" },
             })
          ).rejects.toThrow(
-            "Cannot remove a participant from a completed challenge."
+            "Results are locked; withdrawal is no longer possible."
          );
-         expect(prisma.challengeParticipant.delete).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("rejects an already-withdrawn participant", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            mockParticipant({ isWithdrawn: true }) as never
+         );
+
+         await expect(
+            removeChallengeParticipant({
+               participantId: "p_1",
+               reason: "Duplicate removal",
+               admin: { id: "admin_1", username: "HostAdmin" },
+            })
+         ).rejects.toThrow("You have already withdrawn from this challenge.");
       });
    });
 

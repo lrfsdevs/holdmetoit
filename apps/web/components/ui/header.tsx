@@ -170,12 +170,14 @@ export function AppHeader({
    isPreviewActive,
    showPokemonNav = true,
    showLeaderboardNav = true,
+   showWalletNav = true,
 }: {
    user?: UserNavProps["user"];
    isActualAdmin?: boolean;
    isPreviewActive?: boolean;
    showPokemonNav?: boolean;
    showLeaderboardNav?: boolean;
+   showWalletNav?: boolean;
 }) {
    const searchParams = useSearchParams();
 
@@ -217,13 +219,15 @@ export function AppHeader({
                   Changelog
                </Link>
 
-               <Link
-                  href="/wallet"
-                  data-testid="wallet-nav-link"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
-               >
-                  Wallet
-               </Link>
+               {showWalletNav && (
+                  <Link
+                     href="/wallet"
+                     data-testid="wallet-nav-link"
+                     className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
+                  >
+                     Wallet
+                  </Link>
+               )}
 
                {showLeaderboardNav && (
                   <Link

@@ -11,6 +11,11 @@ import * as requireAdminModule from "@/features/auth/api/require-admin";
 import * as walletRepo from "../data/wallet.repository";
 import * as ledgerRepo from "../data/ledger.repository";
 import * as rewardRepo from "../data/study-reward.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn(),
+}));
 
 vi.mock("next/cache", () => ({
    revalidatePath: vi.fn(),
@@ -48,6 +53,41 @@ vi.mock("../data/study-reward.repository", () => ({
 describe("wallet.actions", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+   });
+
+   it("returns FEATURE_DISABLED for all wallet actions when the flag is off", async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValue(false);
+
+      const results = await Promise.all([
+         getWalletSummaryAction(),
+         getTransactionHistoryAction(),
+         adminAdjustBalanceAction({
+            targetUserId: "target_usr",
+            amount: 50,
+            reason: "Test adjustment",
+         }),
+         reconcileWalletAction(),
+         reverseTransactionAction({
+            transactionId: "tx_1",
+            reason: "Test reversal",
+         }),
+      ]);
+
+      for (const result of results) {
+         expect(result.ok).toBe(false);
+         if (!result.ok) {
+            expect(result.code).toBe("FEATURE_DISABLED");
+         }
+      }
+
+      expect(requireSessionModule.requireSessionUser).not.toHaveBeenCalled();
+      expect(requireAdminModule.requireAdminUser).not.toHaveBeenCalled();
+      expect(walletRepo.getWalletSummary).not.toHaveBeenCalled();
+      expect(walletRepo.executeWalletCredit).not.toHaveBeenCalled();
+      expect(walletRepo.executeWalletDebit).not.toHaveBeenCalled();
+      expect(walletRepo.executeWalletReversal).not.toHaveBeenCalled();
+      expect(walletRepo.getOrCreateWallet).not.toHaveBeenCalled();
    });
 
    describe("getWalletSummaryAction", () => {
