@@ -183,6 +183,9 @@ model ChallengeParticipant {
   isWrappedSeen    Boolean @default(false)
   isFeedbackFilled Boolean @default(false)
 
+  isWithdrawn  Boolean   @default(false)
+  withdrawalAt DateTime?
+
   enrolledAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -195,6 +198,7 @@ model ChallengeParticipant {
 
   @@unique([challengeId, userId])
   @@index([challengeId])
+  @@index([challengeId, isWithdrawn])
   @@index([teamId])
   @@index([userId])
 }

@@ -19,6 +19,7 @@ import * as challengeAdminRepo from "@/features/challenges/data/challenge-admin.
 import * as storage from "@/core/storage/supabase-storage";
 import * as pfpRepo from "@/features/challenges/data/punishment-pfp.repository";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 
 const PUBLIC_BASE =
    "https://abc.supabase.co/storage/v1/object/public/holdmetoit";
@@ -224,6 +225,24 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(revalidatePath).toHaveBeenCalledWith("/challenge/c_1");
       });
 
+      it("returns FEATURE_DISABLED when the withdrawal flag is off", async () => {
+         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+         const result = await removeChallengeParticipantAction({
+            challengeId: "c_1",
+            participantId: "p_1",
+            reason: "Host cleanup",
+         });
+
+         expect(result).toMatchObject({
+            ok: false,
+            code: "FEATURE_DISABLED",
+         });
+         expect(
+            challengeAdminRepo.removeChallengeParticipant
+         ).not.toHaveBeenCalled();
+      });
+
       it("rejects when reason is too short", async () => {
          const result = await removeChallengeParticipantAction({
             challengeId: "c_1",
@@ -302,16 +321,18 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
                id: "admin_1",
                username: "HostAdmin",
             },
-            { settleTrophies: true }
+            { settleTrophies: true, settleRewards: true }
          );
       });
 
-      it("skips trophy settlement when the leaderboard flag is off", async () => {
+      it("skips trophy and reward settlement when the leaderboard flag is off", async () => {
          vi.mocked(requireAdminModule.requireAdminUser).mockResolvedValue({
             id: "admin_1",
             username: "HostAdmin",
          } as never);
-         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+         vi.mocked(isFeatureEnabled)
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(false);
          vi.mocked(challengeAdminRepo.lockChallengeResults).mockResolvedValue({
             id: "c_1",
             status: "COMPLETED",
@@ -322,7 +343,11 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(challengeAdminRepo.lockChallengeResults).toHaveBeenCalledWith(
             "c_1",
             { id: "admin_1", username: "HostAdmin" },
-            { settleTrophies: false }
+            { settleTrophies: false, settleRewards: false }
+         );
+         expect(isFeatureEnabled).toHaveBeenCalledWith(
+            FEATURE_FLAG_KEYS.globalLeaderboard,
+            { userId: null, userRole: null, isSpectator: true }
          );
       });
    });

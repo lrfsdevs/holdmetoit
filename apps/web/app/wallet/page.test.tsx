@@ -4,6 +4,7 @@ import WalletPage from "./page";
 import { auth } from "@/core/auth";
 import * as walletRepo from "@/features/economy/data/wallet.repository";
 import * as ledgerRepo from "@/features/economy/data/ledger.repository";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 vi.mock("next/headers", () => ({
    cookies: () => ({
@@ -31,9 +32,26 @@ vi.mock("@/features/trophies/data/trophy.repository", () => ({
    getUserTrophyBalance: vi.fn().mockResolvedValue(1250),
 }));
 
+vi.mock("@/features/feature-flags/api/server", () => ({
+   isFeatureEnabled: vi.fn(),
+}));
+
 describe("WalletPage (/wallet)", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(isFeatureEnabled).mockResolvedValue(true);
+   });
+
+   it("renders the locked state when the flag is off", async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+      const page = await WalletPage({});
+      const html = renderToStaticMarkup(page);
+
+      expect(html).toContain("Wallet is currently unavailable");
+      expect(auth).not.toHaveBeenCalled();
+      expect(walletRepo.getWalletSummary).not.toHaveBeenCalled();
+      expect(ledgerRepo.findTransactionsByUserId).not.toHaveBeenCalled();
    });
 
    it("renders sign in prompt when unauthenticated", async () => {

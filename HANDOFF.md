@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-19 (Session 144 — Minimal custom challenge description parser on `afnan-jr`)
+> **Last Updated:** 2026-10-22 (Session 149 — Withdrawn users can re-enroll on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,61 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 146 — 2026-10-22 (Fix GH-166 / FB-19: Offline IndexedDB sync resilience, periodic polling & bi-directional reconciliation)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent, Data & Identity Agent.
+- **Scope & Objectives:** Resolve GH-166 [FB-19]: Sync issue between client IndexedDB and hosted PostgreSQL DB where local tasks failed to update to the remote database when connection was interrupted and restored, and hosted website didn't sync changes made on other clients. Incorporate CodeRabbit review feedback for PR #168.
+- **Root Causes:**
+   1. `task-sync.service.ts` had zero retry mechanism or periodic polling loop; failed `fetch` calls exited permanently until next user action. `window.online` event is flaky on real-world networks (doesn't fire on router WAN drops, sleep/wake, or DNS blips).
+   2. In `task-sync.repository.ts`, the entire batch of mutations was enclosed in a single `prisma.$transaction`. Any individual failure (constraint violation, invalid ID) caused Postgres to abort the transaction, rolling back all other valid mutations in the batch and jamming the queue.
+   3. `CockpitTasksSection` hydration only seeded IndexedDB when local stores were completely empty. When hydration attempted to reconcile against the stale SSR `userTasks` prop, it inadvertently pruned freshly synced local tasks absent from the initial page snapshot and resurrected deleted tasks present in the SSR snapshot.
+   4. Background sync completion in `task-sync.service.ts` updated IndexedDB without dispatching any notification or state update to the React view.
+   5. Cross-account boundary risk: Empty-queue background pulls lacked session ID verification, which could attribute remote records to a stale captured `userId` partition on account switch.
+   6. Dependent category-task failure: Tasks specifying a target `categoryId` fell back to a default category when the category creation mutation failed, acknowledging the task in the wrong category.
+- **Code & Test Fixes:**
+   - In `task-sync.service.ts`:
+      - Added auto-retry with exponential backoff on HTTP and network errors (`INITIAL_RETRY_DELAY_MS = 2000`, `MAX_RETRY_DELAY_MS = 30000`), preserving `{ forcePull: true }` across retries.
+      - Added 15-second background interval ticker in `initTaskSync` to detect and flush pending mutations.
+      - Enabled pulling cloud updates via `syncNow(userId, { forcePull: true })` on tab visibility change, online reconnect, and initial mount.
+      - Reconciled and pruned remotely deleted tasks and categories authoritatively in `task-sync.service.ts` from `serverChanges` while safely preserving in-flight offline edits (`syncState === "pending"`).
+      - Added cross-account mismatch detection using `authenticatedUserId` returned by the sync endpoint.
+      - Dispatched custom window event `TASKS_SYNCED_EVENT` (`holdmetoit:task-synced`) upon server reconciliation.
+      - Added comprehensive JSDoc docstrings to `syncNow`, `scheduleRetry`, `scheduleSync`, and `initTaskSync`.
+   - In `task-sync.repository.ts`:
+      - Isolated each mutation inside its own `prisma.$transaction`.
+      - Required `categoryId` to exist when explicitly specified on task creation or update, preventing orphaned tasks from silently re-parenting to default categories.
+      - Returned `authenticatedUserId` in `BatchSyncResponse`.
+      - Added JSDoc docstrings to `processBatchSync`.
+   - In `cockpit-tasks-section.tsx`:
+      - Eliminated competing authority / stale snapshot comparison in `hydrateFromIndexedDB`. Stale `userTasks` prop is now only used as an initial seed when local IndexedDB is entirely empty.
+      - Re-hydrates state directly from authoritative IndexedDB records upon receiving `TASKS_SYNCED_EVENT`.
+   - Tests:
+      - Unit tests in `apps/web/features/tasks/data/local/task-sync.service.test.ts` covering retry backoff, force pull retry, conflict avoidance, cross-account mismatch abort, remote pruning, and event dispatch.
+      - Unit tests in `apps/web/features/tasks/data/task-sync.repository.test.ts` covering batch failure isolation and explicit category dependency validation.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exit 0).
+   - `npm run test:web`: ✅ 182 test files passed (1,720/1,720 tests green).
+   - `npm run build:web`: ✅ Production build succeeded (18 routes + Edge Middleware compiled cleanly).
+
+### Session 145 — 2026-10-22 (Fix GH-130: Prevent false-positive past task lock for weekly challenge categories)
+
+- **Agent Role:** Participant UI Agent, Scoring & Engine Agent.
+- **Scope & Objectives:** Resolve GH-130: Prevent false-positive past task lock when deleting weekly challenge categories in `cockpit-task-menu.tsx` and `cockpit-tasks-section.tsx`.
+- **Root Cause:**
+   1. `CategoryMenuItems` checked `hasPastTasks` without restricting the check to `catType === "daily"`. Weekly tasks without a `dueDate` defaulted to `t.createdAt`, so any weekly goal created on an earlier day was mistakenly flagged as a past task (`opt?.isPast ?? dateKey < effectiveTodayDate`), falsely disabling category deletion.
+   2. When resolving target categories, `[...dailyCategories, ...weeklyCategories].find(...)` prioritized daily categories over weekly categories when names or IDs matched.
+   3. `handleConfirmDeleteCategory` in `cockpit-tasks-section.tsx` evaluated the same past-task check and silently aborted weekly category deletions.
+- **Code & Test Fixes:**
+   - In `cockpit-task-menu.tsx`: Restrict `hasPastTasks` to check matching daily category tasks with the same `id` (or name fallback for daily categories), protecting past daily tasks if a category spans boards while ensuring pure weekly goals remain unlocked.
+   - In `cockpit-tasks-section.tsx`: Check `dailyTargetCat` matching `catId` before confirming category deletion, preventing soft-deletion of past daily study tasks.
+   - In `cockpit-task-menu.test.tsx`: Added unit tests verifying (1) weekly categories with past-dated tasks or matching daily names do not falsely lock deletion, and (2) weekly categories sharing an ID with past daily tasks correctly remain locked.
+   - In `cockpit-tasks-section.test.tsx`: Added unit test asserting weekly categories with past tasks render valid options and menus.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web` passed (0 errors).
+   - `npm run test -w @holdmetoit/web` passed (181 test files, 1,708/1,708 tests green).
+   - `npm run lint:web` passed (0 errors).
+   - `npm run build:web` passed (production build clean).
 
 ### PR #133 — 2026-10-19 (Docstring Coverage)
 
@@ -1137,3 +1192,39 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** New `docs/challenges/README.md` (§9.4).
 - **Quality Gates:** `npm run typecheck:web` ✅ 0 errors · `npm run test:web` ✅ **180 files / 1697 tests** green · `npm run build:web` ✅ 17 routes + Edge Middleware compiled (existing warnings only).
 - **NEXT STEP:** Manually verify create/preview/save, the default fallback, unsafe-link handling, and 360px overview rendering; then commit (`feat(challenges): add minimal custom description parser`).
+
+### Session 146 — 2026-10-22 (Wallet gated under `global_leaderboard_v1` on `afnan-jr`)
+
+- **Page/nav:** `/wallet` renders the locked `EmptyState` when `global_leaderboard_v1` is off; the header Wallet link follows the same flag via `showWalletNav`.
+- **Actions:** `getWalletSummaryAction`, `getTransactionHistoryAction`, `adminAdjustBalanceAction`, `reconcileWalletAction`, and `reverseTransactionAction` return `FEATURE_DISABLED` before auth/DB work when the flag is off.
+- **Rewards paused:** `processStudyReward` skips study/YPT rewards; `lockChallengeResults` accepts `settleRewards` and skips challenge win rewards when false. `lockChallengeResultsAction` passes the flag for both trophies and rewards.
+- **Non-retroactive:** rewards skipped while disabled are not backfilled when re-enabled. Pokémon and betting keep their own flags and existing balances.
+- **Quality Gates:** `npm run typecheck:web` ✅ · targeted wallet/economy/challenge suites ✅ · full `npm run test:web` + `npm run build:web` run before commit.
+
+### Session 147 — 2026-10-22 (Feature-flagged challenge withdrawal on `afnan-jr`)
+
+- **Schema:** `ChallengeParticipant.isWithdrawn` + `withdrawalAt`; no separate model. Migration `20261026000000_add_participant_withdrawal`.
+- **Flag:** `challenge_withdrawal_v1` (seeded DISABLED) gates the overview button and `withdrawFromChallengeAction`.
+- **Eligibility:** pure resolver allows UPCOMING/ACTIVE; blocks results-locked, completed, and repeated withdrawal.
+- **Audit:** `PARTICIPANT_WITHDRAWN` event with previous/new values; ROSTER audit filter + badge.
+- **Exclusion:** withdrawn users disappear from standings, team totals/counts, participant stats, YPT, wrapped, and lock evaluation (no punishment/reward/trophy).
+- **UI:** red Withdraw button + AlertDialog below Participants; hero shows a withdrawn state; `currentUser.hasWithdrawn` added.
+- **Docs:** `docs/challenges/withdrawal.md`, feature-flag table.
+- **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 148 — 2026-10-22 (Soft admin removal via withdrawal on `afnan-jr`)
+
+- **Shared helper:** extracted `applyParticipantWithdrawal` (eligibility + flags + audit) and reused it for self-withdrawal and admin removal.
+- **Admin removal:** `removeChallengeParticipant` no longer deletes the participant/logs/punishments; it soft-withdraws and writes `PARTICIPANT_REMOVED` with the admin actor + reason.
+- **Flag:** admin removal is gated by `challenge_withdrawal_v1`; flag off returns `FEATURE_DISABLED`.
+- **UI:** Manage-tab dialog now says Withdraw/“Yes, Withdraw Participant” and explains logs are preserved.
+- **Restore:** not implemented yet; data is preserved for a future restore slice.
+- **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 149 — 2026-10-22 (Withdrawn users can re-enroll on `afnan-jr`)
+
+- **UI:** withdrawn users are now shown as **not enrolled**; removed the `currentUser.hasWithdrawn` branch/field so the hero shows the normal Enroll CTA. Withdraw/removal modals now say re-enrollment is possible.
+- **Re-enrollment:** `enrollParticipantInChallenge` reactivates the existing withdrawn row instead of throwing — clears `isWithdrawn`/`withdrawalAt`, updates `teamId`/`targetSeconds`/`plannedLeaveDays`, resets `usedLeaveDays`, `status = NORMAL`, and refreshes `enrolledAt`.
+- **Audit:** new `PARTICIPANT_REENROLLED` event with the previous withdrawal snapshot + new enrollment values; ROSTER filter + success badge.
+- **Flag:** re-enrollment is not gated by `challenge_withdrawal_v1`.
+- **Quality Gates:** typecheck/tests/build run before commit.
