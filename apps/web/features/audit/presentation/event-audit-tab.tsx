@@ -90,6 +90,11 @@ function getActionBadgeStyle(action: AuditEventType): string {
          return "bg-brand-2/15 text-brand-1 border-brand-2/30";
       case "ROSTER_EDIT":
          return "bg-accent/15 text-accent-text border-accent/30";
+      case "PARTICIPANT_WITHDRAWN":
+      case "PARTICIPANT_REMOVED":
+         return "bg-feedback-error/15 text-feedback-error-text border-feedback-error/30";
+      case "PARTICIPANT_REENROLLED":
+         return "bg-feedback-success/15 text-feedback-success-text border-feedback-success/30";
       case "HOURS_OVERRIDE":
          return "bg-feedback-success/15 text-feedback-success-text border-feedback-success/30";
       case "TARGET_HOURS_OVERRIDE":
@@ -193,6 +198,9 @@ export function EventAuditTab({
          } else if (selectedCategory === "ROSTER") {
             if (
                log.actionType !== "ROSTER_EDIT" &&
+               log.actionType !== "PARTICIPANT_WITHDRAWN" &&
+               log.actionType !== "PARTICIPANT_REMOVED" &&
+               log.actionType !== "PARTICIPANT_REENROLLED" &&
                log.actionType !== "TARGET_HOURS_OVERRIDE"
             )
                return false;

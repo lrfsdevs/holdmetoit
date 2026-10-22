@@ -15,6 +15,15 @@ vi.mock("./challenge-betting-card", () => ({
    ChallengeBettingCard: () => <div data-testid="betting-card" />,
 }));
 
+vi.mock("./withdraw-challenge-modal", () => ({
+   WithdrawChallengeButton: () =>
+      createElement(
+         "button",
+         { "data-testid": "withdraw-challenge-button" },
+         "Withdraw"
+      ),
+}));
+
 vi.mock("@/features/wagers/api/wager.actions", () => ({
    placeWagerAction: vi.fn(),
    getUserChallengeWagersAction: vi
@@ -136,6 +145,48 @@ describe("ChallengeOverviewTab", () => {
       expect(html).toContain("Honey Bees");
       expect(html).toContain("Active");
       expect(html).not.toContain("Edit hr");
+      expect(html).not.toContain("Withdraw");
+   });
+
+   it("shows the withdraw button for an enrolled participant when the flag is on", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, {
+            challenge: mockChallenge,
+            isAdmin: false,
+            isWithdrawalEnabled: true,
+         })
+      );
+
+      expect(html).toContain("Withdraw");
+   });
+
+   it("hides the withdraw button when withdrawn or locked", () => {
+      const withdrawnHtml = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, {
+            challenge: {
+               ...mockChallenge,
+               currentUser: {
+                  ...mockChallenge.currentUser,
+                  isEnrolled: false,
+               },
+            },
+            isAdmin: false,
+            isWithdrawalEnabled: true,
+         })
+      );
+      expect(withdrawnHtml).not.toContain(">Withdraw<");
+
+      const lockedHtml = renderToStaticMarkup(
+         createElement(ChallengeOverviewTab, {
+            challenge: {
+               ...mockChallenge,
+               resultsLockedAt: "2026-10-08T00:00:00.000Z",
+            },
+            isAdmin: false,
+            isWithdrawalEnabled: true,
+         })
+      );
+      expect(lockedHtml).not.toContain(">Withdraw<");
    });
 
    it("renders the custom description syntax when provided", () => {

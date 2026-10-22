@@ -28,6 +28,7 @@ import {
    settleChallengeTrophies,
    reverseChallengeTrophies,
 } from "@/features/trophies/data/trophy.repository";
+import { applyParticipantWithdrawal } from "./participant.repository";
 import { listAllChallenges } from "./challenge.repository";
 
 export async function listAllChallengesForAdmin() {
@@ -193,7 +194,7 @@ export async function kickoffChallenge(
 export async function lockChallengeResults(
    challengeId: string,
    actor: { id: string; username: string },
-   options?: { settleTrophies?: boolean }
+   options?: { settleTrophies?: boolean; settleRewards?: boolean }
 ) {
    const challenge = await prisma.challenge.findUnique({
       where: { id: challengeId },
@@ -215,7 +216,11 @@ export async function lockChallengeResults(
    const currentStatus = calculateChallengeStatus(challenge);
    assertCanLockChallenge(currentStatus, challenge.resultsLockedAt);
 
-   const participantUserIds = challenge.participants.map(
+   const evaluatedParticipants = challenge.participants.filter(
+      (participant) => !participant.isWithdrawn
+   );
+
+   const participantUserIds = evaluatedParticipants.map(
       (participant) => participant.userId
    );
 
@@ -260,7 +265,7 @@ export async function lockChallengeResults(
 
       const teamTotals = aggregateTeamScores(
          challenge.teams,
-         challenge.participants.map((participant) => ({
+         evaluatedParticipants.map((participant) => ({
             teamId: participant.teamId ?? "no-assigned",
             loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
          }))
@@ -273,7 +278,7 @@ export async function lockChallengeResults(
       const punishedParticipantIds: string[] = [];
       const savedParticipantIds: string[] = [];
 
-      for (const participant of challenge.participants) {
+      for (const participant of evaluatedParticipants) {
          const isExcused =
             participant.status === "EXCUSED" ||
             participant.punishmentRecords.some((record) => record.isPardoned);
@@ -331,12 +336,13 @@ export async function lockChallengeResults(
 
       // 3. Challenge economic rewards settlement (Stage 3)
       if (
+         options?.settleRewards !== false &&
          Boolean(challenge.rewardCoins) &&
          challenge.rewardCoins > 0 &&
          !challenge.isRewardSettled &&
          Boolean((tx as any)?.wallet)
       ) {
-         const savedParticipants = challenge.participants.filter((p) =>
+         const savedParticipants = evaluatedParticipants.filter((p) =>
             savedParticipantIds.includes(p.id)
          );
 
@@ -392,7 +398,7 @@ export async function lockChallengeResults(
                challengeTitle: challenge.title,
                winningTeamIds,
                totalTeamsCount: challenge.teams.length,
-               participants: challenge.participants,
+               participants: evaluatedParticipants,
                savedParticipantIds,
             },
             tx
@@ -415,7 +421,9 @@ export async function lockChallengeResults(
          newValue: {
             status: "COMPLETED",
             resultsLockedAt: completedChallenge.resultsLockedAt,
-            participantsEvaluated: challenge.participants.length,
+            participantsEvaluated: evaluatedParticipants.length,
+            withdrawnParticipants:
+               challenge.participants.length - evaluatedParticipants.length,
             winningTeamIds,
             punishedParticipants: punishedParticipantIds.length,
             savedParticipants: savedParticipantIds.length,
@@ -1006,7 +1014,16 @@ export async function removeChallengeParticipant(params: {
          user: { select: { id: true, displayName: true, username: true } },
          team: { select: { id: true, name: true } },
          challenge: {
-            select: { id: true, title: true, startAt: true, endAt: true },
+            select: {
+               id: true,
+               title: true,
+               startAt: true,
+               endAt: true,
+               resultsLockedAt: true,
+            },
+         },
+         dailyStudyLogs: {
+            select: { durationSeconds: true },
          },
       },
    });
@@ -1015,51 +1032,21 @@ export async function removeChallengeParticipant(params: {
       throw new Error("Participant not found.");
    }
 
-   if (calculateChallengeStatus(participant.challenge) === "COMPLETED") {
-      throw new Error(
-         "Cannot remove a participant from a completed challenge."
-      );
-   }
-
    const participantName =
       participant.user?.displayName ||
       participant.user?.username ||
       "Participant";
 
-   return prisma.$transaction(async (tx) => {
-      await tx.dailyStudyLog.deleteMany({
-         where: { participantId: params.participantId },
-      });
-
-      await tx.punishmentRecord.deleteMany({
-         where: { participantId: params.participantId },
-      });
-
-      await recordAuditEvent({
-         actorId: params.admin.id,
-         actorUsername: params.admin.username,
-         actionType: "ROSTER_EDIT",
-         targetEntityId: participant.id,
-         targetEntityType: "PARTICIPANT",
-         targetEntityName: participantName,
-         challengeId: participant.challengeId,
-         previousValue: {
-            userId: participant.userId,
-            teamId: participant.teamId,
-            teamName: participant.team?.name ?? "Not Assigned",
-            targetSeconds: participant.targetSeconds,
-            status: participant.status,
-         },
-         newValue: null,
-         auditReason: params.reason.trim(),
-      });
-
-      await tx.challengeParticipant.delete({
-         where: { id: params.participantId },
-      });
-
-      return { participantId: participant.id, removedName: participantName };
+   await applyParticipantWithdrawal({
+      participant,
+      participantName,
+      teamName: participant.team?.name ?? null,
+      actor: params.admin,
+      actionType: "PARTICIPANT_REMOVED",
+      reason: params.reason.trim(),
    });
+
+   return { participantId: participant.id, removedName: participantName };
 }
 
 export async function deleteAdminChallenge(

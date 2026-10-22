@@ -29,6 +29,8 @@ interface ChallengeViewProps {
    isWrappedEnabled?: boolean;
    /** Server-evaluated `betting_system_v1`. Gates the overview betting card. */
    isBettingEnabled?: boolean;
+   /** Server-evaluated `challenge_withdrawal_v1`. Gates the overview withdraw button. */
+   isWithdrawalEnabled?: boolean;
 }
 
 /** Renders the challenge shell and coordinates its active tab. */
@@ -42,6 +44,7 @@ export function ChallengeView({
    initialRosterPage = 1,
    isWrappedEnabled = true,
    isBettingEnabled = true,
+   isWithdrawalEnabled = false,
 }: ChallengeViewProps) {
    const isSummaryVisible =
       isWrappedEnabled && Boolean(challenge.resultsLockedAt);
@@ -160,6 +163,7 @@ export function ChallengeView({
                challenge={challenge}
                isAdmin={isAdmin}
                isBettingEnabled={isBettingEnabled}
+               isWithdrawalEnabled={isWithdrawalEnabled}
             />
          )}
 

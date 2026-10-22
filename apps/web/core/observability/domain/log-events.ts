@@ -20,6 +20,7 @@ export const logEvents = {
    challengeUnlocked: "challenge.unlocked",
    challengeEnrolled: "challenge.enrolled",
    challengeParticipantRemoved: "challenge.participant_removed",
+   challengeParticipantWithdrew: "challenge.participant_withdrew",
    challengeParticipantReassigned: "challenge.participant_reassigned",
    challengeTargetOverridden: "challenge.target_overridden",
    challengeImageUploaded: "challenge.image_uploaded",

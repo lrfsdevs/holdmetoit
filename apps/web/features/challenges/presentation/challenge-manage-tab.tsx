@@ -659,7 +659,7 @@ export function ChallengeManageTab({
          });
          setFeedback({
             type: "success",
-            message: `${removeTarget.displayName} has been removed from the challenge.`,
+            message: `${removeTarget.displayName} has been withdrawn from the challenge.`,
          });
          setRemoveTarget(null);
          setRemoveReason("");
@@ -1541,10 +1541,10 @@ export function ChallengeManageTab({
                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 shrink-0">
                         <UserMinus className="h-5 w-5" />
                      </span>
-                     Remove Participant?
+                     Withdraw Participant?
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                     You are about to remove{" "}
+                     You are about to withdraw{" "}
                      <strong className="text-white">
                         {removeTarget?.displayName}
                      </strong>{" "}
@@ -1552,8 +1552,10 @@ export function ChallengeManageTab({
                      <strong className="text-white">
                         &quot;{challenge.title}&quot;
                      </strong>
-                     . Their study logs, punishment record, and standings entry
-                     will be permanently deleted. This action cannot be undone.
+                     . Their study logs and history are preserved, they will be
+                     removed from standings and team totals, and they can be
+                     re-enrolled later. A dedicated restore option can be added
+                     later.
                   </AlertDialogDescription>
                </AlertDialogHeader>
 
@@ -1591,7 +1593,7 @@ export function ChallengeManageTab({
                      {isRemoving && (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                      )}
-                     Yes, Remove Participant
+                     Yes, Withdraw Participant
                   </AlertDialogAction>
                </AlertDialogFooter>
             </AlertDialogContent>
