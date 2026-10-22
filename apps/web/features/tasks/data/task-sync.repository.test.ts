@@ -189,6 +189,61 @@ describe("processBatchSync (task-sync.repository)", () => {
       expect(res.processedMutationIds).not.toContain("mut-fail-1");
    });
 
+   it("isolates mutation failures so remaining valid mutations in the batch are committed and acknowledged", async () => {
+      // First mutation fails
+      vi.mocked(prisma.category.updateMany).mockRejectedValueOnce(
+         new Error("Database collision")
+      );
+      // Second mutation succeeds
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 1 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-bad",
+            entityType: "CATEGORY",
+            action: "UPDATE",
+            payload: { categoryId: "cat-broken", name: "Broken" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+         {
+            id: "mut-good",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "task-good", isComplete: true },
+            createdAt: Date.now() + 1,
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.success).toBe(true);
+      expect(res.processedMutationIds).not.toContain("mut-bad");
+      expect(res.processedMutationIds).toContain("mut-good");
+   });
+
+   it("fails and leaves task mutation unacknowledged when explicit categoryId does not exist", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValueOnce(null);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-task-orphan",
+            entityType: "TASK",
+            action: "CREATE",
+            payload: {
+               id: "task-orphan",
+               title: "Task with missing cat",
+               categoryId: "cat-missing",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.success).toBe(true);
+      expect(res.processedMutationIds).not.toContain("mut-task-orphan");
+      expect(prisma.task.upsert).not.toHaveBeenCalled();
+   });
+
    it("soft-deletes a task on DELETE mutations instead of removing the row", async () => {
       const res = await processBatchSync(userId, [
          {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import ChallengePage from "./page";
+import ChallengePage, { generateMetadata } from "./page";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
 import { auth } from "@/core/auth";
 import { cookies } from "next/headers";
@@ -253,5 +253,101 @@ describe("ChallengePage (Server Component)", () => {
 
       expect(html).toContain('data-initial-tab="overview"');
       expect(html).toContain('data-is-wrapped-enabled="false"');
+   });
+});
+
+describe("generateMetadata", () => {
+   beforeEach(() => {
+      vi.clearAllMocks();
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+   });
+
+   it("builds title, description and Open Graph text from the challenge", async () => {
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.title).toBe("October Sprint | HoldMeToIt");
+      expect(meta.description).toContain("Solo Challenge");
+      expect(meta.openGraph).toMatchObject({
+         type: "website",
+         siteName: "HoldMeToIt",
+         title: "October Sprint",
+      });
+      expect(meta.twitter).toMatchObject({ title: "October Sprint" });
+   });
+
+   it("fetches the scoreboard without a user id so logged-out crawlers work", async () => {
+      await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(getChallengeScoreboard).toHaveBeenCalledWith("chal-1");
+   });
+
+   it("uses the event banner as the embed image when present", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         eventBannerUrl: "https://cdn.example.com/banner.png",
+         heroImageUrl: "https://cdn.example.com/hero.png",
+      } as any);
+
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.openGraph).toMatchObject({
+         images: [{ url: "https://cdn.example.com/banner.png" }],
+      });
+      expect(meta.twitter).toMatchObject({
+         card: "summary_large_image",
+         images: ["https://cdn.example.com/banner.png"],
+      });
+   });
+
+   it("falls back to the hero image when there is no event banner", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         eventBannerUrl: null,
+         heroImageUrl: "https://cdn.example.com/hero.png",
+      } as any);
+
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.openGraph).toMatchObject({
+         images: [{ url: "https://cdn.example.com/hero.png" }],
+      });
+   });
+
+   it("omits images and uses a small Twitter card when no image exists", async () => {
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.openGraph).not.toHaveProperty("images");
+      expect(meta.twitter).not.toHaveProperty("images");
+      expect(meta.twitter).toMatchObject({ card: "summary" });
+   });
+
+   it("returns fallback metadata when the challenge is not found", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(null);
+
+      const meta = await generateMetadata({ params: { id: "chal-missing" } });
+
+      expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
+      expect(meta.openGraph).toBeUndefined();
+   });
+
+   it("returns fallback metadata when the challenge is deleted", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         isDeleted: true,
+      } as any);
+
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
+   });
+
+   it("returns fallback metadata instead of throwing when the fetch fails", async () => {
+      vi.mocked(getChallengeScoreboard).mockRejectedValue(new Error("boom"));
+
+      const meta = await generateMetadata({ params: { id: "chal-1" } });
+
+      expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
    });
 });

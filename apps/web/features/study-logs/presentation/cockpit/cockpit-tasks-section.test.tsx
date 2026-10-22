@@ -749,4 +749,60 @@ describe("CockpitTasksSection", () => {
       expect(html).not.toContain("Ghost Task Inside Deleted Category");
       expect(html).not.toContain("Ghost Weekly Task");
    });
+
+   it("renders weekly category options when weekly category contains tasks from past days (GH-130)", () => {
+      const tasksWithPastWeekly: UserCategorizedTasks = {
+         categories: [
+            {
+               id: "cat_weekly_past",
+               userId: "user_1",
+               name: "Sprint Deliverables",
+               taskType: "WEEKLY",
+               createdAt: new Date("2026-10-01T10:00:00Z"),
+               updatedAt: new Date("2026-10-01T10:00:00Z"),
+            },
+         ],
+         dailyCategories: [],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_past",
+               name: "Sprint Deliverables",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_weekly_past",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_past",
+                     title: "Past Weekly Goal",
+                     isComplete: false,
+                     taskType: "WEEKLY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 1,
+         completedWeeklyTasks: 0,
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userTasks: tasksWithPastWeekly,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      expect(html).toContain(
+         'aria-label="Options for category Sprint Deliverables"'
+      );
+      expect(html).toContain("Sprint Deliverables");
+      expect(html).toContain("Past Weekly Goal");
+   });
 });

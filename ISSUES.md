@@ -599,7 +599,7 @@ Add CSV/JSON export for challenge results. This complements Law L2 (Spreadsheet 
 | 💡 Feature suggestions          | 5      |
 | **Total open findings**         | **33** |
 
-> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Three-Condition Invariant); Session 99 — #10 (Route boundaries coverage); Session 101 — #8 (Decimal hours eliminated), #15 (Dual team modeling consolidated); Session 104 — #3 (Discord Summary copy removed); Session 105 — #9 (`leaveDays` budget implemented & D6 resolved).
+> Closed since the audit: Session 80 — #7, #16, #17, #18; Session 81 — #5, #11, #13; Session 83 — #2 (Three-Condition Invariant); Session 99 — #10 (Route boundaries coverage); Session 101 — #8 (Decimal hours eliminated), #15 (Dual team modeling consolidated); Session 104 — #3 (Discord Summary copy removed); Session 105 — #9 (`leaveDays` budget implemented & D6 resolved); Session 145 — #130; Session 146 — #166 (FB-19: IndexedDB to hosted DB sync resilience).
 
 ### Recommended Fix Order
 
