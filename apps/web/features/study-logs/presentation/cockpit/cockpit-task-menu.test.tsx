@@ -302,6 +302,57 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
       expect(html).not.toContain("Delete Category (Locked)");
    });
 
+   it("locks weekly category deletion when the same category ID contains daily tasks on past challenge days", () => {
+      const sharedCatId = "cat_shared_sprint";
+      const dailyCatWithPastTask: CategoryGroup = {
+         id: sharedCatId,
+         name: "Sprint Goals",
+         isCollapsed: false,
+         tasks: [
+            {
+               id: "t_daily_past",
+               text: "Day 1 Task",
+               completed: true,
+               dueDate: "2026-10-01",
+               createdAt: "2026-10-01T00:00:00Z",
+            },
+         ],
+      };
+      const weeklyCat: CategoryGroup = {
+         id: sharedCatId,
+         name: "Sprint Goals",
+         isCollapsed: false,
+         tasks: [
+            {
+               id: "t_weekly",
+               text: "Active Weekly Goal",
+               completed: false,
+               createdAt: "2026-10-02T00:00:00Z",
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CategoryMenuItems, {
+            cat: weeklyCat,
+            catType: "weekly",
+            dailyCategories: [dailyCatWithPastTask],
+            weeklyCategories: [weeklyCat],
+            selectedDateKey: "2026-10-02",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: mockDayOptions,
+            onMoveCategoryToDay: vi.fn(),
+            onRenameCategory: vi.fn(),
+            onDeleteCategory: vi.fn(),
+            Item: MockItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      expect(html).toContain("Delete Category (Locked)");
+   });
+
    it("invokes callbacks via onSelect and onClick in TaskMenuItems", () => {
       const capturedProps: any[] = [];
       const RecordingItem = ({

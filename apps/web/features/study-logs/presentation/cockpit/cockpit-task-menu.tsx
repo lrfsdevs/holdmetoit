@@ -335,30 +335,32 @@ export function CategoryMenuItems({
       (d) => d.dateKey !== effectiveTodayDate
    );
 
+   const dailyTargetCat = dailyCategories.find((c) =>
+      cat.id ? c.id === cat.id : catType === "daily" && c.name === cat.name
+   );
+
    const targetCat =
       catType === "daily"
-         ? dailyCategories.find((c) =>
-              cat.id ? c.id === cat.id : c.name === cat.name
-           )
+         ? dailyTargetCat
          : weeklyCategories.find((c) =>
               cat.id ? c.id === cat.id : c.name === cat.name
            );
 
-   const hasPastTasks =
-      catType === "daily" &&
-      Boolean(
-         targetCat?.tasks.some((t) => {
-            const dateKey = t.dueDate
-               ? typeof t.dueDate === "string"
-                  ? t.dueDate.slice(0, 10)
-                  : new Date(t.dueDate).toISOString().slice(0, 10)
-               : t.createdAt
-                 ? new Date(t.createdAt).toISOString().slice(0, 10)
-                 : effectiveTodayDate;
-            const opt = dayOptions.find((d) => d.dateKey === dateKey);
-            return opt?.isPast ?? dateKey < effectiveTodayDate;
-         })
-      );
+   const relevantDailyCat = catType === "daily" ? targetCat : dailyTargetCat;
+
+   const hasPastTasks = Boolean(
+      relevantDailyCat?.tasks.some((t) => {
+         const dateKey = t.dueDate
+            ? typeof t.dueDate === "string"
+               ? t.dueDate.slice(0, 10)
+               : new Date(t.dueDate).toISOString().slice(0, 10)
+            : t.createdAt
+              ? new Date(t.createdAt).toISOString().slice(0, 10)
+              : effectiveTodayDate;
+         const opt = dayOptions.find((d) => d.dateKey === dateKey);
+         return opt?.isPast ?? dateKey < effectiveTodayDate;
+      })
+   );
 
    return (
       <>
