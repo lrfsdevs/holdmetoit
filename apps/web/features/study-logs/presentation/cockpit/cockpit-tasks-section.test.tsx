@@ -805,4 +805,58 @@ describe("CockpitTasksSection", () => {
       expect(html).toContain("Sprint Deliverables");
       expect(html).toContain("Past Weekly Goal");
    });
+   it("renders Show more button and title tooltip for long task descriptions", () => {
+      const longText =
+         "This is a very long task description to test that horizontal text caret navigation does not dismiss the modal";
+      const tasksWithLongDescription: UserCategorizedTasks = {
+         categories: [
+            {
+               id: "cat_weekly_long",
+               userId: "user_1",
+               name: "Sprint Deliverables",
+               taskType: "WEEKLY",
+               createdAt: new Date("2026-10-01T10:00:00Z"),
+               updatedAt: new Date("2026-10-01T10:00:00Z"),
+            },
+         ],
+         dailyCategories: [],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_long",
+               name: "Sprint Deliverables",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_weekly_long",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_long",
+                     title: longText,
+                     isComplete: false,
+                     taskType: "WEEKLY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 1,
+         completedWeeklyTasks: 0,
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userTasks: tasksWithLongDescription,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      expect(html).toContain('title="' + longText + '"');
+      expect(html).toContain("Show more");
+   });
 });

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-23 (Session 150 — Fix GH-147 / KAN-38 modal dismiss on text scroll on `krish`)
+> **Last Updated:** 2026-10-23 (Session 151 — Long task description expand/collapse in cockpit on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,22 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 151 — 2026-10-23 (Feat: Long Task Description Expand & Title Tooltip in Daily/Weekly Task Board)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Address user feedback regarding clamped long task descriptions in Daily and Weekly Todos: enable inline expand/collapse ("Show more" / "Show less") and native hover tooltips so long task descriptions are never truncated from the user's view.
+- **Code & Test Fixes:**
+   - In `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`:
+      - Added `expandedTaskIds: Set<string>` state with `toggleTaskExpand(taskId)` handler that stops event propagation (preventing accidental checkbox toggling).
+      - Added `title={task.text}` on the task text span for native hover inspection.
+      - Rendered an inline "Show more" / "Show less" toggle button with animated `ChevronDown` rotation for long descriptions (> 45 chars or with newlines).
+      - Applied to both Daily Tasks and Weekly Tasks lists.
+   - Tests:
+      - Added unit test in `cockpit-tasks-section.test.tsx` verifying `title` tooltip and `Show more` button rendering.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: ✅ 21/21 tests passed.
 
 ### Session 150 — 2026-10-23 (Fix GH-147 / KAN-38 / FB-17: Fix Add/Edit Todo modal dismiss on input text overflow & Right Arrow caret scroll)
 

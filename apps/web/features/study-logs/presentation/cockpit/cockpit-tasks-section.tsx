@@ -167,6 +167,22 @@ export function CockpitTasksSection({
    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
    const [newTodoStatus, setNewTodoStatus] = useState<TaskStatus>("TODO");
    const [addTodoDateKey, setAddTodoDateKey] = useState<string>("");
+   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(
+      () => new Set()
+   );
+
+   const toggleTaskExpand = (taskId: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      setExpandedTaskIds((prev) => {
+         const next = new Set(prev);
+         if (next.has(taskId)) {
+            next.delete(taskId);
+         } else {
+            next.add(taskId);
+         }
+         return next;
+      });
+   };
 
    const categoryInputRef = useRef<HTMLInputElement>(null);
    const categorySelectRef = useRef<HTMLButtonElement>(null);
@@ -3540,24 +3556,79 @@ export function CockpitTasksSection({
                                                                            <X className="h-3.5 w-3.5 stroke-[2.5]" />
                                                                         )}
                                                                      </div>
-                                                                     <span
-                                                                        className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
-                                                                           status ===
-                                                                           "COMPLETED"
-                                                                              ? "text-text-tertiary line-through"
-                                                                              : status ===
-                                                                                  "CROSSED_OUT"
-                                                                                ? "text-text-tertiary line-through decoration-rose-500/60"
-                                                                                : status ===
-                                                                                    "IN_PROGRESS"
-                                                                                  ? "text-white font-medium"
-                                                                                  : "text-white"
-                                                                        }`}
-                                                                     >
-                                                                        {
-                                                                           task.text
-                                                                        }
-                                                                     </span>
+                                                                     <div className="flex-1 min-w-0">
+                                                                        <span
+                                                                           title={
+                                                                              task.text
+                                                                           }
+                                                                           className={`text-sm break-words leading-snug block ${
+                                                                              expandedTaskIds.has(
+                                                                                 task.id
+                                                                              )
+                                                                                 ? ""
+                                                                                 : "line-clamp-2"
+                                                                           } ${
+                                                                              status ===
+                                                                              "COMPLETED"
+                                                                                 ? "text-text-tertiary line-through"
+                                                                                 : status ===
+                                                                                     "CROSSED_OUT"
+                                                                                   ? "text-text-tertiary line-through decoration-rose-500/60"
+                                                                                   : status ===
+                                                                                       "IN_PROGRESS"
+                                                                                     ? "text-white font-medium"
+                                                                                     : "text-white"
+                                                                           }`}
+                                                                        >
+                                                                           {
+                                                                              task.text
+                                                                           }
+                                                                        </span>
+                                                                        {(task
+                                                                           .text
+                                                                           .length >
+                                                                           45 ||
+                                                                           task.text.includes(
+                                                                              "\n"
+                                                                           )) && (
+                                                                           <button
+                                                                              type="button"
+                                                                              onClick={(
+                                                                                 e
+                                                                              ) =>
+                                                                                 toggleTaskExpand(
+                                                                                    task.id,
+                                                                                    e
+                                                                                 )
+                                                                              }
+                                                                              title={
+                                                                                 expandedTaskIds.has(
+                                                                                    task.id
+                                                                                 )
+                                                                                    ? "Show less"
+                                                                                    : "Show full task description"
+                                                                              }
+                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand"
+                                                                           >
+                                                                              <span>
+                                                                                 {expandedTaskIds.has(
+                                                                                    task.id
+                                                                                 )
+                                                                                    ? "Show less"
+                                                                                    : "Show more"}
+                                                                              </span>
+                                                                              <ChevronDown
+                                                                                 className={`h-3 w-3 transition-transform duration-200 ${
+                                                                                    expandedTaskIds.has(
+                                                                                       task.id
+                                                                                    )
+                                                                                       ? "rotate-180"
+                                                                                       : ""
+                                                                                 }`}
+                                                                              />
+                                                                           </button>
+                                                                        )}
+                                                                     </div>
                                                                   </div>
 
                                                                   {status ===
@@ -4243,24 +4314,79 @@ export function CockpitTasksSection({
                                                                            <X className="h-3.5 w-3.5 stroke-[2.5]" />
                                                                         )}
                                                                      </div>
-                                                                     <span
-                                                                        className={`text-sm line-clamp-2 break-words leading-snug flex-1 ${
-                                                                           status ===
-                                                                           "COMPLETED"
-                                                                              ? "text-text-tertiary line-through"
-                                                                              : status ===
-                                                                                  "CROSSED_OUT"
-                                                                                ? "text-text-tertiary line-through decoration-rose-500/60"
-                                                                                : status ===
-                                                                                    "IN_PROGRESS"
-                                                                                  ? "text-white font-medium"
-                                                                                  : "text-white"
-                                                                        }`}
-                                                                     >
-                                                                        {
-                                                                           task.text
-                                                                        }
-                                                                     </span>
+                                                                     <div className="flex-1 min-w-0">
+                                                                        <span
+                                                                           title={
+                                                                              task.text
+                                                                           }
+                                                                           className={`text-sm break-words leading-snug block ${
+                                                                              expandedTaskIds.has(
+                                                                                 task.id
+                                                                              )
+                                                                                 ? ""
+                                                                                 : "line-clamp-2"
+                                                                           } ${
+                                                                              status ===
+                                                                              "COMPLETED"
+                                                                                 ? "text-text-tertiary line-through"
+                                                                                 : status ===
+                                                                                     "CROSSED_OUT"
+                                                                                   ? "text-text-tertiary line-through decoration-rose-500/60"
+                                                                                   : status ===
+                                                                                       "IN_PROGRESS"
+                                                                                     ? "text-white font-medium"
+                                                                                     : "text-white"
+                                                                           }`}
+                                                                        >
+                                                                           {
+                                                                              task.text
+                                                                           }
+                                                                        </span>
+                                                                        {(task
+                                                                           .text
+                                                                           .length >
+                                                                           45 ||
+                                                                           task.text.includes(
+                                                                              "\n"
+                                                                           )) && (
+                                                                           <button
+                                                                              type="button"
+                                                                              onClick={(
+                                                                                 e
+                                                                              ) =>
+                                                                                 toggleTaskExpand(
+                                                                                    task.id,
+                                                                                    e
+                                                                                 )
+                                                                              }
+                                                                              title={
+                                                                                 expandedTaskIds.has(
+                                                                                    task.id
+                                                                                 )
+                                                                                    ? "Show less"
+                                                                                    : "Show full task description"
+                                                                              }
+                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand"
+                                                                           >
+                                                                              <span>
+                                                                                 {expandedTaskIds.has(
+                                                                                    task.id
+                                                                                 )
+                                                                                    ? "Show less"
+                                                                                    : "Show more"}
+                                                                              </span>
+                                                                              <ChevronDown
+                                                                                 className={`h-3 w-3 transition-transform duration-200 ${
+                                                                                    expandedTaskIds.has(
+                                                                                       task.id
+                                                                                    )
+                                                                                       ? "rotate-180"
+                                                                                       : ""
+                                                                                 }`}
+                                                                              />
+                                                                           </button>
+                                                                        )}
+                                                                     </div>
                                                                   </div>
 
                                                                   {status ===
