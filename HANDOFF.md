@@ -176,21 +176,24 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
-### Session 151 — 2026-10-23 (Feat: Long Task Description Expand & Title Tooltip in Daily/Weekly Task Board)
+### Session 151 — 2026-10-23 (Feat & Fix: Long Task Description Expand & Shrink in Daily/Weekly Task Board)
 
 - **Agent Role:** Participant UI Agent.
-- **Scope & Objectives:** Address user feedback regarding clamped long task descriptions in Daily and Weekly Todos: enable inline expand/collapse ("Show more" / "Show less") and native hover tooltips so long task descriptions are never truncated from the user's view.
+- **Scope & Objectives:** Address user feedback regarding clamped long task descriptions in Daily and Weekly Todos: enable inline expand/collapse ("Show more" / "Show less") and native hover tooltips, and resolve defect where clicking "Show less" failed to shrink back to the 2-line clamped state.
+- **Root Cause & Fix:**
+   - **CSS Conflict:** The text span previously had `block` alongside `line-clamp-2`. In Tailwind CSS v4, `.block` (`display: block`) is declared after `.line-clamp-2` (`display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;`), so `display: block` overrode `-webkit-box`. Since `-webkit-line-clamp` is inactive on standard `display: block`, the browser failed to re-clamp the text upon collapse.
+   - **Resolution:**
+      - Removed `block` from the task text span in both Daily and Weekly task lists.
+      - Applied explicit `line-clamp-none` when expanded and `line-clamp-2` when collapsed.
+      - Enforced `e.preventDefault()` alongside `e.stopPropagation()` on both the `toggleTaskExpand` handler and button elements to isolate the expand/shrink action completely from row completion checkbox handlers.
 - **Code & Test Fixes:**
-   - In `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`:
-      - Added `expandedTaskIds: Set<string>` state with `toggleTaskExpand(taskId)` handler that stops event propagation (preventing accidental checkbox toggling).
-      - Added `title={task.text}` on the task text span for native hover inspection.
-      - Rendered an inline "Show more" / "Show less" toggle button with animated `ChevronDown` rotation for long descriptions (> 45 chars or with newlines).
-      - Applied to both Daily Tasks and Weekly Tasks lists.
-   - Tests:
-      - Added unit test in `cockpit-tasks-section.test.tsx` verifying `title` tooltip and `Show more` button rendering.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Removed `block`, wired `line-clamp-none` / `line-clamp-2`, added `cursor-pointer` and `e.preventDefault()`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: Added interactive unit tests with `@testing-library/react` and jsdom verifying initial `line-clamp-2`, expand to `line-clamp-none`, shrink back to `line-clamp-2`, and zero checkbox completion side-effects.
 - **Quality Gates Verified:**
    - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: ✅ 2/2 tests passed.
    - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: ✅ 21/21 tests passed.
+   - Full test suite: ✅ 187/187 test files passed, 1769/1769 tests passed.
 
 ### Session 150 — 2026-10-23 (Fix GH-147 / KAN-38 / FB-17: Fix Add/Edit Todo modal dismiss on input text overflow & Right Arrow caret scroll)
 

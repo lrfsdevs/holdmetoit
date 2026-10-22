@@ -172,6 +172,7 @@ export function CockpitTasksSection({
    );
 
    const toggleTaskExpand = (taskId: string, e?: React.MouseEvent) => {
+      e?.preventDefault();
       e?.stopPropagation();
       setExpandedTaskIds((prev) => {
          const next = new Set(prev);
@@ -3561,11 +3562,11 @@ export function CockpitTasksSection({
                                                                            title={
                                                                               task.text
                                                                            }
-                                                                           className={`text-sm break-words leading-snug block ${
+                                                                           className={`text-sm break-words leading-snug ${
                                                                               expandedTaskIds.has(
                                                                                  task.id
                                                                               )
-                                                                                 ? ""
+                                                                                 ? "line-clamp-none"
                                                                                  : "line-clamp-2"
                                                                            } ${
                                                                               status ===
@@ -3595,12 +3596,14 @@ export function CockpitTasksSection({
                                                                               type="button"
                                                                               onClick={(
                                                                                  e
-                                                                              ) =>
+                                                                              ) => {
+                                                                                 e.preventDefault();
+                                                                                 e.stopPropagation();
                                                                                  toggleTaskExpand(
                                                                                     task.id,
                                                                                     e
-                                                                                 )
-                                                                              }
+                                                                                 );
+                                                                              }}
                                                                               title={
                                                                                  expandedTaskIds.has(
                                                                                     task.id
@@ -3608,7 +3611,7 @@ export function CockpitTasksSection({
                                                                                     ? "Show less"
                                                                                     : "Show full task description"
                                                                               }
-                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand"
+                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand cursor-pointer"
                                                                            >
                                                                               <span>
                                                                                  {expandedTaskIds.has(
@@ -4319,11 +4322,11 @@ export function CockpitTasksSection({
                                                                            title={
                                                                               task.text
                                                                            }
-                                                                           className={`text-sm break-words leading-snug block ${
+                                                                           className={`text-sm break-words leading-snug ${
                                                                               expandedTaskIds.has(
                                                                                  task.id
                                                                               )
-                                                                                 ? ""
+                                                                                 ? "line-clamp-none"
                                                                                  : "line-clamp-2"
                                                                            } ${
                                                                               status ===
@@ -4353,12 +4356,14 @@ export function CockpitTasksSection({
                                                                               type="button"
                                                                               onClick={(
                                                                                  e
-                                                                              ) =>
+                                                                              ) => {
+                                                                                 e.preventDefault();
+                                                                                 e.stopPropagation();
                                                                                  toggleTaskExpand(
                                                                                     task.id,
                                                                                     e
-                                                                                 )
-                                                                              }
+                                                                                 );
+                                                                              }}
                                                                               title={
                                                                                  expandedTaskIds.has(
                                                                                     task.id
@@ -4366,7 +4371,7 @@ export function CockpitTasksSection({
                                                                                     ? "Show less"
                                                                                     : "Show full task description"
                                                                               }
-                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand"
+                                                                              className="text-text-tertiary hover:text-white text-xs font-medium mt-0.5 inline-flex items-center gap-1 transition-colors select-none group/expand cursor-pointer"
                                                                            >
                                                                               <span>
                                                                                  {expandedTaskIds.has(
