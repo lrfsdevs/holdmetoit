@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import { ErrorState } from "@/components/state/error-state";
 import { auth } from "@/core/auth";
@@ -8,6 +9,7 @@ import {
    PARTICIPANT_PREVIEW_COOKIE,
 } from "@/features/auth/domain/preview-mode";
 import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-data";
+import { buildChallengeDescription } from "@/features/challenges/domain/challenge-embed";
 import { ChallengeView } from "@/features/challenges/presentation/challenge-view";
 import {
    ChallengeTab,
@@ -30,6 +32,47 @@ interface ChallengePageProps {
       search?: string;
       team?: string;
       page?: string;
+   };
+}
+
+/** Builds challenge metadata for Discord link embeds. */
+export async function generateMetadata({
+   params,
+}: ChallengePageProps): Promise<Metadata> {
+   let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
+   try {
+      challenge = await getChallengeScoreboard(params.id);
+   } catch (error) {
+      logError(logEvents.appError, {
+         scope: "challenge.metadata",
+         context: { challengeId: params.id },
+         error,
+      });
+   }
+
+   if (!challenge || challenge.isDeleted) {
+      return { title: "Challenge Not Found | HoldMeToIt" };
+   }
+
+   const description = buildChallengeDescription(challenge);
+   const image = challenge.eventBannerUrl ?? challenge.heroImageUrl ?? null;
+
+   return {
+      title: `${challenge.title} | HoldMeToIt`,
+      description,
+      openGraph: {
+         type: "website",
+         siteName: "HoldMeToIt",
+         title: challenge.title,
+         description,
+         ...(image ? { images: [{ url: image }] } : {}),
+      },
+      twitter: {
+         card: image ? "summary_large_image" : "summary",
+         title: challenge.title,
+         description,
+         ...(image ? { images: [image] } : {}),
+      },
    };
 }
 
