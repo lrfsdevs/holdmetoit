@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-22 (Session 149 — Withdrawn users can re-enroll on `afnan-jr`)
+> **Last Updated:** 2026-10-23 (Session 150 — Fix GH-147 / KAN-38 modal dismiss on text scroll on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,30 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 150 — 2026-10-23 (Fix GH-147 / KAN-38 / FB-17: Fix Add/Edit Todo modal dismiss on input text overflow & Right Arrow caret scroll)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Resolve GH-147 [FB-17] / KAN-38: "Add todo modal closes when text is too long or arrow event is triggered on the right most side".
+- **Root Cause:**
+   1. In `apps/web/components/ui/context-menu.tsx`, `ContextMenuContent` registered capturing window listeners (`window.addEventListener("scroll", ..., { capture: true })`) on mount.
+   2. Because every task and category in the cockpit task board rendered `<ContextMenuContent>`, capturing scroll handlers were persistently listening on `window` even when all context menus were closed (`innerRef.current === null`).
+   3. When typing long text in `<Input>` or navigating caret with `ArrowRight` to the rightmost boundary, native horizontal scrolling inside the input field fired DOM `"scroll"` events.
+   4. The capturing listener intercepted the input's scroll event, found `node` did not contain the input, and dispatched `document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`.
+   5. Radix UI `DialogContent` caught the synthetic `Escape` event on `document` and closed the modal, discarding the user's task input.
+- **Code & Test Fixes:**
+   - In `apps/web/components/ui/context-menu.tsx`:
+      - Guarded `handleScroll` and `handleResize` with `mountedNode`: listeners are only bound when the context menu is open and mounted, and unbind on close.
+      - Added `data-state === "open"` guard and explicit form field exclusions (`INPUT`, `TEXTAREA`, `SELECT`, `isContentEditable`).
+      - Eliminated `document.dispatchEvent(Escape)`: Escape is now only dispatched directly to `mountedNode`.
+   - In `apps/web/components/ui/input.tsx`:
+      - Added `onScroll={(e) => { e.stopPropagation(); onScroll?.(e); }}` to isolate native input caret scrolling.
+   - Tests:
+      - Added unit tests in `apps/web/components/ui/context-menu.test.tsx` verifying scroll resilience on closed menus and input fields.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exit 0).
+   - `npm run test:web`: ✅ 186 test files passed (1,766/1,766 tests green).
+   - `npm run build:web`: ✅ Production build succeeded (17 routes + Edge Middleware compiled cleanly).
 
 ### Session 146 — 2026-10-22 (Fix GH-166 / FB-19: Offline IndexedDB sync resilience, periodic polling & bi-directional reconciliation)
 
