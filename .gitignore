@@ -27,6 +27,11 @@ yarn-error.log*
 # env files
 .env
 .env*.local
+.env.jira*
+
+# jira tooling & exports
+jira-*.csv
+jira_*.json
 
 # database backups / dumps (contain credentials + data)
 /backups/
