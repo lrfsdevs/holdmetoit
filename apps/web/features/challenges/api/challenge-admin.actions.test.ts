@@ -224,6 +224,24 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(revalidatePath).toHaveBeenCalledWith("/challenge/c_1");
       });
 
+      it("returns FEATURE_DISABLED when the withdrawal flag is off", async () => {
+         vi.mocked(isFeatureEnabled).mockResolvedValueOnce(false);
+
+         const result = await removeChallengeParticipantAction({
+            challengeId: "c_1",
+            participantId: "p_1",
+            reason: "Host cleanup",
+         });
+
+         expect(result).toMatchObject({
+            ok: false,
+            code: "FEATURE_DISABLED",
+         });
+         expect(
+            challengeAdminRepo.removeChallengeParticipant
+         ).not.toHaveBeenCalled();
+      });
+
       it("rejects when reason is too short", async () => {
          const result = await removeChallengeParticipantAction({
             challengeId: "c_1",

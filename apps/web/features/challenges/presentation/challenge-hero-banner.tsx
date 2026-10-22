@@ -88,16 +88,6 @@ function ChallengeHeroActions({ challenge }: ChallengeHeroBannerProps) {
       return null;
    }
 
-   if (currentUser.hasWithdrawn) {
-      return (
-         <div className="w-36 sm:w-44 rounded-2xl bg-surface-elevated border border-border-strong shadow-xl overflow-hidden shrink-0 self-start sm:self-center p-3 text-center">
-            <p className="text-xs font-bold text-text-secondary">
-               You have withdrawn from this challenge.
-            </p>
-         </div>
-      );
-   }
-
    return (
       <>
          <div className="w-36 sm:w-44 rounded-2xl bg-feedback-error-bg border border-feedback-error-text/20 shadow-xl overflow-hidden shrink-0 self-start sm:self-center flex flex-col">

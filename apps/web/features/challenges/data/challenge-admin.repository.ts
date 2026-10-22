@@ -28,6 +28,7 @@ import {
    settleChallengeTrophies,
    reverseChallengeTrophies,
 } from "@/features/trophies/data/trophy.repository";
+import { applyParticipantWithdrawal } from "./participant.repository";
 import { listAllChallenges } from "./challenge.repository";
 
 export async function listAllChallengesForAdmin() {
@@ -1013,7 +1014,16 @@ export async function removeChallengeParticipant(params: {
          user: { select: { id: true, displayName: true, username: true } },
          team: { select: { id: true, name: true } },
          challenge: {
-            select: { id: true, title: true, startAt: true, endAt: true },
+            select: {
+               id: true,
+               title: true,
+               startAt: true,
+               endAt: true,
+               resultsLockedAt: true,
+            },
+         },
+         dailyStudyLogs: {
+            select: { durationSeconds: true },
          },
       },
    });
@@ -1022,51 +1032,21 @@ export async function removeChallengeParticipant(params: {
       throw new Error("Participant not found.");
    }
 
-   if (calculateChallengeStatus(participant.challenge) === "COMPLETED") {
-      throw new Error(
-         "Cannot remove a participant from a completed challenge."
-      );
-   }
-
    const participantName =
       participant.user?.displayName ||
       participant.user?.username ||
       "Participant";
 
-   return prisma.$transaction(async (tx) => {
-      await tx.dailyStudyLog.deleteMany({
-         where: { participantId: params.participantId },
-      });
-
-      await tx.punishmentRecord.deleteMany({
-         where: { participantId: params.participantId },
-      });
-
-      await recordAuditEvent({
-         actorId: params.admin.id,
-         actorUsername: params.admin.username,
-         actionType: "ROSTER_EDIT",
-         targetEntityId: participant.id,
-         targetEntityType: "PARTICIPANT",
-         targetEntityName: participantName,
-         challengeId: participant.challengeId,
-         previousValue: {
-            userId: participant.userId,
-            teamId: participant.teamId,
-            teamName: participant.team?.name ?? "Not Assigned",
-            targetSeconds: participant.targetSeconds,
-            status: participant.status,
-         },
-         newValue: null,
-         auditReason: params.reason.trim(),
-      });
-
-      await tx.challengeParticipant.delete({
-         where: { id: params.participantId },
-      });
-
-      return { participantId: participant.id, removedName: participantName };
+   await applyParticipantWithdrawal({
+      participant,
+      participantName,
+      teamName: participant.team?.name ?? null,
+      actor: params.admin,
+      actionType: "PARTICIPANT_REMOVED",
+      reason: params.reason.trim(),
    });
+
+   return { participantId: participant.id, removedName: participantName };
 }
 
 export async function deleteAdminChallenge(

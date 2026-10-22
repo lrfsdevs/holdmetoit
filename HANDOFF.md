@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-22 (Session 147 — Feature-flagged challenge withdrawal on `afnan-jr`)
+> **Last Updated:** 2026-10-22 (Session 149 — Withdrawn users can re-enroll on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1155,4 +1155,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Exclusion:** withdrawn users disappear from standings, team totals/counts, participant stats, YPT, wrapped, and lock evaluation (no punishment/reward/trophy).
 - **UI:** red Withdraw button + AlertDialog below Participants; hero shows a withdrawn state; `currentUser.hasWithdrawn` added.
 - **Docs:** `docs/challenges/withdrawal.md`, feature-flag table.
+- **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 148 — 2026-10-22 (Soft admin removal via withdrawal on `afnan-jr`)
+
+- **Shared helper:** extracted `applyParticipantWithdrawal` (eligibility + flags + audit) and reused it for self-withdrawal and admin removal.
+- **Admin removal:** `removeChallengeParticipant` no longer deletes the participant/logs/punishments; it soft-withdraws and writes `PARTICIPANT_REMOVED` with the admin actor + reason.
+- **Flag:** admin removal is gated by `challenge_withdrawal_v1`; flag off returns `FEATURE_DISABLED`.
+- **UI:** Manage-tab dialog now says Withdraw/“Yes, Withdraw Participant” and explains logs are preserved.
+- **Restore:** not implemented yet; data is preserved for a future restore slice.
+- **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 149 — 2026-10-22 (Withdrawn users can re-enroll on `afnan-jr`)
+
+- **UI:** withdrawn users are now shown as **not enrolled**; removed the `currentUser.hasWithdrawn` branch/field so the hero shows the normal Enroll CTA. Withdraw/removal modals now say re-enrollment is possible.
+- **Re-enrollment:** `enrollParticipantInChallenge` reactivates the existing withdrawn row instead of throwing — clears `isWithdrawn`/`withdrawalAt`, updates `teamId`/`targetSeconds`/`plannedLeaveDays`, resets `usedLeaveDays`, `status = NORMAL`, and refreshes `enrolledAt`.
+- **Audit:** new `PARTICIPANT_REENROLLED` event with the previous withdrawal snapshot + new enrollment values; ROSTER filter + success badge.
+- **Flag:** re-enrollment is not gated by `challenge_withdrawal_v1`.
 - **Quality Gates:** typecheck/tests/build run before commit.

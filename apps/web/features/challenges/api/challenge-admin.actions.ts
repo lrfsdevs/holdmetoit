@@ -633,6 +633,17 @@ export async function removeChallengeParticipantAction(
    input: z.infer<typeof removeParticipantSchema>
 ): Promise<AdminActionResult> {
    try {
+      const withdrawalEnabled = await isFeatureEnabled(
+         FEATURE_FLAG_KEYS.withdrawal
+      );
+      if (!withdrawalEnabled) {
+         return {
+            ok: false,
+            code: "FEATURE_DISABLED",
+            message: "Participant removal is currently unavailable.",
+         };
+      }
+
       const admin = await requireAdminUser();
       const parsed = removeParticipantSchema.safeParse(input);
 

@@ -18,6 +18,8 @@ export type AuditEventType =
    | "CHALLENGE_DELETED"
    | "ROSTER_EDIT"
    | "PARTICIPANT_WITHDRAWN"
+   | "PARTICIPANT_REMOVED"
+   | "PARTICIPANT_REENROLLED"
    | "YPT_CLAIM_CREATED"
    | "YPT_CLAIM_APPROVED"
    | "YPT_CLAIM_REJECTED"
@@ -162,6 +164,10 @@ export function formatAuditActionHuman(action: AuditEventType): string {
          return "Team Roster Reassigned";
       case "PARTICIPANT_WITHDRAWN":
          return "Participant Withdrew";
+      case "PARTICIPANT_REMOVED":
+         return "Participant Removed";
+      case "PARTICIPANT_REENROLLED":
+         return "Participant Re-enrolled";
       default:
          return action;
    }

@@ -28,6 +28,7 @@ vi.mock("@/core/db", () => ({
          findFirst: vi.fn(),
          findUnique: vi.fn(),
          create: vi.fn(),
+         update: vi.fn(),
       },
       $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
          callback(transactionMock)
@@ -269,6 +270,75 @@ describe("participant repository", () => {
                targetSeconds: 126000,
             })
          ).rejects.toThrow("Cannot enroll in a completed challenge.");
+      });
+
+      it("re-enrolls a withdrawn participant and records an audit event", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            id: "c_1",
+            startAt: new Date(Date.now() + 86400000),
+            endAt: new Date(Date.now() + 7 * 86400000),
+         } as never);
+
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            id: "part_existing",
+            challengeId: "c_1",
+            userId: "u_1",
+            teamId: null,
+            targetSeconds: 36000,
+            plannedLeaveDays: 2,
+            usedLeaveDays: 1,
+            status: "NORMAL",
+            isWithdrawn: true,
+            withdrawalAt: new Date("2026-10-20T00:00:00.000Z"),
+            user: { displayName: "Alice", username: "alice" },
+         } as never);
+
+         const updatedParticipant = {
+            id: "part_existing",
+            userId: "u_1",
+            challengeId: "c_1",
+            teamId: null,
+            targetSeconds: 126000,
+            plannedLeaveDays: 0,
+            status: "NORMAL",
+            isWithdrawn: false,
+            withdrawalAt: null,
+         };
+         vi.mocked(prisma.challengeParticipant.update).mockResolvedValue(
+            updatedParticipant as never
+         );
+
+         const result = await enrollParticipantInChallenge({
+            challengeId: "c_1",
+            userId: "u_1",
+            targetSeconds: 126000,
+         });
+
+         expect(result).toEqual(updatedParticipant);
+         expect(prisma.challengeParticipant.create).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
+            where: { id: "part_existing" },
+            data: expect.objectContaining({
+               isWithdrawn: false,
+               withdrawalAt: null,
+               targetSeconds: 126000,
+               plannedLeaveDays: 0,
+               usedLeaveDays: 0,
+               status: "NORMAL",
+            }),
+            include: {
+               team: true,
+               challenge: true,
+               user: true,
+            },
+         });
+         expect(recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "PARTICIPANT_REENROLLED",
+               targetEntityId: "part_existing",
+               challengeId: "c_1",
+            })
+         );
       });
 
       it("rejects enrollment when user is already enrolled", async () => {

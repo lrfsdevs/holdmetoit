@@ -85,8 +85,8 @@ export function WithdrawChallengeButton({
                   <AlertDialogDescription>
                      You will be removed from the public standings and team
                      totals, and you will no longer be able to log study time
-                     for this challenge. Your existing logs are preserved, but
-                     you cannot rejoin once you withdraw.
+                     for this challenge. Your existing logs are preserved, and
+                     you can re-enroll later with a new target and team choice.
                   </AlertDialogDescription>
                </AlertDialogHeader>
 

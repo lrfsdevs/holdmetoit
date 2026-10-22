@@ -168,7 +168,6 @@ describe("ChallengeOverviewTab", () => {
                currentUser: {
                   ...mockChallenge.currentUser,
                   isEnrolled: false,
-                  hasWithdrawn: true,
                },
             },
             isAdmin: false,

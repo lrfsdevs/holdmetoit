@@ -104,7 +104,6 @@ describe("buildScoreboardViewModel", () => {
       expect(butterflies?.totalLoggedSeconds).toBe(7_200);
 
       expect(result.currentUser.isEnrolled).toBe(false);
-      expect(result.currentUser.hasWithdrawn).toBe(true);
    });
 
    it("keeps differing hero and punishment image URLs separate", () => {

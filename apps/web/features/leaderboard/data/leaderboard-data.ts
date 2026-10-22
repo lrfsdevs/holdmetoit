@@ -473,7 +473,6 @@ export function buildScoreboardViewModel(
          isEnrolled: Boolean(
             currentUserParticipant && !currentUserParticipant.isWithdrawn
          ),
-         hasWithdrawn: Boolean(currentUserParticipant?.isWithdrawn),
          participantId: currentUserParticipant?.id ?? null,
          isWrappedSeen: currentUserParticipant?.isWrappedSeen ?? false,
          isFeedbackFilled: currentUserParticipant?.isFeedbackFilled ?? false,
