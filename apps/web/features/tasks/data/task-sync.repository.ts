@@ -23,9 +23,9 @@ export async function processBatchSync(
    const mutations = compactMutationQueue(rawMutations);
    const processedMutationIds: string[] = [];
 
-   await prisma.$transaction(async (tx) => {
-      for (const m of mutations) {
-         try {
+   for (const m of mutations) {
+      try {
+         await prisma.$transaction(async (tx) => {
             if (m.entityType === "CATEGORY") {
                const payload = m.payload as Record<string, unknown>;
                const catId = String(payload.id || payload.categoryId || "");
@@ -323,17 +323,17 @@ export async function processBatchSync(
                   }
                }
             }
+         });
 
-            processedMutationIds.push(m.id);
-         } catch (err) {
-            // Individual mutation error: continue processing rest of queue
-            logger.error(logEvents.tasksSyncFailed, {
-               context: { userId, mutationId: m.id, action: m.action },
-               error: err,
-            });
-         }
+         processedMutationIds.push(m.id);
+      } catch (err) {
+         // Individual mutation error: isolated failure allows rest of batch to commit
+         logger.error(logEvents.tasksSyncFailed, {
+            context: { userId, mutationId: m.id, action: m.action },
+            error: err,
+         });
       }
-   });
+   }
 
    // Acknowledge compacted mutations that were completely pruned from rawMutations
    const activeMutationIds = new Set(mutations.map((m) => m.id));
