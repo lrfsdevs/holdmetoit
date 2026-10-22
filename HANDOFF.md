@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-22 (Session 146 — Wallet gated under `global_leaderboard_v1` on `afnan-jr`)
+> **Last Updated:** 2026-10-22 (Session 147 — Feature-flagged challenge withdrawal on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1145,3 +1145,14 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Rewards paused:** `processStudyReward` skips study/YPT rewards; `lockChallengeResults` accepts `settleRewards` and skips challenge win rewards when false. `lockChallengeResultsAction` passes the flag for both trophies and rewards.
 - **Non-retroactive:** rewards skipped while disabled are not backfilled when re-enabled. Pokémon and betting keep their own flags and existing balances.
 - **Quality Gates:** `npm run typecheck:web` ✅ · targeted wallet/economy/challenge suites ✅ · full `npm run test:web` + `npm run build:web` run before commit.
+
+### Session 147 — 2026-10-22 (Feature-flagged challenge withdrawal on `afnan-jr`)
+
+- **Schema:** `ChallengeParticipant.isWithdrawn` + `withdrawalAt`; no separate model. Migration `20261026000000_add_participant_withdrawal`.
+- **Flag:** `challenge_withdrawal_v1` (seeded DISABLED) gates the overview button and `withdrawFromChallengeAction`.
+- **Eligibility:** pure resolver allows UPCOMING/ACTIVE; blocks results-locked, completed, and repeated withdrawal.
+- **Audit:** `PARTICIPANT_WITHDRAWN` event with previous/new values; ROSTER audit filter + badge.
+- **Exclusion:** withdrawn users disappear from standings, team totals/counts, participant stats, YPT, wrapped, and lock evaluation (no punishment/reward/trophy).
+- **UI:** red Withdraw button + AlertDialog below Participants; hero shows a withdrawn state; `currentUser.hasWithdrawn` added.
+- **Docs:** `docs/challenges/withdrawal.md`, feature-flag table.
+- **Quality Gates:** typecheck/tests/build run before commit.

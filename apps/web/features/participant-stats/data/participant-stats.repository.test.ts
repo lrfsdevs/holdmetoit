@@ -133,6 +133,7 @@ describe("getChallengeParticipantStats repository", () => {
             where: {
                userId: "user_1",
                challengeId: "chal_1",
+               isWithdrawn: false,
                challenge: { isDeleted: false },
             },
          })
@@ -157,6 +158,7 @@ describe("getChallengeParticipantStats repository", () => {
             where: {
                userId: "user_1",
                challengeId: "chal_1",
+               isWithdrawn: false,
                challenge: { isDeleted: false },
             },
          })

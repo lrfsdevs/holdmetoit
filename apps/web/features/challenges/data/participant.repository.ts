@@ -1,5 +1,7 @@
 import { prisma } from "@/core/db";
+import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { resolveWithdrawalEligibility } from "@/features/challenges/domain/withdrawal";
 
 export async function findParticipantForUser(
    userId: string,
@@ -20,6 +22,7 @@ export async function findParticipantForUser(
          where: {
             userId,
             challengeId,
+            isWithdrawn: false,
             challenge: { isDeleted: false },
          },
          include,
@@ -29,6 +32,7 @@ export async function findParticipantForUser(
    const activeParticipant = await prisma.challengeParticipant.findFirst({
       where: {
          userId,
+         isWithdrawn: false,
          challenge: {
             isDeleted: false,
             startAt: { lte: now },
@@ -46,6 +50,7 @@ export async function findParticipantForUser(
    const upcomingParticipant = await prisma.challengeParticipant.findFirst({
       where: {
          userId,
+         isWithdrawn: false,
          challenge: {
             isDeleted: false,
             startAt: { gt: now },
@@ -62,6 +67,7 @@ export async function findParticipantForUser(
    return prisma.challengeParticipant.findFirst({
       where: {
          userId,
+         isWithdrawn: false,
          challenge: {
             isDeleted: false,
             endAt: { lte: now },
@@ -80,6 +86,7 @@ export async function findOwnedParticipant(
       where: {
          userId,
          challengeId,
+         isWithdrawn: false,
          challenge: { isDeleted: false },
       },
       include: {
@@ -104,6 +111,7 @@ export async function findActiveChallengeEnrollment(
    const participant = await prisma.challengeParticipant.findFirst({
       where: {
          userId,
+         isWithdrawn: false,
          challenge: {
             isDeleted: false,
             resultsLockedAt: null,
@@ -151,7 +159,9 @@ export async function enrollParticipantInChallenge(params: {
               where: { id: params.teamId! },
               include: {
                  _count: {
-                    select: { participants: true },
+                    select: {
+                       participants: { where: { isWithdrawn: false } },
+                    },
                  },
               },
            })
@@ -164,6 +174,10 @@ export async function enrollParticipantInChallenge(params: {
 
    if (calculateChallengeStatus(challenge) === "COMPLETED") {
       throw new Error("Cannot enroll in a completed challenge.");
+   }
+
+   if (existing?.isWithdrawn) {
+      throw new Error("You have already withdrawn from this challenge.");
    }
 
    if (existing) {
@@ -208,7 +222,98 @@ export async function updateParticipantTargetSeconds(
    targetSeconds: number
 ) {
    return prisma.challengeParticipant.update({
-      where: { id: participantId },
+      where: { id: participantId, isWithdrawn: false },
       data: { targetSeconds },
    });
+}
+
+export async function withdrawParticipant(params: {
+   challengeId: string;
+   userId: string;
+}) {
+   const participant = await prisma.challengeParticipant.findUnique({
+      where: {
+         challengeId_userId: {
+            challengeId: params.challengeId,
+            userId: params.userId,
+         },
+      },
+      include: {
+         challenge: {
+            select: {
+               id: true,
+               startAt: true,
+               endAt: true,
+               resultsLockedAt: true,
+            },
+         },
+         user: {
+            select: {
+               displayName: true,
+               username: true,
+            },
+         },
+         dailyStudyLogs: {
+            select: { durationSeconds: true },
+         },
+      },
+   });
+
+   if (!participant) {
+      throw new Error("You are not enrolled in this challenge.");
+   }
+
+   const eligibility = resolveWithdrawalEligibility({
+      isWithdrawn: participant.isWithdrawn,
+      resultsLockedAt: participant.challenge.resultsLockedAt,
+      status: calculateChallengeStatus(participant.challenge),
+   });
+
+   if (!eligibility.allowed) {
+      throw new Error(eligibility.message);
+   }
+
+   const now = new Date();
+   const totalLoggedSeconds = participant.dailyStudyLogs.reduce(
+      (total, log) => total + log.durationSeconds,
+      0
+   );
+   const participantName =
+      participant.user.displayName ||
+      participant.user.username ||
+      "Participant";
+
+   await prisma.$transaction(async (tx) => {
+      await tx.challengeParticipant.update({
+         where: { id: participant.id },
+         data: {
+            isWithdrawn: true,
+            withdrawalAt: now,
+         },
+      });
+
+      await recordAuditEvent({
+         actorId: participant.userId,
+         actorUsername: participant.user.username ?? participantName,
+         actorDisplayName: participant.user.displayName,
+         actionType: "PARTICIPANT_WITHDRAWN",
+         targetEntityId: participant.id,
+         targetEntityType: "PARTICIPANT",
+         targetEntityName: participantName,
+         challengeId: participant.challengeId,
+         previousValue: {
+            teamId: participant.teamId,
+            targetSeconds: participant.targetSeconds,
+            totalLoggedSeconds,
+            status: participant.status,
+         },
+         newValue: {
+            isWithdrawn: true,
+            withdrawalAt: now.toISOString(),
+         },
+         auditReason: "Participant self-withdrawal",
+      });
+   });
+
+   return { participantId: participant.id, withdrawalAt: now };
 }

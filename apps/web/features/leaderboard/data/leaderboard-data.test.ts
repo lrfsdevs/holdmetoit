@@ -75,6 +75,38 @@ describe("buildScoreboardViewModel", () => {
 
    const fixedNow = new Date("2026-09-04T12:00:00.000Z");
 
+   it("excludes withdrawn participants from standings and team totals", () => {
+      const result = buildScoreboardViewModel(
+         {
+            ...mockChallenge,
+            participants: [
+               { ...mockChallenge.participants[0], isWithdrawn: true },
+               mockChallenge.participants[1],
+            ],
+         },
+         "user-1",
+         fixedNow
+      );
+
+      expect(result.standings.map((entry) => entry.participantId)).toEqual([
+         "part-2",
+      ]);
+
+      const bees = result.teams.find((team) => team.id === "team-bees");
+      expect(bees).toMatchObject({
+         companionCount: 0,
+         totalLoggedSeconds: 0,
+      });
+
+      const butterflies = result.teams.find(
+         (team) => team.id === "team-butterflies"
+      );
+      expect(butterflies?.totalLoggedSeconds).toBe(7_200);
+
+      expect(result.currentUser.isEnrolled).toBe(false);
+      expect(result.currentUser.hasWithdrawn).toBe(true);
+   });
+
    it("keeps differing hero and punishment image URLs separate", () => {
       const url =
          "https://example.supabase.co/storage/v1/object/public/holdmetoit-bucket/event-banners/upload.png";

@@ -320,6 +320,56 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
       });
 
+      it("skips withdrawn participants during lock evaluation", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([
+               mockParticipant({
+                  dailyStudyLogs: [{ durationSeconds: 40000 }],
+               }),
+               mockParticipant({
+                  id: "p_withdrawn",
+                  userId: "u_withdrawn",
+                  isWithdrawn: true,
+                  dailyStudyLogs: [],
+               }),
+            ]) as never
+         );
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.task.findMany).toHaveBeenCalledWith({
+            where: {
+               challengeId: "c_act",
+               taskType: "WEEKLY",
+               userId: { in: ["u_1"] },
+            },
+            select: { userId: true, status: true },
+         });
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ["p_1"] } },
+            data: { status: "NORMAL" },
+         });
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+         expect(auditRepo.recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "CHALLENGE_LOCKED",
+               newValue: expect.objectContaining({
+                  withdrawnParticipants: 1,
+                  participantsEvaluated: 1,
+               }),
+            })
+         );
+      });
+
       it("punishes a winning-team participant when a weekly task is incomplete", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([

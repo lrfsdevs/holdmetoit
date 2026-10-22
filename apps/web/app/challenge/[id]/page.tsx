@@ -50,6 +50,9 @@ export default async function ChallengePage({
 
    const isWrappedEnabled = await isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);
    const isBettingEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.betting);
+   const isWithdrawalEnabled = await isFeatureEnabled(
+      FEATURE_FLAG_KEYS.withdrawal
+   );
 
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
@@ -101,6 +104,7 @@ export default async function ChallengePage({
          initialRosterPage={initialRosterPage}
          isWrappedEnabled={isWrappedEnabled}
          isBettingEnabled={isBettingEnabled}
+         isWithdrawalEnabled={isWithdrawalEnabled}
       />
    );
 }

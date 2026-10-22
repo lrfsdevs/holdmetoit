@@ -77,7 +77,7 @@ export async function getChallengeParticipantStats(
    };
 
    let participant = await prisma.challengeParticipant.findUnique({
-      where: { id: participantId },
+      where: { id: participantId, isWithdrawn: false },
       include: includeRelations,
    });
 
@@ -91,6 +91,7 @@ export async function getChallengeParticipantStats(
          where: {
             userId: lookupUserId,
             challengeId,
+            isWithdrawn: false,
             challenge: { isDeleted: false },
          },
          include: includeRelations,

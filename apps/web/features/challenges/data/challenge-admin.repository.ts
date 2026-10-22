@@ -215,7 +215,11 @@ export async function lockChallengeResults(
    const currentStatus = calculateChallengeStatus(challenge);
    assertCanLockChallenge(currentStatus, challenge.resultsLockedAt);
 
-   const participantUserIds = challenge.participants.map(
+   const evaluatedParticipants = challenge.participants.filter(
+      (participant) => !participant.isWithdrawn
+   );
+
+   const participantUserIds = evaluatedParticipants.map(
       (participant) => participant.userId
    );
 
@@ -260,7 +264,7 @@ export async function lockChallengeResults(
 
       const teamTotals = aggregateTeamScores(
          challenge.teams,
-         challenge.participants.map((participant) => ({
+         evaluatedParticipants.map((participant) => ({
             teamId: participant.teamId ?? "no-assigned",
             loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
          }))
@@ -273,7 +277,7 @@ export async function lockChallengeResults(
       const punishedParticipantIds: string[] = [];
       const savedParticipantIds: string[] = [];
 
-      for (const participant of challenge.participants) {
+      for (const participant of evaluatedParticipants) {
          const isExcused =
             participant.status === "EXCUSED" ||
             participant.punishmentRecords.some((record) => record.isPardoned);
@@ -337,7 +341,7 @@ export async function lockChallengeResults(
          !challenge.isRewardSettled &&
          Boolean((tx as any)?.wallet)
       ) {
-         const savedParticipants = challenge.participants.filter((p) =>
+         const savedParticipants = evaluatedParticipants.filter((p) =>
             savedParticipantIds.includes(p.id)
          );
 
@@ -393,7 +397,7 @@ export async function lockChallengeResults(
                challengeTitle: challenge.title,
                winningTeamIds,
                totalTeamsCount: challenge.teams.length,
-               participants: challenge.participants,
+               participants: evaluatedParticipants,
                savedParticipantIds,
             },
             tx
@@ -416,7 +420,9 @@ export async function lockChallengeResults(
          newValue: {
             status: "COMPLETED",
             resultsLockedAt: completedChallenge.resultsLockedAt,
-            participantsEvaluated: challenge.participants.length,
+            participantsEvaluated: evaluatedParticipants.length,
+            withdrawnParticipants:
+               challenge.participants.length - evaluatedParticipants.length,
             winningTeamIds,
             punishedParticipants: punishedParticipantIds.length,
             savedParticipants: savedParticipantIds.length,

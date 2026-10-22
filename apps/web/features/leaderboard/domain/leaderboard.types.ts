@@ -87,6 +87,7 @@ export interface ChallengeScoreboardViewModel {
    currentUser: {
       isLoggedIn: boolean;
       isEnrolled: boolean;
+      hasWithdrawn?: boolean;
       participantId: string | null;
       isWrappedSeen: boolean;
       isFeedbackFilled: boolean;

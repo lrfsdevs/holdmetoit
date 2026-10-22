@@ -25,6 +25,12 @@ export const SYSTEM_FEATURE_FLAGS = [
       description:
          "Gates /leaderboard, trophy awards, and admin trophy adjustments.",
    },
+   {
+      key: "challenge_withdrawal_v1",
+      name: "Challenge Withdrawal",
+      description:
+         "Gates participant self-withdrawal, the overview withdraw button, and exclusion from standings.",
+   },
 ] as const;
 
 export async function seedSystemFeatureFlags(prisma: PrismaClient) {

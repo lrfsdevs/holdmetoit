@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/core/db";
+import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
 import {
    enrollParticipantInChallenge,
    findActiveChallengeEnrollment,
    findOwnedParticipant,
    findParticipantForUser,
+   withdrawParticipant,
 } from "@/features/challenges/data/participant.repository";
+
+const transactionMock = {
+   challengeParticipant: {
+      update: vi.fn(),
+   },
+};
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -21,7 +29,14 @@ vi.mock("@/core/db", () => ({
          findUnique: vi.fn(),
          create: vi.fn(),
       },
+      $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
+         callback(transactionMock)
+      ),
    },
+}));
+
+vi.mock("@/features/audit/data/audit-log.repository", () => ({
+   recordAuditEvent: vi.fn(),
 }));
 
 describe("participant repository", () => {
@@ -46,6 +61,7 @@ describe("participant repository", () => {
             where: {
                userId: "u_1",
                challengeId: "chal_1",
+               isWithdrawn: false,
                challenge: { isDeleted: false },
             },
             include: {
@@ -135,6 +151,7 @@ describe("participant repository", () => {
             where: {
                userId: "u_1",
                challengeId: "c_1",
+               isWithdrawn: false,
                challenge: { isDeleted: false },
             },
             include: { challenge: true },
@@ -158,6 +175,7 @@ describe("participant repository", () => {
          expect(prisma.challengeParticipant.findFirst).toHaveBeenCalledWith({
             where: {
                userId: "u_1",
+               isWithdrawn: false,
                challenge: {
                   isDeleted: false,
                   resultsLockedAt: null,
@@ -325,7 +343,11 @@ describe("participant repository", () => {
 
          expect(prisma.team.findUnique).toHaveBeenCalledWith({
             where: { id: "t_deleted" },
-            include: { _count: { select: { participants: true } } },
+            include: {
+               _count: {
+                  select: { participants: { where: { isWithdrawn: false } } },
+               },
+            },
          });
       });
 
@@ -447,6 +469,87 @@ describe("participant repository", () => {
                user: true,
             },
          });
+      });
+   });
+
+   describe("withdrawParticipant", () => {
+      const participantRecord = {
+         id: "part_1",
+         challengeId: "c_1",
+         userId: "u_1",
+         teamId: "t_1",
+         targetSeconds: 126000,
+         status: "NORMAL",
+         isWithdrawn: false,
+         challenge: {
+            id: "c_1",
+            startAt: new Date(Date.now() + 86400000),
+            endAt: new Date(Date.now() + 7 * 86400000),
+            resultsLockedAt: null,
+         },
+         user: { displayName: "Alice", username: "alice" },
+         dailyStudyLogs: [{ durationSeconds: 3600 }],
+      };
+
+      beforeEach(() => {
+         vi.clearAllMocks();
+         transactionMock.challengeParticipant.update.mockResolvedValue(
+            {} as never
+         );
+      });
+
+      it("flags the participant and records an audit event", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            participantRecord as never
+         );
+
+         const result = await withdrawParticipant({
+            challengeId: "c_1",
+            userId: "u_1",
+         });
+
+         expect(result.participantId).toBe("part_1");
+         expect(
+            transactionMock.challengeParticipant.update
+         ).toHaveBeenCalledWith({
+            where: { id: "part_1" },
+            data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
+         });
+         expect(recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "PARTICIPANT_WITHDRAWN",
+               targetEntityId: "part_1",
+               challengeId: "c_1",
+            })
+         );
+      });
+
+      it("rejects withdrawal once results are locked", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            ...participantRecord,
+            challenge: {
+               ...participantRecord.challenge,
+               resultsLockedAt: new Date(),
+            },
+         } as never);
+
+         await expect(
+            withdrawParticipant({ challengeId: "c_1", userId: "u_1" })
+         ).rejects.toThrow(
+            "Results are locked; withdrawal is no longer possible."
+         );
+         expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it("rejects a repeated withdrawal", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
+            ...participantRecord,
+            isWithdrawn: true,
+         } as never);
+
+         await expect(
+            withdrawParticipant({ challengeId: "c_1", userId: "u_1" })
+         ).rejects.toThrow("You have already withdrawn from this challenge.");
       });
    });
 });

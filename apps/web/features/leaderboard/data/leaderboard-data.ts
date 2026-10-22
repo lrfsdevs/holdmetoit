@@ -66,6 +66,8 @@ export interface RawChallengePayload {
       teamId: string | null;
       targetSeconds: number;
       status: "NORMAL" | "DEFICIT" | "EXCUSED" | "PUNISHED";
+      isWithdrawn?: boolean;
+      withdrawalAt?: Date | string | null;
       isWrappedSeen?: boolean;
       isFeedbackFilled?: boolean;
       weeklyTasksCompletedCount?: number;
@@ -148,8 +150,12 @@ export function buildScoreboardViewModel(
       ? 0
       : Math.min(totalDays, getChallengeDayNumber(challenge.startAt, now));
 
+   const activeParticipants = challenge.participants.filter(
+      (p) => !p.isWithdrawn
+   );
+
    // 1. Participant logs mapping
-   const participantScores = challenge.participants.map((p) => {
+   const participantScores = activeParticipants.map((p) => {
       const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
       return {
          participantId: p.id,
@@ -176,7 +182,7 @@ export function buildScoreboardViewModel(
 
    const companionCounts = new Map<string, number>();
    const teamTargetMap = new Map<string, number>();
-   for (const p of challenge.participants) {
+   for (const p of activeParticipants) {
       if (p.teamId) {
          companionCounts.set(
             p.teamId,
@@ -283,7 +289,7 @@ export function buildScoreboardViewModel(
       ? getChallengeDayDateKey(challenge.startAt, totalDays)
       : getChallengeDayBuckets(challenge.startAt, now).current.dateKey;
 
-   const participantRows = challenge.participants.map((p) => {
+   const participantRows = activeParticipants.map((p) => {
       const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
       const todayLog = p.dailyStudyLogs.find((log) => {
          if (!log.logDate) return false;
@@ -464,7 +470,10 @@ export function buildScoreboardViewModel(
       standings,
       currentUser: {
          isLoggedIn: Boolean(currentUserId),
-         isEnrolled: Boolean(currentUserParticipant),
+         isEnrolled: Boolean(
+            currentUserParticipant && !currentUserParticipant.isWithdrawn
+         ),
+         hasWithdrawn: Boolean(currentUserParticipant?.isWithdrawn),
          participantId: currentUserParticipant?.id ?? null,
          isWrappedSeen: currentUserParticipant?.isWrappedSeen ?? false,
          isFeedbackFilled: currentUserParticipant?.isFeedbackFilled ?? false,
