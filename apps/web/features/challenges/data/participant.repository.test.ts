@@ -12,7 +12,7 @@ import {
 
 const transactionMock = {
    challengeParticipant: {
-      update: vi.fn(),
+      updateMany: vi.fn(),
    },
 };
 
@@ -563,9 +563,9 @@ describe("participant repository", () => {
 
       beforeEach(() => {
          vi.clearAllMocks();
-         transactionMock.challengeParticipant.update.mockResolvedValue(
-            {} as never
-         );
+         transactionMock.challengeParticipant.updateMany.mockResolvedValue({
+            count: 1,
+         } as never);
       });
 
       it("flags the participant and records an audit event", async () => {
@@ -580,9 +580,13 @@ describe("participant repository", () => {
 
          expect(result.participantId).toBe("part_1");
          expect(
-            transactionMock.challengeParticipant.update
+            transactionMock.challengeParticipant.updateMany
          ).toHaveBeenCalledWith({
-            where: { id: "part_1" },
+            where: {
+               id: "part_1",
+               isWithdrawn: false,
+               challenge: { resultsLockedAt: null },
+            },
             data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
          });
          expect(recordAuditEvent).toHaveBeenCalledWith(

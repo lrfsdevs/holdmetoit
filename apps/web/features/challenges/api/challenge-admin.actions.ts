@@ -37,6 +37,18 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("challenge.admin");
 
+/**
+ * Context-independent evaluation used for system-wide settlement decisions.
+ * GLOBAL flags evaluate true; TARGETED flags (which require a specific user)
+ * evaluate false. This prevents an admin's own targeting from controlling
+ * whether every participant's rewards settle.
+ */
+const SYSTEM_FLAG_CONTEXT = {
+   userId: null,
+   userRole: null,
+   isSpectator: true,
+} as const;
+
 const BANNER_REQUIRED_MESSAGE = "Please upload an event header image.";
 const PFP_REQUIRED_MESSAGE = "Please upload a punishment PFP.";
 
@@ -205,16 +217,19 @@ export async function lockChallengeResultsAction(
 ): Promise<AdminActionResult> {
    try {
       const admin = await requireAdminUser();
-      const economyEnabled = await isFeatureEnabled(
+      // Keep the existing trophy gate tied to the admin context.
+      const settleTrophies = await isFeatureEnabled(
          FEATURE_FLAG_KEYS.globalLeaderboard
+      );
+      // Reward settlement is system-wide, so evaluate it without user context.
+      const settleRewards = await isFeatureEnabled(
+         FEATURE_FLAG_KEYS.globalLeaderboard,
+         SYSTEM_FLAG_CONTEXT
       );
       await lockChallengeResults(
          challengeId,
          { id: admin.id, username: admin.username },
-         {
-            settleTrophies: economyEnabled,
-            settleRewards: economyEnabled,
-         }
+         { settleTrophies, settleRewards }
       );
 
       invalidateTags([

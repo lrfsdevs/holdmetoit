@@ -1225,6 +1225,9 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
             mockParticipant() as never
          );
+         vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
+            count: 1,
+         } as never);
 
          const result = await removeChallengeParticipant({
             participantId: "p_1",
@@ -1236,8 +1239,12 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             participantId: "p_1",
             removedName: "Afnan",
          });
-         expect(prisma.challengeParticipant.update).toHaveBeenCalledWith({
-            where: { id: "p_1" },
+         expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: "p_1",
+               isWithdrawn: false,
+               challenge: { resultsLockedAt: null },
+            },
             data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
          });
          expect(prisma.dailyStudyLog.deleteMany).not.toHaveBeenCalled();
@@ -1289,7 +1296,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                admin: { id: "admin_1", username: "HostAdmin" },
             })
          ).rejects.toThrow("This challenge has already concluded.");
-         expect(prisma.challengeParticipant.update).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
       });
 
       it("rejects when results are locked", async () => {
@@ -1314,7 +1321,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          ).rejects.toThrow(
             "Results are locked; withdrawal is no longer possible."
          );
-         expect(prisma.challengeParticipant.update).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
       });
 
       it("rejects an already-withdrawn participant", async () => {
