@@ -332,13 +332,20 @@ export async function applyParticipantWithdrawal(params: {
    );
 
    await prisma.$transaction(async (tx) => {
-      await tx.challengeParticipant.update({
-         where: { id: participant.id },
+      const { count } = await tx.challengeParticipant.updateMany({
+         where: {
+            id: participant.id,
+            isWithdrawn: false,
+            challenge: { resultsLockedAt: null },
+         },
          data: {
             isWithdrawn: true,
             withdrawalAt: now,
          },
       });
+      if (count === 0) {
+         throw new Error("Withdrawal is no longer possible.");
+      }
 
       await recordAuditEvent({
          actorId: actor.id,
