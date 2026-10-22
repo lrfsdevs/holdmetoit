@@ -107,6 +107,15 @@ The following commands are **strictly prohibited** in all environments:
 - `git push --force` or `git push -f` (Overwriting shared remote history)
 - Rebasing shared public branches (`dev` or `main`)
 
+### 4.4 Issue Tracking & Lifecycle Workflow (Jira & GitHub)
+
+- **Strict Transition Invariant (No Direct-to-Done):** Autonomous agents and engineers must never transition an issue directly from `In Progress` (or `To Do`) to `Done`.
+- **Mandatory 3-Stage Lifecycle:**
+   1. **`To Do` $\rightarrow$ `In Progress`:** When branch creation occurs and active implementation begins.
+   2. **`In Progress` $\rightarrow$ `In Review`:** When implementation is complete, quality gates pass (`npm run typecheck`, `npm run test`), and a Pull Request is submitted from the development branch to `dev` (e.g. `krish` $\rightarrow$ `dev`).
+   3. **`In Review` $\rightarrow$ `Done`:** **Only** after the pull request has been peer-reviewed, merged into `dev`, and the `dev` branch has been integrated into `main` via release PR.
+- **Forbidden Anti-Pattern:** Prematurely marking Jira issues as `Done` or closing GitHub issues prior to the PR being reviewed and merged into `dev` and subsequently `main`.
+
 ---
 
 ## 5. Conflict Resolution Protocol
