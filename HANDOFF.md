@@ -209,11 +209,15 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
          - Added `14h counted` badge and tooltip whenever a daily log exceeds 14:00:00.
    6. **E2E & Unit Test Fixtures Alignment:**
       - Updated synthetic test fixtures in `solo-challenge-lifecycle.test.ts`, `leaderboard-data.test.ts`, and `challenge-admin.repository.test.ts` where multi-day commitments (e.g. 35h, 20h, 30h) were originally compressed into single mock log rows exceeding 14h.
+   7. **Database Connection Hardening against Pooler Latency:**
+      - In `packages/database/src/index.ts`, added `withConnectionTimeouts` to dynamically inject `connect_timeout=30` and `pool_timeout=30` into `DATABASE_URL` and `DIRECT_URL`.
+      - Resolved Prisma `P1001` timeout when establishing TLS/SCRAM negotiation against Supabase pooler on cold start.
+      - Updated `apps/web/.env.example` with hardened connection string documentation.
 - **Quality Gates Verified:**
    - `npm run typecheck:web`: ✅ 0 compiler errors.
    - `npm run test:web`: ✅ 187/187 test files passed (1,777/1,777 tests green).
    - Atomic commits: 6 discrete commits on branch `krish`.
-- **NEXT STEP:** Push branch `krish`, submit Pull Request from `krish` to `dev`, and transition Jira ticket [KAN-55] from `In Progress` to `In Review`.
+- **NEXT STEP:** Review PR #173, merge to `dev`, and verify staging.
 
 ### Session 151 — 2026-10-23 (Feat & Fix: Long Task Description Expand & Shrink in Daily/Weekly Task Board; PR #171 to dev)
 
