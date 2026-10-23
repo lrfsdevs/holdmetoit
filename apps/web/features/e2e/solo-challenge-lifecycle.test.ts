@@ -261,7 +261,13 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
                teamId: "team_solo_scholars",
                targetSeconds: 35 * 3600,
                status: "NORMAL",
-               dailyStudyLogs: [{ durationSeconds: 35 * 3600 }],
+               dailyStudyLogs: [
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+               ],
                punishmentRecords: [],
             },
             {
@@ -270,7 +276,10 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
                teamId: "team_solo_scholars",
                targetSeconds: 35 * 3600,
                status: "NORMAL",
-               dailyStudyLogs: [{ durationSeconds: 20 * 3600 }], // 15h deficit
+               dailyStudyLogs: [
+                  { durationSeconds: 10 * 3600 },
+                  { durationSeconds: 10 * 3600 },
+               ], // 15h deficit
                punishmentRecords: [],
             },
             {
@@ -279,7 +288,11 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
                teamId: "team_solo_scholars",
                targetSeconds: 30 * 3600,
                status: "NORMAL",
-               dailyStudyLogs: [{ durationSeconds: 30 * 3600 }], // Hours met!
+               dailyStudyLogs: [
+                  { durationSeconds: 10 * 3600 },
+                  { durationSeconds: 10 * 3600 },
+                  { durationSeconds: 10 * 3600 },
+               ], // Hours met!
                punishmentRecords: [],
             },
          ],
