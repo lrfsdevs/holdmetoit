@@ -265,4 +265,23 @@ describe("DailyHoursModal", () => {
       expect(html).toContain("🌴 Mark as Leave");
       expect(html).not.toContain("🌴 Remove Leave");
    });
+   it("renders 14-hour daily cap notice when hours exceed 14", () => {
+      const html = renderToHtml(
+         createElement(DailyHoursModal, {
+            challengeId: "chal-1",
+            isOpen: true,
+            onClose: vi.fn(),
+            todayDate: "2026-10-07",
+            todayDayNumber: 3,
+            todayLoggedSeconds: 16 * 3600, // 16 hours logged
+         })
+      );
+
+      expect(html).toContain("14-Hour Scoring Cap Active");
+      expect(html).toContain(
+         "To support healthy habits, a maximum of 14:00:00 counts"
+      );
+      expect(html).toContain("+1400 coins");
+      expect(html).toContain("(max/day)");
+   });
 });
