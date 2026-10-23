@@ -67,15 +67,23 @@ It solves three primary challenges:
 
 All environment variables are validated and exported through a single module: [`src/config/env.js`](file:///home/afnan/Projects/YPT/src/config/env.js). No other file should directly call `process.env`.
 
-| Variable              | Description                                                                | Example / Default                                                      |
-| :-------------------- | :------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
-| `DATABASE_URL`        | PostgreSQL connection pooler URI (Port 6543, `pgbouncer=true`)             | `postgresql://...@...pooler.supabase.com:6543/postgres?pgbouncer=true` |
-| `DIRECT_URL`          | Direct PostgreSQL connection for migrations (Port 5432)                    | `postgresql://...@...pooler.supabase.com:5432/postgres`                |
-| `YPT_EMAIL`           | Account email for YPT API authentication                                   | `bot@example.com`                                                      |
-| `YPT_PASSWORD`        | Account password for YPT API authentication                                | `••••••••`                                                             |
-| `YPT_GROUP_IDS`       | Comma-separated list of YPT group IDs to scrape                            | `6814572,6487271`                                                      |
-| `ACTIVE_CHALLENGE_ID` | Optional override challenge ID (if omitted, dynamically queries DB in UTC) | `cmuub6ijq0003sb4eytzy2262`                                            |
-| `PORT`                | Express server HTTP port                                                   | `3000`                                                                 |
+| Variable                         | Description                                                                | Example / Default                                                      |
+| :------------------------------- | :------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| `DATABASE_URL`                   | PostgreSQL connection pooler URI (Port 6543, `pgbouncer=true`)             | `postgresql://...@...pooler.supabase.com:6543/postgres?pgbouncer=true` |
+| `DIRECT_URL`                     | Direct PostgreSQL connection for migrations (Port 5432)                    | `postgresql://...@...pooler.supabase.com:5432/postgres`                |
+| `YPT_EMAIL`                      | Account email for YPT API authentication                                   | `bot@example.com`                                                      |
+| `YPT_PASSWORD`                   | Account password for YPT API authentication                                | `••••••••`                                                             |
+| `YPT_GROUP_IDS`                  | Comma-separated list of YPT group IDs to scrape                            | `6814572,6487271`                                                      |
+| `ACTIVE_CHALLENGE_ID`            | Optional override challenge ID (if omitted, dynamically queries DB in UTC) | `cmuub6ijq0003sb4eytzy2262`                                            |
+| `PORT`                           | Express server HTTP port                                                   | `3000`                                                                 |
+| `DATABASE_BACKUP_ENABLED`        | Enable the in-process 00:00 UTC backup scheduler                           | `false`                                                                |
+| `DATABASE_BACKUP_CATCH_UP`       | Run on boot when the newest dump is ≥24h old                               | `true`                                                                 |
+| `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this                                                | `30`                                                                   |
+| `DATABASE_BACKUP_PREFIX`         | Storage folder inside the backup bucket                                    | `backups`                                                              |
+| `DATABASE_BACKUP_SCHEMAS`        | Comma-separated `pg_dump --schema` list                                    | `public`                                                               |
+| `SUPABASE_URL`                   | Supabase project URL (backup uploads)                                      | `https://<ref>.supabase.co`                                            |
+| `SUPABASE_SERVICE_ROLE_KEY`      | Server-only key used for the private bucket                                | `••••••••`                                                             |
+| `SUPABASE_BACKUP_BUCKET`         | Private bucket for dumps                                                   | `holdmetoit-backups`                                                   |
 
 ---
 
@@ -285,36 +293,81 @@ All 57 tests across 18 test suites validate:
 
 The repository is configured for turnkey deployment on [Render](https://render.com).
 
-### Option 1: 1-Click Blueprint (`render.yaml`)
+> **Runtime: Docker.** Render's native Node runtime ships `postgresql-client` 12–14 only.
+> The nightly backup needs a `pg_dump` at least as new as Supabase (15+), so the service
+> must run the Docker image at `apps/ypt-bot/Dockerfile` (Node 22 + `postgresql-client-17`).
 
-1. In your Render Dashboard, click **New +** $\rightarrow$ **Blueprint**.
-2. Connect your Git repository. Render will automatically detect [`render.yaml`](file:///home/afnan/Projects/YPT/render.yaml).
-3. Populate the required environment secrets when prompted:
-   - `DATABASE_URL`: PostgreSQL pooler connection URI.
-   - `DIRECT_URL`: PostgreSQL direct session connection URI.
-   - `YPT_EMAIL`: Bot YPT login email.
-   - `YPT_PASSWORD`: Bot YPT password.
-4. Click **Apply**. Render will automatically build the service and start the web server with 5-minute background synchronization.
+### Option 1: Blueprint
+
+A committed `render.yaml` is not present yet. When added, define the service with
+`runtime: docker`, `dockerfilePath: ./apps/ypt-bot/Dockerfile`, and the env vars below.
 
 ### Option 2: Manual Web Service Setup
 
 1. In the Render Dashboard, click **New +** $\rightarrow$ **Web Service**.
 2. Connect your repository and configure:
-   - **Environment**: `Node`
-   - **Build Command**: `npm install && npm run build` _(or `npm install && npx prisma generate`)_
-   - **Start Command**: `npm start`
+   - **Runtime**: `Docker`
+   - **Dockerfile Path**: `apps/ypt-bot/Dockerfile`
+   - **Docker Build Context Directory**: repository root
+   - **Start Command**: `npm start -w @holdmetoit/ypt-bot` (already the image `CMD`)
    - **Health Check Path**: `/health`
 3. Under **Environment Variables**, add:
    - `DATABASE_URL`: Your Supabase pooler URL
-   - `DIRECT_URL`: Your Supabase direct URL
+   - `DIRECT_URL`: Your Supabase direct URL (port `5432`, not the `6543` transaction pooler)
    - `YPT_EMAIL`: Your YPT account email
    - `YPT_PASSWORD`: Your YPT account password
    - `YPT_GROUP_IDS`: `6814572,7393477`
    - `REFRESH_INTERVAL_MINUTES`: `5` (runs ingestion every 5 minutes)
    - `POLL_INTERVAL_IDLE_SEC`: `30` (ingest daemon poll interval, in seconds)
    - `NODE_ENV`: `production`
+   - `DATABASE_BACKUP_ENABLED`: `true`
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BACKUP_BUCKET`
+   - `DATABASE_BACKUP_RETENTION_DAYS`: `30`
 
 ### Option 3: Headless Background Worker or Cron Job
 
 - **Background Worker**: Set Start Command to `npm run ingest`. It runs continuously and
   polls at the interval configured by `POLL_INTERVAL_IDLE_SEC` (seconds, default `30`).
+  Backups are **not** scheduled in this entrypoint; run the web service (`npm start`) for
+  the 00:00 UTC backup timer.
+
+---
+
+## 10. Nightly Database Backups
+
+The web service performs a logical PostgreSQL backup every night at **00:00 UTC**:
+
+1. Preflight: verify `pg_dump`/`pg_restore` versions, server major version, and bucket
+   reachability.
+2. `pg_dump --format=custom --no-owner --no-privileges --schema=public` (password passed
+   via `PGPASSWORD`, never as an argument).
+3. Reject empty dumps and verify the archive with `pg_restore --list`.
+4. Upload to the private bucket as `backups/holdmetoit-YYYY-MM-DD.dump`.
+5. Delete dumps older than `DATABASE_BACKUP_RETENTION_DAYS` (default 30).
+
+Scheduling and failure semantics:
+
+- Self-rescheduling `setTimeout` (no `setInterval` drift); one run at a time.
+- On boot, if the newest object is ≥24h old, a catch-up run starts after 60s.
+- Day-scoped filenames make restarts/idle instances idempotent (duplicate uploads are
+  treated as success).
+- All failures are logged (`backup_failed`, `backup_catch_up_failed`) without crashing the
+  API or ingest loop.
+- The service must remain always on; free instances that spin down only recover via
+  catch-up.
+
+Manual run:
+
+```bash
+npm run backup:db
+```
+
+Restore:
+
+```bash
+pg_restore --dbname="$DIRECT_URL" --clean --if-exists \
+  --no-owner --no-privileges --verbose holdmetoit-YYYY-MM-DD.dump
+```
+
+Full operational details, environment table, security rules, and lifecycle:
+[`docs/database-backups/README.md`](../database-backups/README.md).

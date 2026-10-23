@@ -12,6 +12,7 @@ import {
 import { ingestGroupMembersToDailyStudyLogs } from "./sync/ingestStudyLogs.js";
 import { env } from "./config/env.js";
 import { logger } from "./logger.js";
+import { startDailyBackupScheduler } from "./backup/databaseBackup.js";
 
 // Global state holding session and cached joined groups
 const state = {
@@ -472,6 +473,9 @@ async function startServer() {
                intervalMinutes * 60 * 1000
             );
          }
+
+         // 8. Nightly PostgreSQL backup at 00:00 UTC (in-process scheduler)
+         startDailyBackupScheduler();
       });
    } catch (error) {
       logger.error("Initialization error", error);

@@ -67,6 +67,26 @@ export const env = Object.freeze({
    ACTIVE_CHALLENGE_ID: process.env.ACTIVE_CHALLENGE_ID
       ? process.env.ACTIVE_CHALLENGE_ID.trim()
       : null,
+
+   DATABASE_BACKUP_ENABLED:
+      String(process.env.DATABASE_BACKUP_ENABLED || "").toLowerCase() ===
+      "true",
+   DATABASE_BACKUP_CATCH_UP:
+      String(process.env.DATABASE_BACKUP_CATCH_UP || "").toLowerCase() !==
+      "false",
+   DATABASE_BACKUP_RETENTION_DAYS: parseIntFallback(
+      process.env.DATABASE_BACKUP_RETENTION_DAYS,
+      30
+   ),
+   DATABASE_BACKUP_PREFIX: process.env.DATABASE_BACKUP_PREFIX || "backups",
+   DATABASE_BACKUP_SCHEMAS: process.env.DATABASE_BACKUP_SCHEMAS || "public",
+   PG_DUMP_BIN: process.env.PG_DUMP_BIN || "pg_dump",
+   PG_RESTORE_BIN: process.env.PG_RESTORE_BIN || "pg_restore",
+   PG_PSQL_BIN: process.env.PG_PSQL_BIN || "psql",
+
+   SUPABASE_URL: process.env.SUPABASE_URL || "",
+   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+   SUPABASE_BACKUP_BUCKET: process.env.SUPABASE_BACKUP_BUCKET || "",
 });
 
 export default env;
