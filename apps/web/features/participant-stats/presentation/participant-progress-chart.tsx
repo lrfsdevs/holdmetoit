@@ -1,4 +1,5 @@
 import { BarChart3 } from "lucide-react";
+import { MAX_COUNTED_DAILY_STUDY_SECONDS } from "@/features/study-logs/domain/duration";
 import type { ParticipantDailyHistoryEntry } from "../domain/participant-stats.types";
 
 interface ParticipantProgressChartProps {
