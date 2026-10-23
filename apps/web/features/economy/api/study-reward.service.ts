@@ -3,6 +3,7 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { recordStudyRewardTransaction } from "../data/study-reward.repository";
+import { capDailyStudySeconds } from "@/features/study-logs/domain/duration";
 
 const logger = createLogger("economy.study-reward");
 
@@ -151,7 +152,7 @@ export async function processStudyReward(
          };
       }
 
-      const eligibleSeconds = log.durationSeconds;
+      const eligibleSeconds = capDailyStudySeconds(log.durationSeconds);
       const idempotencyKey = `study-log:${log.id}`;
 
       // 4. Atomically record study reward and credit wallet
