@@ -3,6 +3,7 @@ import {
    calculateRequiredDailyPace,
 } from "@/features/leaderboard/domain/deficit";
 import {
+   capDailyStudySeconds,
    formatSecondsToClock,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
@@ -91,5 +92,8 @@ export function calculateInclusiveDaysRemaining(
 export function sumLoggedSeconds(
    logs: readonly { durationSeconds: number }[]
 ): number {
-   return logs.reduce((total, log) => total + log.durationSeconds, 0);
+   return logs.reduce(
+      (total, log) => total + capDailyStudySeconds(log.durationSeconds),
+      0
+   );
 }
