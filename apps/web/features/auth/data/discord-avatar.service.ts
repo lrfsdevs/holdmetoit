@@ -228,7 +228,7 @@ export interface SyncUserAvatarResult {
  * Synchronizes and updates a user's avatar in the database without requiring them to re-login.
  * 1. Checks OAuth user tokens (@me) with auto-refresh.
  * 2. Falls back to Discord Bot REST API if configured.
- * 3. Only falls back to default embed avatar if previous image was an avatar hash that now 404s.
+ * 3. Only falls back to default embed avatar if previous image was an avatar hash that now verified 404s.
  */
 export async function syncUserAvatar(
    params: SyncUserAvatarParams
@@ -261,11 +261,22 @@ export async function syncUserAvatar(
    if (fetched) {
       targetImageUrl = fetched.avatarUrl;
    } else {
-      // Fallback: If neither OAuth nor bot token could reach Discord,
-      // only heal to default embed avatar if current image was a Discord hash.
+      // If live Discord fetch was unavailable, verify if the current image is actually 404
+      // before replacing it with the default avatar. Never overwrite a valid custom avatar!
       const currentParsed = parseDiscordAvatarUrl(user.image);
-      if (currentParsed.isDiscordAvatar) {
-         targetImageUrl = getDiscordDefaultAvatarUrl(user.discordId);
+      if (currentParsed.isDiscordAvatar && user.image) {
+         const isBroken = await fetch(user.image, {
+            method: "HEAD",
+            cache: "no-store",
+         })
+            .then((r) => r.status === 404)
+            .catch(() => false);
+
+         if (isBroken) {
+            targetImageUrl = getDiscordDefaultAvatarUrl(user.discordId);
+         } else {
+            return { success: false, newImageUrl: user.image };
+         }
       } else {
          return { success: false, newImageUrl: user.image };
       }

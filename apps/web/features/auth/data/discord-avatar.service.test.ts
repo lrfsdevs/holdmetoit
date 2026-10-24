@@ -182,6 +182,11 @@ describe("discord-avatar.service", () => {
             image: "https://cdn.discordapp.com/avatars/80351110224678912/dead_hash.png",
          } as never);
 
+         global.fetch = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 404,
+         });
+
          const result = await syncUserAvatar({
             discordId: "80351110224678912",
          });
