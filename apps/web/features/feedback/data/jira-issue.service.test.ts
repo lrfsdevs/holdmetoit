@@ -140,7 +140,13 @@ describe("createJiraIssue", () => {
       expect(body.fields.project).toEqual({ key: "HMT" });
       expect(body.fields.issuetype).toEqual({ name: "Task" });
       expect(body.fields.summary).toBe("[FB-42] Submit button unresponsive");
-      expect(body.fields.labels).toEqual(["holdmetoit", "feedback", "bug"]);
+      expect(body.fields.labels).toEqual([
+         "holdmetoit",
+         "feedback",
+         "frontend",
+         "challenges",
+         "bug",
+      ]);
       expect(body.fields.description.type).toBe("doc");
       expect(body.fields.assignee).toBeUndefined();
       expect(JSON.stringify(body)).not.toContain("jira_token");
@@ -156,6 +162,8 @@ describe("createJiraIssue", () => {
       expect(body.fields.labels).toEqual([
          "holdmetoit",
          "feedback",
+         "frontend",
+         "challenges",
          "enhancement",
       ]);
    });
@@ -168,8 +176,55 @@ describe("createJiraIssue", () => {
       await createJiraIssue(input);
 
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-      expect(body.fields.labels).toEqual(["support", "needs-triage", "bug"]);
+      expect(body.fields.labels).toEqual([
+         "support",
+         "needs-triage",
+         "frontend",
+         "challenges",
+         "bug",
+      ]);
       expect(body.fields.assignee).toEqual({ accountId: "account-123" });
+   });
+
+   it("creates a remote link and formats summary with GitHub issue number when present", async () => {
+      fetchMock
+         .mockResolvedValueOnce(
+            jiraResponse(201, { id: "10001", key: "HMT-10" })
+         )
+         .mockResolvedValueOnce(jiraResponse(201, { id: "remotelink_1" }));
+
+      const result = await createJiraIssue({
+         ...input,
+         githubIssueNumber: 167,
+         githubIssueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+      });
+
+      expect(result).toEqual({
+         status: "created",
+         issueKey: "HMT-10",
+         issueUrl: "https://example.atlassian.net/browse/HMT-10",
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const [issueUrl, issueInit] = fetchMock.mock.calls[0];
+      const issueBody = JSON.parse(issueInit.body);
+      expect(issueBody.fields.summary).toBe(
+         "[GH-#167] [FB-42] Submit button unresponsive"
+      );
+
+      const [linkUrl, linkInit] = fetchMock.mock.calls[1];
+      expect(linkUrl).toBe(
+         "https://example.atlassian.net/rest/api/3/issue/HMT-10/remotelink"
+      );
+      const linkBody = JSON.parse(linkInit.body);
+      expect(linkBody.object).toEqual({
+         url: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+         title: "GitHub Issue #167",
+         icon: {
+            url16x16: "https://github.githubassets.com/favicons/favicon.png",
+            title: "GitHub",
+         },
+      });
    });
 
    it("surfaces Jira field errors on a 400", async () => {

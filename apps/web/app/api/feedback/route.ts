@@ -160,32 +160,56 @@ export async function POST(req: NextRequest) {
          })),
       };
 
-      // Dispatch side effects in parallel; none may fail the submission.
-      const [discordSettled, githubSettled, jiraSettled] =
-         await Promise.allSettled([
-            sendFeedbackToDiscord(dispatchPayload),
-            createGitHubIssue(dispatchPayload),
-            createJiraIssue(dispatchPayload),
-         ]);
+      // Dispatch side effects: Discord in parallel, GitHub first so Jira can reference it
+      const discordPromise = sendFeedbackToDiscord(dispatchPayload).catch(
+         (error) =>
+            ({
+               success: false,
+               error:
+                  error instanceof Error
+                     ? error.message
+                     : "Discord dispatch rejected.",
+            }) as DiscordSendResult
+      );
 
-      const discordResult: DiscordSendResult =
-         discordSettled.status === "fulfilled"
-            ? discordSettled.value
-            : {
-                 success: false,
-                 error: "Discord dispatch rejected.",
-              };
+      let githubResult: GitHubIssueResult;
+      try {
+         githubResult = await createGitHubIssue(dispatchPayload);
+      } catch (error) {
+         githubResult = {
+            status: "failed",
+            error:
+               error instanceof Error
+                  ? error.message
+                  : "GitHub dispatch rejected.",
+         };
+      }
 
-      const githubResult: GitHubIssueResult =
-         githubSettled.status === "fulfilled"
-            ? githubSettled.value
-            : { status: "failed", error: "GitHub dispatch rejected." };
+      let jiraResult: JiraIssueResult;
+      try {
+         const jiraPayload = {
+            ...dispatchPayload,
+            githubIssueNumber:
+               githubResult.status === "created"
+                  ? githubResult.issueNumber
+                  : undefined,
+            githubIssueUrl:
+               githubResult.status === "created"
+                  ? githubResult.issueUrl
+                  : undefined,
+         };
+         jiraResult = await createJiraIssue(jiraPayload);
+      } catch (error) {
+         jiraResult = {
+            status: "failed",
+            error:
+               error instanceof Error
+                  ? error.message
+                  : "Jira dispatch rejected.",
+         };
+      }
 
-      const jiraResult: JiraIssueResult =
-         jiraSettled.status === "fulfilled"
-            ? jiraSettled.value
-            : { status: "failed", error: "Jira dispatch rejected." };
-
+      const discordResult = await discordPromise;
       if (discordResult.success && discordResult.messageId) {
          await updateFeedbackDiscordStatus(feedback.id, {
             status: "SENT",
@@ -255,10 +279,15 @@ export async function POST(req: NextRequest) {
       }
 
       const githubDelivered = githubResult.status === "created";
-      const githubIssueUrl = githubDelivered ? githubResult.issueUrl : null;
+      const githubIssueUrl =
+         githubResult.status === "created" ? githubResult.issueUrl : null;
+      const githubIssueNumber =
+         githubResult.status === "created" ? githubResult.issueNumber : null;
       const jiraDelivered = jiraResult.status === "created";
-      const jiraIssueKey = jiraDelivered ? jiraResult.issueKey : null;
-      const jiraIssueUrl = jiraDelivered ? jiraResult.issueUrl : null;
+      const jiraIssueKey =
+         jiraResult.status === "created" ? jiraResult.issueKey : null;
+      const jiraIssueUrl =
+         jiraResult.status === "created" ? jiraResult.issueUrl : null;
 
       logger.info(logEvents.feedbackSubmitted, {
          context: {
@@ -270,9 +299,7 @@ export async function POST(req: NextRequest) {
             discordDelivered: discordResult.success,
             githubDelivered,
             githubStatus: githubResult.status,
-            githubIssueNumber: githubDelivered
-               ? githubResult.issueNumber
-               : null,
+            githubIssueNumber,
             jiraDelivered,
             jiraStatus: jiraResult.status,
             jiraIssueKey,

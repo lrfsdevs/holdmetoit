@@ -190,6 +190,43 @@ async function postIssue(
    }
 }
 
+async function postRemoteLink(
+   config: JiraConfig,
+   issueKey: string,
+   github: { url: string; issueNumber?: number | null }
+): Promise<void> {
+   try {
+      const title = github.issueNumber
+         ? `GitHub Issue #${github.issueNumber}`
+         : "GitHub Issue";
+
+      await fetch(`${config.baseUrl}/rest/api/3/issue/${issueKey}/remotelink`, {
+         method: "POST",
+         headers: {
+            Authorization: `Basic ${Buffer.from(
+               `${config.email}:${config.apiToken}`
+            ).toString("base64")}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+         },
+         body: JSON.stringify({
+            object: {
+               url: github.url,
+               title,
+               icon: {
+                  url16x16:
+                     "https://github.githubassets.com/favicons/favicon.png",
+                  title: "GitHub",
+               },
+            },
+         }),
+         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+   } catch {
+      // Fail-soft: failure to attach remote link does not compromise issue creation
+   }
+}
+
 /**
  * Creates a Jira Cloud issue for a feedback submission. Fail-soft: config,
  * HTTP, and network problems return a result instead of throwing.
@@ -229,6 +266,14 @@ export async function createJiraIssue(
             issueKey: outcome.issueKey,
          },
       });
+
+      if (input.githubIssueUrl) {
+         await postRemoteLink(config, outcome.issueKey, {
+            url: input.githubIssueUrl,
+            issueNumber: input.githubIssueNumber,
+         });
+      }
+
       return {
          status: "created",
          issueKey: outcome.issueKey,

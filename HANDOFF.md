@@ -186,6 +186,33 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Behavior:** unchanged; no DB or dependency changes.
 - **NEXT STEP:** none (no commit made — pending manual testing).
 
+### Session 155 — 2026-10-24 (Feat: Standardize Jira Issue Creation & GitHub Link for In-App Feedback; GH-167, KAN-53 on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #167 / Jira KAN-53. Standardize Jira ticket creation when bug reports and enhancement suggestions are submitted from the app to match the project's Jira format (`jira-overhaul-update.csv`), prepend GitHub issue link and horizontal rule to description, attach native Jira Remote Web Links, and apply automated layer and module tags.
+- **Implementation Slices:**
+   1. **Domain Models & Formatting Logic (`Law L7`):**
+      - In `apps/web/features/feedback/domain/jira-issue.ts`:
+         - Updated `formatJiraSummary`: formats summary with prefix `[GH-#<number>] [FB-<codeNumber>] <Title>` when GitHub issue is present, gracefully falling back to `[FB-<codeNumber>] <Title>` within Jira's 255-character limit.
+         - Updated `buildJiraDescriptionAdf`: prepends `Original GitHub Issue: <url>` link followed by an ADF `{ type: "rule" }` horizontal divider node.
+         - Added `inferFeedbackTags(url, title, description)`: intelligently derives layer tags (`admin`, `frontend`) and module tags (`challenges`, `profile`, `study-logs`, `economy`, `ypt`, `wrapped`, `jira-sync`, `auth`) matching the project's standard Jira label taxonomy.
+         - Updated `normalizeJiraLabels` and `buildJiraIssueFields` to combine base labels, inferred tags, and type tags (`bug` / `enhancement`).
+   2. **Service Layer & Jira Remote Web Link:**
+      - In `apps/web/features/feedback/data/jira-issue.service.ts`:
+         - Added `postRemoteLink` calling Jira Cloud REST API `POST /rest/api/3/issue/{issueKey}/remotelink` to attach the GitHub issue into Jira's native "Web Links" widget with the official GitHub icon and `GitHub Issue #<number>` title.
+         - Preserved fail-soft error handling: remote link failures never block or fail Jira ticket creation.
+   3. **Route Dispatch Orchestration:**
+      - In `apps/web/app/api/feedback/route.ts`:
+         - Re-sequenced side effects: Discord dispatch runs non-blocking in parallel; GitHub issue creation runs prior to Jira issue creation so created GitHub issue number and URL flow into Jira issue input.
+         - Maintained 100% fail-soft isolation: failures in GitHub or Jira do not affect user response or other side effects.
+   4. **Quality Gates & Unit Testing:**
+      - Comprehensive unit tests added in `jira-issue.test.ts`, `jira-issue.service.test.ts`, and `route.test.ts`.
+      - All 193 test files and 1,824 tests passing. Zero TypeScript errors (`tsc --noEmit`).
+- **Issue Lifecycle Policy (`AGENTS.md` §4.4):**
+   - GitHub Issue #167 and Jira Ticket KAN-53 assigned to Krish Jaiswal.
+   - Jira Ticket KAN-53 moved to `In Progress` (Stage 1).
+- **NEXT STEP:** Open PR from `krish` to `dev` and transition KAN-53 to `In Review` (Stage 2).
+
 ### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
 
 - **Scope:** Three competing entry points (`ingest`, `challenge_sync`, `backup`) duplicated the server's ingestion loop, auth handling, and health server.

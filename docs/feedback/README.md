@@ -76,14 +76,19 @@ Only `ready` drafts are submitted. Submitting is blocked while any draft is `upl
 
 ### 2.4 Delivery dispatch (Discord + GitHub + Jira)
 
-After the feedback row is committed, all side effects run in parallel and none may fail the submission:
+After the feedback row is committed, side effects run with fail-soft guarantees. Discord is dispatched in parallel, while GitHub runs prior to Jira so the Jira ticket can link directly to the created GitHub issue:
 
 ```
-Promise.allSettled([
-  sendFeedbackToDiscord(...),
-  createGitHubIssue(...),
-  createJiraIssue(...),
-])
+Discord dispatch (parallel, background)
+GitHub dispatch:
+  → createGitHubIssue(...)
+      └─ returns { issueNumber, issueUrl }
+Jira dispatch:
+  → createJiraIssue(..., { githubIssueNumber, githubIssueUrl })
+      ├─ Summary: [GH-#N] [FB-N] <Title>
+      ├─ Description (ADF): prepends Original GitHub Issue link + rule divider
+      ├─ Remote Link: attaches GitHub Issue URL via Jira REST remotelink API
+      └─ Labels: infers layer (frontend/admin) & module (study-logs, challenges, etc.)
   → updateFeedbackDiscordStatus(SENT | FAILED)
   → updateFeedbackGitHubStatus(CREATED | FAILED | SKIPPED)
   → updateFeedbackJiraStatus(CREATED | FAILED | SKIPPED)
@@ -102,12 +107,16 @@ GitHub issue body:
 - Description.
 - Attachments: `![Image N](url)` for images (GitHub renders them inline) and `[Video N](url)` for videos.
 
-Jira description (ADF):
+Jira description (ADF) & formatting:
 
+- Summary prefix `[GH-#N] [FB-N] <Title>` (or `[FB-N] <Title>` if GitHub sync is unconfigured or failed).
+- Header paragraph `Original GitHub Issue: <issueUrl>` and horizontal rule divider (when GitHub sync succeeds).
 - Plain marker paragraph `holdmetoit-feedback:FB-N`.
 - Type, page, reporter, and LogRocket link.
 - Description paragraphs.
 - Attachments as a bullet list of links (Jira does not render remote images inline).
+- Remote Web Link attached via `/rest/api/3/issue/{key}/remotelink` with GitHub icon and title.
+- Automated labels combining configured base labels, inferred layer (`frontend`/`admin`), inferred module (`study-logs`, `challenges`, `profile`, `economy`, `ypt`, `jira-sync`, etc.), and feedback type (`bug`/`enhancement`).
 
 ---
 
