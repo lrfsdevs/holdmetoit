@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -1196,18 +1197,13 @@ export function ChallengeManageTab({
                                        href={`/challenge/${challenge.id}/participant/${participant.participantId}`}
                                        className="h-10 w-10 rounded-full bg-surface-nested border border-border-strong overflow-hidden shrink-0 flex items-center justify-center hover:border-feedback-success transition-colors"
                                     >
-                                       {participant.image ? (
-                                          <Image
-                                             src={participant.image}
-                                             alt={participant.displayName}
-                                             width={40}
-                                             height={40}
-                                             className="h-full w-full object-cover"
-                                             unoptimized
-                                          />
-                                       ) : (
-                                          <UserIcon className="h-5 w-5 text-text-tertiary" />
-                                       )}
+                                       <UserAvatar
+                                          src={participant.image}
+                                          name={participant.displayName}
+                                          userId={participant.userId}
+                                          size="md"
+                                          className="h-full w-full border-0"
+                                       />
                                     </Link>
                                     <div className="min-w-0">
                                        <Link

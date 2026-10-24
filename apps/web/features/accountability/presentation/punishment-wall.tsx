@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Download, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
@@ -157,22 +158,12 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
                               className="flex items-center justify-between rounded-xl border border-border-default bg-surface-elevated p-3 text-xs shadow-sm hover:border-border-strong transition-colors"
                            >
                               <div className="flex items-center gap-3 min-w-0">
-                                 {member.image ? (
-                                    <Image
-                                       src={member.image}
-                                       alt={member.displayName}
-                                       width={32}
-                                       height={32}
-                                       className="h-8 w-8 rounded-full border border-border-strong shrink-0 object-cover"
-                                       unoptimized
-                                    />
-                                 ) : (
-                                    <div className="h-8 w-8 rounded-full bg-surface-nested border border-border-strong flex items-center justify-center font-bold text-xs text-text-secondary shrink-0">
-                                       {member.displayName
-                                          .charAt(0)
-                                          .toUpperCase()}
-                                    </div>
-                                 )}
+                                 <UserAvatar
+                                    src={member.image}
+                                    name={member.displayName}
+                                    size="sm"
+                                    className="h-8 w-8 rounded-full border border-border-strong shrink-0"
+                                 />
                                  <div className="min-w-0 space-y-0.5">
                                     <div className="flex items-center gap-1.5 truncate">
                                        <span className="font-semibold text-white truncate">

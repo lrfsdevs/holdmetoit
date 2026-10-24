@@ -37,6 +37,7 @@ export function ParticipantStatsView({
          <ParticipantProfileHeader
             profile={profile}
             isAdmin={viewer.isAdmin}
+            isOwner={viewer.isOwner}
             viewParam={viewParam}
             isFallback={isFallback}
          />
