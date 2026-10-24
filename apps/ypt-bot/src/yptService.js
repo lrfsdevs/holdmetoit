@@ -168,24 +168,8 @@ export async function getJoinedGroups(token) {
 }
 
 /**
- * Filter joined groups by search term (id, name, or category)
- * @param {Array<object>} groups
- * @param {string|number} query
- */
-export function searchJoinedGroups(groups, query) {
-   if (!query) return groups;
-   const q = String(query).trim().toLowerCase();
-   return groups.filter(
-      (g) =>
-         String(g.id) === q ||
-         g.name.toLowerCase().includes(q) ||
-         g.category.toLowerCase().includes(q) ||
-         g.owner.toLowerCase().includes(q)
-   );
-}
-
-/**
  * Fetch real-time study status and study times of all members in a group
+ *
  * @param {string} token
  * @param {number} groupId
  */

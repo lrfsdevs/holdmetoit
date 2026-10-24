@@ -14,7 +14,7 @@ This document provides a comprehensive guide to the **YPT Analytics Checker & Ch
    - [A. Challenge Sync (`challenge_sync`)](#a-challenge-sync-challenge_sync)
    - [B. Live Study Log Ingestion (`ingest`)](#b-live-study-log-ingestion-ingest)
    - [C. Unified Member Leaderboard & Aggregation](#c-unified-member-leaderboard--aggregation)
-   - [D. REST API Server](#d-rest-api-server)
+   - [D. Health Endpoint](#d-health-endpoint)
 6. [Strict UTC Time Guarantee](#strict-utc-time-guarantee)
 7. [Admin Override Protection (Law L5)](#admin-override-protection-law-l5)
 8. [Testing & Verification](#testing--verification)
@@ -36,7 +36,7 @@ It solves three primary challenges:
 ## 2. Architecture & Technology Stack
 
 - **Runtime**: Node.js (ES Modules, Node >= 20)
-- **Web Framework**: Express 5
+- **HTTP Server**: `node:http` (built-in) — health check only
 - **ORM / Database**: Prisma 6.8.2 connecting to Supabase PostgreSQL (via Session Pooler and Direct Connection)
 - **Test Runner**: Node.js native test runner (`node --test`)
 - **Directory Structure**:
@@ -52,7 +52,7 @@ It solves three primary challenges:
    │   ├── sync/
    │   │   ├── ingestStudyLogs.js  # Live YPT telemetry ingestion into DailyStudyLog
    │   │   └── challenge_sync.js   # Monday-to-today ingestion & historical sync pipeline
-   │   ├── server.js             # Express REST API & scheduled background sync
+   │   ├── server.js             # Health endpoint & scheduled background sync
    │   └── yptService.js         # YPT API client (auth, group telemetry, multi-group aggregation)
    ├── test/
    │   ├── challenge-sync.test.js # Unit/integration tests for challenge_sync
@@ -75,7 +75,7 @@ All environment variables are validated and exported through a single module: [`
 | `YPT_PASSWORD`                   | Account password for YPT API authentication                                | `••••••••`                                                             |
 | `YPT_GROUP_IDS`                  | Comma-separated list of YPT group IDs to scrape                            | `6814572,6487271`                                                      |
 | `ACTIVE_CHALLENGE_ID`            | Optional override challenge ID (if omitted, dynamically queries DB in UTC) | `cmuub6ijq0003sb4eytzy2262`                                            |
-| `PORT`                           | Express server HTTP port                                                   | `3000`                                                                 |
+| `PORT`                           | Health server HTTP port                                                    | `3000`                                                                 |
 | `DATABASE_BACKUP_ENABLED`        | Enable the in-process 00:00 UTC backup scheduler                           | `false`                                                                |
 | `DATABASE_BACKUP_CATCH_UP`       | Run on boot when the newest dump is ≥24h old                               | `true`                                                                 |
 | `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this (minimum `1`)                                  | `30`                                                                   |
@@ -168,12 +168,6 @@ challenge is resolved via fallback). If **no** challenge exists at all, it fails
 (there is no `ChallengeParticipant` to key rows to). The challenge validity "checks" — what
 counts for a challenge — belong to the server on the read side.
 
-Also exposed via REST API endpoint:
-
-```bash
-curl -X POST http://localhost:3000/sync
-```
-
 ---
 
 ### C. Unified Member Leaderboard & Aggregation
@@ -187,21 +181,22 @@ When an account belongs to multiple groups/channels, `getAggregatedMembers` cons
 
 ---
 
-### D. REST API Server
+### D. Health Endpoint
 
-Start the Express server:
+Start the service:
 
 ```bash
 npm start
 ```
 
-| Method | Endpoint                   | Description                                                                       |
-| :----- | :------------------------- | :-------------------------------------------------------------------------------- |
-| `GET`  | `/health`                  | Server status and authenticated account info.                                     |
-| `GET`  | `/members`                 | Unified and deduplicated members across all joined groups.                        |
-| `GET`  | `/groups`                  | List all joined groups. Supports `?q=<keyword>` and `?refresh=true`.              |
-| `GET`  | `/groups/:groupId/members` | Live telemetry for members of a specific group.                                   |
-| `POST` | `/sync`                    | Trigger an immediate live YPT scrape and database ingestion into `DailyStudyLog`. |
+The only HTTP route is a liveness probe for the hosting platform. It exposes no account, group, or member data:
+
+```bash
+curl http://localhost:3000/health
+# {"status":"ok","service":"ypt-bot","uptimeSeconds":42}
+```
+
+Any other path or method returns `404 {"error":"Not found"}`.
 
 ---
 

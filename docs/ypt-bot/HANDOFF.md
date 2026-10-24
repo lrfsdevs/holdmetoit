@@ -1,5 +1,37 @@
 # HANDOFF
 
+## 2026-10-24 — Express removed; single `node:http` health route
+
+### Context
+
+The bot exposed an unauthenticated Express API that leaked the YPT service account
+(`/health` returned its email) plus group rosters and live member telemetry
+(`/groups`, `/members`, `/groups/:groupId/members`) and an ingestion trigger
+(`POST /sync`). Nothing consumed these routes — `apps/web` never called the bot's
+HTTP API, and no test imported `server.js`.
+
+### What changed
+
+- **`src/server.js`**: deleted every Express route except liveness. Replaced the
+  Express app with `createServer` from `node:http`; `GET /health` returns
+  `{ status: "ok", service: "ypt-bot", uptimeSeconds }`. All other paths/methods
+  return `404 {"error":"Not found"}`. Removed `express.json()` and the HTTP
+  access-log middleware.
+- **Dead code**: removed `displayGroupMembers()` (only the deleted route used it)
+  and the `searchJoinedGroups()` export in `src/yptService.js`.
+- **Dependency**: dropped `express` from `apps/ypt-bot/package.json`; lockfile
+  regenerated (124 packages pruned).
+- **Unchanged**: CLI login, joined-group discovery/console tables, initial ingest,
+  the 5-minute ingest scheduler, and `startDailyBackupScheduler()`.
+
+### Verification
+
+- `npm run test -w @holdmetoit/ypt-bot` → green.
+- `npm ls express -w @holdmetoit/ypt-bot` → `(empty)`.
+- `grep -rn "express" apps/ypt-bot/src apps/ypt-bot/package.json` → no matches.
+
+---
+
 ## 2026-10-15 — Challenge-independent ingest: always log telemetry to `DailyStudyLog`
 
 ### Context
