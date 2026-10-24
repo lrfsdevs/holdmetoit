@@ -10,11 +10,10 @@ This document provides a comprehensive guide to the **YPT Analytics Checker & Ch
 2. [Architecture & Technology Stack](#architecture--technology-stack)
 3. [Environment Configuration (SPOC)](#environment-configuration-spoc)
 4. [Database & Prisma Models](#database--prisma-models)
-5. [Core Features & CLI Tools](#core-features--cli-tools)
-   - [A. Challenge Sync (`challenge_sync`)](#a-challenge-sync-challenge_sync)
-   - [B. Live Study Log Ingestion (`ingest`)](#b-live-study-log-ingestion-ingest)
-   - [C. Unified Member Leaderboard & Aggregation](#c-unified-member-leaderboard--aggregation)
-   - [D. REST API Server](#d-rest-api-server)
+5. [Core Features](#core-features)
+   - [A. Live Study Log Ingestion](#a-live-study-log-ingestion)
+   - [B. Unified Member Leaderboard & Aggregation](#b-unified-member-leaderboard--aggregation)
+   - [C. Health Endpoint](#c-health-endpoint)
 6. [Strict UTC Time Guarantee](#strict-utc-time-guarantee)
 7. [Admin Override Protection (Law L5)](#admin-override-protection-law-l5)
 8. [Testing & Verification](#testing--verification)
@@ -36,7 +35,7 @@ It solves three primary challenges:
 ## 2. Architecture & Technology Stack
 
 - **Runtime**: Node.js (ES Modules, Node >= 20)
-- **Web Framework**: Express 5
+- **HTTP Server**: `node:http` (built-in) — health check only
 - **ORM / Database**: Prisma 6.8.2 connecting to Supabase PostgreSQL (via Session Pooler and Direct Connection)
 - **Test Runner**: Node.js native test runner (`node --test`)
 - **Directory Structure**:
@@ -44,20 +43,35 @@ It solves three primary challenges:
    ├── prisma/
    │   └── schema.prisma         # Prisma data models (DailyStudyLogV2, Challenge, User, etc.)
    ├── src/
+   │   ├── server.js             # Bootstrap: health, ingestion loop, backups
    │   ├── config/
-   │   │   └── env.js            # Single Point of Contact (SPOC) for environment variables
-   │   ├── db.js                 # PrismaClient singleton with connection pooling
+   │   │   ├── env.js            # Single Point of Contact (SPOC) for env vars
+   │   │   └── limits.js         # Daily/session study caps
+   │   ├── http/
+   │   │   └── health-server.js  # GET /health only
+   │   ├── lib/
+   │   │   └── logger.js         # Winston logger factory
+   │   ├── ypt/
+   │   │   ├── client.js         # YPT auth + group telemetry client
+   │   │   └── session.js        # Cached JWT session + refresh
    │   ├── db/
-   │   │   └── challengeService.js # UTC active challenge and participant map queries
-   │   ├── sync/
-   │   │   ├── ingestStudyLogs.js  # Live YPT telemetry ingestion into DailyStudyLog
-   │   │   └── challenge_sync.js   # Monday-to-today ingestion & historical sync pipeline
-   │   ├── server.js             # Express REST API & scheduled background sync
-   │   └── yptService.js         # YPT API client (auth, group telemetry, multi-group aggregation)
+   │   │   ├── client.js         # PrismaClient singleton
+   │   │   └── challenge-repository.js # Challenge/participant queries
+   │   ├── ingest/
+   │   │   ├── run-ingest.js     # Ingestion orchestration
+   │   │   ├── daily-study-log.js # DailyStudyLog upserts
+   │   │   └── date-buckets.js   # Pure UTC/challenge day math
+   │   └── backup/
+   │       ├── config.js         # Env config + URL parsing
+   │       ├── retention.js      # Object naming/retention math
+   │       ├── runner.js         # Dump/verify/upload/prune
+   │       └── scheduler.js      # 00:00 UTC scheduler + catch-up
    ├── test/
-   │   ├── challenge-sync.test.js # Unit/integration tests for challenge_sync
-   │   ├── ingest-utc.test.js    # Tests for UTC date normalization and participant resolution
-   │   └── yptService.test.js    # Tests for multi-group deduplication and fault tolerance
+   │   ├── ypt/                  # Client, aggregation, session-cap tests
+   │   ├── db/                   # Challenge repository + lifecycle tests
+   │   ├── ingest/               # Date buckets, guards, duration caps
+   │   ├── backup/               # config, retention, runner, scheduler
+   │   └── lib/                  # logger
    └── package.json
    ```
 
@@ -75,7 +89,7 @@ All environment variables are validated and exported through a single module: [`
 | `YPT_PASSWORD`                   | Account password for YPT API authentication                                | `••••••••`                                                             |
 | `YPT_GROUP_IDS`                  | Comma-separated list of YPT group IDs to scrape                            | `6814572,6487271`                                                      |
 | `ACTIVE_CHALLENGE_ID`            | Optional override challenge ID (if omitted, dynamically queries DB in UTC) | `cmuub6ijq0003sb4eytzy2262`                                            |
-| `PORT`                           | Express server HTTP port                                                   | `3000`                                                                 |
+| `PORT`                           | Health server HTTP port                                                    | `3000`                                                                 |
 | `DATABASE_BACKUP_ENABLED`        | Enable the in-process 00:00 UTC backup scheduler                           | `false`                                                                |
 | `DATABASE_BACKUP_CATCH_UP`       | Run on boot when the newest dump is ≥24h old                               | `true`                                                                 |
 | `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this (minimum `1`)                                  | `30`                                                                   |
@@ -123,43 +137,13 @@ model DailyStudyLogV2 {
 
 ---
 
-## 5. Core Features & CLI Tools
+## 5. Core Features
 
-### A. Challenge Sync (`challenge_sync`)
+### A. Live Study Log Ingestion
 
-Ingests and updates all study hours in `DailyStudyLogV2` from **Monday** of the active challenge up to today.
-
-```bash
-npm run challenge_sync
-```
-
-#### Workflow:
-
-1. **Dynamic Challenge Detection**: Queries PostgreSQL for the ongoing challenge in UTC (`startAt <= nowUtc AND endAt >= nowUtc`).
-2. **Phase 1: Historical Days Backfill (Monday to Yesterday)**:
-   - Queries historical study records from `DailyStudyLog` (V1).
-   - Upserts entries for Monday through yesterday into `DailyStudyLogV2`.
-   - Sets status to `"OFFLINE"`.
-   - Preserves `durationSeconds` and admin override details (`isOverride`, `overrideById`, `overrideReason`).
-   - If an existing record in `DailyStudyLogV2` already has `isOverride: true`, it is protected and skipped.
-3. **Phase 2: Today's Live YPT Telemetry**:
-   - Scrapes live telemetry from YPT groups in `env.YPT_GROUP_IDS`.
-   - Maps active members to `ChallengeParticipant` records.
-   - Upserts real-time `durationSeconds` and status:
-      - `"STUDYING"`: Member has an active study session (`member.isStudying === true`, whether running or paused).
-      - `"OFFLINE"`: Member has no active study session (`member.isStudying === false`).
-4. **Console Breakdown**: Displays a structured table summarizing each day from Monday to today.
-
----
-
-### B. Live Study Log Ingestion (`ingest`)
-
-Performs a live scrape of study telemetry and writes directly to the daily study log table
-`DailyStudyLog`:
-
-```bash
-npm run ingest
-```
+`npm start` runs the single ingestion loop: `runIngest()` scrapes the configured
+`YPT_GROUP_IDS` and upserts today's telemetry into `DailyStudyLog` every
+`POLL_INTERVAL_IDLE_SEC` seconds (default `30`). There is no separate ingest command.
 
 The cron is **challenge-window independent**: it no longer skips when the challenge is
 locked, ended, or outside its active window. It keeps scraping and logging study telemetry
@@ -168,15 +152,9 @@ challenge is resolved via fallback). If **no** challenge exists at all, it fails
 (there is no `ChallengeParticipant` to key rows to). The challenge validity "checks" — what
 counts for a challenge — belong to the server on the read side.
 
-Also exposed via REST API endpoint:
-
-```bash
-curl -X POST http://localhost:3000/sync
-```
-
 ---
 
-### C. Unified Member Leaderboard & Aggregation
+### B. Unified Member Leaderboard & Aggregation
 
 When an account belongs to multiple groups/channels, `getAggregatedMembers` consolidates members into a single grid:
 
@@ -187,21 +165,22 @@ When an account belongs to multiple groups/channels, `getAggregatedMembers` cons
 
 ---
 
-### D. REST API Server
+### C. Health Endpoint
 
-Start the Express server:
+Start the service:
 
 ```bash
 npm start
 ```
 
-| Method | Endpoint                   | Description                                                                       |
-| :----- | :------------------------- | :-------------------------------------------------------------------------------- |
-| `GET`  | `/health`                  | Server status and authenticated account info.                                     |
-| `GET`  | `/members`                 | Unified and deduplicated members across all joined groups.                        |
-| `GET`  | `/groups`                  | List all joined groups. Supports `?q=<keyword>` and `?refresh=true`.              |
-| `GET`  | `/groups/:groupId/members` | Live telemetry for members of a specific group.                                   |
-| `POST` | `/sync`                    | Trigger an immediate live YPT scrape and database ingestion into `DailyStudyLog`. |
+The only HTTP route is a liveness probe for the hosting platform. It exposes no account, group, or member data:
+
+```bash
+curl http://localhost:3000/health
+# {"status":"ok","service":"ypt-bot","uptimeSeconds":42}
+```
+
+Any other path or method returns `404 {"error":"Not found"}`.
 
 ---
 
@@ -317,25 +296,23 @@ A committed `render.yaml` is not present yet. When added, define the service wit
    - `YPT_EMAIL`: Your YPT account email
    - `YPT_PASSWORD`: Your YPT account password
    - `YPT_GROUP_IDS`: `6814572,7393477`
-   - `REFRESH_INTERVAL_MINUTES`: `5` (runs ingestion every 5 minutes)
-   - `POLL_INTERVAL_IDLE_SEC`: `30` (ingest daemon poll interval, in seconds)
+   - `POLL_INTERVAL_IDLE_SEC`: `30` (ingestion loop interval, in seconds)
    - `NODE_ENV`: `production`
    - `DATABASE_BACKUP_ENABLED`: `true`
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BACKUP_BUCKET`
    - `DATABASE_BACKUP_RETENTION_DAYS`: `30`
 
-### Option 3: Headless Background Worker or Cron Job
+### Option 3: Background Worker
 
-- **Background Worker**: Set Start Command to `npm run ingest`. It runs continuously and
-  polls at the interval configured by `POLL_INTERVAL_IDLE_SEC` (seconds, default `30`).
-  Backups are **not** scheduled in this entrypoint; run the web service (`npm start`) for
-  the 00:00 UTC backup timer.
+There is no separate worker entry point. Deploy a single service with the start command
+`npm start -w @holdmetoit/ypt-bot`; it runs ingestion at `POLL_INTERVAL_IDLE_SEC` and the
+00:00 UTC backup timer in the same process.
 
 ---
 
 ## 10. Nightly Database Backups
 
-The web service performs a logical PostgreSQL backup every night at **00:00 UTC**:
+`npm start` performs a logical PostgreSQL backup every night at **00:00 UTC**:
 
 1. Preflight: verify `pg_dump`/`pg_restore` versions, server major version, and bucket
    reachability.
@@ -356,11 +333,8 @@ Scheduling and failure semantics:
 - The service must remain always on; free instances that spin down only recover via
   catch-up.
 
-Manual run:
-
-```bash
-npm run backup:db
-```
+Backups are scheduled only by `npm start`. There is no separate manual-run command; a
+restart with `DATABASE_BACKUP_CATCH_UP=true` backfills a missed night.
 
 Restore:
 

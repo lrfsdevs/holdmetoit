@@ -21,13 +21,16 @@ Scope guardrails:
 
 Files:
 
-| Path                                        | Purpose                                        |
-| :------------------------------------------ | :--------------------------------------------- |
-| `apps/ypt-bot/src/backup/databaseBackup.js` | Runner, scheduler, pure date/retention helpers |
-| `apps/ypt-bot/src/config/env.js`            | Backup environment configuration (SPOC)        |
-| `apps/ypt-bot/src/server.js`                | Starts the scheduler after `app.listen`        |
-| `apps/ypt-bot/Dockerfile`                   | Node 22 + `postgresql-client-17`               |
-| `apps/ypt-bot/test/database-backup.test.js` | Offline unit tests (fake exec + fake bucket)   |
+| Path                                   | Purpose                                   |
+| :------------------------------------- | :---------------------------------------- |
+| `apps/ypt-bot/src/backup/runner.js`    | Dump, verify, upload, prune               |
+| `apps/ypt-bot/src/backup/scheduler.js` | 00:00 UTC scheduler + boot catch-up       |
+| `apps/ypt-bot/src/backup/retention.js` | Pure object naming/date/retention helpers |
+| `apps/ypt-bot/src/backup/config.js`    | Env resolution + `DIRECT_URL` parsing     |
+| `apps/ypt-bot/src/config/env.js`       | Backup environment configuration (SPOC)   |
+| `apps/ypt-bot/src/server.js`           | Sole entry point; starts the scheduler    |
+| `apps/ypt-bot/Dockerfile`              | Node 22 + `postgresql-client-17`          |
+| `apps/ypt-bot/test/backup/`            | Offline runner/retention/scheduler tests  |
 
 ## 2. Domain State Machine & Decisions
 
@@ -127,27 +130,19 @@ service rejects it.
 the last 24 hours of dumps are always kept and the run never prunes the backup it just
 created.
 
-### 4.2 Manual run
+### 4.2 Triggering a run
 
-```bash
-# From the repo root
-npm run backup:db
-
-# Or directly
-DATABASE_BACKUP_ENABLED=true npm run backup -w @holdmetoit/ypt-bot
-```
-
-A manual run ignores `DATABASE_BACKUP_ENABLED` and always uses a timestamped object name.
-Exit code `0` means the dump was verified and uploaded; `1` means nothing was stored.
+There is no standalone manual-backup command. `npm start` owns the scheduler; a missed
+night is recovered by the boot catch-up (`DATABASE_BACKUP_CATCH_UP=true`, 60s delay).
 
 Expected log sequence (`backup_started` → `backup_dump_completed` → `backup_verified` →
 `backup_uploaded` → `backup_pruned` → `backup_run_finished`).
 
 ### 4.3 Service integration
 
-`apps/ypt-bot/src/server.js` calls `startDailyBackupScheduler()` inside the `app.listen`
-callback. The scheduler exports `{ stop }` for tests/shutdown. It is intentionally **not**
-started from `ingestStudyLogs.js`, so running both entrypoints cannot schedule two jobs.
+`apps/ypt-bot/src/server.js` is the only entry point and calls
+`startDailyBackupScheduler()` inside the HTTP `listen` callback. The scheduler exports
+`{ stop }` for tests/shutdown.
 
 ### 4.4 Restore
 
@@ -172,13 +167,14 @@ Restore into an empty/disposable database first; `--clean` drops matching object
 - Logs never include `DIRECT_URL`, the password, or the service-role key.
 - Temp files live under `os.tmpdir()` (0700 directory); successful runs delete them.
 - Dumps are never written to the repository; `/backups/` remains gitignored.
-- Manual runs are operator-only (CLI access to the host/repo), not exposed over HTTP.
+- Backup execution is internal to `npm start`; there is no CLI or HTTP trigger.
 
 ## 6. Feature Lifecycle & Decommissioning
 
 1. **Dormant deploy** — code ships with `DATABASE_BACKUP_ENABLED=false`.
-2. **Targeted verification** — create the private bucket, set the env vars, run
-   `npm run backup:db` once, confirm the object and a restore into a scratch database.
+2. **Targeted verification** — create the private bucket, set the env vars, restart the
+   service with `DATABASE_BACKUP_ENABLED=true` and `DATABASE_BACKUP_CATCH_UP=true`, then
+   confirm the catch-up object and a restore into a scratch database.
 3. **GA** — set `DATABASE_BACKUP_ENABLED=true` on the Render service and redeploy. Verify
    `backup_scheduled` with the next 00:00 UTC timestamp.
 4. **Monitoring** — alert on `backup_failed` / `backup_catch_up_failed`. A healthy day has
