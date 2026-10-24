@@ -149,6 +149,28 @@ describe("discord-avatar.service", () => {
          expect(result.newImageUrl).toBeNull();
       });
 
+      it("skips OAuth token lookup when allowOAuth is false", async () => {
+         vi.mocked(prisma.user.findFirst).mockResolvedValue({
+            id: "user_target",
+            discordId: "80351110224678912",
+            image: "https://cdn.discordapp.com/avatars/80351110224678912/active.png",
+         } as never);
+
+         global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+         });
+
+         const result = await syncUserAvatar({
+            userId: "user_target",
+            allowOAuth: false,
+         });
+
+         expect(prisma.account.findFirst).not.toHaveBeenCalled();
+         expect(result.success).toBe(false);
+         expect(result.error).toContain("without OAuth authorization");
+      });
+
       it("updates user avatar in DB when fresh avatar is fetched from Discord via Bot", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
@@ -231,7 +253,7 @@ describe("discord-avatar.service", () => {
          expect(prisma.user.update).toHaveBeenCalled();
       });
 
-      it("preserves healthy avatar and requests re-auth when tokens are expired", async () => {
+      it("preserves healthy avatar and requests re-auth when tokens are expired and allowOAuth is true", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
          const healthyAvatar =
             "https://cdn.discordapp.com/avatars/80351110224678912/healthy_hash.png";
@@ -249,6 +271,7 @@ describe("discord-avatar.service", () => {
 
          const result = await syncUserAvatar({
             userId: "user_3",
+            allowOAuth: true,
          });
          expect(result.success).toBe(false);
          expect(result.requiresReauth).toBe(true);

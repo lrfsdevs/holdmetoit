@@ -17,13 +17,13 @@ export interface RefreshAvatarButtonProps {
 /**
  * Button that allows an authenticated user to sync their current Discord avatar
  * on-demand without needing to log out and log back in.
+ * Calls /api/users/sync-avatar with no client-supplied userId so the server
+ * securely binds the refresh to the authenticated session user.
  */
 export function RefreshAvatarButton({
    className,
    variant = "outline",
    size = "sm",
-   userId,
-   discordId,
    onSuccess,
 }: RefreshAvatarButtonProps) {
    const [isPending, startTransition] = useTransition();
@@ -40,7 +40,7 @@ export function RefreshAvatarButton({
             const res = await fetch("/api/users/sync-avatar", {
                method: "POST",
                headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ userId, discordId }),
+               body: JSON.stringify({}),
             });
 
             const data = (await res.json().catch(() => ({}))) as {

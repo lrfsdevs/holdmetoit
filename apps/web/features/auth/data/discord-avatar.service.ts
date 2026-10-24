@@ -247,6 +247,7 @@ export async function fetchDiscordUserAvatarViaOAuth(
 export interface SyncUserAvatarParams {
    userId?: string;
    discordId?: string;
+   allowOAuth?: boolean;
 }
 
 export interface SyncUserAvatarResult {
@@ -290,17 +291,23 @@ export async function syncUserAvatar(
       };
    }
 
-   // 1. Try OAuth token lookup (no bot token needed, works seamlessly for authenticated users)
-   const oauthResult = await fetchDiscordUserAvatarViaOAuth(user.id);
+   // 1. Try OAuth token lookup ONLY if allowOAuth is true (security gate against unauthorized token consumption)
+   const allowOAuth = params.allowOAuth ?? false;
    let fetched: DiscordAvatarFetchResult | null = null;
+   let oauthResult: OAuthAvatarFetchResult | null = null;
 
-   if (oauthResult.success) {
-      fetched = {
-         avatarUrl: oauthResult.avatarUrl,
-         avatarHash: oauthResult.avatarHash,
-      };
-   } else {
-      // 2. If OAuth lookup didn't work (e.g. spectator or expired token), try Bot API if configured
+   if (allowOAuth) {
+      oauthResult = await fetchDiscordUserAvatarViaOAuth(user.id);
+      if (oauthResult.success) {
+         fetched = {
+            avatarUrl: oauthResult.avatarUrl,
+            avatarHash: oauthResult.avatarHash,
+         };
+      }
+   }
+
+   // 2. If OAuth lookup didn't run or didn't succeed, try Bot API if configured
+   if (!fetched) {
       fetched = await fetchDiscordUserAvatar(user.discordId);
    }
 
@@ -371,14 +378,22 @@ export async function syncUserAvatar(
       };
    }
 
-   // The existing avatar is healthy (not broken), but live sync failed due to expired OAuth session
+   // The existing avatar is healthy (not broken), but live sync failed or was restricted
+   const requiresReauth = oauthResult
+      ? !oauthResult.success && oauthResult.requiresReauth
+      : false;
+   const errorMessage =
+      oauthResult && !oauthResult.success
+         ? oauthResult.error
+         : allowOAuth
+           ? "Discord session expired — please log in again to sync"
+           : "Live Discord sync unavailable without OAuth authorization";
+
    return {
       success: false,
       newImageUrl: user.image,
-      requiresReauth: oauthResult.success ? false : oauthResult.requiresReauth,
-      error: !oauthResult.success
-         ? oauthResult.error
-         : "Discord session expired — please log in again to sync",
+      requiresReauth,
+      error: errorMessage,
       message:
          "Current avatar is active. Please log in again to sync new changes.",
    };

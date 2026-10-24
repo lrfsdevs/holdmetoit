@@ -30,23 +30,18 @@ describe("RefreshAvatarButton", () => {
       expect(screen.getByRole("button", { name: /sync avatar/i })).toBeTruthy();
    });
 
-   it("calls /api/users/sync-avatar on click and triggers router.refresh", async () => {
+   it("calls /api/users/sync-avatar without client-supplied userId on click and triggers router.refresh", async () => {
       global.fetch = vi.fn().mockResolvedValue({
          ok: true,
          json: async () => ({
             success: true,
             newImageUrl: "https://cdn.discordapp.com/avatars/123/new.png",
+            updated: true,
          }),
       });
 
       const onSuccess = vi.fn();
-      render(
-         <RefreshAvatarButton
-            userId="user_1"
-            discordId="123"
-            onSuccess={onSuccess}
-         />
-      );
+      render(<RefreshAvatarButton onSuccess={onSuccess} />);
 
       const btn = screen.getByRole("button", { name: /sync avatar/i });
       fireEvent.click(btn);
@@ -56,7 +51,7 @@ describe("RefreshAvatarButton", () => {
             "/api/users/sync-avatar",
             expect.objectContaining({
                method: "POST",
-               body: JSON.stringify({ userId: "user_1", discordId: "123" }),
+               body: JSON.stringify({}),
             })
          );
          expect(onSuccess).toHaveBeenCalledWith(
@@ -77,7 +72,7 @@ describe("RefreshAvatarButton", () => {
          }),
       });
 
-      render(<RefreshAvatarButton userId="user_expired" />);
+      render(<RefreshAvatarButton />);
 
       const btn = screen.getByRole("button", { name: /sync avatar/i });
       fireEvent.click(btn);
@@ -102,7 +97,7 @@ describe("RefreshAvatarButton", () => {
          }),
       });
 
-      render(<RefreshAvatarButton userId="user_same" />);
+      render(<RefreshAvatarButton />);
 
       const btn = screen.getByRole("button", { name: /sync avatar/i });
       fireEvent.click(btn);
