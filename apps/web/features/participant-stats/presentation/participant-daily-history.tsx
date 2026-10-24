@@ -99,7 +99,7 @@ export function ParticipantDailyHistory({
                               </span>
                               {day.durationSeconds >
                                  MAX_COUNTED_DAILY_STUDY_SECONDS && (
-                                 <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                 <span className="ml-1.5 px-1.5 py-0.5 rounded text-label font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
                                     14h counted
                                  </span>
                               )}
@@ -214,7 +214,7 @@ export function ParticipantDailyHistory({
                                     </span>
                                     {day.durationSeconds >
                                        MAX_COUNTED_DAILY_STUDY_SECONDS && (
-                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                       <span className="px-1.5 py-0.5 rounded text-label font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
                                           14h counted
                                        </span>
                                     )}
