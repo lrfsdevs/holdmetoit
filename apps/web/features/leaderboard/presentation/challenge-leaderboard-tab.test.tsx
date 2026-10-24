@@ -399,6 +399,20 @@ describe("ChallengeLeaderboardTab", () => {
       expect(indexTodayChampion).toBeLessThan(indexOverallLeader);
    });
 
+   it("hides View by Team and ignores team mode for SOLOS challenges", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: { ...mockChallenge, format: "SOLOS" },
+            initialViewMode: "team",
+         })
+      );
+
+      expect(html).not.toContain("View by Team");
+      expect(html).toContain("Overall Rank");
+      expect(html).not.toContain("lg:grid-cols-2");
+      expect(html).toContain("Afnan");
+   });
+
    it("preserves view mode in participant profile links when initialViewMode is 'today' and omits query when 'individual'", () => {
       const todayChallenge: ChallengeScoreboardViewModel = {
          ...mockChallenge,
