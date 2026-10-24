@@ -1369,11 +1369,11 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ### Session 153 — 2026-10-24 (Resilient Avatar & Stale Discord PFP Sync on `krish` — GH-#96 / KAN-14)
 
-- **Root Cause Resolved:** Discord avatar URLs use immutable content hashes that return 404 once updated on Discord. Stale URLs persisted in Prisma because `events.signIn` previously passed the existing `user.image` rather than parsing `profile.avatar`, and Next.js / `<Image>` lacked `onError` fallbacks.
+- **Root Cause Resolved:** Discord avatar URLs use immutable content hashes that return 404 once updated on Discord. Stale URLs persisted in Prisma because `events.signIn` previously passed the existing `user.image` rather than parsing `profile.avatar`, `@auth/prisma-adapter` did not persist updated tokens on subsequent sign-ins, and Next.js / `<Image>` lacked `onError` fallbacks.
 - **Domain Logic:** Added `apps/web/features/auth/domain/discord-avatar.ts` (`getDiscordDefaultAvatarUrl`, `buildDiscordAvatarUrl`, `parseDiscordAvatarUrl`, `getInitials`) conforming to Law L7 with 100% test coverage.
-- **Data Service:** Added `apps/web/features/auth/data/discord-avatar.service.ts` to query Discord REST API v10 via bot token and automatically heal dead hashes in Prisma (`syncUserAvatar`).
-- **OAuth SignIn Sync:** Fixed `apps/web/core/auth/index.ts` so every login dynamically computes and synchronizes the latest Discord avatar hash.
-- **API Endpoint:** Added `POST /api/users/sync-avatar` with Zod validation and comprehensive tests in `apps/web/app/api/users/sync-avatar/route.test.ts`.
-- **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives. Seamlessly falls back to default Discord embed avatar or initials on 404 while silently triggering background self-healing.
+- **Data Service:** Added `apps/web/features/auth/data/discord-avatar.service.ts` to query Discord REST API v10 via user OAuth `/users/@me` (with automated token rotation and refresh) or Bot API, verified non-404 avatars via HEAD checks so healthy custom avatars are never overridden, and automatically healed dead hashes in Prisma (`syncUserAvatar`).
+- **OAuth SignIn Sync & Token Persistence:** Fixed `apps/web/core/auth/index.ts` so every login dynamically computes and synchronizes the latest Discord avatar hash and updates `prisma.account` with fresh `access_token` and `refresh_token`.
+- **API Endpoint:** Added `POST /api/users/sync-avatar` with Zod validation, granular status responses (`requiresReauth`, `updated`, `message`), and tests in `apps/web/app/api/users/sync-avatar/route.test.ts`.
+- **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives with seamless 404 fallback to embed avatars or initials, and added `RefreshAvatarButton` on participant profile headers with clear status feedback (`"Avatar updated!"`, `"Avatar is up to date!"`, or `"Session expired — please log in again to sync"`).
 - **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
-- **Quality Gates:** 0 typecheck errors, 0 lint errors, 191/191 test files (1804 tests) passing.
+- **Quality Gates:** 0 typecheck errors, 0 lint errors, 193/193 test files (1814 tests) passing.
