@@ -3,8 +3,6 @@ import { z } from "zod";
 
 import { auth } from "@/core/auth";
 import { createLogger, logEvents } from "@/core/observability/logger";
-import { getClientIp } from "@/core/security/client-ip";
-import { checkRateLimit } from "@/core/security/rate-limiter";
 import { syncUserAvatar } from "@/features/auth/data/discord-avatar.service";
 
 const logger = createLogger("api-sync-avatar");
@@ -19,24 +17,6 @@ export async function POST(req: Request) {
       const session = await auth();
       if (!session?.user?.id) {
          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
-      const clientIp = getClientIp(req.headers);
-      const rateLimitKey = `sync-avatar:${session.user.id}:${clientIp}`;
-      const rateLimit = checkRateLimit(rateLimitKey, {
-         maxAttempts: 10,
-         windowMs: 60 * 1000,
-      });
-
-      if (!rateLimit.allowed) {
-         const retryAfter = Math.ceil(rateLimit.resetMs / 1000);
-         return NextResponse.json(
-            { error: "Too many requests. Please wait a moment." },
-            {
-               status: 429,
-               headers: { "Retry-After": String(retryAfter) },
-            }
-         );
       }
 
       const body = await req.json().catch(() => ({}));

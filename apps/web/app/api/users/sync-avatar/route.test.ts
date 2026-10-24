@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 import { auth } from "@/core/auth";
-import { clearRateLimitStore } from "@/core/security/rate-limiter";
 import * as avatarService from "@/features/auth/data/discord-avatar.service";
 
 vi.mock("@/core/auth", () => ({
@@ -26,7 +25,6 @@ vi.mock("@/core/observability/logger", () => ({
 describe("POST /api/users/sync-avatar", () => {
    beforeEach(() => {
       vi.clearAllMocks();
-      clearRateLimitStore();
    });
 
    it("returns 401 when unauthenticated", async () => {
@@ -120,39 +118,5 @@ describe("POST /api/users/sync-avatar", () => {
          discordId: undefined,
          allowOAuth: true,
       });
-   });
-
-   it("returns 429 when rate limit is exceeded", async () => {
-      vi.mocked(auth).mockResolvedValue({
-         user: { id: "user_spammer" },
-      } as never);
-
-      vi.mocked(avatarService.syncUserAvatar).mockResolvedValue({
-         success: true,
-         newImageUrl: "https://cdn.discordapp.com/avatars/123/fresh.png",
-      });
-
-      for (let i = 0; i < 10; i++) {
-         const req = new Request("http://localhost/api/users/sync-avatar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-         });
-         const res = await POST(req);
-         expect(res.status).toBe(200);
-      }
-
-      const throttledReq = new Request(
-         "http://localhost/api/users/sync-avatar",
-         {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-         }
-      );
-      const throttledRes = await POST(throttledReq);
-      expect(throttledRes.status).toBe(429);
-      const json = await throttledRes.json();
-      expect(json.error).toContain("Too many requests");
    });
 });
