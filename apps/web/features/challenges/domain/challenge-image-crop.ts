@@ -31,8 +31,8 @@ export const CHALLENGE_IMAGE_SPECS: Record<
 > = {
    "event-banner": {
       aspectRatio: 5,
-      minWidth: 1500,
-      minHeight: 300,
+      minWidth: 1000,
+      minHeight: 200,
       maxOutputWidth: 2500,
    },
    "punishment-pfp": {
