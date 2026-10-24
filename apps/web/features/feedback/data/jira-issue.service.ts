@@ -200,30 +200,59 @@ async function postRemoteLink(
          ? `GitHub Issue #${github.issueNumber}`
          : "GitHub Issue";
 
-      await fetch(`${config.baseUrl}/rest/api/3/issue/${issueKey}/remotelink`, {
-         method: "POST",
-         headers: {
-            Authorization: `Basic ${Buffer.from(
-               `${config.email}:${config.apiToken}`
-            ).toString("base64")}`,
-            Accept: "application/json",
-            "Content-Type": "application/json",
-         },
-         body: JSON.stringify({
-            object: {
-               url: github.url,
-               title,
-               icon: {
-                  url16x16:
-                     "https://github.githubassets.com/favicons/favicon.png",
-                  title: "GitHub",
-               },
+      const res = await fetch(
+         `${config.baseUrl}/rest/api/3/issue/${issueKey}/remotelink`,
+         {
+            method: "POST",
+            headers: {
+               Authorization: `Basic ${Buffer.from(
+                  `${config.email}:${config.apiToken}`
+               ).toString("base64")}`,
+               Accept: "application/json",
+               "Content-Type": "application/json",
             },
-         }),
-         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+            body: JSON.stringify({
+               object: {
+                  url: github.url,
+                  title,
+                  icon: {
+                     url16x16:
+                        "https://github.githubassets.com/favicons/favicon.png",
+                     title: "GitHub",
+                  },
+               },
+            }),
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+         }
+      );
+
+      const isOk =
+         typeof res.ok === "boolean"
+            ? res.ok
+            : res.status >= 200 && res.status < 300;
+
+      if (!isOk) {
+         const errorText =
+            typeof res.text === "function"
+               ? await res.text().catch(() => "")
+               : "";
+         logger.warn(logEvents.feedbackJiraDispatchFailed, {
+            context: {
+               issueKey,
+               status: res.status,
+               error: errorText.slice(0, ERROR_TEXT_MAX),
+               message: "Failed to attach remote link to Jira issue",
+            },
+         });
+      }
+   } catch (error) {
+      logger.warn(logEvents.feedbackJiraDispatchFailed, {
+         context: {
+            issueKey,
+            error: error instanceof Error ? error.message : String(error),
+            message: "Exception attaching remote link to Jira issue",
+         },
       });
-   } catch {
-      // Fail-soft: failure to attach remote link does not compromise issue creation
    }
 }
 

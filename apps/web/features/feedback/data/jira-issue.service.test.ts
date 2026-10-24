@@ -16,7 +16,10 @@ const input = {
 function jiraResponse(status: number, body: unknown) {
    return {
       status,
+      ok: status >= 200 && status < 300,
       json: async () => body,
+      text: async () =>
+         typeof body === "string" ? body : JSON.stringify(body),
    };
 }
 
@@ -224,6 +227,48 @@ describe("createJiraIssue", () => {
             url16x16: "https://github.githubassets.com/favicons/favicon.png",
             title: "GitHub",
          },
+      });
+   });
+
+   it("logs warning and preserves created status when remote link returns non-2xx", async () => {
+      fetchMock
+         .mockResolvedValueOnce(
+            jiraResponse(201, { id: "10001", key: "HMT-10" })
+         )
+         .mockResolvedValueOnce(
+            jiraResponse(500, { errorMessages: ["Internal server error"] })
+         );
+
+      const result = await createJiraIssue({
+         ...input,
+         githubIssueNumber: 167,
+         githubIssueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+      });
+
+      expect(result).toEqual({
+         status: "created",
+         issueKey: "HMT-10",
+         issueUrl: "https://example.atlassian.net/browse/HMT-10",
+      });
+   });
+
+   it("logs warning and preserves created status when remote link network request fails", async () => {
+      fetchMock
+         .mockResolvedValueOnce(
+            jiraResponse(201, { id: "10001", key: "HMT-10" })
+         )
+         .mockRejectedValueOnce(new Error("Remote link connection timed out"));
+
+      const result = await createJiraIssue({
+         ...input,
+         githubIssueNumber: 167,
+         githubIssueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+      });
+
+      expect(result).toEqual({
+         status: "created",
+         issueKey: "HMT-10",
+         issueUrl: "https://example.atlassian.net/browse/HMT-10",
       });
    });
 

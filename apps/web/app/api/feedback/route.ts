@@ -34,6 +34,12 @@ import { getClientIp } from "@/core/security/client-ip";
 
 const logger = createLogger("feedback");
 
+/**
+ * Configure max duration for serverless deployment environments to cover
+ * worst-case sequential GitHub, Jira, and remote-link dispatch attempts.
+ */
+export const maxDuration = 30;
+
 /** Persists feedback and attempts fail-soft Discord delivery. */
 export async function POST(req: NextRequest) {
    try {
