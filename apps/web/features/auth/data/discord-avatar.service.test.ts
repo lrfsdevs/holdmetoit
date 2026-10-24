@@ -2,12 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
 import {
    fetchDiscordUserAvatar,
+   fetchDiscordUserAvatarViaOAuth,
    syncUserAvatar,
 } from "./discord-avatar.service";
 
 vi.mock("@/core/db", () => ({
    prisma: {
       user: {
+         findFirst: vi.fn(),
+         update: vi.fn(),
+      },
+      account: {
          findFirst: vi.fn(),
          update: vi.fn(),
       },
@@ -22,7 +27,7 @@ vi.mock("@/core/observability/logger", () => ({
    }),
    logEvents: {
       appError: "app.error",
-      authUserSynced: "auth_user_synced",
+      authUserSynced: "auth.user_synced",
    },
 }));
 
@@ -32,6 +37,7 @@ describe("discord-avatar.service", () => {
    beforeEach(() => {
       vi.clearAllMocks();
       process.env = { ...originalEnv };
+      vi.mocked(prisma.account.findFirst).mockResolvedValue(null);
    });
 
    afterEach(() => {
@@ -97,13 +103,46 @@ describe("discord-avatar.service", () => {
       });
    });
 
+   describe("fetchDiscordUserAvatarViaOAuth", () => {
+      it("returns null if no account exists", async () => {
+         vi.mocked(prisma.account.findFirst).mockResolvedValue(null);
+         const res = await fetchDiscordUserAvatarViaOAuth("user_none");
+         expect(res).toBeNull();
+      });
+
+      it("fetches profile using valid access token without re-login", async () => {
+         vi.mocked(prisma.account.findFirst).mockResolvedValue({
+            id: "acc_1",
+            access_token: "valid_token",
+            refresh_token: "refresh_123",
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+         } as never);
+
+         global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+               id: "617551062102048779",
+               username: "nrgslayer",
+               avatar: "fresh_hash_oauth",
+               discriminator: "0",
+            }),
+         });
+
+         const res = await fetchDiscordUserAvatarViaOAuth("user_1");
+         expect(res?.avatarUrl).toBe(
+            "https://cdn.discordapp.com/avatars/617551062102048779/fresh_hash_oauth.png"
+         );
+      });
+   });
+
    describe("syncUserAvatar", () => {
       it("returns false if neither userId nor discordId is provided", async () => {
          const result = await syncUserAvatar({});
          expect(result).toEqual({ success: false, newImageUrl: null });
       });
 
-      it("updates user avatar in DB when fresh avatar is fetched from Discord", async () => {
+      it("updates user avatar in DB when fresh avatar is fetched from Discord via Bot", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
             id: "user_1",
@@ -135,7 +174,7 @@ describe("discord-avatar.service", () => {
          });
       });
 
-      it("heals dead avatar hash to default embed avatar if bot query is unavailable", async () => {
+      it("heals dead avatar hash to default embed avatar if bot query and oauth are unavailable", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
             id: "user_2",

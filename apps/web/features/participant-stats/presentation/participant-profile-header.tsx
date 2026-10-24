@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { RefreshAvatarButton } from "@/features/auth/presentation/refresh-avatar-button";
 import Link from "next/link";
 import {
    ChevronRight,
@@ -14,6 +15,7 @@ import { getTeamBadgeStyle } from "@/features/challenges/domain/team-colors";
 interface ParticipantProfileHeaderProps {
    profile: ProfileHeaderType;
    isAdmin?: boolean;
+   isOwner?: boolean;
    viewParam?: string;
    isFallback?: boolean;
 }
@@ -21,6 +23,7 @@ interface ParticipantProfileHeaderProps {
 export function ParticipantProfileHeader({
    profile,
    isAdmin = false,
+   isOwner = false,
    viewParam,
    isFallback = false,
 }: ParticipantProfileHeaderProps) {
@@ -182,6 +185,14 @@ export function ParticipantProfileHeader({
                         )}
                      </div>
                   </div>
+
+                  {isOwner && (
+                     <RefreshAvatarButton
+                        userId={profile.userId}
+                        size="sm"
+                        className="rounded-xl border-border-strong bg-surface-nested hover:bg-surface-elevated text-xs font-semibold text-text-secondary hover:text-white"
+                     />
+                  )}
 
                   {isAdmin && !isFallback && (
                      <Link

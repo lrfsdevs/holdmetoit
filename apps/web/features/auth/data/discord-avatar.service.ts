@@ -22,7 +22,7 @@ export interface DiscordAvatarFetchResult {
 }
 
 /**
- * Fetches the latest avatar information for a Discord user via Discord REST API v10.
+ * Fetches the latest avatar information for a Discord user via Discord REST API v10 using a Bot Token.
  * Requires DISCORD_BOT_TOKEN to be configured.
  */
 export async function fetchDiscordUserAvatar(
@@ -82,6 +82,138 @@ export async function fetchDiscordUserAvatar(
    }
 }
 
+/**
+ * Fetches the current user's profile directly from Discord OAuth2 /users/@me using stored user tokens.
+ * Automatically handles token expiration and token rotation via refresh_token without requiring re-login.
+ */
+export async function fetchDiscordUserAvatarViaOAuth(
+   userId: string
+): Promise<DiscordAvatarFetchResult | null> {
+   try {
+      const account = await prisma.account.findFirst({
+         where: { userId, provider: "discord" },
+         select: {
+            id: true,
+            access_token: true,
+            refresh_token: true,
+            expires_at: true,
+         },
+      });
+
+      if (!account || (!account.access_token && !account.refresh_token)) {
+         return null;
+      }
+
+      let accessToken = account.access_token;
+      let shouldRefresh =
+         !accessToken ||
+         (account.expires_at !== null &&
+            account.expires_at !== undefined &&
+            account.expires_at <= Math.floor(Date.now() / 1000));
+
+      // Attempt fetch with existing token if not explicitly expired
+      let res: Response | null = null;
+      if (accessToken && !shouldRefresh) {
+         res = await fetch("https://discord.com/api/v10/users/@me", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            cache: "no-store",
+         }).catch(() => null);
+
+         if (res && res.status === 401) {
+            shouldRefresh = true;
+         }
+      }
+
+      // Refresh token if needed
+      if ((shouldRefresh || !res || !res.ok) && account.refresh_token) {
+         const clientId =
+            process.env.AUTH_DISCORD_ID || process.env.DISCORD_CLIENT_ID;
+         const clientSecret =
+            process.env.AUTH_DISCORD_SECRET ||
+            process.env.DISCORD_CLIENT_SECRET;
+
+         if (clientId && clientSecret) {
+            const params = new URLSearchParams({
+               client_id: clientId,
+               client_secret: clientSecret,
+               grant_type: "refresh_token",
+               refresh_token: account.refresh_token,
+            });
+
+            const refreshRes = await fetch(
+               "https://discord.com/api/v10/oauth2/token",
+               {
+                  method: "POST",
+                  headers: {
+                     "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                  body: params.toString(),
+               }
+            ).catch(() => null);
+
+            if (refreshRes && refreshRes.ok) {
+               const refreshData = (await refreshRes.json()) as {
+                  access_token?: string;
+                  refresh_token?: string;
+                  expires_in?: number;
+               };
+
+               if (refreshData.access_token && refreshData.refresh_token) {
+                  accessToken = refreshData.access_token;
+                  const newExpiresAt =
+                     Math.floor(Date.now() / 1000) +
+                     (refreshData.expires_in ?? 604800);
+
+                  await prisma.account
+                     .update({
+                        where: { id: account.id },
+                        data: {
+                           access_token: refreshData.access_token,
+                           refresh_token: refreshData.refresh_token,
+                           expires_at: newExpiresAt,
+                        },
+                     })
+                     .catch((err) => {
+                        logger.error(logEvents.appError, {
+                           context: {
+                              action: "updateAccountTokens",
+                              userId,
+                           },
+                           error: err,
+                        });
+                     });
+
+                  res = await fetch("https://discord.com/api/v10/users/@me", {
+                     headers: { Authorization: `Bearer ${accessToken}` },
+                     cache: "no-store",
+                  }).catch(() => null);
+               }
+            }
+         }
+      }
+
+      if (res && res.ok) {
+         const data = (await res.json()) as DiscordUserApiResponse;
+         const avatarUrl = data.avatar
+            ? buildDiscordAvatarUrl(data.id, data.avatar)
+            : getDiscordDefaultAvatarUrl(data.id, data.discriminator);
+
+         return {
+            avatarUrl,
+            avatarHash: data.avatar,
+         };
+      }
+
+      return null;
+   } catch (error) {
+      logger.error(logEvents.appError, {
+         context: { action: "fetchDiscordUserAvatarViaOAuth", userId },
+         error,
+      });
+      return null;
+   }
+}
+
 export interface SyncUserAvatarParams {
    userId?: string;
    discordId?: string;
@@ -93,9 +225,10 @@ export interface SyncUserAvatarResult {
 }
 
 /**
- * Synchronizes and updates a user's avatar in the database.
- * If Discord API fails or has no bot token, it falls back to the deterministic default Discord avatar
- * to heal dead 404 hashes.
+ * Synchronizes and updates a user's avatar in the database without requiring them to re-login.
+ * 1. Checks OAuth user tokens (@me) with auto-refresh.
+ * 2. Falls back to Discord Bot REST API if configured.
+ * 3. Only falls back to default embed avatar if previous image was an avatar hash that now 404s.
  */
 export async function syncUserAvatar(
    params: SyncUserAvatarParams
@@ -115,15 +248,21 @@ export async function syncUserAvatar(
       return { success: false, newImageUrl: null };
    }
 
-   const fetched = await fetchDiscordUserAvatar(user.discordId);
+   // 1. Try OAuth token lookup (no bot token needed, works without re-login)
+   let fetched = await fetchDiscordUserAvatarViaOAuth(user.id);
+
+   // 2. If OAuth lookup didn't work (e.g. spectator or account tokens not available), try Bot API
+   if (!fetched) {
+      fetched = await fetchDiscordUserAvatar(user.discordId);
+   }
 
    let targetImageUrl: string;
 
    if (fetched) {
       targetImageUrl = fetched.avatarUrl;
    } else {
-      // Fallback: If Discord bot query is unavailable and current image was a Discord hash,
-      // heal it to the default Discord avatar so it stops returning 404.
+      // Fallback: If neither OAuth nor bot token could reach Discord,
+      // only heal to default embed avatar if current image was a Discord hash.
       const currentParsed = parseDiscordAvatarUrl(user.image);
       if (currentParsed.isDiscordAvatar) {
          targetImageUrl = getDiscordDefaultAvatarUrl(user.discordId);
