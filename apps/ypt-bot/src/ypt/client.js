@@ -1,4 +1,4 @@
-import { logger } from "./logger.js";
+import { logger } from "../lib/logger.js";
 
 const BASE_URL = "https://pi.tgclab.com";
 

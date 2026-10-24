@@ -1,12 +1,12 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { getGroupMembers, getAggregatedMembers } from "../src/yptService.js";
+import { getGroupMembers, getAggregatedMembers } from "../../src/ypt/client.js";
+import { ingestGroupMembersToDailyStudyLogs } from "../../src/ingest/daily-study-log.js";
 import {
-   ingestGroupMembersToDailyStudyLogs,
    getOrRefreshAuthToken,
    invalidateAuthToken,
-} from "../src/sync/ingestStudyLogs.js";
-import { prisma } from "../src/db.js";
+} from "../../src/ypt/session.js";
+import { prisma } from "../../src/db/client.js";
 
 describe("YPT studyDate extraction and aggregation", () => {
    const originalFetch = globalThis.fetch;

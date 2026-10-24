@@ -1,8 +1,8 @@
-import { createServer } from "node:http";
-import { runIngest } from "./sync/ingestStudyLogs.js";
+import { runIngest } from "./ingest/run-ingest.js";
+import { createHealthServer } from "./http/health-server.js";
 import { env } from "./config/env.js";
-import { logger } from "./logger.js";
-import { startDailyBackupScheduler } from "./backup/databaseBackup.js";
+import { logger } from "./lib/logger.js";
+import { startDailyBackupScheduler } from "./backup/scheduler.js";
 
 /**
  * Fail fast when the runtime is missing configuration the ingest loop needs.
@@ -25,27 +25,6 @@ function validateConfig() {
    ) {
       throw new Error("POLL_INTERVAL_IDLE_SEC must be a positive integer");
    }
-}
-
-function createHealthServer() {
-   return createServer((req, res) => {
-      const pathname = (req.url || "/").split("?")[0];
-
-      if (req.method === "GET" && pathname === "/health") {
-         res.writeHead(200, { "Content-Type": "application/json" });
-         res.end(
-            JSON.stringify({
-               status: "ok",
-               service: "ypt-bot",
-               uptimeSeconds: Math.floor(process.uptime()),
-            })
-         );
-         return;
-      }
-
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Not found" }));
-   });
 }
 
 let ingestInFlight = false;

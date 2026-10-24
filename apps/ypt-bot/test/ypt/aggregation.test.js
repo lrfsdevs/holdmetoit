@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { getAggregatedMembers } from "../src/yptService.js";
+import { getAggregatedMembers } from "../../src/ypt/client.js";
 
 describe("getAggregatedMembers", () => {
    const originalFetch = globalThis.fetch;
