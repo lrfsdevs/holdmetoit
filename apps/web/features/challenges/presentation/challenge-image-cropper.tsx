@@ -126,21 +126,41 @@ export function ChallengeImageCropper({
       );
    }, [image, crop?.x, crop?.y, crop?.width, crop?.height]); // eslint-disable-line react-hooks/exhaustive-deps
 
+   /** Moves the crop window by a source-pixel offset, keeping it inside the image. */
+   const moveCrop = (dx: number, dy: number) => {
+      if (!size || !crop) return;
+      const minX = crop.width / 2 / size.width;
+      const minY = crop.height / 2 / size.height;
+      setFocus((f) => ({
+         x: Math.min(Math.max(f.x + dx / size.width, minX), 1 - minX),
+         y: Math.min(Math.max(f.y + dy / size.height, minY), 1 - minY),
+      }));
+   };
+
    const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
-      if (!dragRef.current || !size || !crop) return;
+      if (!dragRef.current || !crop) return;
       const rect = event.currentTarget.getBoundingClientRect();
       const scale = crop.width / rect.width; // screen px -> source px
       const dx = (event.clientX - dragRef.current.x) * scale;
       const dy = (event.clientY - dragRef.current.y) * scale;
       dragRef.current = { x: event.clientX, y: event.clientY };
+      // Dragging moves the image, so the crop window moves the opposite way.
+      moveCrop(-dx, -dy);
+   };
 
-      // Dragging moves the image, so the focus point moves the opposite way.
-      const minX = crop.width / 2 / size.width;
-      const minY = crop.height / 2 / size.height;
-      setFocus((f) => ({
-         x: Math.min(Math.max(f.x - dx / size.width, minX), 1 - minX),
-         y: Math.min(Math.max(f.y - dy / size.height, minY), 1 - minY),
-      }));
+   const handleKeyDown = (event: React.KeyboardEvent<HTMLCanvasElement>) => {
+      if (!crop) return;
+      const step = crop.width * (event.shiftKey ? 0.2 : 0.05);
+      const moves: Record<string, [number, number]> = {
+         ArrowLeft: [-step, 0],
+         ArrowRight: [step, 0],
+         ArrowUp: [0, -step],
+         ArrowDown: [0, step],
+      };
+      const move = moves[event.key];
+      if (!move) return;
+      event.preventDefault();
+      moveCrop(move[0], move[1]);
    };
 
    const handleConfirm = async () => {
@@ -183,7 +203,7 @@ export function ChallengeImageCropper({
    };
 
    return (
-      <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <Dialog open onOpenChange={(open) => !open && !exporting && onCancel()}>
          <DialogContent>
             <DialogHeader>
                <DialogTitle>
@@ -216,8 +236,10 @@ export function ChallengeImageCropper({
                         ref={canvasRef}
                         width={previewWidth}
                         height={previewHeight}
-                        aria-label="Crop preview. Drag to reposition."
-                        className="h-auto w-full cursor-grab touch-none rounded-xl border border-border-strong"
+                        tabIndex={0}
+                        aria-label="Crop preview. Drag or use the arrow keys to reposition."
+                        className="h-auto w-full cursor-grab touch-none rounded-xl border border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
+                        onKeyDown={handleKeyDown}
                         onPointerDown={(e) => {
                            e.currentTarget.setPointerCapture(e.pointerId);
                            dragRef.current = { x: e.clientX, y: e.clientY };
