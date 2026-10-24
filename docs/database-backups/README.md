@@ -21,13 +21,16 @@ Scope guardrails:
 
 Files:
 
-| Path                                        | Purpose                                        |
-| :------------------------------------------ | :--------------------------------------------- |
-| `apps/ypt-bot/src/backup/databaseBackup.js` | Runner, scheduler, pure date/retention helpers |
-| `apps/ypt-bot/src/config/env.js`            | Backup environment configuration (SPOC)        |
-| `apps/ypt-bot/src/server.js`                | Sole entry point; starts the scheduler         |
-| `apps/ypt-bot/Dockerfile`                   | Node 22 + `postgresql-client-17`               |
-| `apps/ypt-bot/test/database-backup.test.js` | Offline unit tests (fake exec + fake bucket)   |
+| Path                                   | Purpose                                   |
+| :------------------------------------- | :---------------------------------------- |
+| `apps/ypt-bot/src/backup/runner.js`    | Dump, verify, upload, prune               |
+| `apps/ypt-bot/src/backup/scheduler.js` | 00:00 UTC scheduler + boot catch-up       |
+| `apps/ypt-bot/src/backup/retention.js` | Pure object naming/date/retention helpers |
+| `apps/ypt-bot/src/backup/config.js`    | Env resolution + `DIRECT_URL` parsing     |
+| `apps/ypt-bot/src/config/env.js`       | Backup environment configuration (SPOC)   |
+| `apps/ypt-bot/src/server.js`           | Sole entry point; starts the scheduler    |
+| `apps/ypt-bot/Dockerfile`              | Node 22 + `postgresql-client-17`          |
+| `apps/ypt-bot/test/backup/`            | Offline runner/retention/scheduler tests  |
 
 ## 2. Domain State Machine & Decisions
 

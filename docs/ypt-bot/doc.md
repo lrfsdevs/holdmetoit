@@ -43,18 +43,35 @@ It solves three primary challenges:
    ├── prisma/
    │   └── schema.prisma         # Prisma data models (DailyStudyLogV2, Challenge, User, etc.)
    ├── src/
+   │   ├── server.js             # Bootstrap: health, ingestion loop, backups
    │   ├── config/
-   │   │   └── env.js            # Single Point of Contact (SPOC) for environment variables
-   │   ├── db.js                 # PrismaClient singleton with connection pooling
+   │   │   ├── env.js            # Single Point of Contact (SPOC) for env vars
+   │   │   └── limits.js         # Daily/session study caps
+   │   ├── http/
+   │   │   └── health-server.js  # GET /health only
+   │   ├── lib/
+   │   │   └── logger.js         # Winston logger factory
+   │   ├── ypt/
+   │   │   ├── client.js         # YPT auth + group telemetry client
+   │   │   └── session.js        # Cached JWT session + refresh
    │   ├── db/
-   │   │   └── challengeService.js # UTC active challenge and participant map queries
-   │   ├── sync/
-   │   │   └── ingestStudyLogs.js  # Live YPT telemetry ingestion into DailyStudyLog
-   │   ├── server.js             # Sole entry point: health, ingestion loop, backups
-   │   └── yptService.js         # YPT API client (auth, group telemetry, multi-group aggregation)
+   │   │   ├── client.js         # PrismaClient singleton
+   │   │   └── challenge-repository.js # Challenge/participant queries
+   │   ├── ingest/
+   │   │   ├── run-ingest.js     # Ingestion orchestration
+   │   │   ├── daily-study-log.js # DailyStudyLog upserts
+   │   │   └── date-buckets.js   # Pure UTC/challenge day math
+   │   └── backup/
+   │       ├── config.js         # Env config + URL parsing
+   │       ├── retention.js      # Object naming/retention math
+   │       ├── runner.js         # Dump/verify/upload/prune
+   │       └── scheduler.js      # 00:00 UTC scheduler + catch-up
    ├── test/
-   │   ├── ingest-utc.test.js    # Tests for UTC date normalization and participant resolution
-   │   └── yptService.test.js    # Tests for multi-group deduplication and fault tolerance
+   │   ├── ypt/                  # Client, aggregation, session-cap tests
+   │   ├── db/                   # Challenge repository + lifecycle tests
+   │   ├── ingest/               # Date buckets, guards, duration caps
+   │   ├── backup/               # config, retention, runner, scheduler
+   │   └── lib/                  # logger
    └── package.json
    ```
 
