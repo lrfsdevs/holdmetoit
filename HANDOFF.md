@@ -186,6 +186,35 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Behavior:** unchanged; no DB or dependency changes.
 - **NEXT STEP:** none (no commit made — pending manual testing).
 
+### Session 155 — 2026-10-24 (Feat: Standardize Jira Issue Creation & GitHub Link for In-App Feedback; GH-167, KAN-53 on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #167 / Jira KAN-53. Standardize Jira ticket creation when bug reports and enhancement suggestions are submitted from the app to match the project's Jira format (`jira-overhaul-update.csv`), prepend GitHub issue link and horizontal rule to description, attach native Jira Remote Web Links, and apply automated layer and module tags.
+- **Implementation Slices:**
+   1. **Domain Models & Formatting Logic (`Law L7`):**
+      - In `apps/web/features/feedback/domain/jira-issue.ts`:
+         - Updated `formatJiraSummary`: formats summary with prefix `[GH-#<number>] [FB-<codeNumber>] <Title>` when GitHub issue is present, gracefully falling back to `[FB-<codeNumber>] <Title>` within Jira's 255-character limit.
+         - Updated `buildJiraDescriptionAdf`: prepends `Original GitHub Issue: <url>` link followed by an ADF `{ type: "rule" }` horizontal divider node.
+         - Added `inferFeedbackTags(url, title, description)`: intelligently derives layer tags (`admin`, `frontend`) and module tags (`challenges`, `profile`, `study-logs`, `economy`, `ypt`, `wrapped`, `jira-sync`, `auth`) matching the project's standard Jira label taxonomy.
+         - Updated `normalizeJiraLabels` and `buildJiraIssueFields` to combine base labels, inferred tags, and type tags (`bug` / `enhancement`).
+   2. **Service Layer & Jira Remote Web Link:**
+      - In `apps/web/features/feedback/data/jira-issue.service.ts`:
+         - Added `postRemoteLink` calling Jira Cloud REST API `POST /rest/api/3/issue/{issueKey}/remotelink` to attach the GitHub issue into Jira's native "Web Links" widget with the official GitHub icon and `GitHub Issue #<number>` title.
+         - Preserved fail-soft error handling: remote link failures never block or fail Jira ticket creation.
+         - Hardened response validation to check `res.ok`, logging non-2xx HTTP statuses, network errors, and timeouts with issue key context.
+   3. **Route Dispatch Orchestration & Deployment Timeout:**
+      - In `apps/web/app/api/feedback/route.ts`:
+         - Re-sequenced side effects: Discord dispatch runs non-blocking in parallel; GitHub issue creation runs prior to Jira issue creation so created GitHub issue number and URL flow into Jira issue input.
+         - Configured `export const maxDuration = 30;` to ensure serverless function timeouts cover worst-case sequential GitHub retry, Jira creation, and remote-link dispatch.
+         - Maintained 100% fail-soft isolation: failures in GitHub or Jira do not affect user response or other side effects.
+   4. **Quality Gates & Unit Testing:**
+      - Comprehensive unit tests added in `jira-issue.test.ts`, `jira-issue.service.test.ts`, and `route.test.ts`.
+      - All 193 test files and 1,826 tests passing. Zero TypeScript errors (`tsc --noEmit`).
+- **Issue Lifecycle Policy (`AGENTS.md` §4.4):**
+   - GitHub Issue #167 and Jira Ticket KAN-53 assigned to Krish Jaiswal.
+   - Jira Ticket KAN-53 moved to `In Progress` (Stage 1), then transitioned to `In Review` (Stage 2) upon PR #181 creation.
+- **NEXT STEP:** Peer review and merge PR #181 from `krish` into `dev`.
+
 ### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
 
 - **Scope:** Three competing entry points (`ingest`, `challenge_sync`, `backup`) duplicated the server's ingestion loop, auth handling, and health server.
@@ -1207,7 +1236,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 141 — 2026-10-19 (Automatic GitHub Issue Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a GitHub issue alongside the Discord embed, using a repo-scoped **fine-grained PAT** via the REST Issues API. Enabled only when `GITHUB_TOKEN` + `GITHUB_REPO` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` now runs Discord and GitHub in parallel (`Promise.allSettled`) after the DB commit. Neither can fail the submission. Results are persisted as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord and GitHub in parallel (`Promise.allSettled`). In Session 155, GitHub issue creation runs prior to Jira issue creation so created GitHub issue metadata links into Jira. Results persist as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
 - **Issue content:** `[FB-N] title`, hidden `<!-- holdmetoit-feedback:FB-N -->` marker, type/page/reporter/LogRocket, description, and attachments (images as inline markdown, videos as links). Labels default to `bug` / `enhancement`; a GitHub `422` triggers one retry without labels. 10s request timeout; no automatic retry after a failure.
 - **Domain/data:** pure `features/feedback/domain/github-issue.ts` (title/body builder, limits 256/65,536, label/assignee normalization) and fail-soft `features/feedback/data/github-issue.service.ts` (`createGitHubIssue`, config resolution, error mapping).
 - **Schema:** `20261019010000_add_feedback_github_issue` adds `GitHubDeliveryStatus` and the four `Feedback` columns + index.
@@ -1218,7 +1247,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 142 — 2026-10-19 (Automatic Jira Ticket Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a **Jira Cloud** issue alongside Discord and GitHub, using a server-side API token (Basic auth). Enabled only when `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` runs Discord, GitHub, and Jira in parallel (`Promise.allSettled`). None can fail the submission. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord, GitHub, and Jira in parallel (`Promise.allSettled`). In Session 155, Discord runs concurrently in parallel while GitHub runs prior to Jira so the Jira ticket links directly to the created GitHub issue and attaches native remote web links. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
 - **Mapping:** `bug → Task`, `enhancement → Story` (fixed). The target KAN project has no `Bug` issue type, so bugs use `Task` and remain distinguishable by the appended `bug` label. `JIRA_LABELS` defaults to `holdmetoit,feedback`; the type label is appended. Optional `JIRA_ASSIGNEE_ACCOUNT_ID`.
 - **Description:** Atlassian Document Format via a pure builder — plain-text marker `holdmetoit-feedback:FB-N`, type/page/reporter/LogRocket, description paragraphs, and attachment links (images and videos are links; Jira does not inline remote media).
 - **Domain/data:** `features/feedback/domain/jira-issue.ts` (summary 255, description text 30k, ADF helpers, labels) and fail-soft `features/feedback/data/jira-issue.service.ts` (config resolution, REST v3 POST, Jira `errors` extraction).

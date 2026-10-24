@@ -32,12 +32,15 @@ export interface JiraIssueInput {
    } | null;
    attachments?: JiraAttachmentRef[];
    createdAt?: Date;
+   githubIssueNumber?: number | null;
+   githubIssueUrl?: string | null;
 }
 
 export interface JiraIssueOptions {
    projectKey: string;
    baseLabels: string[];
    assigneeAccountId?: string | null;
+   inferredTags?: string[];
 }
 
 export interface JiraIssueFields {
@@ -96,9 +99,13 @@ function formatReporter(reporter: JiraIssueInput["reporter"]): string {
 }
 
 export function formatJiraSummary(
-   input: Pick<JiraIssueInput, "feedbackNumber" | "title">
+   input: Pick<JiraIssueInput, "feedbackNumber" | "title" | "githubIssueNumber">
 ): string {
-   const prefix = `[${formatFeedbackCode(input.feedbackNumber)}] `;
+   const ghPrefix = input.githubIssueNumber
+      ? `[GH-#${input.githubIssueNumber}] `
+      : "";
+   const fbPrefix = `[${formatFeedbackCode(input.feedbackNumber)}] `;
+   const prefix = `${ghPrefix}${fbPrefix}`;
    const available = JIRA_SUMMARY_MAX - prefix.length;
    const title = clean(input.title);
 
@@ -112,7 +119,19 @@ export function formatJiraSummary(
 /** Builds an Atlassian Document Format description for Jira Cloud v3. */
 export function buildJiraDescriptionAdf(input: JiraIssueInput): AdfDoc {
    const code = formatFeedbackCode(input.feedbackNumber);
-   const content: AdfNode[] = [
+   const content: AdfNode[] = [];
+
+   if (input.githubIssueUrl) {
+      content.push(
+         paragraph([
+            textNode("Original GitHub Issue: "),
+            linkText(input.githubIssueUrl, input.githubIssueUrl),
+         ]),
+         { type: "rule" }
+      );
+   }
+
+   content.push(
       paragraph([textNode(`${JIRA_FEEDBACK_MARKER_PREFIX}:${code}`)]),
       paragraph([
          textNode(
@@ -122,8 +141,8 @@ export function buildJiraDescriptionAdf(input: JiraIssueInput): AdfDoc {
          ),
       ]),
       paragraph([textNode(`Page: ${clean(input.url) || "/"}`)]),
-      paragraph([textNode(`Reported by: ${formatReporter(input.reporter)}`)]),
-   ];
+      paragraph([textNode(`Reported by: ${formatReporter(input.reporter)}`)])
+   );
 
    if (input.logrocketSessionId) {
       content.push(
@@ -187,11 +206,78 @@ export function buildJiraDescriptionAdf(input: JiraIssueInput): AdfDoc {
    return { type: "doc", version: 1, content };
 }
 
+/**
+ * Infers layer and module tags from the page URL and feedback content
+ * adhering to the project's standard Jira label taxonomy.
+ */
+export function inferFeedbackTags(
+   url: string,
+   title?: string,
+   description?: string
+): string[] {
+   const tags = new Set<string>();
+   const cleanUrl = (url || "/").toLowerCase().trim();
+   const text = `${title || ""} ${description || ""}`.toLowerCase();
+
+   const isAdmin = cleanUrl.startsWith("/admin");
+   if (isAdmin) {
+      tags.add("admin");
+      if (cleanUrl.includes("challenge")) {
+         tags.add("challenges");
+      } else if (cleanUrl.includes("user")) {
+         tags.add("profile");
+      }
+   } else {
+      tags.add("frontend");
+      if (cleanUrl.includes("/challenge")) {
+         tags.add("challenges");
+      } else if (cleanUrl.includes("/profile")) {
+         tags.add("profile");
+      } else if (cleanUrl.includes("/pokemon") || cleanUrl.includes("/shop")) {
+         tags.add("economy");
+      } else if (cleanUrl.includes("/ypt") || cleanUrl.includes("/settings")) {
+         tags.add("ypt");
+      } else if (cleanUrl.includes("/wrapped")) {
+         tags.add("wrapped");
+      } else if (cleanUrl === "/" || cleanUrl.startsWith("/dashboard")) {
+         tags.add("dashboard");
+      }
+   }
+
+   if (/\b(todo|todos|task|tasks|checklist)\b/.test(text)) {
+      tags.add("study-logs");
+   }
+   if (/\b(study\s*log|hours?|timer|deficit)\b/.test(text)) {
+      tags.add("study-logs");
+   }
+   if (/\b(challenge|standings|leaderboard)\b/.test(text)) {
+      tags.add("challenges");
+   }
+   if (/\b(profile|avatar|pfp|friend)\b/.test(text)) {
+      tags.add("profile");
+   }
+   if (/\b(ypt|yeolpumta)\b/.test(text)) {
+      tags.add("ypt");
+   }
+   if (/\b(jira|github|ticket)\b/.test(text)) {
+      tags.add("jira-sync");
+   }
+   if (/\b(coin|coins|wallet|pokemon|gacha|shop)\b/.test(text)) {
+      tags.add("economy");
+   }
+   if (/\b(auth|login|discord\s*oauth|session)\b/.test(text)) {
+      tags.add("auth");
+   }
+
+   return Array.from(tags);
+}
+
 export function normalizeJiraLabels(
    baseLabels: string[],
-   type: FeedbackType
+   type: FeedbackType,
+   inferredTags: string[] = []
 ): string[] {
-   const labels = baseLabels
+   const labels = [...baseLabels, ...inferredTags]
       .map((label) => label.trim().replace(/\s+/g, "-"))
       .filter(Boolean);
 
@@ -204,13 +290,16 @@ export function buildJiraIssueFields(
    options: JiraIssueOptions
 ): JiraIssueFields {
    const assigneeAccountId = options.assigneeAccountId?.trim();
+   const inferredTags =
+      options.inferredTags ??
+      inferFeedbackTags(input.url, input.title, input.description);
 
    return {
       project: { key: options.projectKey },
       issuetype: { name: input.type === "bug" ? "Task" : "Story" },
       summary: formatJiraSummary(input),
       description: buildJiraDescriptionAdf(input),
-      labels: normalizeJiraLabels(options.baseLabels, input.type),
+      labels: normalizeJiraLabels(options.baseLabels, input.type, inferredTags),
       ...(assigneeAccountId
          ? { assignee: { accountId: assigneeAccountId } }
          : {}),

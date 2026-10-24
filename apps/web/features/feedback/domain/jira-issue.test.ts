@@ -6,6 +6,7 @@ import {
    buildJiraDescriptionAdf,
    buildJiraIssueFields,
    formatJiraSummary,
+   inferFeedbackTags,
    normalizeJiraLabels,
    type AdfNode,
 } from "./jira-issue";
@@ -67,6 +68,27 @@ describe("formatJiraSummary", () => {
       );
    });
 
+   it("prefixes both GitHub issue number and feedback code when available", () => {
+      expect(
+         formatJiraSummary({
+            ...baseInput,
+            githubIssueNumber: 167,
+         })
+      ).toBe("[GH-#167] [FB-42] Submit button unresponsive");
+   });
+
+   it("truncates long summaries with GitHub issue number intact", () => {
+      const summary = formatJiraSummary({
+         ...baseInput,
+         githubIssueNumber: 167,
+         title: "a".repeat(400),
+      });
+
+      expect(summary.length).toBe(JIRA_SUMMARY_MAX);
+      expect(summary.startsWith("[GH-#167] [FB-42] ")).toBe(true);
+      expect(summary.endsWith("…")).toBe(true);
+   });
+
    it("truncates long summaries to 255 characters", () => {
       const summary = formatJiraSummary({
          ...baseInput,
@@ -118,6 +140,34 @@ describe("buildJiraDescriptionAdf", () => {
          "Submitted via HoldMeToIt feedback (FB-42) on 2026-10-19T12:00:00.000Z."
       );
       expect(findNodes(doc, "heading")).toHaveLength(1);
+   });
+
+   it("prepends GitHub issue link and horizontal rule when provided", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         githubIssueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+      });
+
+      expect(doc.content[0]).toEqual({
+         type: "paragraph",
+         content: [
+            { type: "text", text: "Original GitHub Issue: " },
+            {
+               type: "text",
+               text: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+               marks: [
+                  {
+                     type: "link",
+                     attrs: {
+                        href: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+                     },
+                  },
+               ],
+            },
+         ],
+      });
+      expect(doc.content[1]).toEqual({ type: "rule" });
+      expect(allText(doc)).toContain(`${JIRA_FEEDBACK_MARKER_PREFIX}:FB-42`);
    });
 
    it("labels enhancement suggestions", () => {
@@ -220,6 +270,24 @@ describe("buildJiraDescriptionAdf", () => {
    });
 });
 
+describe("inferFeedbackTags", () => {
+   it("infers admin and module for admin paths", () => {
+      expect(
+         inferFeedbackTags("/admin/challenges/new", "broken save", "button")
+      ).toEqual(["admin", "challenges"]);
+   });
+
+   it("infers frontend, dashboard and contextual keywords", () => {
+      expect(
+         inferFeedbackTags("/", "add todo modal closes", "cannot add task")
+      ).toEqual(["frontend", "dashboard", "study-logs"]);
+
+      expect(
+         inferFeedbackTags("/", "jira ticket format", "github link")
+      ).toEqual(["frontend", "dashboard", "jira-sync"]);
+   });
+});
+
 describe("normalizeJiraLabels", () => {
    it("sanitizes, de-duplicates and appends the type label", () => {
       expect(
@@ -234,7 +302,7 @@ describe("normalizeJiraLabels", () => {
 });
 
 describe("buildJiraIssueFields", () => {
-   it("maps bugs to Task and suggestions to Story", () => {
+   it("maps bugs to Task and suggestions to Story with inferred tags", () => {
       const bug = buildJiraIssueFields(baseInput, {
          projectKey: "HMT",
          baseLabels: ["holdmetoit", "feedback"],
@@ -242,7 +310,13 @@ describe("buildJiraIssueFields", () => {
 
       expect(bug.project).toEqual({ key: "HMT" });
       expect(bug.issuetype).toEqual({ name: "Task" });
-      expect(bug.labels).toEqual(["holdmetoit", "feedback", "bug"]);
+      expect(bug.labels).toEqual([
+         "holdmetoit",
+         "feedback",
+         "frontend",
+         "challenges",
+         "bug",
+      ]);
       expect(bug.assignee).toBeUndefined();
 
       const suggestion = buildJiraIssueFields(
@@ -253,6 +327,8 @@ describe("buildJiraIssueFields", () => {
       expect(suggestion.labels).toEqual([
          "holdmetoit",
          "feedback",
+         "frontend",
+         "challenges",
          "enhancement",
       ]);
    });
