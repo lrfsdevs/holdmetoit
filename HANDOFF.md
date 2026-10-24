@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-23 (Session 150 — Nightly database backups inside ypt-bot on `afnan-jr`)
+> **Last Updated:** 2026-10-23 (Session 152 — Nightly database backups inside ypt-bot on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,55 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 151 — 2026-10-23 (Feat & Fix: Long Task Description Expand & Shrink in Daily/Weekly Task Board; PR #171 to dev)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Address user feedback regarding clamped long task descriptions in Daily and Weekly Todos: enable inline expand/collapse ("Show more" / "Show less") and native hover tooltips, resolve defect where clicking "Show less" failed to shrink back to the 2-line clamped state, and submit PR to `dev`.
+- **Root Cause & Fix:**
+   - **CSS Conflict:** The text span previously had `block` alongside `line-clamp-2`. In Tailwind CSS v4, `.block` (`display: block`) is declared after `.line-clamp-2` (`display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;`), so `display: block` overrode `-webkit-box`. Since `-webkit-line-clamp` is inactive on standard `display: block`, the browser failed to re-clamp the text upon collapse.
+   - **Resolution:**
+      - Removed `block` from the task text span in both Daily and Weekly task lists.
+      - Applied explicit `line-clamp-none` when expanded and `line-clamp-2` when collapsed.
+      - Enforced `e.preventDefault()` alongside `e.stopPropagation()` on both the `toggleTaskExpand` handler and button elements to isolate the expand/shrink action completely from row completion checkbox handlers.
+- **Issue Lifecycle Policy & Rule Addition (AGENTS.md §4.4):**
+   - Established strict 3-stage lifecycle progression: `To Do` -> `In Progress` (on branch checkout/start) -> `In Review` (on PR submission to `dev`) -> `Done` (ONLY after `dev` is merged into `main` via release PR).
+   - Direct transitions from `In Progress` or `To Do` to `Done` are strictly prohibited.
+   - Jira ticket **[KAN-38]** transitioned to **`In Review`**.
+   - GitHub Issue **[#147]** linked in **PR #171** (`krish` -> `dev`) and kept `open` in review.
+- **Code & Test Fixes:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Removed `block`, wired `line-clamp-none` / `line-clamp-2`, added `cursor-pointer` and `e.preventDefault()`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: Added interactive unit tests with `@testing-library/react` and jsdom verifying initial `line-clamp-2`, expand to `line-clamp-none`, shrink back to `line-clamp-2`, and zero checkbox completion side-effects.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: ✅ 2/2 tests passed.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: ✅ 21/21 tests passed.
+   - Full test suite: ✅ 187/187 test files passed, 1769/1769 tests passed.
+   - Remote PR: Created PR #171 (`krish` -> `dev`).
+
+### Session 150 — 2026-10-23 (Fix GH-147 / KAN-38 / FB-17: Fix Add/Edit Todo modal dismiss on input text overflow & Right Arrow caret scroll)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Resolve GH-147 [FB-17] / KAN-38: "Add todo modal closes when text is too long or arrow event is triggered on the right most side".
+- **Root Cause:**
+   1. In `apps/web/components/ui/context-menu.tsx`, `ContextMenuContent` registered capturing window listeners (`window.addEventListener("scroll", ..., { capture: true })`) on mount.
+   2. Because every task and category in the cockpit task board rendered `<ContextMenuContent>`, capturing scroll handlers were persistently listening on `window` even when all context menus were closed (`innerRef.current === null`).
+   3. When typing long text in `<Input>` or navigating caret with `ArrowRight` to the rightmost boundary, native horizontal scrolling inside the input field fired DOM `"scroll"` events.
+   4. The capturing listener intercepted the input's scroll event, found `node` did not contain the input, and dispatched `document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`.
+   5. Radix UI `DialogContent` caught the synthetic `Escape` event on `document` and closed the modal, discarding the user's task input.
+- **Code & Test Fixes:**
+   - In `apps/web/components/ui/context-menu.tsx`:
+      - Guarded `handleScroll` and `handleResize` with `mountedNode`: listeners are only bound when the context menu is open and mounted, and unbind on close.
+      - Added `data-state === "open"` guard and explicit form field exclusions (`INPUT`, `TEXTAREA`, `SELECT`, `isContentEditable`).
+      - Eliminated `document.dispatchEvent(Escape)`: Escape is now only dispatched directly to `mountedNode`.
+   - In `apps/web/components/ui/input.tsx`:
+      - Added `onScroll={(e) => { e.stopPropagation(); onScroll?.(e); }}` to isolate native input caret scrolling.
+   - Tests:
+      - Added unit tests in `apps/web/components/ui/context-menu.test.tsx` verifying scroll resilience on closed menus and input fields.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exit 0).
+   - `npm run test:web`: ✅ 186 test files passed (1,766/1,766 tests green).
+   - `npm run build:web`: ✅ Production build succeeded (17 routes + Edge Middleware compiled cleanly).
 
 ### Session 146 — 2026-10-22 (Fix GH-166 / FB-19: Offline IndexedDB sync resilience, periodic polling & bi-directional reconciliation)
 
