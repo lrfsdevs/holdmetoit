@@ -16,10 +16,10 @@ describe("meetsMinResolution", () => {
    });
 
    it("rejects images below the minimum on either side", () => {
-      expect(meetsMinResolution({ width: 1499, height: 900 }, banner)).toBe(
+      expect(meetsMinResolution({ width: 999, height: 900 }, banner)).toBe(
          false
       );
-      expect(meetsMinResolution({ width: 3000, height: 299 }, banner)).toBe(
+      expect(meetsMinResolution({ width: 3000, height: 199 }, banner)).toBe(
          false
       );
    });
