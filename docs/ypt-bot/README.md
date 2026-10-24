@@ -4,9 +4,9 @@ A Node.js service for ingesting YPT (Yeolpumta) study group analytics into HoldM
 
 ## Features
 
-- **CLI Interactive Authentication**: Prompts for your YPT account email and password when started.
-- **Joined Groups Discovery**: Fetches all groups the account belongs to (`/group/groups/v2`) and displays them in a structured table.
-- **Unified Single-Grid Member Leaderboard**: Automatically consolidates all members across all joined groups/channels into a single unified grid, deduplicating members who belong to multiple groups while preserving their highest study times, live status, and group memberships.
+- **Single Entry Point**: `npm start` runs the health endpoint, the study-log ingestion loop, and the nightly database backup scheduler.
+- **Unified Single-Grid Member Leaderboard**: Automatically consolidates all members across the configured groups/channels into a single unified grid, deduplicating members who belong to multiple groups while preserving their highest study times, live status, and group memberships.
+- **Automatic Database Backups**: Nightly PostgreSQL dump at 00:00 UTC with boot-time catch-up.
 
 ---
 
@@ -18,24 +18,25 @@ A Node.js service for ingesting YPT (Yeolpumta) study group analytics into HoldM
 npm install
 ```
 
-### 2. Run the Server
+### 2. Configure the Environment
+
+Set the following in `apps/ypt-bot/.env` (or the deployment environment):
+
+```text
+YPT_EMAIL=your-dummy-account@example.com
+YPT_PASSWORD=yourpassword
+YPT_GROUP_IDS=6814572,7393477
+```
+
+Startup fails fast when any of these are missing.
+
+### 3. Run the Server
 
 ```bash
 npm start
 ```
 
-When prompted in the terminal, enter your YPT dummy account credentials:
-
-```text
-=============================================
-       YPT Analytics Server Login Setup
-=============================================
-
-Enter YPT Email: your-dummy-account@example.com
-Enter YPT Password: yourpassword
-```
-
-_(Optional: You can also pass `YPT_EMAIL` and `YPT_PASSWORD` as environment variables for headless/containerized execution)._
+This starts ingestion immediately, then repeats every `POLL_INTERVAL_IDLE_SEC` seconds (default `30`), and schedules the nightly backup.
 
 ---
 

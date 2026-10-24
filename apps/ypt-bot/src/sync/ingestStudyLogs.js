@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db.js";
 import { env } from "../config/env.js";
@@ -418,42 +416,4 @@ export async function runIngest() {
 
    run.info("Ingestion cycle completed.", { durationMs: Date.now() - start });
    return result;
-}
-
-// Auto-run when executed directly via CLI (daemon mode; interval from env)
-const isDirectExecution =
-   process.argv[1] &&
-   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isDirectExecution) {
-   const intervalSeconds = env.POLL_INTERVAL_IDLE_SEC;
-
-   logger.info("Ingest daemon started.", { intervalSeconds });
-
-   // If deployed on Render Web Service (which requires an open HTTP port)
-   if (process.env.PORT) {
-      import("node:http").then(({ createServer }) => {
-         const port = Number(process.env.PORT) || 3000;
-         const server = createServer((req, res) => {
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(
-               JSON.stringify({
-                  status: "ok",
-                  service: "ingest-watch",
-                  intervalSeconds,
-               })
-            );
-         });
-         server.listen(port, "0.0.0.0", () => {
-            logger.info("Health server listening (Render compatible).", {
-               host: "0.0.0.0",
-               port,
-            });
-         });
-      });
-   }
-
-   runIngest().catch((e) => logger.error("Ingest error", e));
-   setInterval(() => {
-      runIngest().catch((e) => logger.error("Ingest error", e));
-   }, intervalSeconds * 1000);
 }

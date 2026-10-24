@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 153 — ypt-bot HTTP surface reduced to a single health route on `afnan-jr`)
+> **Last Updated:** 2026-10-24 (Session 154 — ypt-bot consolidated onto `npm start` on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,18 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
+
+- **Scope:** Three competing entry points (`ingest`, `challenge_sync`, `backup`) duplicated the server's ingestion loop, auth handling, and health server.
+- **`npm start` now owns:** env validation, `GET /health`, the `runIngest()` loop on `POLL_INTERVAL_IDLE_SEC` (in-flight guarded), and `startDailyBackupScheduler()`.
+- **Removed scripts:** `ingest`, `challenge_sync`, `backup` from `@holdmetoit/ypt-bot`; `backup:db` from the root. Only `start` / `build` / `test` remain.
+- **Deleted:** `src/sync/challenge_sync.js` and `test/challenge-sync.test.js` (historical phase re-upserted the same table; live phase duplicated ingest).
+- **Removed CLI blocks:** `isDirectExecution` daemon in `ingestStudyLogs.js` (plus its duplicate health server) and auto-run in `databaseBackup.js`.
+- **Dead code:** `getJoinedGroups()` removed from `yptService.js`.
+- **Behavior:** credentials are env-only (no TTY prompt), ingestion is 30s by default, only `YPT_GROUP_IDS` is scraped, and manual `npm run backup` is gone (boot catch-up covers misses).
+- **Docs:** `docs/ypt-bot/doc.md`, `docs/ypt-bot/README.md`, `docs/database-backups/README.md`, `docs/ypt-bot/HANDOFF.md`.
+- **NEXT STEP:** none.
 
 ### Session 153 — 2026-10-24 (ypt-bot: remove Express API, keep `node:http` health route on `afnan-jr`)
 

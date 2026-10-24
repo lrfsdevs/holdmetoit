@@ -1,5 +1,40 @@
 # HANDOFF
 
+## 2026-10-24 — `npm start` is the single runtime entry point
+
+### Context
+
+The bot had three competing runtime entry points (`ingest`, `challenge_sync`,
+`backup`) that duplicated the server's ingestion loop, auth handling, and health
+server. Requested change: make `npm start` the single source of truth.
+
+### What changed
+
+- **`src/server.js`**: now owns env validation, the health endpoint, the ingestion
+  loop, and the backup scheduler. It calls `runIngest()` every
+  `POLL_INTERVAL_IDLE_SEC` (default 30s) with an in-flight guard; it no longer
+  prompts for credentials, scrapes all joined groups, or runs its own 5-minute
+  loop.
+- **Removed entry points**: `npm run ingest`, `npm run challenge_sync`,
+  `npm run backup`, and the `backup:db` root script. Modules no longer have
+  `isDirectExecution` CLI blocks.
+- **`src/sync/challenge_sync.js` deleted** (plus `test/challenge-sync.test.js`):
+  its historical phase re-upserted the same `DailyStudyLog` rows and its live
+  phase duplicated `runIngest()`.
+- **`src/yptService.js`**: removed `getJoinedGroups` (only the old server used it).
+- **Behavior**: credentials must come from env; ingestion cadence is
+  `POLL_INTERVAL_IDLE_SEC`; only `YPT_GROUP_IDS` groups are scraped; missed
+  backups recover via the existing boot catch-up.
+
+### Verification
+
+- `npm run test -w @holdmetoit/ypt-bot` → green.
+- `node --check` on the changed modules.
+- No `isDirectExecution`, `challenge_sync`, `npm run ingest`, or
+  `REFRESH_INTERVAL_MINUTES` references remain outside historical handoff notes.
+
+---
+
 ## 2026-10-24 — Express removed; single `node:http` health route
 
 ### Context

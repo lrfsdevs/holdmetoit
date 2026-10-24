@@ -113,61 +113,6 @@ export async function splashLogin(token) {
 }
 
 /**
- * Retrieve all groups the authenticated account has joined
- * @param {string} token
- * @returns {Promise<Array<object>>}
- */
-export async function getJoinedGroups(token) {
-   const url = `${BASE_URL}/group/groups/v2`;
-   const response = await fetch(url, {
-      method: "GET",
-      headers: {
-         ...DEFAULT_HEADERS,
-         Authorization: `JWT ${token}`,
-      },
-   });
-
-   const data = await response.json();
-   if (!response.ok || data.s !== true) {
-      throw new Error(
-         `Failed to retrieve joined groups (HTTP ${response.status})`
-      );
-   }
-
-   const groupMap = new Map();
-   const listKeys = ["gs", "ms", "cs", "ps"];
-
-   for (const key of listKeys) {
-      const list = Array.isArray(data[key]) ? data[key] : [];
-      for (const raw of list) {
-         const id = raw.id || raw.gd || raw.groupID;
-         if (!id || groupMap.has(id)) continue;
-
-         const groupType =
-            key === "ms"
-               ? "Owner / Manager"
-               : key === "cs"
-                 ? "Cam Study"
-                 : "Member";
-
-         groupMap.set(id, {
-            id,
-            name: raw.t || raw.n || raw.title || "Untitled Group",
-            category: raw.c || raw.category || raw.ct || "General",
-            owner: raw.on || raw.leader || "Unknown",
-            role: groupType,
-            memberCount: raw.jc ?? raw.membersCount ?? raw.personnel ?? 0,
-            maxCapacity: raw.mc ?? raw.maxCapacity ?? raw.maxPersonnel ?? 0,
-            isPrivate: Boolean(raw.ip ?? raw.p ?? false),
-            notice: (raw.sn || raw.notice || "").trim(),
-         });
-      }
-   }
-
-   return Array.from(groupMap.values());
-}
-
-/**
  * Fetch real-time study status and study times of all members in a group
  *
  * @param {string} token

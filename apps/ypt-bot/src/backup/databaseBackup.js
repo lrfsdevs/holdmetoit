@@ -1,8 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "../config/env.js";
@@ -717,20 +716,4 @@ export function startDailyBackupScheduler(options = {}) {
          if (catchUpTimer) clearTimeout(catchUpTimer);
       },
    };
-}
-
-// Auto-run when executed directly via CLI (manual, timestamped object name).
-const isDirectExecution =
-   process.argv[1] &&
-   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isDirectExecution) {
-   runDatabaseBackup({ manual: true })
-      .then((result) => {
-         logger.info("backup_run_finished", result);
-         process.exit(0);
-      })
-      .catch((error) => {
-         logger.error("backup_failed", { error: error.message });
-         process.exit(1);
-      });
 }

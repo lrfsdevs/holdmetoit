@@ -11,10 +11,7 @@
    "scripts": {
       "start": "node src/server.js",
       "build": "echo \"ypt-bot: no build step\"",
-      "test": "LOG_SILENT=true node --test",
-      "ingest": "node src/sync/ingestStudyLogs.js",
-      "challenge_sync": "node src/sync/challenge_sync.js",
-      "backup": "node src/backup/databaseBackup.js"
+      "test": "LOG_SILENT=true node --test"
    },
    "dependencies": {
       "@holdmetoit/database": "*",
