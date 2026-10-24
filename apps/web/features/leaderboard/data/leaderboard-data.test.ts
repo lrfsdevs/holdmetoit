@@ -254,7 +254,13 @@ describe("buildScoreboardViewModel", () => {
             {
                ...mockChallenge.participants[0],
                // Met target 35h: 126000s, all goals completed
-               dailyStudyLogs: [{ durationSeconds: 126_000 }],
+               dailyStudyLogs: [
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+               ],
             },
             {
                ...mockChallenge.participants[1],

@@ -57,24 +57,38 @@ ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 const ContextMenuContent = React.forwardRef<
    React.ElementRef<typeof ContextMenuPrimitive.Content>,
    React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({ className, ...props }, ref) => {
-   const innerRef = React.useRef<HTMLDivElement | null>(null);
+>(({ className, children, ...props }, ref) => {
+   const [mountedNode, setMountedNode] = React.useState<HTMLDivElement | null>(
+      null
+   );
 
    React.useEffect(() => {
+      if (!mountedNode) {
+         return;
+      }
+
       const handleScroll = (event: Event) => {
-         const node = innerRef.current;
-         if (node && event.target && node.contains(event.target as Node)) {
+         if (
+            !mountedNode.isConnected ||
+            mountedNode.getAttribute("data-state") !== "open"
+         ) {
+            return;
+         }
+         if (event.target && mountedNode.contains(event.target as Node)) {
+            return;
+         }
+         // Ignore native horizontal/vertical scroll inside form fields (inputs, textareas, selects)
+         if (
+            event.target instanceof HTMLElement &&
+            (event.target.tagName === "INPUT" ||
+               event.target.tagName === "TEXTAREA" ||
+               event.target.tagName === "SELECT" ||
+               event.target.isContentEditable)
+         ) {
             return;
          }
          // Dismiss context menu on external container or window scroll
-         innerRef.current?.dispatchEvent(
-            new KeyboardEvent("keydown", {
-               key: "Escape",
-               bubbles: true,
-               cancelable: true,
-            })
-         );
-         document.dispatchEvent(
+         mountedNode.dispatchEvent(
             new KeyboardEvent("keydown", {
                key: "Escape",
                bubbles: true,
@@ -84,15 +98,14 @@ const ContextMenuContent = React.forwardRef<
       };
 
       const handleResize = () => {
+         if (
+            !mountedNode.isConnected ||
+            mountedNode.getAttribute("data-state") !== "open"
+         ) {
+            return;
+         }
          // Dismiss context menu on window resize or resolution change
-         innerRef.current?.dispatchEvent(
-            new KeyboardEvent("keydown", {
-               key: "Escape",
-               bubbles: true,
-               cancelable: true,
-            })
-         );
-         document.dispatchEvent(
+         mountedNode.dispatchEvent(
             new KeyboardEvent("keydown", {
                key: "Escape",
                bubbles: true,
@@ -111,13 +124,13 @@ const ContextMenuContent = React.forwardRef<
          window.removeEventListener("scroll", handleScroll, { capture: true });
          window.removeEventListener("resize", handleResize);
       };
-   }, []);
+   }, [mountedNode]);
 
    return (
       <ContextMenuPrimitive.Portal>
          <ContextMenuPrimitive.Content
             ref={(node) => {
-               innerRef.current = node;
+               setMountedNode(node);
                if (typeof ref === "function") {
                   ref(node);
                } else if (ref) {

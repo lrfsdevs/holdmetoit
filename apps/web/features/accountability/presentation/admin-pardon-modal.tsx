@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useRouter } from "next/navigation";
 import {
    HeartHandshake,
@@ -166,18 +167,12 @@ export function AdminPardonModal({
             {/* Scholar Identity Card */}
             <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-surface-primary border border-border-default">
                <div className="h-11 w-11 rounded-full bg-surface-nested border border-border-strong overflow-hidden shrink-0 flex items-center justify-center">
-                  {participant.image ? (
-                     <Image
-                        src={participant.image}
-                        alt={participant.displayName}
-                        width={44}
-                        height={44}
-                        className="h-full w-full object-cover"
-                        unoptimized
-                     />
-                  ) : (
-                     <UserIcon className="h-5 w-5 text-text-tertiary" />
-                  )}
+                  <UserAvatar
+                     src={participant.image}
+                     name={participant.displayName}
+                     size="md"
+                     className="h-full w-full border-0"
+                  />
                </div>
 
                <div className="min-w-0 flex-1">

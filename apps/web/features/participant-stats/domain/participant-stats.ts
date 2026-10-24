@@ -1,4 +1,5 @@
 import {
+   capDailyStudySeconds,
    formatSecondsToClock,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
@@ -96,7 +97,7 @@ export function calculateParticipantDailyTimeline(
       };
       const durationSeconds = log.durationSeconds;
       if (!day.isFuture) {
-         cumulativeSeconds += durationSeconds;
+         cumulativeSeconds += capDailyStudySeconds(durationSeconds);
       }
 
       history.push({

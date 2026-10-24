@@ -485,6 +485,47 @@ describe("POST /api/feedback", () => {
       );
    });
 
+   it("passes created GitHub issue number and URL into Jira dispatch", async () => {
+      vi.mocked(feedbackRepo.createFeedbackRecord).mockResolvedValue(
+         baseFeedback as any
+      );
+      vi.mocked(discordService.sendFeedbackToDiscord).mockResolvedValue({
+         success: true,
+         messageId: "msg_999",
+         channelId: "chan_888",
+      });
+      createGitHubIssue.mockResolvedValue({
+         status: "created",
+         issueNumber: 167,
+         issueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+      });
+      createJiraIssue.mockResolvedValue({
+         status: "created",
+         issueKey: "KAN-53",
+         issueUrl: "https://example.atlassian.net/browse/KAN-53",
+      });
+
+      const res = await POST(
+         createRequest({
+            type: "enhancement",
+            title: "Proper issue tags and github link",
+            description:
+               "Jira tickets should link to github issues and have tags",
+            url: "https://holdmetoit.com/",
+         })
+      );
+
+      expect(res.status).toBe(201);
+      expect(createJiraIssue).toHaveBeenCalledWith(
+         expect.objectContaining({
+            feedbackNumber: 42,
+            type: "enhancement",
+            githubIssueNumber: 167,
+            githubIssueUrl: "https://github.com/lrfsdevs/holdmetoit/issues/167",
+         })
+      );
+   });
+
    it("records SKIPPED when Jira issue sync is disabled", async () => {
       vi.mocked(feedbackRepo.createFeedbackRecord).mockResolvedValue(
          baseFeedback as any

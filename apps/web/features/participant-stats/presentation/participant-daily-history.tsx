@@ -1,4 +1,5 @@
 import { Calendar, Clock, AlertCircle } from "lucide-react";
+import { MAX_COUNTED_DAILY_STUDY_SECONDS } from "@/features/study-logs/domain/duration";
 import type { ParticipantDailyHistoryEntry } from "../domain/participant-stats.types";
 
 interface ParticipantDailyHistoryProps {
@@ -96,6 +97,12 @@ export function ParticipantDailyHistory({
                               >
                                  {day.durationClock}
                               </span>
+                              {day.durationSeconds >
+                                 MAX_COUNTED_DAILY_STUDY_SECONDS && (
+                                 <span className="ml-1.5 px-1.5 py-0.5 rounded text-label font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                    14h counted
+                                 </span>
+                              )}
                               <span className="text-meta text-text-tertiary ml-1">
                                  {day.isLeave
                                     ? "(Leave Day)"
@@ -205,6 +212,12 @@ export function ParticipantDailyHistory({
                                     >
                                        {day.durationClock}
                                     </span>
+                                    {day.durationSeconds >
+                                       MAX_COUNTED_DAILY_STUDY_SECONDS && (
+                                       <span className="px-1.5 py-0.5 rounded text-label font-semibold bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                          14h counted
+                                       </span>
+                                    )}
                                     <span className="text-meta text-text-tertiary">
                                        {day.isLeave
                                           ? "(Leave)"

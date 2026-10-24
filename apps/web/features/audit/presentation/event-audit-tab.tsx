@@ -8,6 +8,7 @@ import {
    useTransition,
 } from "react";
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
    Calendar,
    ChevronDown,
@@ -432,28 +433,15 @@ export function EventAuditTab({
                                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
                                     {/* Admin Avatar */}
                                     <div className="relative shrink-0">
-                                       {log.actorImage ? (
-                                          <Image
-                                             src={log.actorImage}
-                                             alt={
-                                                log.actorDisplayName ||
-                                                log.actorUsername
-                                             }
-                                             width={40}
-                                             height={40}
-                                             className="h-10 w-10 rounded-full border border-border-strong object-cover"
-                                          />
-                                       ) : (
-                                          <div className="h-10 w-10 rounded-full border border-border-strong bg-accent-bg text-accent-text flex items-center justify-center font-bold text-sm">
-                                             {(
-                                                log.actorDisplayName ||
-                                                log.actorUsername ||
-                                                "A"
-                                             )
-                                                .slice(0, 1)
-                                                .toUpperCase()}
-                                          </div>
-                                       )}
+                                       <UserAvatar
+                                          src={log.actorImage}
+                                          name={
+                                             log.actorDisplayName ||
+                                             log.actorUsername
+                                          }
+                                          size="md"
+                                          className="h-10 w-10 rounded-full border border-border-strong"
+                                       />
                                     </div>
 
                                     {/* Main Description */}

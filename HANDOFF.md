@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-22 (Session 149 — Withdrawn users can re-enroll on `afnan-jr`)
+> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 166 files green (1516/1516 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 187 files green (1777/1777 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -175,6 +175,160 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 155 — 2026-10-24 (ypt-bot: layered file structure on `afnan-jr`)
+
+- **Moves:** `db.js` → `db/client.js`, `challengeService.js` → `challenge-repository.js`, `yptService.js` → `ypt/client.js`, `ingestStudyLogs.js` → `ingest/run-ingest.js`, `databaseBackup.js` → `backup/runner.js`, `logger.js` → `lib/logger.js`.
+- **Splits:** `ypt/session.js` (token cache), `ingest/{daily-study-log,date-buckets}.js`, `backup/{config,retention,scheduler}.js`, `http/health-server.js`.
+- **Tests:** moved into `test/{ypt,db,ingest,backup,lib}`; backup tests split into config/retention/runner/scheduler (scheduler coverage added).
+- **Docs:** `docs/ypt-bot/doc.md` tree and `docs/database-backups/README.md` file table updated.
+- **Handoff:** deleted `docs/ypt-bot/HANDOFF.md`; this root `HANDOFF.md` is the single relay document.
+- **Behavior:** unchanged; no DB or dependency changes.
+- **NEXT STEP:** none (no commit made — pending manual testing).
+
+### Session 155 — 2026-10-24 (Feat: Standardize Jira Issue Creation & GitHub Link for In-App Feedback; GH-167, KAN-53 on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #167 / Jira KAN-53. Standardize Jira ticket creation when bug reports and enhancement suggestions are submitted from the app to match the project's Jira format (`jira-overhaul-update.csv`), prepend GitHub issue link and horizontal rule to description, attach native Jira Remote Web Links, and apply automated layer and module tags.
+- **Implementation Slices:**
+   1. **Domain Models & Formatting Logic (`Law L7`):**
+      - In `apps/web/features/feedback/domain/jira-issue.ts`:
+         - Updated `formatJiraSummary`: formats summary with prefix `[GH-#<number>] [FB-<codeNumber>] <Title>` when GitHub issue is present, gracefully falling back to `[FB-<codeNumber>] <Title>` within Jira's 255-character limit.
+         - Updated `buildJiraDescriptionAdf`: prepends `Original GitHub Issue: <url>` link followed by an ADF `{ type: "rule" }` horizontal divider node.
+         - Added `inferFeedbackTags(url, title, description)`: intelligently derives layer tags (`admin`, `frontend`) and module tags (`challenges`, `profile`, `study-logs`, `economy`, `ypt`, `wrapped`, `jira-sync`, `auth`) matching the project's standard Jira label taxonomy.
+         - Updated `normalizeJiraLabels` and `buildJiraIssueFields` to combine base labels, inferred tags, and type tags (`bug` / `enhancement`).
+   2. **Service Layer & Jira Remote Web Link:**
+      - In `apps/web/features/feedback/data/jira-issue.service.ts`:
+         - Added `postRemoteLink` calling Jira Cloud REST API `POST /rest/api/3/issue/{issueKey}/remotelink` to attach the GitHub issue into Jira's native "Web Links" widget with the official GitHub icon and `GitHub Issue #<number>` title.
+         - Preserved fail-soft error handling: remote link failures never block or fail Jira ticket creation.
+         - Hardened response validation to check `res.ok`, logging non-2xx HTTP statuses, network errors, and timeouts with issue key context.
+   3. **Route Dispatch Orchestration & Deployment Timeout:**
+      - In `apps/web/app/api/feedback/route.ts`:
+         - Re-sequenced side effects: Discord dispatch runs non-blocking in parallel; GitHub issue creation runs prior to Jira issue creation so created GitHub issue number and URL flow into Jira issue input.
+         - Configured `export const maxDuration = 30;` to ensure serverless function timeouts cover worst-case sequential GitHub retry, Jira creation, and remote-link dispatch.
+         - Maintained 100% fail-soft isolation: failures in GitHub or Jira do not affect user response or other side effects.
+   4. **Quality Gates & Unit Testing:**
+      - Comprehensive unit tests added in `jira-issue.test.ts`, `jira-issue.service.test.ts`, and `route.test.ts`.
+      - All 193 test files and 1,826 tests passing. Zero TypeScript errors (`tsc --noEmit`).
+- **Issue Lifecycle Policy (`AGENTS.md` §4.4):**
+   - GitHub Issue #167 and Jira Ticket KAN-53 assigned to Krish Jaiswal.
+   - Jira Ticket KAN-53 moved to `In Progress` (Stage 1), then transitioned to `In Review` (Stage 2) upon PR #181 creation.
+- **NEXT STEP:** Peer review and merge PR #181 from `krish` into `dev`.
+
+### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
+
+- **Scope:** Three competing entry points (`ingest`, `challenge_sync`, `backup`) duplicated the server's ingestion loop, auth handling, and health server.
+- **`npm start` now owns:** env validation, `GET /health`, the `runIngest()` loop on `POLL_INTERVAL_IDLE_SEC` (in-flight guarded), and `startDailyBackupScheduler()`.
+- **Removed scripts:** `ingest`, `challenge_sync`, `backup` from `@holdmetoit/ypt-bot`; `backup:db` from the root. Only `start` / `build` / `test` remain.
+- **Deleted:** `src/sync/challenge_sync.js` and `test/challenge-sync.test.js` (historical phase re-upserted the same table; live phase duplicated ingest).
+- **Removed CLI blocks:** `isDirectExecution` daemon in `ingestStudyLogs.js` (plus its duplicate health server) and auto-run in `databaseBackup.js`.
+- **Dead code:** `getJoinedGroups()` removed from `yptService.js`.
+- **Behavior:** credentials are env-only (no TTY prompt), ingestion is 30s by default, only `YPT_GROUP_IDS` is scraped, and manual `npm run backup` is gone (boot catch-up covers misses).
+- **Docs:** `docs/ypt-bot/doc.md`, `docs/ypt-bot/README.md`, `docs/database-backups/README.md`.
+- **NEXT STEP:** none.
+
+### Session 153 — 2026-10-24 (ypt-bot: remove Express API, keep `node:http` health route on `afnan-jr`)
+
+- **Scope:** The bot's unauthenticated Express API was unused and exposed sensitive telemetry (`/health` leaked the YPT account email; `/groups`, `/members`, `/groups/:groupId/members` exposed rosters; `POST /sync` triggered ingestion).
+- **Removed:** `GET /groups`, `GET /groups/:groupId`, `GET /groups/:groupId/members`, `GET /members`, `GET /groups/members`, `POST /sync`, `express.json()`, and the HTTP access-log middleware.
+- **Replaced:** Express app → `node:http` `createServer`; the only route is `GET /health` → `{ status: "ok", service: "ypt-bot", uptimeSeconds }`, with `404 {"error":"Not found"}` for everything else.
+- **Dead code:** `displayGroupMembers()` (`server.js`) and `searchJoinedGroups()` (`yptService.js`).
+- **Dependency:** `express` removed from `@holdmetoit/ypt-bot`; root lockfile regenerated.
+- **Unchanged:** CLI login, group discovery console output, initial ingest, 5-minute ingest scheduler, nightly backup scheduler, and all CLI scripts.
+- **Docs:** `docs/ypt-bot/README.md` and `docs/ypt-bot/doc.md` updated to the health-only surface.
+- **NEXT STEP:** none — no consumer existed; Render's `/health` probe path remains valid.
+
+### Session 152 — 2026-10-23 (Feat & Fix: 14h Daily Study Evaluation Cap & Time Input Bounds; GH-172, KAN-55 on `krish`)
+
+- **Agent Role:** Scoring & Engine Agent, Participant UI Agent, Data & Identity Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #172 / Jira KAN-55. Fix study time input fields to prevent out-of-bounds values (negative hours, $>24$h, $>59$m, $>59$s). Strictly enforce a 14:00:00 (50,400 seconds) daily evaluation cap across challenge scoring, leaderboard standings, dynamic deficit calculations, lock/punishment evaluations, and study coin rewards, while allowing users and hosts to log $>14$h in raw study history.
+- **Root Cause & Architectural Alignment:**
+   - Previous time input modals allowed arbitrary numeric entries into hours, minutes, and seconds fields, allowing overflow past 24:00:00 or out-of-bounds minute/second intervals.
+   - Challenge evaluations directly aggregated raw `DailyStudyLog.durationSeconds`, meaning an extreme study session (or single-day synthetic test fixture) could count beyond healthy limits and distort team standings and deficit paces.
+   - Per product requirement, participants should still be permitted to record their raw physical time (e.g. 16:00:00 from YPT) in their personal history, but all platform calculations must strictly cap daily counted time at 14 hours (`MAX_COUNTED_DAILY_STUDY_SECONDS = 50_400`).
+- **Implementation Slices:**
+   1. **Domain Isolation & Pure Math (`Law L7`):**
+      - In `apps/web/features/study-logs/domain/duration.ts`, exported `MAX_COUNTED_DAILY_STUDY_SECONDS = 50_400` and pure helper `capDailyStudySeconds(totalSeconds: number): number`.
+      - In `apps/web/features/leaderboard/domain/catch-up-presentation.ts`, updated `sumLoggedSeconds(logs)` to apply `capDailyStudySeconds(log.durationSeconds)` on each day's entry. Because `sumLoggedSeconds` is the single mathematical foundation (`Law L1`) consumed by leaderboard matchup standings, individual leaderboards, deficit calculations, and `evaluateLockOutcome` (`Law L6`), the 14h cap is automatically and consistently enforced across all challenge scoring.
+   2. **Participant Daily Hours Modal Input Bounds & Notice:**
+      - In `apps/web/features/study-logs/presentation/daily-hours-modal.tsx`:
+         - Clamped hours input strictly to `0..24`, minutes and seconds to `0..59` during keystrokes and paste.
+         - Validated total duration $\le 86,400$ seconds (24:00:00) on submission.
+         - Rendered informative health notice badge when entered duration $>14$h explaining that raw time will be preserved in history, but only 14:00:00 will count toward challenge standings and leaderboard scoring.
+         - Capped projected coin reward display to 1,400 coins/day maximum.
+   3. **Admin Hours Override Modal Input Bounds & Notice:**
+      - In `apps/web/features/study-logs/presentation/admin-hours-override-modal.tsx`:
+         - Clamped hours to `0..24`, minutes and seconds to `0..59`.
+         - Validated single-day 24:00:00 limit on submit.
+         - Rendered warning banner explaining that challenge rules strictly cap daily counting at 14h for any log $>14$h.
+   4. **Economy Daily Reward Cap:**
+      - In `apps/web/features/economy/api/study-reward.service.ts`:
+         - Capped `eligibleSeconds` using `capDailyStudySeconds(log.durationSeconds)` to ensure maximum daily study reward is 1,400 coins (100 coins/hr * 14h).
+   5. **Participant Statistics & History Differentiation:**
+      - In `apps/web/features/participant-stats/domain/participant-stats.ts`:
+         - `calculateParticipantDailyTimeline` accumulates `capDailyStudySeconds(durationSeconds)` into `cumulativeSeconds` while preserving raw duration in `durationSeconds`.
+      - In `apps/web/features/participant-stats/presentation/participant-daily-history.tsx` & `participant-progress-chart.tsx`:
+         - Added `14h counted` badge and tooltip whenever a daily log exceeds 14:00:00.
+   6. **E2E & Unit Test Fixtures Alignment:**
+      - Updated synthetic test fixtures in `solo-challenge-lifecycle.test.ts`, `leaderboard-data.test.ts`, and `challenge-admin.repository.test.ts` where multi-day commitments (e.g. 35h, 20h, 30h) were originally compressed into single mock log rows exceeding 14h.
+   7. **Database Connection Hardening against Pooler Latency:**
+      - In `packages/database/src/index.ts`, added `withConnectionTimeouts` to dynamically inject `connect_timeout=30` and `pool_timeout=30` into `DATABASE_URL` and `DIRECT_URL`.
+      - Resolved Prisma `P1001` timeout when establishing TLS/SCRAM negotiation against Supabase pooler on cold start.
+      - Updated `apps/web/.env.example` with hardened connection string documentation.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test:web`: ✅ 187/187 test files passed (1,777/1,777 tests green).
+   - Atomic commits: 6 discrete commits on branch `krish`.
+- **NEXT STEP:** Review PR #173, merge to `dev`, and verify staging.
+
+### Session 151 — 2026-10-23 (Feat & Fix: Long Task Description Expand & Shrink in Daily/Weekly Task Board; PR #171 to dev)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Address user feedback regarding clamped long task descriptions in Daily and Weekly Todos: enable inline expand/collapse ("Show more" / "Show less") and native hover tooltips, resolve defect where clicking "Show less" failed to shrink back to the 2-line clamped state, and submit PR to `dev`.
+- **Root Cause & Fix:**
+   - **CSS Conflict:** The text span previously had `block` alongside `line-clamp-2`. In Tailwind CSS v4, `.block` (`display: block`) is declared after `.line-clamp-2` (`display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;`), so `display: block` overrode `-webkit-box`. Since `-webkit-line-clamp` is inactive on standard `display: block`, the browser failed to re-clamp the text upon collapse.
+   - **Resolution:**
+      - Removed `block` from the task text span in both Daily and Weekly task lists.
+      - Applied explicit `line-clamp-none` when expanded and `line-clamp-2` when collapsed.
+      - Enforced `e.preventDefault()` alongside `e.stopPropagation()` on both the `toggleTaskExpand` handler and button elements to isolate the expand/shrink action completely from row completion checkbox handlers.
+- **Issue Lifecycle Policy & Rule Addition (AGENTS.md §4.4):**
+   - Established strict 3-stage lifecycle progression: `To Do` -> `In Progress` (on branch checkout/start) -> `In Review` (on PR submission to `dev`) -> `Done` (ONLY after `dev` is merged into `main` via release PR).
+   - Direct transitions from `In Progress` or `To Do` to `Done` are strictly prohibited.
+   - Jira ticket **[KAN-38]** and GitHub Issue **[#147]** closed (**`Done`** / **`closed`**).
+   - Going forward: new issues follow AGENTS.md §4.4 lifecycle (`To Do` -> `In Progress` -> `In Review` on PR -> `Done` on `dev` merge to `main`).
+- **Code & Test Fixes:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Removed `block`, wired `line-clamp-none` / `line-clamp-2`, added `cursor-pointer` and `e.preventDefault()`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: Added interactive unit tests with `@testing-library/react` and jsdom verifying initial `line-clamp-2`, expand to `line-clamp-none`, shrink back to `line-clamp-2`, and zero checkbox completion side-effects.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: ✅ 2/2 tests passed.
+   - `npm run test -w @holdmetoit/web features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: ✅ 21/21 tests passed.
+   - Full test suite: ✅ 187/187 test files passed, 1769/1769 tests passed.
+   - Remote PR: Created PR #171 (`krish` -> `dev`).
+
+### Session 150 — 2026-10-23 (Fix GH-147 / KAN-38 / FB-17: Fix Add/Edit Todo modal dismiss on input text overflow & Right Arrow caret scroll)
+
+- **Agent Role:** Participant UI Agent.
+- **Scope & Objectives:** Resolve GH-147 [FB-17] / KAN-38: "Add todo modal closes when text is too long or arrow event is triggered on the right most side".
+- **Root Cause:**
+   1. In `apps/web/components/ui/context-menu.tsx`, `ContextMenuContent` registered capturing window listeners (`window.addEventListener("scroll", ..., { capture: true })`) on mount.
+   2. Because every task and category in the cockpit task board rendered `<ContextMenuContent>`, capturing scroll handlers were persistently listening on `window` even when all context menus were closed (`innerRef.current === null`).
+   3. When typing long text in `<Input>` or navigating caret with `ArrowRight` to the rightmost boundary, native horizontal scrolling inside the input field fired DOM `"scroll"` events.
+   4. The capturing listener intercepted the input's scroll event, found `node` did not contain the input, and dispatched `document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`.
+   5. Radix UI `DialogContent` caught the synthetic `Escape` event on `document` and closed the modal, discarding the user's task input.
+- **Code & Test Fixes:**
+   - In `apps/web/components/ui/context-menu.tsx`:
+      - Guarded `handleScroll` and `handleResize` with `mountedNode`: listeners are only bound when the context menu is open and mounted, and unbind on close.
+      - Added `data-state === "open"` guard and explicit form field exclusions (`INPUT`, `TEXTAREA`, `SELECT`, `isContentEditable`).
+      - Eliminated `document.dispatchEvent(Escape)`: Escape is now only dispatched directly to `mountedNode`.
+   - In `apps/web/components/ui/input.tsx`:
+      - Added `onScroll={(e) => { e.stopPropagation(); onScroll?.(e); }}` to isolate native input caret scrolling.
+   - Tests:
+      - Added unit tests in `apps/web/components/ui/context-menu.test.tsx` verifying scroll resilience on closed menus and input fields.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exit 0).
+   - `npm run test:web`: ✅ 186 test files passed (1,766/1,766 tests green).
+   - `npm run build:web`: ✅ Production build succeeded (17 routes + Edge Middleware compiled cleanly).
 
 ### Session 146 — 2026-10-22 (Fix GH-166 / FB-19: Offline IndexedDB sync resilience, periodic polling & bi-directional reconciliation)
 
@@ -1082,7 +1236,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 141 — 2026-10-19 (Automatic GitHub Issue Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a GitHub issue alongside the Discord embed, using a repo-scoped **fine-grained PAT** via the REST Issues API. Enabled only when `GITHUB_TOKEN` + `GITHUB_REPO` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` now runs Discord and GitHub in parallel (`Promise.allSettled`) after the DB commit. Neither can fail the submission. Results are persisted as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord and GitHub in parallel (`Promise.allSettled`). In Session 155, GitHub issue creation runs prior to Jira issue creation so created GitHub issue metadata links into Jira. Results persist as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
 - **Issue content:** `[FB-N] title`, hidden `<!-- holdmetoit-feedback:FB-N -->` marker, type/page/reporter/LogRocket, description, and attachments (images as inline markdown, videos as links). Labels default to `bug` / `enhancement`; a GitHub `422` triggers one retry without labels. 10s request timeout; no automatic retry after a failure.
 - **Domain/data:** pure `features/feedback/domain/github-issue.ts` (title/body builder, limits 256/65,536, label/assignee normalization) and fail-soft `features/feedback/data/github-issue.service.ts` (`createGitHubIssue`, config resolution, error mapping).
 - **Schema:** `20261019010000_add_feedback_github_issue` adds `GitHubDeliveryStatus` and the four `Feedback` columns + index.
@@ -1093,7 +1247,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 142 — 2026-10-19 (Automatic Jira Ticket Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a **Jira Cloud** issue alongside Discord and GitHub, using a server-side API token (Basic auth). Enabled only when `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` runs Discord, GitHub, and Jira in parallel (`Promise.allSettled`). None can fail the submission. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord, GitHub, and Jira in parallel (`Promise.allSettled`). In Session 155, Discord runs concurrently in parallel while GitHub runs prior to Jira so the Jira ticket links directly to the created GitHub issue and attaches native remote web links. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
 - **Mapping:** `bug → Task`, `enhancement → Story` (fixed). The target KAN project has no `Bug` issue type, so bugs use `Task` and remain distinguishable by the appended `bug` label. `JIRA_LABELS` defaults to `holdmetoit,feedback`; the type label is appended. Optional `JIRA_ASSIGNEE_ACCOUNT_ID`.
 - **Description:** Atlassian Document Format via a pure builder — plain-text marker `holdmetoit-feedback:FB-N`, type/page/reporter/LogRocket, description paragraphs, and attachment links (images and videos are links; Jira does not inline remote media).
 - **Domain/data:** `features/feedback/domain/jira-issue.ts` (summary 255, description text 30k, ADF helpers, labels) and fail-soft `features/feedback/data/jira-issue.service.ts` (config resolution, REST v3 POST, Jira `errors` extraction).
@@ -1228,3 +1382,27 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Audit:** new `PARTICIPANT_REENROLLED` event with the previous withdrawal snapshot + new enrollment values; ROSTER filter + success badge.
 - **Flag:** re-enrollment is not gated by `challenge_withdrawal_v1`.
 - **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 150 — 2026-10-23 (Nightly database backups inside ypt-bot on `afnan-jr`)
+
+- **Scope:** Added a self-hosted nightly PostgreSQL backup that runs inside the always-on ypt-bot service at **00:00 UTC**, uploading compressed dumps to a dedicated private Supabase bucket and pruning after 30 days.
+- **Runner:** `apps/ypt-bot/src/backup/databaseBackup.js` — preflight (`pg_dump`/`pg_restore`/server major + bucket), `pg_dump --format=custom --no-owner --no-privileges --schema=public`, empty-dump guard, `pg_restore --list` verification, upload, retention prune, structured winston logs, `PGPASSWORD`-only credentials.
+- **Scheduler:** `startDailyBackupScheduler()` starts in `server.js` after `app.listen`; self-rescheduling 00:00 UTC `setTimeout`, 24h catch-up on boot, `inFlight` guard, day-scoped object names for idempotency. Failures never crash the API/ingest loop.
+- **Config:** new keys in `src/config/env.js` (`DATABASE_BACKUP_*`, `SUPABASE_BACKUP_BUCKET`, `PG_*_BIN`). Manual runs use `npm run backup:db` (root) / `npm run backup -w @holdmetoit/ypt-bot`.
+- **Retention:** `DATABASE_BACKUP_RETENTION_DAYS` is clamped to a minimum of **1 day** in both env parsing and `selectExpiredObjects`; `0`/negative values behave exactly like `1`.
+- **Runtime:** added `apps/ypt-bot/Dockerfile` (Node 22 bookworm + `postgresql-client-17`) and root `.dockerignore`. **Render native ships only pg client 12–14, which cannot dump the PostgreSQL 15+ Supabase server — the service must switch to this Docker image.** Image built and validated locally (`pg_dump` 17.11 present, `.env` not baked in).
+- **Tests:** `apps/ypt-bot/test/database-backup.test.js` — 27 offline tests (date/schedule/retention helpers + runner happy path, skip, retention-0 minimum, empty dump, dump/verify/upload failures, duplicate upload, version mismatch, missing config). No DB/network required.
+- **Docs:** new `docs/database-backups/README.md` (scope, state machine, env, restore, security, lifecycle); `docs/ypt-bot/doc.md` updated with the env table, Docker runtime requirement, and backup section.
+- **Manual step (deferred):** create the private `holdmetoit-backups` bucket in Supabase, add the new env vars on Render, switch the service runtime to Docker, then run `npm run backup:db` once and perform a restore smoke test.
+- **NEXT STEP:** Provision the bucket + Render env/runtime, deploy, and verify the first scheduled run logs `backup_scheduled` for the next 00:00 UTC and stores `backups/holdmetoit-YYYY-MM-DD.dump`.
+
+### Session 153 — 2026-10-24 (Resilient Avatar & Stale Discord PFP Sync on `krish` — GH-#96 / KAN-14)
+
+- **Root Cause Resolved:** Discord avatar URLs use immutable content hashes that return 404 once updated on Discord. Stale URLs persisted in Prisma because `events.signIn` previously passed the existing `user.image` rather than parsing `profile.avatar`, `@auth/prisma-adapter` did not persist updated tokens on subsequent sign-ins, and Next.js / `<Image>` lacked `onError` fallbacks.
+- **Domain Logic:** Added `apps/web/features/auth/domain/discord-avatar.ts` (`getDiscordDefaultAvatarUrl`, `buildDiscordAvatarUrl`, `parseDiscordAvatarUrl`, `getInitials`) conforming to Law L7 with 100% test coverage.
+- **Data Service:** Added `apps/web/features/auth/data/discord-avatar.service.ts` to query Discord REST API v10 via user OAuth `/users/@me` (with automated token rotation and refresh) or Bot API, verified non-404 avatars via HEAD checks so healthy custom avatars are never overridden, and automatically healed dead hashes in Prisma (`syncUserAvatar`).
+- **OAuth SignIn Sync & Token Persistence:** Fixed `apps/web/core/auth/index.ts` so every login dynamically computes and synchronizes the latest Discord avatar hash and updates `prisma.account` with fresh `access_token` and `refresh_token`.
+- **API Endpoint & Security Hardening:** Added `POST /api/users/sync-avatar` with Zod validation, authenticated session enforcement (`auth()`), and `allowOAuth` security guard preventing cross-user token consumption (in-memory rate limiting removed for stateless Vercel serverless compatibility), with comprehensive tests in `apps/web/app/api/users/sync-avatar/route.test.ts` and `auth.actions.test.ts`.
+- **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives with seamless 404 fallback to embed avatars or initials, and added `RefreshAvatarButton` on participant profile headers with clear status feedback (`"Avatar updated!"`, `"Avatar is up to date!"`, or `"Session expired — please log in again to sync"`), without client-supplied user IDs.
+- **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
+- **Quality Gates:** 0 typecheck errors, 0 lint errors, 193/193 test files (1817 tests) passing. PR #179 submitted from `krish` -> `dev`.

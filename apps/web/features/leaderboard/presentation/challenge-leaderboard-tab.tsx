@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
 import {
    Search,
@@ -52,6 +53,7 @@ import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-ba
 import {
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
+   supportsTeamView,
    type LeaderboardViewMode,
 } from "../domain/leaderboard";
 
@@ -106,8 +108,13 @@ export function ChallengeLeaderboardTab({
    const [statusFilter, setStatusFilter] = useState<
       "ALL" | "on-track" | "catch-up"
    >("ALL");
-   const [viewMode, setViewMode] =
+   const teamViewEnabled = supportsTeamView(challenge.format);
+   const [requestedViewMode, setViewMode] =
       useState<LeaderboardViewMode>(initialViewMode);
+   const viewMode: LeaderboardViewMode =
+      requestedViewMode === "team" && !teamViewEnabled
+         ? "individual"
+         : requestedViewMode;
 
    useEffect(() => {
       if (initialViewMode) {
@@ -599,18 +606,20 @@ export function ChallengeLeaderboardTab({
                         <Clock className="h-3.5 w-3.5" />
                         <span>Today&apos;s LB</span>
                      </button>
-                     <button
-                        type="button"
-                        onClick={() => handleViewModeChange("team")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                           viewMode === "team"
-                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
-                              : "text-text-tertiary hover:text-white"
-                        }`}
-                     >
-                        <Users className="h-3.5 w-3.5" />
-                        <span>View by Team</span>
-                     </button>
+                     {teamViewEnabled && (
+                        <button
+                           type="button"
+                           onClick={() => handleViewModeChange("team")}
+                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                              viewMode === "team"
+                                 ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                                 : "text-text-tertiary hover:text-white"
+                           }`}
+                        >
+                           <Users className="h-3.5 w-3.5" />
+                           <span>View by Team</span>
+                        </button>
+                     )}
                   </div>
                </div>
 
@@ -902,22 +911,13 @@ export function ChallengeLeaderboardTab({
                                                    )}
                                                    className="h-8 w-8 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                                 >
-                                                   {entry.image ? (
-                                                      <Image
-                                                         src={entry.image}
-                                                         alt={entry.displayName}
-                                                         width={32}
-                                                         height={32}
-                                                         className="h-full w-full object-cover"
-                                                         unoptimized
-                                                      />
-                                                   ) : (
-                                                      <span className="font-bold text-white">
-                                                         {entry.displayName
-                                                            .charAt(0)
-                                                            .toUpperCase()}
-                                                      </span>
-                                                   )}
+                                                   <UserAvatar
+                                                      src={entry.image}
+                                                      name={entry.displayName}
+                                                      userId={entry.userId}
+                                                      size="sm"
+                                                      className="h-full w-full border-0"
+                                                   />
                                                 </Link>
 
                                                 {/* Name & Pace */}
@@ -1069,22 +1069,13 @@ export function ChallengeLeaderboardTab({
                                     )}
                                     className="h-9 w-9 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                  >
-                                    {entry.image ? (
-                                       <Image
-                                          src={entry.image}
-                                          alt={entry.displayName}
-                                          width={36}
-                                          height={36}
-                                          className="h-full w-full object-cover"
-                                          unoptimized
-                                       />
-                                    ) : (
-                                       <span className="font-bold text-white">
-                                          {entry.displayName
-                                             .charAt(0)
-                                             .toUpperCase()}
-                                       </span>
-                                    )}
+                                    <UserAvatar
+                                       src={entry.image}
+                                       name={entry.displayName}
+                                       userId={entry.userId}
+                                       size="sm"
+                                       className="h-full w-full border-0"
+                                    />
                                  </Link>
 
                                  {/* Participant Details: Name + Team Badge, @username */}
@@ -1239,22 +1230,13 @@ export function ChallengeLeaderboardTab({
                                              )}
                                              className="h-7 w-7 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center text-xs shrink-0 hover:border-feedback-success transition-colors"
                                           >
-                                             {entry.image ? (
-                                                <Image
-                                                   src={entry.image}
-                                                   alt={entry.displayName}
-                                                   width={28}
-                                                   height={28}
-                                                   className="object-cover"
-                                                   unoptimized
-                                                />
-                                             ) : (
-                                                <span>
-                                                   {entry.displayName
-                                                      .charAt(0)
-                                                      .toUpperCase()}
-                                                </span>
-                                             )}
+                                             <UserAvatar
+                                                src={entry.image}
+                                                name={entry.displayName}
+                                                userId={entry.userId}
+                                                size="sm"
+                                                className="h-full w-full border-0"
+                                             />
                                           </Link>
                                           <div>
                                              <div className="flex items-center gap-1.5 flex-wrap">

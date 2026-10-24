@@ -6,7 +6,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 /** Renders the shared styled text input while preserving native input props. */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-   ({ className, type, ...props }, ref) => {
+   ({ className, type, onScroll, ...props }, ref) => {
       return (
          <input
             type={type}
@@ -15,6 +15,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                className
             )}
             ref={ref}
+            onScroll={(e) => {
+               e.stopPropagation();
+               onScroll?.(e);
+            }}
             {...props}
          />
       );

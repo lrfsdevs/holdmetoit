@@ -7,7 +7,7 @@ import {
    cappedLiveStudyMs,
    MAX_CONTINUOUS_SESSION_SECONDS,
    MAX_CONTINUOUS_SESSION_MS,
-} from "../src/config/limits.js";
+} from "../../src/config/limits.js";
 
 describe("MAX_DAILY_STUDY_SECONDS", () => {
    test("is exactly 14 hours in seconds", () => {

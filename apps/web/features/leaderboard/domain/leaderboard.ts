@@ -176,3 +176,11 @@ export function resolveLeaderboardViewMode(
    if (value === "team") return "team";
    return "individual";
 }
+
+/**
+ * Solos are teams of one, so only 'SOLOS' returns false.
+ * Used to hide the team toggle and to fall back to "individual".
+ */
+export function supportsTeamView(format: string): boolean {
+   return format !== "SOLOS";
+}

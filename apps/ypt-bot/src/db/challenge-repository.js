@@ -1,6 +1,6 @@
-import { prisma } from "../db.js";
+import { prisma } from "./client.js";
 import { env } from "../config/env.js";
-import { logger } from "../logger.js";
+import { logger } from "../lib/logger.js";
 
 export const CHALLENGE_GRACE_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
 

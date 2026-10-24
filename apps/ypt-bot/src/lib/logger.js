@@ -1,5 +1,5 @@
 import winston from "winston";
-import { env } from "./config/env.js";
+import { env } from "../config/env.js";
 
 const isProd = env.NODE_ENV === "production";
 
