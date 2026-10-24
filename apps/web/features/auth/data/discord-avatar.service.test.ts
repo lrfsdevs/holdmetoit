@@ -104,10 +104,13 @@ describe("discord-avatar.service", () => {
    });
 
    describe("fetchDiscordUserAvatarViaOAuth", () => {
-      it("returns null if no account exists", async () => {
+      it("returns error and requiresReauth when no account exists", async () => {
          vi.mocked(prisma.account.findFirst).mockResolvedValue(null);
          const res = await fetchDiscordUserAvatarViaOAuth("user_none");
-         expect(res).toBeNull();
+         expect(res.success).toBe(false);
+         if (!res.success) {
+            expect(res.requiresReauth).toBe(true);
+         }
       });
 
       it("fetches profile using valid access token without re-login", async () => {
@@ -130,16 +133,20 @@ describe("discord-avatar.service", () => {
          });
 
          const res = await fetchDiscordUserAvatarViaOAuth("user_1");
-         expect(res?.avatarUrl).toBe(
-            "https://cdn.discordapp.com/avatars/617551062102048779/fresh_hash_oauth.png"
-         );
+         expect(res.success).toBe(true);
+         if (res.success) {
+            expect(res.avatarUrl).toBe(
+               "https://cdn.discordapp.com/avatars/617551062102048779/fresh_hash_oauth.png"
+            );
+         }
       });
    });
 
    describe("syncUserAvatar", () => {
       it("returns false if neither userId nor discordId is provided", async () => {
          const result = await syncUserAvatar({});
-         expect(result).toEqual({ success: false, newImageUrl: null });
+         expect(result.success).toBe(false);
+         expect(result.newImageUrl).toBeNull();
       });
 
       it("updates user avatar in DB when fresh avatar is fetched from Discord via Bot", async () => {
@@ -163,6 +170,7 @@ describe("discord-avatar.service", () => {
 
          const result = await syncUserAvatar({ userId: "user_1" });
          expect(result.success).toBe(true);
+         expect(result.updated).toBe(true);
          expect(result.newImageUrl).toBe(
             "https://cdn.discordapp.com/avatars/80351110224678912/fresh_hash_456.png"
          );
@@ -172,6 +180,34 @@ describe("discord-avatar.service", () => {
                image: "https://cdn.discordapp.com/avatars/80351110224678912/fresh_hash_456.png",
             },
          });
+      });
+
+      it("returns success without database write when avatar is already identical", async () => {
+         process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
+         const currentAvatar =
+            "https://cdn.discordapp.com/avatars/80351110224678912/current_hash.png";
+         vi.mocked(prisma.user.findFirst).mockResolvedValue({
+            id: "user_1",
+            discordId: "80351110224678912",
+            image: currentAvatar,
+         } as never);
+
+         global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+               id: "80351110224678912",
+               username: "testuser",
+               avatar: "current_hash",
+               discriminator: "0",
+            }),
+         });
+
+         const result = await syncUserAvatar({ userId: "user_1" });
+         expect(result.success).toBe(true);
+         expect(result.updated).toBe(false);
+         expect(result.message).toContain("up to date");
+         expect(prisma.user.update).not.toHaveBeenCalled();
       });
 
       it("heals dead avatar hash to default embed avatar if bot query and oauth are unavailable", async () => {
@@ -193,6 +229,31 @@ describe("discord-avatar.service", () => {
          expect(result.success).toBe(true);
          expect(result.newImageUrl).toContain("embed/avatars");
          expect(prisma.user.update).toHaveBeenCalled();
+      });
+
+      it("preserves healthy avatar and requests re-auth when tokens are expired", async () => {
+         delete process.env.DISCORD_BOT_TOKEN;
+         const healthyAvatar =
+            "https://cdn.discordapp.com/avatars/80351110224678912/healthy_hash.png";
+         vi.mocked(prisma.user.findFirst).mockResolvedValue({
+            id: "user_3",
+            discordId: "80351110224678912",
+            image: healthyAvatar,
+         } as never);
+
+         // HEAD request returns 200 OK (not 404)
+         global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+         });
+
+         const result = await syncUserAvatar({
+            userId: "user_3",
+         });
+         expect(result.success).toBe(false);
+         expect(result.requiresReauth).toBe(true);
+         expect(result.newImageUrl).toBe(healthyAvatar);
+         expect(prisma.user.update).not.toHaveBeenCalled();
       });
    });
 });

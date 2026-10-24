@@ -28,6 +28,9 @@ export function RefreshAvatarButton({
 }: RefreshAvatarButtonProps) {
    const [isPending, startTransition] = useTransition();
    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+   const [statusType, setStatusType] = useState<
+      "success" | "warning" | "error"
+   >("success");
    const router = useRouter();
 
    const handleSync = () => {
@@ -43,20 +46,37 @@ export function RefreshAvatarButton({
             const data = (await res.json().catch(() => ({}))) as {
                success?: boolean;
                newImageUrl?: string;
+               updated?: boolean;
+               message?: string;
                error?: string;
+               requiresReauth?: boolean;
             };
 
             if (res.ok && data.success && data.newImageUrl) {
-               setStatusMessage("Avatar updated!");
+               setStatusMessage(
+                  data.message ||
+                     (data.updated === false
+                        ? "Avatar is up to date!"
+                        : "Avatar updated!")
+               );
+               setStatusType("success");
                onSuccess?.(data.newImageUrl);
                router.refresh();
                setTimeout(() => setStatusMessage(null), 3000);
+            } else if (data.requiresReauth) {
+               setStatusMessage(
+                  data.error || "Session expired — please log in again to sync"
+               );
+               setStatusType("warning");
+               setTimeout(() => setStatusMessage(null), 5000);
             } else {
                setStatusMessage(data.error || "Failed to sync");
+               setStatusType("error");
                setTimeout(() => setStatusMessage(null), 4000);
             }
          } catch {
             setStatusMessage("Error syncing avatar");
+            setStatusType("error");
             setTimeout(() => setStatusMessage(null), 4000);
          }
       });
@@ -81,9 +101,11 @@ export function RefreshAvatarButton({
          {statusMessage && (
             <span
                className={`text-label font-medium ${
-                  statusMessage.includes("updated")
+                  statusType === "success"
                      ? "text-feedback-success"
-                     : "text-feedback-error"
+                     : statusType === "warning"
+                       ? "text-feedback-warning"
+                       : "text-feedback-error"
                }`}
             >
                {statusMessage}

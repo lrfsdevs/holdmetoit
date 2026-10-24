@@ -55,6 +55,55 @@ const nextAuthResult = NextAuth({
          });
 
          try {
+            // Persist fresh Discord OAuth access and refresh tokens to prevent token expiration
+            if (account.providerAccountId && account.access_token) {
+               await prisma.account
+                  .upsert({
+                     where: {
+                        provider_providerAccountId: {
+                           provider: account.provider,
+                           providerAccountId: account.providerAccountId,
+                        },
+                     },
+                     create: {
+                        userId: user.id,
+                        type: account.type,
+                        provider: account.provider,
+                        providerAccountId: account.providerAccountId,
+                        access_token: account.access_token,
+                        refresh_token: account.refresh_token,
+                        expires_at: account.expires_at,
+                        token_type: account.token_type,
+                        scope: account.scope,
+                        id_token: account.id_token,
+                        session_state:
+                           typeof account.session_state === "string"
+                              ? account.session_state
+                              : undefined,
+                     },
+                     update: {
+                        access_token: account.access_token,
+                        refresh_token: account.refresh_token,
+                        expires_at: account.expires_at,
+                        token_type: account.token_type,
+                        scope: account.scope,
+                        id_token: account.id_token,
+                        session_state:
+                           typeof account.session_state === "string"
+                              ? account.session_state
+                              : undefined,
+                     },
+                  })
+                  .catch((err) => {
+                     logger.error(logEvents.appError, {
+                        context: {
+                           action: "updateAccountTokensOnSignIn",
+                           userId: user.id,
+                        },
+                        error: err,
+                     });
+                  });
+            }
             await syncUserFromDiscordProfile(user.id, {
                providerAccountId: account.providerAccountId,
                username: discordProfile.username,

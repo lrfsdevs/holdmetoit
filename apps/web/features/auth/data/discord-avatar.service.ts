@@ -21,6 +21,10 @@ export interface DiscordAvatarFetchResult {
    avatarHash: string | null;
 }
 
+export type OAuthAvatarFetchResult =
+   | { success: true; avatarUrl: string; avatarHash: string | null }
+   | { success: false; requiresReauth: boolean; error: string };
+
 /**
  * Fetches the latest avatar information for a Discord user via Discord REST API v10 using a Bot Token.
  * Requires DISCORD_BOT_TOKEN to be configured.
@@ -88,7 +92,7 @@ export async function fetchDiscordUserAvatar(
  */
 export async function fetchDiscordUserAvatarViaOAuth(
    userId: string
-): Promise<DiscordAvatarFetchResult | null> {
+): Promise<OAuthAvatarFetchResult> {
    try {
       const account = await prisma.account.findFirst({
          where: { userId, provider: "discord" },
@@ -101,7 +105,11 @@ export async function fetchDiscordUserAvatarViaOAuth(
       });
 
       if (!account || (!account.access_token && !account.refresh_token)) {
-         return null;
+         return {
+            success: false,
+            requiresReauth: true,
+            error: "No linked Discord OAuth credentials found",
+         };
       }
 
       let accessToken = account.access_token;
@@ -188,6 +196,19 @@ export async function fetchDiscordUserAvatarViaOAuth(
                      cache: "no-store",
                   }).catch(() => null);
                }
+            } else {
+               logger.warn(logEvents.appError, {
+                  context: {
+                     action: "refreshDiscordOAuthToken",
+                     userId,
+                     status: refreshRes?.status,
+                  },
+               });
+               return {
+                  success: false,
+                  requiresReauth: true,
+                  error: "Discord session expired — please log in again to sync",
+               };
             }
          }
       }
@@ -199,18 +220,27 @@ export async function fetchDiscordUserAvatarViaOAuth(
             : getDiscordDefaultAvatarUrl(data.id, data.discriminator);
 
          return {
+            success: true,
             avatarUrl,
             avatarHash: data.avatar,
          };
       }
 
-      return null;
+      return {
+         success: false,
+         requiresReauth: true,
+         error: "Discord session expired — please log in again to sync",
+      };
    } catch (error) {
       logger.error(logEvents.appError, {
          context: { action: "fetchDiscordUserAvatarViaOAuth", userId },
          error,
       });
-      return null;
+      return {
+         success: false,
+         requiresReauth: false,
+         error: "Unable to contact Discord API",
+      };
    }
 }
 
@@ -222,6 +252,10 @@ export interface SyncUserAvatarParams {
 export interface SyncUserAvatarResult {
    success: boolean;
    newImageUrl: string | null;
+   updated?: boolean;
+   message?: string;
+   error?: string;
+   requiresReauth?: boolean;
 }
 
 /**
@@ -234,7 +268,11 @@ export async function syncUserAvatar(
    params: SyncUserAvatarParams
 ): Promise<SyncUserAvatarResult> {
    if (!params.userId && !params.discordId) {
-      return { success: false, newImageUrl: null };
+      return {
+         success: false,
+         newImageUrl: null,
+         error: "Either userId or discordId must be provided",
+      };
    }
 
    const user = await prisma.user.findFirst({
@@ -245,14 +283,24 @@ export async function syncUserAvatar(
    });
 
    if (!user || !user.discordId) {
-      return { success: false, newImageUrl: null };
+      return {
+         success: false,
+         newImageUrl: null,
+         error: "User not found",
+      };
    }
 
-   // 1. Try OAuth token lookup (no bot token needed, works without re-login)
-   let fetched = await fetchDiscordUserAvatarViaOAuth(user.id);
+   // 1. Try OAuth token lookup (no bot token needed, works seamlessly for authenticated users)
+   const oauthResult = await fetchDiscordUserAvatarViaOAuth(user.id);
+   let fetched: DiscordAvatarFetchResult | null = null;
 
-   // 2. If OAuth lookup didn't work (e.g. spectator or account tokens not available), try Bot API
-   if (!fetched) {
+   if (oauthResult.success) {
+      fetched = {
+         avatarUrl: oauthResult.avatarUrl,
+         avatarHash: oauthResult.avatarHash,
+      };
+   } else {
+      // 2. If OAuth lookup didn't work (e.g. spectator or expired token), try Bot API if configured
       fetched = await fetchDiscordUserAvatar(user.discordId);
    }
 
@@ -260,29 +308,47 @@ export async function syncUserAvatar(
 
    if (fetched) {
       targetImageUrl = fetched.avatarUrl;
-   } else {
-      // If live Discord fetch was unavailable, verify if the current image is actually 404
-      // before replacing it with the default avatar. Never overwrite a valid custom avatar!
-      const currentParsed = parseDiscordAvatarUrl(user.image);
-      if (currentParsed.isDiscordAvatar && user.image) {
-         const isBroken = await fetch(user.image, {
-            method: "HEAD",
-            cache: "no-store",
-         })
-            .then((r) => r.status === 404)
-            .catch(() => false);
+      const isDifferent = targetImageUrl !== user.image;
 
-         if (isBroken) {
-            targetImageUrl = getDiscordDefaultAvatarUrl(user.discordId);
-         } else {
-            return { success: false, newImageUrl: user.image };
-         }
-      } else {
-         return { success: false, newImageUrl: user.image };
+      if (isDifferent) {
+         await prisma.user.update({
+            where: { id: user.id },
+            data: { image: targetImageUrl },
+         });
+         logger.info(logEvents.authUserSynced, {
+            context: {
+               userId: user.id,
+               discordId: user.discordId,
+               oldImage: user.image,
+               newImage: targetImageUrl,
+            },
+         });
       }
+
+      return {
+         success: true,
+         newImageUrl: targetImageUrl,
+         updated: isDifferent,
+         message: isDifferent ? "Avatar updated!" : "Avatar is up to date!",
+      };
    }
 
-   if (targetImageUrl !== user.image) {
+   // 3. Neither OAuth nor Bot API succeeded
+   // Check if current avatar is 404 on Discord CDN before deciding what to do
+   const currentParsed = parseDiscordAvatarUrl(user.image);
+   let isBroken = false;
+
+   if (currentParsed.isDiscordAvatar && user.image) {
+      isBroken = await fetch(user.image, {
+         method: "HEAD",
+         cache: "no-store",
+      })
+         .then((r) => r.status === 404)
+         .catch(() => false);
+   }
+
+   if (isBroken) {
+      targetImageUrl = getDiscordDefaultAvatarUrl(user.discordId);
       await prisma.user.update({
          where: { id: user.id },
          data: { image: targetImageUrl },
@@ -293,12 +359,27 @@ export async function syncUserAvatar(
             discordId: user.discordId,
             oldImage: user.image,
             newImage: targetImageUrl,
+            reason: "healed_404",
          },
       });
+
+      return {
+         success: true,
+         newImageUrl: targetImageUrl,
+         updated: true,
+         message: "Restored default Discord avatar",
+      };
    }
 
+   // The existing avatar is healthy (not broken), but live sync failed due to expired OAuth session
    return {
-      success: true,
-      newImageUrl: targetImageUrl,
+      success: false,
+      newImageUrl: user.image,
+      requiresReauth: oauthResult.success ? false : oauthResult.requiresReauth,
+      error: !oauthResult.success
+         ? oauthResult.error
+         : "Discord session expired — please log in again to sync",
+      message:
+         "Current avatar is active. Please log in again to sync new changes.",
    };
 }

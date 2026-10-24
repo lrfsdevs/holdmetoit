@@ -66,4 +66,49 @@ describe("RefreshAvatarButton", () => {
          expect(screen.getByText("Avatar updated!")).toBeTruthy();
       });
    });
+
+   it("displays warning when session expired and re-authentication is required", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: false,
+            requiresReauth: true,
+            error: "Discord session expired — please log in again to sync",
+         }),
+      });
+
+      render(<RefreshAvatarButton userId="user_expired" />);
+
+      const btn = screen.getByRole("button", { name: /sync avatar/i });
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+         expect(
+            screen.getByText(
+               "Discord session expired — please log in again to sync"
+            )
+         ).toBeTruthy();
+      });
+   });
+
+   it("displays friendly message when avatar is already up to date", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            updated: false,
+            message: "Avatar is up to date!",
+            newImageUrl: "https://cdn.discordapp.com/avatars/123/same.png",
+         }),
+      });
+
+      render(<RefreshAvatarButton userId="user_same" />);
+
+      const btn = screen.getByRole("button", { name: /sync avatar/i });
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+         expect(screen.getByText("Avatar is up to date!")).toBeTruthy();
+      });
+   });
 });
