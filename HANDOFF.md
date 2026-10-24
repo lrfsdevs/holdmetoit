@@ -1366,3 +1366,14 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** new `docs/database-backups/README.md` (scope, state machine, env, restore, security, lifecycle); `docs/ypt-bot/doc.md` updated with the env table, Docker runtime requirement, and backup section.
 - **Manual step (deferred):** create the private `holdmetoit-backups` bucket in Supabase, add the new env vars on Render, switch the service runtime to Docker, then run `npm run backup:db` once and perform a restore smoke test.
 - **NEXT STEP:** Provision the bucket + Render env/runtime, deploy, and verify the first scheduled run logs `backup_scheduled` for the next 00:00 UTC and stores `backups/holdmetoit-YYYY-MM-DD.dump`.
+
+### Session 153 — 2026-10-24 (Resilient Avatar & Stale Discord PFP Sync on `krish` — GH-#96 / KAN-14)
+
+- **Root Cause Resolved:** Discord avatar URLs use immutable content hashes that return 404 once updated on Discord. Stale URLs persisted in Prisma because `events.signIn` previously passed the existing `user.image` rather than parsing `profile.avatar`, and Next.js / `<Image>` lacked `onError` fallbacks.
+- **Domain Logic:** Added `apps/web/features/auth/domain/discord-avatar.ts` (`getDiscordDefaultAvatarUrl`, `buildDiscordAvatarUrl`, `parseDiscordAvatarUrl`, `getInitials`) conforming to Law L7 with 100% test coverage.
+- **Data Service:** Added `apps/web/features/auth/data/discord-avatar.service.ts` to query Discord REST API v10 via bot token and automatically heal dead hashes in Prisma (`syncUserAvatar`).
+- **OAuth SignIn Sync:** Fixed `apps/web/core/auth/index.ts` so every login dynamically computes and synchronizes the latest Discord avatar hash.
+- **API Endpoint:** Added `POST /api/users/sync-avatar` with Zod validation and comprehensive tests in `apps/web/app/api/users/sync-avatar/route.test.ts`.
+- **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives. Seamlessly falls back to default Discord embed avatar or initials on 404 while silently triggering background self-healing.
+- **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
+- **Quality Gates:** 0 typecheck errors, 0 lint errors, 191/191 test files (1804 tests) passing.

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { LogOut, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { DiscordIcon } from "@/components/icons/discord-icon";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
@@ -86,6 +87,7 @@ export interface UserNavProps {
       username?: string | null;
       image?: string | null;
       role?: string;
+      discordId?: string | null;
    } | null;
    redirectTo?: string;
    isPreviewActive?: boolean;
@@ -126,19 +128,14 @@ export function UserNav({
             className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-border-strong bg-surface-elevated hover:bg-surface-nested hover:border-border-strong px-2 sm:px-2.5 py-1 text-xs shrink-0 max-w-[130px] sm:max-w-none transition-colors group cursor-pointer"
          >
             <div className="relative h-5 w-5 overflow-hidden rounded-full border border-input-bg bg-surface-nested shrink-0 group-hover:border-border-strong transition-colors">
-               {user.image ? (
-                  <Image
-                     src={user.image}
-                     alt={displayName}
-                     fill
-                     sizes="20px"
-                     className="object-cover"
-                  />
-               ) : (
-                  <span className="flex h-full w-full items-center justify-center text-label font-bold text-text-primary">
-                     {initial}
-                  </span>
-               )}
+               <UserAvatar
+                  src={user.image}
+                  name={displayName}
+                  userId={user.id}
+                  discordId={user.discordId}
+                  size="xs"
+                  className="h-full w-full border-0"
+               />
             </div>
 
             <span className="max-w-[45px] xs:max-w-[75px] sm:max-w-[130px] truncate font-medium text-text-primary group-hover:text-white transition-colors">

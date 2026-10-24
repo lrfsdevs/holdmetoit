@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
 import {
    ChevronRight,
@@ -84,20 +85,13 @@ export function ParticipantProfileHeader({
                <div className="flex items-center gap-4 min-w-0">
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                     <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-surface-elevated border-2 border-border-strong overflow-hidden flex items-center justify-center text-xl font-bold text-white shadow-md">
-                        {profile.image ? (
-                           <Image
-                              src={profile.image}
-                              alt={profile.displayName}
-                              width={80}
-                              height={80}
-                              className="h-full w-full object-cover"
-                              unoptimized
-                           />
-                        ) : (
-                           <UserIcon className="h-8 w-8 text-text-tertiary" />
-                        )}
-                     </div>
+                     <UserAvatar
+                        src={profile.image}
+                        name={profile.displayName}
+                        userId={profile.userId}
+                        size="xl"
+                        className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-2 border-border-strong shadow-md text-xl"
+                     />
                      {isRankOne && (
                         <div
                            className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-feedback-success text-text-inverse flex items-center justify-center shadow-lg border border-black/40"
