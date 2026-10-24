@@ -74,9 +74,9 @@ export const env = Object.freeze({
    DATABASE_BACKUP_CATCH_UP:
       String(process.env.DATABASE_BACKUP_CATCH_UP || "").toLowerCase() !==
       "false",
-   DATABASE_BACKUP_RETENTION_DAYS: parseIntFallback(
-      process.env.DATABASE_BACKUP_RETENTION_DAYS,
-      30
+   DATABASE_BACKUP_RETENTION_DAYS: Math.max(
+      1,
+      parseIntFallback(process.env.DATABASE_BACKUP_RETENTION_DAYS, 30)
    ),
    DATABASE_BACKUP_PREFIX: process.env.DATABASE_BACKUP_PREFIX || "backups",
    DATABASE_BACKUP_SCHEMAS: process.env.DATABASE_BACKUP_SCHEMAS || "public",

@@ -5,7 +5,8 @@
 HoldMeToIt keeps a **self-hosted, nightly logical backup** of the Supabase PostgreSQL
 database. The backup runs inside the always-on `@holdmetoit/ypt-bot` service at
 **00:00 UTC**, writes a compressed custom-format dump to a **private Supabase Storage
-bucket**, and prunes dumps older than **30 days**.
+bucket**, and prunes dumps older than **30 days** (configurable, with a minimum
+retention of **1 day**).
 
 This complements (does not replace) Supabase provider backups/PITR. Provider recovery is
 still the first option for infrastructure-level incidents; this feature guarantees an
@@ -107,7 +108,7 @@ The dump contains the `public` schema (Prisma tables, `_prisma_migrations`, app 
 | :------------------------------- | :----------- | :-------------------------------------------------- |
 | `DATABASE_BACKUP_ENABLED`        | `false`      | Must be `true` for the in-process scheduler         |
 | `DATABASE_BACKUP_CATCH_UP`       | `true`       | Run on boot if the newest dump is ≥24h old          |
-| `DATABASE_BACKUP_RETENTION_DAYS` | `30`         | Objects older than this are pruned                  |
+| `DATABASE_BACKUP_RETENTION_DAYS` | `30`         | Objects older than this are pruned; minimum `1`     |
 | `DATABASE_BACKUP_PREFIX`         | `backups`    | Storage folder                                      |
 | `DATABASE_BACKUP_SCHEMAS`        | `public`     | Comma-separated `pg_dump --schema` list             |
 | `DIRECT_URL`                     | —            | **Required.** Direct/session connection (port 5432) |
@@ -120,6 +121,11 @@ The dump contains the `public` schema (Prisma tables, `_prisma_migrations`, app 
 
 `DIRECT_URL` must **not** be the transaction pooler (`:6543` or `pgbouncer=true`). The
 service rejects it.
+
+**Retention minimum:** retention is measured in days from the run's UTC clock.
+`DATABASE_BACKUP_RETENTION_DAYS=0` (or any value below `1`) is clamped to **1 day**, so
+the last 24 hours of dumps are always kept and the run never prunes the backup it just
+created.
 
 ### 4.2 Manual run
 

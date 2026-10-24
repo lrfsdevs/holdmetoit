@@ -172,6 +172,8 @@ export function isBackupDue(now, lastBackupAt) {
 
 /**
  * Selects object paths older than the retention window.
+ * Retention is clamped to a minimum of 1 day: `0` (or any invalid value)
+ * behaves exactly like `1`, keeping the last 24 hours of backups.
  * @param {Array<{ name: string }>} objects
  * @param {Date|string|number} now
  * @param {number} retentionDays
@@ -184,9 +186,10 @@ export function selectExpiredObjects(
    retentionDays,
    prefix = "backups"
 ) {
-   if (!Number.isFinite(retentionDays) || retentionDays < 0) return [];
+   const days =
+      !Number.isFinite(retentionDays) || retentionDays < 1 ? 1 : retentionDays;
 
-   const cutoff = new Date(now).getTime() - retentionDays * DAY_MS;
+   const cutoff = new Date(now).getTime() - days * DAY_MS;
 
    return (objects || [])
       .map((object) => ({ object, date: parseObjectDate(object.name) }))

@@ -234,15 +234,17 @@ describe("selectExpiredObjects", () => {
       assert.deepStrictEqual(expired, ["backups/holdmetoit-2026-09-22.dump"]);
    });
 
-   test("does nothing for invalid retention values", () => {
-      assert.deepStrictEqual(
-         selectExpiredObjects(
-            [{ name: "holdmetoit-2020-01-01.dump" }],
-            now,
-            -1
-         ),
-         []
-      );
+   test("clamps retention 0 and negative values to one day", () => {
+      const objects = [
+         { name: "holdmetoit-2026-10-21.dump" },
+         { name: "holdmetoit-2026-10-22.dump" },
+         { name: "holdmetoit-2026-10-23.dump" },
+      ];
+
+      const oneDay = selectExpiredObjects(objects, now, 1);
+      assert.deepStrictEqual(oneDay, ["backups/holdmetoit-2026-10-21.dump"]);
+      assert.deepStrictEqual(selectExpiredObjects(objects, now, 0), oneDay);
+      assert.deepStrictEqual(selectExpiredObjects(objects, now, -5), oneDay);
    });
 });
 
@@ -342,6 +344,27 @@ describe("runDatabaseBackup", () => {
          calls.every((call) => !call.args.includes("secret")),
          "password must never be a CLI argument"
       );
+   });
+
+   test("applies the one-day minimum when retention is 0", async () => {
+      const log = createLoggerStub();
+      const { exec } = createExec();
+      const bucket = createBucket({
+         objects: ["holdmetoit-2026-10-21.dump", "holdmetoit-2026-10-22.dump"],
+      });
+
+      const result = await runDatabaseBackup({
+         now,
+         log,
+         exec,
+         bucket,
+         config: { ...BASE_CONFIG, retentionDays: 0 },
+      });
+
+      assert.strictEqual(result.pruned, 1);
+      assert.deepStrictEqual(bucket.state.removed, [
+         "backups/holdmetoit-2026-10-21.dump",
+      ]);
    });
 
    test("skips when the scheduled object already exists", async () => {

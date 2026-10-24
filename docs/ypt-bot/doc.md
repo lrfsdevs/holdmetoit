@@ -78,7 +78,7 @@ All environment variables are validated and exported through a single module: [`
 | `PORT`                           | Express server HTTP port                                                   | `3000`                                                                 |
 | `DATABASE_BACKUP_ENABLED`        | Enable the in-process 00:00 UTC backup scheduler                           | `false`                                                                |
 | `DATABASE_BACKUP_CATCH_UP`       | Run on boot when the newest dump is ≥24h old                               | `true`                                                                 |
-| `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this                                                | `30`                                                                   |
+| `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this (minimum `1`)                                  | `30`                                                                   |
 | `DATABASE_BACKUP_PREFIX`         | Storage folder inside the backup bucket                                    | `backups`                                                              |
 | `DATABASE_BACKUP_SCHEMAS`        | Comma-separated `pg_dump --schema` list                                    | `public`                                                               |
 | `SUPABASE_URL`                   | Supabase project URL (backup uploads)                                      | `https://<ref>.supabase.co`                                            |
@@ -343,7 +343,7 @@ The web service performs a logical PostgreSQL backup every night at **00:00 UTC*
    via `PGPASSWORD`, never as an argument).
 3. Reject empty dumps and verify the archive with `pg_restore --list`.
 4. Upload to the private bucket as `backups/holdmetoit-YYYY-MM-DD.dump`.
-5. Delete dumps older than `DATABASE_BACKUP_RETENTION_DAYS` (default 30).
+5. Delete dumps older than `DATABASE_BACKUP_RETENTION_DAYS` (default 30, minimum 1).
 
 Scheduling and failure semantics:
 
