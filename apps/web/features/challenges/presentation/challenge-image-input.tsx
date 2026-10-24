@@ -15,6 +15,7 @@ import {
    PUNISHMENT_PFP_MAX_BYTES,
    PUNISHMENT_PFP_MIME_TO_EXT,
 } from "@/features/challenges/domain/punishment-pfp";
+import { ChallengeImageCropper } from "@/features/challenges/presentation/challenge-image-cropper";
 
 interface ChallengeImageInputProps {
    purpose: ChallengeImagePurpose;
@@ -26,6 +27,18 @@ interface ChallengeImageInputProps {
    disabled?: boolean;
    error?: string | null;
    label?: string;
+}
+
+/** Client-side pre-checks shared by file selection and upload. */
+function getFileError(file: File): string | null {
+   if (!(file.type in PUNISHMENT_PFP_MIME_TO_EXT)) {
+      return "Only PNG, JPEG or WebP images are allowed.";
+   }
+   if (!file.size) return "The selected file is empty.";
+   if (file.size > PUNISHMENT_PFP_MAX_BYTES) {
+      return "Image must be 3 MB or smaller.";
+   }
+   return null;
 }
 
 function ImagePreview({
@@ -98,6 +111,7 @@ export function ChallengeImageInput({
    const [localPreview, setLocalPreview] = useState<string | null>(null);
    const [localError, setLocalError] = useState<string | null>(null);
    const [lastFile, setLastFile] = useState<File | null>(null);
+   const [pendingFile, setPendingFile] = useState<File | null>(null);
    const isBanner = purpose === "event-banner";
 
    useEffect(() => {
@@ -117,16 +131,9 @@ export function ChallengeImageInput({
       setLocalError(null);
       setLastFile(null);
 
-      if (!(file.type in PUNISHMENT_PFP_MIME_TO_EXT)) {
-         setLocalError("Only PNG, JPEG or WebP images are allowed.");
-         return;
-      }
-      if (!file.size) {
-         setLocalError("The selected file is empty.");
-         return;
-      }
-      if (file.size > PUNISHMENT_PFP_MAX_BYTES) {
-         setLocalError("Image must be 3 MB or smaller.");
+      const fileError = getFileError(file);
+      if (fileError) {
+         setLocalError(fileError);
          return;
       }
 
@@ -167,7 +174,15 @@ export function ChallengeImageInput({
    const handleSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       event.target.value = "";
-      if (file) void upload(file);
+      if (!file) return;
+      setLocalError(null);
+      const fileError = getFileError(file);
+      if (fileError) {
+         setLocalError(fileError);
+         return;
+      }
+      // upload() runs after the host confirms the crop.
+      setPendingFile(file);
    };
 
    const previewSrc = localPreview ?? value;
@@ -257,7 +272,8 @@ export function ChallengeImageInput({
                   id={`${inputId}-format`}
                   className="text-meta text-text-tertiary"
                >
-                  PNG, JPEG or WebP · up to 3 MB
+                  PNG, JPEG or WebP · up to 3 MB · cropped to{" "}
+                  {isBanner ? "5:1 (min 1500×300)" : "1:1 (min 256×256)"}
                </p>
             </div>
          </div>
@@ -282,6 +298,18 @@ export function ChallengeImageInput({
                   </button>
                )}
             </div>
+         )}
+
+         {pendingFile && (
+            <ChallengeImageCropper
+               file={pendingFile}
+               purpose={purpose}
+               onCancel={() => setPendingFile(null)}
+               onConfirm={(cropped) => {
+                  setPendingFile(null);
+                  void upload(cropped);
+               }}
+            />
          )}
       </div>
    );

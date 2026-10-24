@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import { ChallengeImageInput } from "./challenge-image-input";
+import { ChallengeImageCropper } from "./challenge-image-cropper";
 import { ChallengeCreatorWizard } from "./challenge-creator-wizard";
 import { ChallengeManageTab } from "./challenge-manage-tab";
 import { Button } from "@/components/ui/button";
@@ -161,6 +162,23 @@ function image(tree: ReactNode, purpose: "event-banner" | "punishment-pfp") {
    );
 }
 
+/** Simulates the host choosing a file in the hidden file input. */
+function pickFile(
+   tree: ReactNode,
+   file: File | { type: string; size: number }
+) {
+   find(tree, (element) => element.type === "input").props.onChange({
+      target: { files: [file], value: "" },
+   });
+}
+
+/** The crop dialog element, or undefined when it is not open. */
+function cropperOf(tree: ReactNode) {
+   return elements(tree).find(
+      (element) => element.type === ChallengeImageCropper
+   );
+}
+
 function button(tree: ReactNode, text: string) {
    return find(
       tree,
@@ -306,7 +324,7 @@ describe("ChallengeImageInput SSR", () => {
 
 describe("ChallengeImageInput upload callbacks", () => {
    it.each(["event-banner", "punishment-pfp"] as const)(
-      "sends file and %s purpose and discards only a replaced unsaved upload",
+      "uploads the cropped %s file only after the crop is confirmed and discards only a replaced unsaved upload",
       async (purpose) => {
          const onChange = vi.fn();
          const onBusyChange = vi.fn();
@@ -325,17 +343,33 @@ describe("ChallengeImageInput upload callbacks", () => {
                   onBusyChange,
                });
             let tree = liveRender(render);
-            const file = new File(["image"], "image.png", {
+            const original = new File(["image"], "image.png", {
                type: "image/png",
             });
-            find(tree, (element) => element.type === "input").props.onChange({
-               target: { files: [file], value: "image.png" },
+            pickFile(tree, original);
+            // Picking a file only opens the cropper; nothing uploads yet.
+            expect(mocks.upload).not.toHaveBeenCalled();
+
+            tree = liveRender(render);
+            const cropper = find(
+               tree,
+               (element) => element.type === ChallengeImageCropper
+            );
+            expect(cropper.props.file).toBe(original);
+            expect(cropper.props.purpose).toBe(purpose);
+
+            const cropped = new File(["cropped"], "cropped.webp", {
+               type: "image/webp",
             });
+            cropper.props.onConfirm(cropped);
             const data = mocks.upload.mock.calls[0][0] as FormData;
             expect(data.get("purpose")).toBe(purpose);
             expect(data.get("file")).toBeInstanceOf(File);
+            expect((data.get("file") as File).name).toBe("cropped.webp");
             expect(onBusyChange).toHaveBeenCalledWith(true);
+
             tree = liveRender(render);
+            expect(cropperOf(tree)).toBeUndefined();
             expect(
                find(tree, (element) => element.type === "input").props.disabled
             ).toBe(true);
@@ -377,14 +411,17 @@ describe("ChallengeImageInput upload callbacks", () => {
                onChange,
             });
          let tree = liveRender(render);
-         find(tree, (element) => element.type === "input").props.onChange({
-            target: {
-               files: [
-                  new File(["image"], "avatar.png", { type: "image/png" }),
-               ],
-               value: "",
-            },
-         });
+         pickFile(
+            tree,
+            new File(["image"], "avatar.png", { type: "image/png" })
+         );
+         tree = liveRender(render);
+         find(
+            tree,
+            (element) => element.type === ChallengeImageCropper
+         ).props.onConfirm(
+            new File(["cropped"], "avatar.webp", { type: "image/webp" })
+         );
          await vi.waitFor(() =>
             expect(mocks.slots).toContain("Storage unavailable")
          );
@@ -425,6 +462,31 @@ describe("ChallengeImageInput upload callbacks", () => {
       expect(mocks.slots).toContain(
          "Only PNG, JPEG or WebP images are allowed."
       );
+      expect(mocks.upload).not.toHaveBeenCalled();
+      // Rejected files never open the cropper.
+      tree = liveRender(render);
+      expect(cropperOf(tree)).toBeUndefined();
+   });
+
+   it("opens the cropper for a valid file and uploads nothing if it is cancelled", () => {
+      const render = () =>
+         ChallengeImageInput({
+            purpose: "event-banner",
+            value: null,
+            onChange: vi.fn(),
+         });
+      let tree = liveRender(render);
+      expect(cropperOf(tree)).toBeUndefined();
+
+      pickFile(tree, new File(["image"], "image.png", { type: "image/png" }));
+      tree = liveRender(render);
+      find(
+         tree,
+         (element) => element.type === ChallengeImageCropper
+      ).props.onCancel();
+
+      tree = liveRender(render);
+      expect(cropperOf(tree)).toBeUndefined();
       expect(mocks.upload).not.toHaveBeenCalled();
    });
 });
