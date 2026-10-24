@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, X } from "lucide-react";
+import { Calendar, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,11 @@ import {
    trackLogRocketEvent,
 } from "@/core/observability/logrocket";
 import { logStudyTimeAction } from "@/features/study-logs/api/log-study-time.actions";
-import { decomposeSecondsToParts } from "@/features/study-logs/domain/duration";
+import {
+   decomposeSecondsToParts,
+   MAX_COUNTED_DAILY_STUDY_SECONDS,
+   MAX_DAILY_LOG_SECONDS,
+} from "@/features/study-logs/domain/duration";
 import {
    formatDayDate,
    getChallengeDayFromDateKey,
@@ -189,6 +193,63 @@ export function DailyHoursModal({
    const [leavePending, setLeavePending] = useState<boolean>(false);
    const [feedback, setFeedback] = useState<string | null>(null);
    const [isPending, startTransition] = useTransition();
+
+   const handleHoursChange = (raw: string) => {
+      if (raw === "") {
+         setHours("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setHours("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(24, val));
+      setHours(String(clamped));
+      if (clamped > 0) {
+         setIsLeaveMode(false);
+      }
+   };
+
+   const handleMinutesChange = (raw: string) => {
+      if (raw === "") {
+         setMinutes("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setMinutes("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(59, val));
+      setMinutes(String(clamped));
+      if (clamped > 0) {
+         setIsLeaveMode(false);
+      }
+   };
+
+   const handleSecondsChange = (raw: string) => {
+      if (raw === "") {
+         setSeconds("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setSeconds("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(59, val));
+      setSeconds(String(clamped));
+      if (clamped > 0) {
+         setIsLeaveMode(false);
+      }
+   };
 
    const populateInputsForDate = (date: string) => {
       const existing = getExistingSecondsForDate(date);
@@ -446,10 +507,21 @@ export function DailyHoursModal({
       const m = parseInt(minutes || "0", 10);
       const s = parseInt(seconds || "0", 10);
 
-      if (isNaN(h) || isNaN(m) || isNaN(s)) {
+      if (isNaN(h) || isNaN(m) || isNaN(s) || h < 0 || m < 0 || s < 0) {
          setFeedback(
             "Please enter valid positive numbers for hours, minutes, and seconds."
          );
+         return;
+      }
+
+      if (m > 59 || s > 59) {
+         setFeedback("Minutes and seconds must be between 0 and 59.");
+         return;
+      }
+
+      const totalSeconds = h * 3600 + m * 60 + s;
+      if (totalSeconds > MAX_DAILY_LOG_SECONDS) {
+         setFeedback("A single day cannot exceed 24:00:00 of study time.");
          return;
       }
 
@@ -778,12 +850,7 @@ export function DailyHoursModal({
                         max="24"
                         placeholder="0"
                         value={hours}
-                        onChange={(e) => {
-                           setHours(e.target.value);
-                           if (parseInt(e.target.value, 10) > 0) {
-                              setIsLeaveMode(false);
-                           }
-                        }}
+                        onChange={(e) => handleHoursChange(e.target.value)}
                         className="h-11 bg-input-bg border-input-border text-white text-center font-sans font-sans-tabular text-base rounded-xl"
                      />
                   </div>
@@ -801,12 +868,7 @@ export function DailyHoursModal({
                         max="59"
                         placeholder="0"
                         value={minutes}
-                        onChange={(e) => {
-                           setMinutes(e.target.value);
-                           if (parseInt(e.target.value, 10) > 0) {
-                              setIsLeaveMode(false);
-                           }
-                        }}
+                        onChange={(e) => handleMinutesChange(e.target.value)}
                         className="h-11 bg-input-bg border-input-border text-white text-center font-sans font-sans-tabular text-base rounded-xl"
                      />
                   </div>
@@ -824,12 +886,7 @@ export function DailyHoursModal({
                         max="59"
                         placeholder="0"
                         value={seconds}
-                        onChange={(e) => {
-                           setSeconds(e.target.value);
-                           if (parseInt(e.target.value, 10) > 0) {
-                              setIsLeaveMode(false);
-                           }
-                        }}
+                        onChange={(e) => handleSecondsChange(e.target.value)}
                         className="h-11 bg-input-bg border-input-border text-white text-center font-sans font-sans-tabular text-base rounded-xl"
                      />
                   </div>
@@ -841,19 +898,48 @@ export function DailyHoursModal({
                      parseInt(minutes || "0", 10) * 60 +
                      parseInt(seconds || "0", 10);
                   if (enteredSeconds > 0 && !isSelectedDateLeave) {
-                     const coins = Math.floor(enteredSeconds / 36);
+                     const countedRewardSeconds = Math.min(
+                        enteredSeconds,
+                        MAX_COUNTED_DAILY_STUDY_SECONDS
+                     );
+                     const coins = Math.floor(countedRewardSeconds / 36);
                      return (
-                        <div
-                           data-testid="projected-reward-banner"
-                           className="flex items-center justify-between px-3 py-2 rounded-xl bg-brand-1/10 border border-brand-1/25 text-xs text-brand-1 animate-in fade-in"
-                        >
-                           <span className="flex items-center gap-1.5 font-medium">
-                              <CoinsIcon className="h-3.5 w-3.5" />
-                              Estimated Study Reward
-                           </span>
-                           <span className="font-semibold tabular-nums">
-                              +{coins} coin{coins === 1 ? "" : "s"}
-                           </span>
+                        <div className="space-y-2">
+                           {enteredSeconds >
+                              MAX_COUNTED_DAILY_STUDY_SECONDS && (
+                              <div
+                                 data-testid="daily-cap-notice"
+                                 className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 animate-in fade-in"
+                              >
+                                 <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+                                 <div className="text-left">
+                                    <p className="font-semibold text-amber-300">
+                                       14-Hour Scoring Cap Active
+                                    </p>
+                                    <p className="text-amber-200/80 mt-0.5 leading-relaxed">
+                                       To support healthy habits, a maximum of
+                                       14:00:00 counts toward challenge scoring
+                                       and coin rewards. Your actual logged
+                                       hours remain preserved in your history.
+                                    </p>
+                                 </div>
+                              </div>
+                           )}
+                           <div
+                              data-testid="projected-reward-banner"
+                              className="flex items-center justify-between px-3 py-2 rounded-xl bg-brand-1/10 border border-brand-1/25 text-xs text-brand-1 animate-in fade-in"
+                           >
+                              <span className="flex items-center gap-1.5 font-medium">
+                                 <CoinsIcon className="h-3.5 w-3.5" />
+                                 Estimated Study Reward
+                              </span>
+                              <span className="font-semibold tabular-nums">
+                                 +{coins} coin{coins === 1 ? "" : "s"}
+                                 {enteredSeconds >
+                                    MAX_COUNTED_DAILY_STUDY_SECONDS &&
+                                    " (max/day)"}
+                              </span>
+                           </div>
                         </div>
                      );
                   }

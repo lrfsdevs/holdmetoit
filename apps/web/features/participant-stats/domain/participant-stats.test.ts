@@ -139,6 +139,34 @@ describe("calculateParticipantDailyTimeline", () => {
       expect(timeline[6].cumulativeClock).toBe("—");
       expect(timeline[6].cumulativeHuman).toBe("—");
    });
+
+   it("caps cumulative hours to 14h per day while preserving raw logged durationSeconds in timeline", () => {
+      const logs = [
+         {
+            logDate: "2026-10-01T00:00:00.000Z",
+            durationSeconds: 16 * 3600, // 16h logged
+            isOverride: false,
+         },
+         {
+            logDate: "2026-10-02T00:00:00.000Z",
+            durationSeconds: 8 * 3600, // 8h logged
+            isOverride: false,
+         },
+      ];
+
+      const timeline = calculateParticipantDailyTimeline(startAt, 7, logs, now);
+
+      // Day 1 preserves 16h raw duration, but cumulative is capped at 14h (50,400s)
+      expect(timeline[0].durationSeconds).toBe(16 * 3600);
+      expect(timeline[0].durationClock).toBe("16:00:00");
+      expect(timeline[0].cumulativeSeconds).toBe(14 * 3600);
+      expect(timeline[0].cumulativeClock).toBe("14:00:00");
+
+      // Day 2 adds 8h to 14h = 22h cumulative
+      expect(timeline[1].durationSeconds).toBe(8 * 3600);
+      expect(timeline[1].cumulativeSeconds).toBe(22 * 3600);
+      expect(timeline[1].cumulativeClock).toBe("22:00:00");
+   });
 });
 
 describe("calculateParticipantSummaryStats", () => {

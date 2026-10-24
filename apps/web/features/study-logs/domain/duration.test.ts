@@ -6,6 +6,8 @@ import {
    decomposeSecondsToParts,
    formatSecondsToClock,
    formatSecondsToHuman,
+   MAX_COUNTED_DAILY_STUDY_SECONDS,
+   capDailyStudySeconds,
    MAX_DAILY_LOG_SECONDS,
    MAX_WEEKLY_TARGET_SECONDS,
    MIN_WEEKLY_TARGET_SECONDS,
@@ -177,5 +179,28 @@ describe("decomposeSecondsToParts", () => {
          minutes: 0,
          seconds: 0,
       });
+   });
+});
+
+describe("capDailyStudySeconds", () => {
+   it("returns the original duration when under 14 hours", () => {
+      expect(capDailyStudySeconds(0)).toBe(0);
+      expect(capDailyStudySeconds(3_600)).toBe(3_600);
+      expect(capDailyStudySeconds(50_399)).toBe(50_399);
+      expect(capDailyStudySeconds(MAX_COUNTED_DAILY_STUDY_SECONDS)).toBe(
+         50_400
+      );
+   });
+
+   it("caps durations exceeding 14 hours to 50,400 seconds (14:00:00)", () => {
+      expect(capDailyStudySeconds(50_401)).toBe(50_400);
+      expect(capDailyStudySeconds(16 * 3_600)).toBe(50_400);
+      expect(capDailyStudySeconds(24 * 3_600)).toBe(50_400);
+   });
+
+   it("rejects negative numbers and non-integers", () => {
+      expect(() => capDailyStudySeconds(-1)).toThrow(DurationRangeError);
+      expect(() => capDailyStudySeconds(14.5)).toThrow(DurationRangeError);
+      expect(() => capDailyStudySeconds(NaN)).toThrow(DurationRangeError);
    });
 });

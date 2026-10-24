@@ -409,7 +409,10 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                   id: "p_2",
                   userId: "u_2",
                   teamId: "t_2",
-                  dailyStudyLogs: [{ durationSeconds: 72000 }],
+                  dailyStudyLogs: [
+                     { durationSeconds: 36000 },
+                     { durationSeconds: 36000 },
+                  ],
                }),
             ]) as never
          );

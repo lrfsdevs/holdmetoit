@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 155 — ypt-bot layered file structure on `afnan-jr`)
+> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 166 files green (1516/1516 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 187 files green (1777/1777 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -209,6 +209,49 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Docs:** `docs/ypt-bot/README.md` and `docs/ypt-bot/doc.md` updated to the health-only surface.
 - **NEXT STEP:** none — no consumer existed; Render's `/health` probe path remains valid.
 
+### Session 152 — 2026-10-23 (Feat & Fix: 14h Daily Study Evaluation Cap & Time Input Bounds; GH-172, KAN-55 on `krish`)
+
+- **Agent Role:** Scoring & Engine Agent, Participant UI Agent, Data & Identity Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #172 / Jira KAN-55. Fix study time input fields to prevent out-of-bounds values (negative hours, $>24$h, $>59$m, $>59$s). Strictly enforce a 14:00:00 (50,400 seconds) daily evaluation cap across challenge scoring, leaderboard standings, dynamic deficit calculations, lock/punishment evaluations, and study coin rewards, while allowing users and hosts to log $>14$h in raw study history.
+- **Root Cause & Architectural Alignment:**
+   - Previous time input modals allowed arbitrary numeric entries into hours, minutes, and seconds fields, allowing overflow past 24:00:00 or out-of-bounds minute/second intervals.
+   - Challenge evaluations directly aggregated raw `DailyStudyLog.durationSeconds`, meaning an extreme study session (or single-day synthetic test fixture) could count beyond healthy limits and distort team standings and deficit paces.
+   - Per product requirement, participants should still be permitted to record their raw physical time (e.g. 16:00:00 from YPT) in their personal history, but all platform calculations must strictly cap daily counted time at 14 hours (`MAX_COUNTED_DAILY_STUDY_SECONDS = 50_400`).
+- **Implementation Slices:**
+   1. **Domain Isolation & Pure Math (`Law L7`):**
+      - In `apps/web/features/study-logs/domain/duration.ts`, exported `MAX_COUNTED_DAILY_STUDY_SECONDS = 50_400` and pure helper `capDailyStudySeconds(totalSeconds: number): number`.
+      - In `apps/web/features/leaderboard/domain/catch-up-presentation.ts`, updated `sumLoggedSeconds(logs)` to apply `capDailyStudySeconds(log.durationSeconds)` on each day's entry. Because `sumLoggedSeconds` is the single mathematical foundation (`Law L1`) consumed by leaderboard matchup standings, individual leaderboards, deficit calculations, and `evaluateLockOutcome` (`Law L6`), the 14h cap is automatically and consistently enforced across all challenge scoring.
+   2. **Participant Daily Hours Modal Input Bounds & Notice:**
+      - In `apps/web/features/study-logs/presentation/daily-hours-modal.tsx`:
+         - Clamped hours input strictly to `0..24`, minutes and seconds to `0..59` during keystrokes and paste.
+         - Validated total duration $\le 86,400$ seconds (24:00:00) on submission.
+         - Rendered informative health notice badge when entered duration $>14$h explaining that raw time will be preserved in history, but only 14:00:00 will count toward challenge standings and leaderboard scoring.
+         - Capped projected coin reward display to 1,400 coins/day maximum.
+   3. **Admin Hours Override Modal Input Bounds & Notice:**
+      - In `apps/web/features/study-logs/presentation/admin-hours-override-modal.tsx`:
+         - Clamped hours to `0..24`, minutes and seconds to `0..59`.
+         - Validated single-day 24:00:00 limit on submit.
+         - Rendered warning banner explaining that challenge rules strictly cap daily counting at 14h for any log $>14$h.
+   4. **Economy Daily Reward Cap:**
+      - In `apps/web/features/economy/api/study-reward.service.ts`:
+         - Capped `eligibleSeconds` using `capDailyStudySeconds(log.durationSeconds)` to ensure maximum daily study reward is 1,400 coins (100 coins/hr * 14h).
+   5. **Participant Statistics & History Differentiation:**
+      - In `apps/web/features/participant-stats/domain/participant-stats.ts`:
+         - `calculateParticipantDailyTimeline` accumulates `capDailyStudySeconds(durationSeconds)` into `cumulativeSeconds` while preserving raw duration in `durationSeconds`.
+      - In `apps/web/features/participant-stats/presentation/participant-daily-history.tsx` & `participant-progress-chart.tsx`:
+         - Added `14h counted` badge and tooltip whenever a daily log exceeds 14:00:00.
+   6. **E2E & Unit Test Fixtures Alignment:**
+      - Updated synthetic test fixtures in `solo-challenge-lifecycle.test.ts`, `leaderboard-data.test.ts`, and `challenge-admin.repository.test.ts` where multi-day commitments (e.g. 35h, 20h, 30h) were originally compressed into single mock log rows exceeding 14h.
+   7. **Database Connection Hardening against Pooler Latency:**
+      - In `packages/database/src/index.ts`, added `withConnectionTimeouts` to dynamically inject `connect_timeout=30` and `pool_timeout=30` into `DATABASE_URL` and `DIRECT_URL`.
+      - Resolved Prisma `P1001` timeout when establishing TLS/SCRAM negotiation against Supabase pooler on cold start.
+      - Updated `apps/web/.env.example` with hardened connection string documentation.
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors.
+   - `npm run test:web`: ✅ 187/187 test files passed (1,777/1,777 tests green).
+   - Atomic commits: 6 discrete commits on branch `krish`.
+- **NEXT STEP:** Review PR #173, merge to `dev`, and verify staging.
+
 ### Session 151 — 2026-10-23 (Feat & Fix: Long Task Description Expand & Shrink in Daily/Weekly Task Board; PR #171 to dev)
 
 - **Agent Role:** Participant UI Agent.
@@ -222,8 +265,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Issue Lifecycle Policy & Rule Addition (AGENTS.md §4.4):**
    - Established strict 3-stage lifecycle progression: `To Do` -> `In Progress` (on branch checkout/start) -> `In Review` (on PR submission to `dev`) -> `Done` (ONLY after `dev` is merged into `main` via release PR).
    - Direct transitions from `In Progress` or `To Do` to `Done` are strictly prohibited.
-   - Jira ticket **[KAN-38]** transitioned to **`In Review`**.
-   - GitHub Issue **[#147]** linked in **PR #171** (`krish` -> `dev`) and kept `open` in review.
+   - Jira ticket **[KAN-38]** and GitHub Issue **[#147]** closed (**`Done`** / **`closed`**).
+   - Going forward: new issues follow AGENTS.md §4.4 lifecycle (`To Do` -> `In Progress` -> `In Review` on PR -> `Done` on `dev` merge to `main`).
 - **Code & Test Fixes:**
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Removed `block`, wired `line-clamp-none` / `line-clamp-2`, added `cursor-pointer` and `e.preventDefault()`.
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-expansion.test.tsx`: Added interactive unit tests with `@testing-library/react` and jsdom verifying initial `line-clamp-2`, expand to `line-clamp-none`, shrink back to `line-clamp-2`, and zero checkbox completion side-effects.

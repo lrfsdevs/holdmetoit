@@ -8,6 +8,7 @@ import {
    X,
    AlertTriangle,
    Check,
+   Info,
    Loader2,
    ShieldAlert,
    User as UserIcon,
@@ -25,6 +26,8 @@ import {
 import {
    decomposeSecondsToParts,
    formatSecondsToClock,
+   MAX_COUNTED_DAILY_STUDY_SECONDS,
+   MAX_DAILY_LOG_SECONDS,
 } from "@/features/study-logs/domain/duration";
 import {
    getChallengeDayOptions,
@@ -72,6 +75,54 @@ export function AdminHoursOverrideModal({
 }: AdminHoursOverrideModalProps) {
    const router = useRouter();
    const [isPending, startTransition] = useTransition();
+
+   const handleHoursChange = (raw: string) => {
+      if (raw === "") {
+         setHours("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setHours("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(24, val));
+      setHours(String(clamped));
+   };
+
+   const handleMinutesChange = (raw: string) => {
+      if (raw === "") {
+         setMinutes("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setMinutes("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(59, val));
+      setMinutes(String(clamped));
+   };
+
+   const handleSecondsChange = (raw: string) => {
+      if (raw === "") {
+         setSeconds("");
+         return;
+      }
+      const clean = raw.replace(/\D/g, "");
+      if (clean === "") {
+         setSeconds("");
+         return;
+      }
+      const val = parseInt(clean, 10);
+      if (isNaN(val)) return;
+      const clamped = Math.max(0, Math.min(59, val));
+      setSeconds(String(clamped));
+   };
 
    const effectiveStartDate = useMemo(() => {
       if (!challengeStartDate) return new Date().toISOString().slice(0, 10);
@@ -288,6 +339,13 @@ export function AdminHoursOverrideModal({
       }
 
       const durationSeconds = h * 3600 + m * 60 + s;
+      if (durationSeconds > MAX_DAILY_LOG_SECONDS) {
+         setFeedback({
+            type: "error",
+            message: "A single day cannot exceed 24:00:00 of study time.",
+         });
+         return;
+      }
       const existingSecondsForDate = getExistingSecondsForDate(
          selectedDayOption.dateKey
       );
@@ -635,7 +693,7 @@ export function AdminHoursOverrideModal({
                               selectedDayOption.isFuture ||
                               !hasExistingSession
                            }
-                           onChange={(e) => setHours(e.target.value)}
+                           onChange={(e) => handleHoursChange(e.target.value)}
                            className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
@@ -654,7 +712,7 @@ export function AdminHoursOverrideModal({
                               selectedDayOption.isFuture ||
                               !hasExistingSession
                            }
-                           onChange={(e) => setMinutes(e.target.value)}
+                           onChange={(e) => handleMinutesChange(e.target.value)}
                            className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
@@ -673,7 +731,7 @@ export function AdminHoursOverrideModal({
                               selectedDayOption.isFuture ||
                               !hasExistingSession
                            }
-                           onChange={(e) => setSeconds(e.target.value)}
+                           onChange={(e) => handleSecondsChange(e.target.value)}
                            className="h-11 rounded-xl bg-surface-elevated border-border-strong focus:border-white text-white text-center font-mono text-base disabled:opacity-40"
                         />
                      </div>
@@ -696,6 +754,37 @@ export function AdminHoursOverrideModal({
                      </button>
                   </div>
                </div>
+
+               {(() => {
+                  const currentSec =
+                     parseInt(hours || "0", 10) * 3600 +
+                     parseInt(minutes || "0", 10) * 60 +
+                     parseInt(seconds || "0", 10);
+                  if (currentSec > MAX_COUNTED_DAILY_STUDY_SECONDS) {
+                     return (
+                        <div
+                           data-testid="admin-daily-cap-notice"
+                           className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 animate-in fade-in"
+                        >
+                           <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+                           <div className="text-left">
+                              <p className="font-semibold text-amber-300">
+                                 14-Hour Scoring Cap Enforced
+                              </p>
+                              <p className="text-amber-200/80 mt-0.5 leading-relaxed">
+                                 The participant will have{" "}
+                                 {hours.padStart(2, "0")}:
+                                 {minutes.padStart(2, "0")}:
+                                 {seconds.padStart(2, "0")} logged, but
+                                 challenge scoring and deficit calculations will
+                                 strictly count a maximum of 14:00:00.
+                              </p>
+                           </div>
+                        </div>
+                     );
+                  }
+                  return null;
+               })()}
 
                {/* Mandatory Audit Reason */}
                <div className="space-y-1.5">
