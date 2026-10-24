@@ -1,0 +1,13 @@
+**/node_modules
+**/.next
+**/out
+**/dist
+**/build
+**/coverage
+.git
+.husky
+backups
+**/.env
+**/.env*.local
+*.log
+tsconfig.tsbuildinfo

@@ -11,14 +11,12 @@
    "scripts": {
       "start": "node src/server.js",
       "build": "echo \"ypt-bot: no build step\"",
-      "test": "LOG_SILENT=true node --test",
-      "ingest": "node src/sync/ingestStudyLogs.js",
-      "challenge_sync": "node src/sync/challenge_sync.js"
+      "test": "LOG_SILENT=true node --test"
    },
    "dependencies": {
       "@holdmetoit/database": "*",
+      "@supabase/supabase-js": "^2.117.2",
       "dotenv": "^16.6.1",
-      "express": "^5.2.1",
       "winston": "^3.19.0"
    }
 }

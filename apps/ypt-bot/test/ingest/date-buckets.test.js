@@ -4,12 +4,12 @@ import {
    computeUtcLogDate,
    computeChallengeDayLogDate,
    deriveStudyStatus,
-} from "../src/sync/ingestStudyLogs.js";
+} from "../../src/ingest/date-buckets.js";
 import {
    getActiveChallenge,
    getParticipantMap,
-} from "../src/db/challengeService.js";
-import { prisma } from "../src/db.js";
+} from "../../src/db/challenge-repository.js";
+import { prisma } from "../../src/db/client.js";
 
 describe("computeUtcLogDate (Strict UTC)", () => {
    test("normalizes any timestamp to UTC midnight (00:00:00.000Z)", () => {

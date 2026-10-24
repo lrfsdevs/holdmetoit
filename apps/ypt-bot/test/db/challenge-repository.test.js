@@ -5,12 +5,10 @@ import {
    CHALLENGE_GRACE_WINDOW_MS,
    getActiveChallenge,
    lockExpiredChallengesAfterGrace,
-} from "../src/db/challengeService.js";
-import {
-   computeChallengeDayLogDate,
-   ingestGroupMembersToDailyStudyLogs,
-} from "../src/sync/ingestStudyLogs.js";
-import { prisma } from "../src/db.js";
+} from "../../src/db/challenge-repository.js";
+import { computeChallengeDayLogDate } from "../../src/ingest/date-buckets.js";
+import { ingestGroupMembersToDailyStudyLogs } from "../../src/ingest/daily-study-log.js";
+import { prisma } from "../../src/db/client.js";
 
 describe("getChallengeLifecycle", () => {
    const startAt = new Date("2026-10-05T00:00:00.000Z");
@@ -124,7 +122,7 @@ describe("Day 7 Grace Period Session Filtering Logic", () => {
    const day7End = new Date("2026-10-12T00:00:00.000Z");
    const day7EndMs = day7End.getTime();
 
-   // Helper matching ingestStudyLogs.js grace session derivation logic
+   // Helper matching daily-study-log.js grace session derivation logic
    function filterGraceSession({ member, existing }) {
       const isStudying = Boolean(member.isStudying);
       const sessionStartMs = member.sessionStartMs

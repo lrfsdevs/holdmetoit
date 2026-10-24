@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { Writable } from "node:stream";
 import winston from "winston";
-import { createLogger } from "../src/logger.js";
+import { createLogger } from "../../src/lib/logger.js";
 
 function captureLogger(options = {}) {
    const records = [];

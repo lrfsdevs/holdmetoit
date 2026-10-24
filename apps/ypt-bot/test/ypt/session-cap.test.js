@@ -1,6 +1,6 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { getGroupMembers } from "../src/yptService.js";
+import { getGroupMembers } from "../../src/ypt/client.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 

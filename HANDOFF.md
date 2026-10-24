@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-23 (Session 152 — 14h daily study evaluation cap & time input bounds on `krish`)
+> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,39 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 155 — 2026-10-24 (ypt-bot: layered file structure on `afnan-jr`)
+
+- **Moves:** `db.js` → `db/client.js`, `challengeService.js` → `challenge-repository.js`, `yptService.js` → `ypt/client.js`, `ingestStudyLogs.js` → `ingest/run-ingest.js`, `databaseBackup.js` → `backup/runner.js`, `logger.js` → `lib/logger.js`.
+- **Splits:** `ypt/session.js` (token cache), `ingest/{daily-study-log,date-buckets}.js`, `backup/{config,retention,scheduler}.js`, `http/health-server.js`.
+- **Tests:** moved into `test/{ypt,db,ingest,backup,lib}`; backup tests split into config/retention/runner/scheduler (scheduler coverage added).
+- **Docs:** `docs/ypt-bot/doc.md` tree and `docs/database-backups/README.md` file table updated.
+- **Handoff:** deleted `docs/ypt-bot/HANDOFF.md`; this root `HANDOFF.md` is the single relay document.
+- **Behavior:** unchanged; no DB or dependency changes.
+- **NEXT STEP:** none (no commit made — pending manual testing).
+
+### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
+
+- **Scope:** Three competing entry points (`ingest`, `challenge_sync`, `backup`) duplicated the server's ingestion loop, auth handling, and health server.
+- **`npm start` now owns:** env validation, `GET /health`, the `runIngest()` loop on `POLL_INTERVAL_IDLE_SEC` (in-flight guarded), and `startDailyBackupScheduler()`.
+- **Removed scripts:** `ingest`, `challenge_sync`, `backup` from `@holdmetoit/ypt-bot`; `backup:db` from the root. Only `start` / `build` / `test` remain.
+- **Deleted:** `src/sync/challenge_sync.js` and `test/challenge-sync.test.js` (historical phase re-upserted the same table; live phase duplicated ingest).
+- **Removed CLI blocks:** `isDirectExecution` daemon in `ingestStudyLogs.js` (plus its duplicate health server) and auto-run in `databaseBackup.js`.
+- **Dead code:** `getJoinedGroups()` removed from `yptService.js`.
+- **Behavior:** credentials are env-only (no TTY prompt), ingestion is 30s by default, only `YPT_GROUP_IDS` is scraped, and manual `npm run backup` is gone (boot catch-up covers misses).
+- **Docs:** `docs/ypt-bot/doc.md`, `docs/ypt-bot/README.md`, `docs/database-backups/README.md`.
+- **NEXT STEP:** none.
+
+### Session 153 — 2026-10-24 (ypt-bot: remove Express API, keep `node:http` health route on `afnan-jr`)
+
+- **Scope:** The bot's unauthenticated Express API was unused and exposed sensitive telemetry (`/health` leaked the YPT account email; `/groups`, `/members`, `/groups/:groupId/members` exposed rosters; `POST /sync` triggered ingestion).
+- **Removed:** `GET /groups`, `GET /groups/:groupId`, `GET /groups/:groupId/members`, `GET /members`, `GET /groups/members`, `POST /sync`, `express.json()`, and the HTTP access-log middleware.
+- **Replaced:** Express app → `node:http` `createServer`; the only route is `GET /health` → `{ status: "ok", service: "ypt-bot", uptimeSeconds }`, with `404 {"error":"Not found"}` for everything else.
+- **Dead code:** `displayGroupMembers()` (`server.js`) and `searchJoinedGroups()` (`yptService.js`).
+- **Dependency:** `express` removed from `@holdmetoit/ypt-bot`; root lockfile regenerated.
+- **Unchanged:** CLI login, group discovery console output, initial ingest, 5-minute ingest scheduler, nightly backup scheduler, and all CLI scripts.
+- **Docs:** `docs/ypt-bot/README.md` and `docs/ypt-bot/doc.md` updated to the health-only surface.
+- **NEXT STEP:** none — no consumer existed; Render's `/health` probe path remains valid.
 
 ### Session 152 — 2026-10-23 (Feat & Fix: 14h Daily Study Evaluation Cap & Time Input Bounds; GH-172, KAN-55 on `krish`)
 
@@ -1320,3 +1353,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Audit:** new `PARTICIPANT_REENROLLED` event with the previous withdrawal snapshot + new enrollment values; ROSTER filter + success badge.
 - **Flag:** re-enrollment is not gated by `challenge_withdrawal_v1`.
 - **Quality Gates:** typecheck/tests/build run before commit.
+
+### Session 150 — 2026-10-23 (Nightly database backups inside ypt-bot on `afnan-jr`)
+
+- **Scope:** Added a self-hosted nightly PostgreSQL backup that runs inside the always-on ypt-bot service at **00:00 UTC**, uploading compressed dumps to a dedicated private Supabase bucket and pruning after 30 days.
+- **Runner:** `apps/ypt-bot/src/backup/databaseBackup.js` — preflight (`pg_dump`/`pg_restore`/server major + bucket), `pg_dump --format=custom --no-owner --no-privileges --schema=public`, empty-dump guard, `pg_restore --list` verification, upload, retention prune, structured winston logs, `PGPASSWORD`-only credentials.
+- **Scheduler:** `startDailyBackupScheduler()` starts in `server.js` after `app.listen`; self-rescheduling 00:00 UTC `setTimeout`, 24h catch-up on boot, `inFlight` guard, day-scoped object names for idempotency. Failures never crash the API/ingest loop.
+- **Config:** new keys in `src/config/env.js` (`DATABASE_BACKUP_*`, `SUPABASE_BACKUP_BUCKET`, `PG_*_BIN`). Manual runs use `npm run backup:db` (root) / `npm run backup -w @holdmetoit/ypt-bot`.
+- **Retention:** `DATABASE_BACKUP_RETENTION_DAYS` is clamped to a minimum of **1 day** in both env parsing and `selectExpiredObjects`; `0`/negative values behave exactly like `1`.
+- **Runtime:** added `apps/ypt-bot/Dockerfile` (Node 22 bookworm + `postgresql-client-17`) and root `.dockerignore`. **Render native ships only pg client 12–14, which cannot dump the PostgreSQL 15+ Supabase server — the service must switch to this Docker image.** Image built and validated locally (`pg_dump` 17.11 present, `.env` not baked in).
+- **Tests:** `apps/ypt-bot/test/database-backup.test.js` — 27 offline tests (date/schedule/retention helpers + runner happy path, skip, retention-0 minimum, empty dump, dump/verify/upload failures, duplicate upload, version mismatch, missing config). No DB/network required.
+- **Docs:** new `docs/database-backups/README.md` (scope, state machine, env, restore, security, lifecycle); `docs/ypt-bot/doc.md` updated with the env table, Docker runtime requirement, and backup section.
+- **Manual step (deferred):** create the private `holdmetoit-backups` bucket in Supabase, add the new env vars on Render, switch the service runtime to Docker, then run `npm run backup:db` once and perform a restore smoke test.
+- **NEXT STEP:** Provision the bucket + Render env/runtime, deploy, and verify the first scheduled run logs `backup_scheduled` for the next 00:00 UTC and stores `backups/holdmetoit-YYYY-MM-DD.dump`.
