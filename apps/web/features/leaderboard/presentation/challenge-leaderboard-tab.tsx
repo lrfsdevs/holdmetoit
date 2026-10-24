@@ -52,6 +52,7 @@ import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-ba
 import {
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
+   supportsTeamView,
    type LeaderboardViewMode,
 } from "../domain/leaderboard";
 
@@ -106,8 +107,13 @@ export function ChallengeLeaderboardTab({
    const [statusFilter, setStatusFilter] = useState<
       "ALL" | "on-track" | "catch-up"
    >("ALL");
-   const [viewMode, setViewMode] =
+   const teamViewEnabled = supportsTeamView(challenge.format);
+   const [requestedViewMode, setViewMode] =
       useState<LeaderboardViewMode>(initialViewMode);
+   const viewMode: LeaderboardViewMode =
+      requestedViewMode === "team" && !teamViewEnabled
+         ? "individual"
+         : requestedViewMode;
 
    useEffect(() => {
       if (initialViewMode) {
@@ -599,18 +605,20 @@ export function ChallengeLeaderboardTab({
                         <Clock className="h-3.5 w-3.5" />
                         <span>Today&apos;s LB</span>
                      </button>
-                     <button
-                        type="button"
-                        onClick={() => handleViewModeChange("team")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                           viewMode === "team"
-                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
-                              : "text-text-tertiary hover:text-white"
-                        }`}
-                     >
-                        <Users className="h-3.5 w-3.5" />
-                        <span>View by Team</span>
-                     </button>
+                     {teamViewEnabled && (
+                        <button
+                           type="button"
+                           onClick={() => handleViewModeChange("team")}
+                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                              viewMode === "team"
+                                 ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                                 : "text-text-tertiary hover:text-white"
+                           }`}
+                        >
+                           <Users className="h-3.5 w-3.5" />
+                           <span>View by Team</span>
+                        </button>
+                     )}
                   </div>
                </div>
 

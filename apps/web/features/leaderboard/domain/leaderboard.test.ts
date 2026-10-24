@@ -7,6 +7,7 @@ import {
    calculateSharePercentages,
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
+   supportsTeamView,
 } from "@/features/leaderboard/domain/leaderboard";
 
 const teams = [{ id: "bees" }, { id: "butterflies" }, { id: "solos-team-1" }];
@@ -304,5 +305,13 @@ describe("resolveLeaderboardViewMode", () => {
       expect(resolveLeaderboardViewMode(null)).toBe("individual");
       expect(resolveLeaderboardViewMode("")).toBe("individual");
       expect(resolveLeaderboardViewMode("unknown")).toBe("individual");
+   });
+});
+
+describe("supportsTeamView", () => {
+   it("is false only for SOLOS", () => {
+      expect(supportsTeamView("SOLOS")).toBe(false);
+      expect(supportsTeamView("TEAM_VS_TEAM")).toBe(true);
+      expect(supportsTeamView("DUOS")).toBe(true);
    });
 });
