@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
+> **Last Updated:** 2026-10-25 (Session 155 on `dev` · Session 154 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1406,3 +1406,26 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives with seamless 404 fallback to embed avatars or initials, and added `RefreshAvatarButton` on participant profile headers with clear status feedback (`"Avatar updated!"`, `"Avatar is up to date!"`, or `"Session expired — please log in again to sync"`), without client-supplied user IDs.
 - **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
 - **Quality Gates:** 0 typecheck errors, 0 lint errors, 193/193 test files (1817 tests) passing. PR #179 submitted from `krish` -> `dev`.
+
+### Session 154 — 2026-10-25 (Operational Daily Planning Checklist Outside Challenges on `krish` — GH-#125 / KAN-34)
+
+- **Root Cause Resolved:** Previously, daily tasks in the cockpit inherited anti-cheat past-day challenge locks (`PAST_DAY_NOT_ALLOWED`) unconditionally when rendering earlier days in a calendar week. However, under Law L6 (Three-Condition Invariant), challenges evaluate only challenge-linked weekly goals—daily tasks are purely personal planning tools and should never block non-challenge participants from logging or scheduling commitments on past days.
+- **Domain Refinement (`challenge-day.ts`):**
+   - Updated `validateAddTaskChallengeDay(isPastDay, options?: { isChallengeActive?: boolean })` to allow past-day task additions when `isChallengeActive === false`.
+   - Updated `validateMoveTaskChallengeDay(sourceDateKey, targetDateKey, todayDateKey, options?: ValidateMoveTaskOptions)` to allow moving tasks across any day when `options?.isChallengeActive === false`.
+   - Added unit test coverage across all cases in `challenge-day.test.ts` (48 tests passing).
+- **Presentation Layer Updates (`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`):**
+   - Added `hasChallengeContext = Boolean(challengeStartDate)` and derived `isPastDayLocked = hasChallengeContext && isActiveDayPast`.
+   - Conditioned all anti-cheat locking badges, empty states, disabled action buttons, and drag-and-drop guards on `isPastDayLocked` instead of `isActiveDayPast`.
+   - Updated personal planning empty state copy to `"Plan or log your tasks for {Day}."` and `"+ Add todo for {Day}"` when not in an active challenge.
+   - Added `initialSelectedDateKey?: string` prop to `CockpitTasksSectionProps` for robust day selection and testing.
+   - Updated `TaskMenuItems` and `CategoryMenuItems` with `isChallengeActive?: boolean` to unlock deletion and rescheduling on past days for personal planning.
+- **Slice Splitting (3-Stage Plan):**
+   - Slice 1 (This Session): Core daily task operationalization & past-day lock lifting (GH #125 / KAN-34).
+   - Slice 2: Multi-week arrow navigation & date picker selector for personal planning outside challenges (GH #184 / KAN-60).
+   - Slice 3: Weekly goals personal view & unlinked challenge status (GH #185 / KAN-61).
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+   - `npm run test:web`: ✅ 194 test files passed (1843/1843 tests green).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, transition Jira `KAN-34` from `In Progress` to `In Review`, and proceed to Slice 2 (GH #184 / KAN-60).
