@@ -79,6 +79,7 @@ import {
 } from "@/components/ui/context-menu";
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
+import { cn } from "@/lib/utils";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -800,6 +801,8 @@ export function CockpitTasksSection({
             (t) => t.id === taskId
          );
          if (!targetTask) return;
+         const targetDateKey = getTaskDateKey(targetTask);
+         if (checkIsDayLocked(targetDateKey)) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
@@ -1058,11 +1061,18 @@ export function CockpitTasksSection({
               ? new Date(editTaskModal.createdAt).toISOString().slice(0, 10)
               : effectiveTodayDate;
 
+         if (checkIsDayLocked(resolvedDueDate)) {
+            return;
+         }
+
          const check = validateMoveTaskChallengeDay(
             originalDateKey,
             resolvedDueDate,
             effectiveTodayDate,
-            { isChallengeActive: hasChallengeContext }
+            {
+               isChallengeActive: hasChallengeContext,
+               isTargetDayLocked: checkIsDayLocked(resolvedDueDate),
+            }
          );
          if (!check.ok) {
             return;
@@ -2374,8 +2384,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -2526,8 +2535,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -2787,8 +2795,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -3662,13 +3669,22 @@ export function CockpitTasksSection({
                                                                         status ===
                                                                         "COMPLETED"
                                                                      }
-                                                                     onClick={() =>
+                                                                     onClick={() => {
+                                                                        if (
+                                                                           isPastDayLocked
+                                                                        )
+                                                                           return;
                                                                         toggleDailyTask(
                                                                            catIdx,
                                                                            task.id
-                                                                        )
-                                                                     }
-                                                                     className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
+                                                                        );
+                                                                     }}
+                                                                     className={cn(
+                                                                        "flex items-start gap-3 flex-1 min-w-0",
+                                                                        isPastDayLocked
+                                                                           ? "cursor-not-allowed opacity-75"
+                                                                           : "cursor-pointer"
+                                                                     )}
                                                                      title={
                                                                         status ===
                                                                         "COMPLETED"

@@ -452,15 +452,11 @@ export function isChallengeDayDateLocked(
       return false;
    }
 
-   if (options.challengeStatus === "ACTIVE") {
-      return dateKey < todayDateKey;
+   if (options.challengeStatus === "COMPLETED" || todayDateKey > endKey) {
+      return true;
    }
 
-   if (options.challengeStatus === "COMPLETED") {
-      const isNewWeekStarted = todayDateKey > endKey;
-      if (isNewWeekStarted) {
-         return true;
-      }
+   if (options.challengeStatus === "ACTIVE") {
       return dateKey < todayDateKey;
    }
 
