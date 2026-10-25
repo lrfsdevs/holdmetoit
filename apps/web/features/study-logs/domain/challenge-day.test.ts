@@ -8,6 +8,10 @@ import {
    getChallengeDayNumber,
    getChallengeDayOptions,
    getCalendarWeekDayOptions,
+   getAdjacentWeekAnchor,
+   formatWeekRange,
+   isSameCalendarWeek,
+   getCalendarMonthGrid,
    validateStudyLogChallengeDay,
    validateAdminOverrideChallengeDay,
    isChallengeDayInPast,
@@ -157,6 +161,117 @@ describe("getCalendarWeekDayOptions", () => {
       expect(options[6].weekday).toBe("Sun");
       expect(options[6].dayNumber).toBe(7);
       expect(options[6].isFuture).toBe(true);
+   });
+
+   it("supports arbitrary anchor week with decoupled today date", () => {
+      // Anchor is in the future relative to today (today: Oct 7, anchor: Oct 14)
+      const futureAnchor = "2026-10-14";
+      const today = "2026-10-07";
+      const futureOptions = getCalendarWeekDayOptions(futureAnchor, today);
+
+      expect(futureOptions).toHaveLength(7);
+      expect(futureOptions[0].dateKey).toBe("2026-10-12"); // Monday
+      expect(futureOptions[6].dateKey).toBe("2026-10-18"); // Sunday
+      expect(futureOptions.every((d) => d.isFuture)).toBe(true);
+      expect(futureOptions.some((d) => d.isToday)).toBe(false);
+
+      // Anchor is in the past relative to today (today: Oct 7, anchor: Sep 30)
+      const pastAnchor = "2026-09-30";
+      const pastOptions = getCalendarWeekDayOptions(pastAnchor, today);
+      expect(pastOptions).toHaveLength(7);
+      expect(pastOptions[0].dateKey).toBe("2026-09-28"); // Monday
+      expect(pastOptions[6].dateKey).toBe("2026-10-04"); // Sunday
+      expect(pastOptions.every((d) => d.isPast)).toBe(true);
+      expect(pastOptions.some((d) => d.isToday)).toBe(false);
+   });
+});
+
+describe("getAdjacentWeekAnchor", () => {
+   it("calculates previous and next week anchor dates correctly", () => {
+      expect(getAdjacentWeekAnchor("2026-10-25", -1)).toBe("2026-10-18");
+      expect(getAdjacentWeekAnchor("2026-10-25", 1)).toBe("2026-11-01");
+      expect(getAdjacentWeekAnchor("2026-10-25", 2)).toBe("2026-11-08");
+      expect(getAdjacentWeekAnchor("2026-10-25", -2)).toBe("2026-10-11");
+   });
+
+   it("crosses month and year boundaries cleanly", () => {
+      expect(getAdjacentWeekAnchor("2026-01-05", -1)).toBe("2025-12-29");
+      expect(getAdjacentWeekAnchor("2025-12-29", 1)).toBe("2026-01-05");
+   });
+});
+
+describe("formatWeekRange", () => {
+   it("formats week range within the same month", () => {
+      expect(formatWeekRange("2026-10-19", "2026-10-25")).toBe("Oct 19 – 25");
+   });
+
+   it("formats week range across different months in same year", () => {
+      expect(formatWeekRange("2026-10-26", "2026-11-01")).toBe(
+         "Oct 26 – Nov 1"
+      );
+   });
+
+   it("formats week range across different years", () => {
+      expect(formatWeekRange("2026-12-28", "2027-01-03")).toBe(
+         "Dec 28, 2026 – Jan 3, 2027"
+      );
+   });
+
+   it("falls back gracefully on malformed dates", () => {
+      expect(formatWeekRange("invalid", "dates")).toBe("invalid – dates");
+   });
+});
+
+describe("isSameCalendarWeek", () => {
+   it("identifies dates within the same ISO Monday-Sunday week", () => {
+      expect(isSameCalendarWeek("2026-10-19", "2026-10-25")).toBe(true);
+      expect(isSameCalendarWeek("2026-10-21", "2026-10-25")).toBe(true);
+      expect(isSameCalendarWeek("2026-10-19", "2026-10-19")).toBe(true);
+   });
+
+   it("returns false for dates in different calendar weeks", () => {
+      expect(isSameCalendarWeek("2026-10-25", "2026-10-26")).toBe(false);
+      expect(isSameCalendarWeek("2026-10-18", "2026-10-19")).toBe(false);
+   });
+
+   it("returns false for invalid inputs", () => {
+      expect(isSameCalendarWeek("invalid", "2026-10-25")).toBe(false);
+   });
+});
+
+describe("getCalendarMonthGrid", () => {
+   it("generates a complete Monday-aligned month grid for October 2026", () => {
+      const grid = getCalendarMonthGrid(2026, 9); // October (0-indexed 9)
+
+      expect(grid.year).toBe(2026);
+      expect(grid.month).toBe(9);
+      expect(grid.monthName).toBe("October 2026");
+      expect(grid.weeks).toHaveLength(5);
+
+      // First week starts on Monday Sep 28
+      const firstWeek = grid.weeks[0];
+      expect(firstWeek).toHaveLength(7);
+      expect(firstWeek[0].dateKey).toBe("2026-09-28");
+      expect(firstWeek[0].isCurrentMonth).toBe(false);
+      expect(firstWeek[0].weekdayIndex).toBe(0);
+
+      // Oct 1 is Thursday (index 3)
+      expect(firstWeek[3].dateKey).toBe("2026-10-01");
+      expect(firstWeek[3].isCurrentMonth).toBe(true);
+      expect(firstWeek[3].dayOfMonth).toBe(1);
+
+      // Last week ends on Sunday Nov 1
+      const lastWeek = grid.weeks[4];
+      expect(lastWeek[5].dateKey).toBe("2026-10-31");
+      expect(lastWeek[5].isCurrentMonth).toBe(true);
+      expect(lastWeek[6].dateKey).toBe("2026-11-01");
+      expect(lastWeek[6].isCurrentMonth).toBe(false);
+   });
+
+   it("supports Date or string input", () => {
+      const grid = getCalendarMonthGrid("2026-10-15");
+      expect(grid.monthName).toBe("October 2026");
+      expect(grid.weeks.length).toBeGreaterThanOrEqual(4);
    });
 });
 
