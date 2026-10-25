@@ -1338,11 +1338,15 @@ export function CockpitTasksSection({
       if (!foundTask || foundCatIdx === undefined) return;
 
       const sourceDateKey = getTaskDateKey(foundTask);
+      if (checkIsDayLocked(sourceDateKey)) return;
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
          effectiveTodayDate,
-         { isChallengeActive: hasChallengeContext }
+         {
+            isChallengeActive: hasChallengeContext,
+            isTargetDayLocked: checkIsDayLocked(targetDateKey),
+         }
       );
       if (!validation.ok) return;
 
@@ -1561,11 +1565,15 @@ export function CockpitTasksSection({
       if (!sourceCat) return;
 
       const sourceDateKey = selectedDateKey;
+      if (checkIsDayLocked(sourceDateKey)) return;
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
          effectiveTodayDate,
-         { isChallengeActive: hasChallengeContext }
+         {
+            isChallengeActive: hasChallengeContext,
+            isTargetDayLocked: checkIsDayLocked(targetDateKey),
+         }
       );
       if (!validation.ok) return;
 
@@ -2243,11 +2251,18 @@ export function CockpitTasksSection({
 
       if (draggedItem.sourceColumn === "daily") {
          const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+         if (checkIsDayLocked(sourceDateKey)) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+         }
          const validation = validateMoveTaskChallengeDay(
             sourceDateKey,
             opt.dateKey,
             effectiveTodayDate,
-            { isChallengeActive: hasChallengeContext }
+            {
+               isChallengeActive: hasChallengeContext,
+               isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+            }
          );
          if (!validation.ok) {
             e.dataTransfer.dropEffect = "none";
@@ -2260,7 +2275,10 @@ export function CockpitTasksSection({
             return;
          }
       } else if (draggedItem.sourceColumn === "weekly") {
-         if (hasChallengeContext && opt.isPast) {
+         if (
+            checkIsDayLocked(opt.dateKey) ||
+            (hasChallengeContext && opt.isPast)
+         ) {
             e.dataTransfer.dropEffect = "none";
             if (!dragOverInfo || dragOverInfo.targetDateKey !== opt.dateKey) {
                setDragOverInfo({
@@ -2293,11 +2311,18 @@ export function CockpitTasksSection({
       if (draggedItem.type === "category") {
          if (draggedItem.sourceColumn === "daily") {
             const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+            if (checkIsDayLocked(sourceDateKey)) {
+               handleDragEnd();
+               return;
+            }
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
                effectiveTodayDate,
-               { isChallengeActive: hasChallengeContext }
+               {
+                  isChallengeActive: hasChallengeContext,
+                  isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+               }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2309,7 +2334,10 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (hasChallengeContext && opt.isPast) {
+            if (
+               checkIsDayLocked(opt.dateKey) ||
+               (hasChallengeContext && opt.isPast)
+            ) {
                handleDragEnd();
                return;
             }
@@ -2326,11 +2354,18 @@ export function CockpitTasksSection({
       if (draggedItem.type === "task" && draggedItem.id) {
          if (draggedItem.sourceColumn === "daily") {
             const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+            if (checkIsDayLocked(sourceDateKey)) {
+               handleDragEnd();
+               return;
+            }
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
                effectiveTodayDate,
-               { isChallengeActive: hasChallengeContext }
+               {
+                  isChallengeActive: hasChallengeContext,
+                  isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+               }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2343,7 +2378,10 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (hasChallengeContext && opt.isPast) {
+            if (
+               checkIsDayLocked(opt.dateKey) ||
+               (hasChallengeContext && opt.isPast)
+            ) {
                handleDragEnd();
                return;
             }
@@ -3214,16 +3252,23 @@ export function CockpitTasksSection({
                            if (draggedItem.sourceColumn === "daily") {
                               const sourceKey =
                                  draggedItem.sourceDateKey || selectedDateKey;
-                              isDropAllowedOnOpt = validateMoveTaskChallengeDay(
-                                 sourceKey,
-                                 opt.dateKey,
-                                 effectiveTodayDate,
-                                 { isChallengeActive: hasChallengeContext }
-                              ).ok;
+                              isDropAllowedOnOpt =
+                                 !checkIsDayLocked(sourceKey) &&
+                                 validateMoveTaskChallengeDay(
+                                    sourceKey,
+                                    opt.dateKey,
+                                    effectiveTodayDate,
+                                    {
+                                       isChallengeActive: hasChallengeContext,
+                                       isTargetDayLocked: checkIsDayLocked(
+                                          opt.dateKey
+                                       ),
+                                    }
+                                 ).ok;
                            } else if (draggedItem.sourceColumn === "weekly") {
-                              isDropAllowedOnOpt = hasChallengeContext
-                                 ? !opt.isPast
-                                 : true;
+                              isDropAllowedOnOpt =
+                                 !checkIsDayLocked(opt.dateKey) &&
+                                 (hasChallengeContext ? !opt.isPast : true);
                            }
                         }
 

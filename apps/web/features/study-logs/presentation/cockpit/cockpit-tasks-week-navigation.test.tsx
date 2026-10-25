@@ -125,31 +125,40 @@ describe("CockpitTasksSection Interactive Week Navigation (GH #184 / KAN-60)", (
    });
 
    it("locks daily todos for a previous challenge week when navigated back from the new week", () => {
-      render(
-         <CockpitTasksSection
-            isLoggedIn={true}
-            userTasks={emptyTasks}
-            challengeStartDate="2026-10-12"
-            totalChallengeDays={7}
-            challengeStatus="COMPLETED"
-            todayDate="2026-10-25"
-         />
-      );
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T12:00:00Z"));
 
-      // On current week (Oct 19 – 25), today (Oct 25) is unlocked
-      expect(screen.queryByText("Locked")).toBeNull();
+      try {
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={emptyTasks}
+               challengeStartDate="2026-10-12"
+               totalChallengeDays={7}
+               challengeStatus="COMPLETED"
+               todayDate="2026-10-25"
+            />
+         );
 
-      // Page back to the previous week (Oct 12 – 18, which was the challenge week)
-      const prevWeekBtn = screen.getByRole("button", { name: "Previous week" });
-      fireEvent.click(prevWeekBtn);
-      expect(screen.getByText("Oct 12 – 18")).toBeTruthy();
+         // On current week (Oct 19 – 25), today (Oct 25) is unlocked
+         expect(screen.queryByText("Locked")).toBeNull();
 
-      // The daily todos for that past challenge week must now be locked!
-      expect(screen.getByText("Locked")).toBeTruthy();
-      expect(
-         screen.getByText(
-            "This challenge day has passed. New tasks cannot be added to past days."
-         )
-      ).toBeTruthy();
+         // Page back to the previous week (Oct 12 – 18, which was the challenge week)
+         const prevWeekBtn = screen.getByRole("button", {
+            name: "Previous week",
+         });
+         fireEvent.click(prevWeekBtn);
+         expect(screen.getByText("Oct 12 – 18")).toBeTruthy();
+
+         // The daily todos for that past challenge week must now be locked!
+         expect(screen.getByText("Locked")).toBeTruthy();
+         expect(
+            screen.getByText(
+               "This challenge day has passed. New tasks cannot be added to past days."
+            )
+         ).toBeTruthy();
+      } finally {
+         vi.useRealTimers();
+      }
    });
 });
