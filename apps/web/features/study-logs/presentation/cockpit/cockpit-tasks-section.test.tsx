@@ -976,5 +976,26 @@ describe("CockpitTasksSection", () => {
          expect(html).not.toContain("Past day locked (new tasks blocked)");
          expect(html).toContain("+ Add more todos for Mon");
       });
+
+      it("does not lock past days and ignores expired challenge start dates when challengeStatus is COMPLETED", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-05",
+               challengeId: "ch_completed_1",
+               challengeStatus: "COMPLETED",
+               todayDate: "2026-10-11",
+            })
+         );
+
+         expect(html).not.toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).not.toContain("Past day locked (new tasks blocked)");
+         expect(html).not.toContain("Adding tasks to past days is locked");
+         expect(html).toContain('aria-label="Calendar Week Day Tabs"');
+         expect(html).toContain("+ Add first todo");
+      });
    });
 });

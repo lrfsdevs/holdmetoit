@@ -160,7 +160,15 @@ export function CockpitTasksSection({
    const [, startTransition] = useTransition();
    const linkableChallengeId =
       challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
-   const hasChallengeContext = Boolean(challengeStartDate);
+   const isChallengeActive = challengeStatus
+      ? challengeStatus === "ACTIVE"
+      : Boolean(challengeStartDate);
+   const hasChallengeContext = Boolean(
+      (challengeStartDate || (challengeStatus === "ACTIVE" && todayDate)) &&
+      isChallengeActive
+   );
+   const effectiveStartDate =
+      challengeStartDate || (hasChallengeContext ? todayDate : undefined);
    const [addModalType, setAddModalType] = useState<"daily" | "weekly" | null>(
       null
    );
@@ -315,19 +323,27 @@ export function CockpitTasksSection({
    );
 
    const effectiveTodayDate = useMemo(() => {
+      if (!hasChallengeContext && challengeStatus === "COMPLETED") {
+         return new Date().toISOString().slice(0, 10);
+      }
       return todayDate || new Date().toISOString().slice(0, 10);
-   }, [todayDate]);
+   }, [hasChallengeContext, challengeStatus, todayDate]);
 
    const dayOptions: ChallengeDayOption[] = useMemo(() => {
-      if (challengeStartDate) {
+      if (hasChallengeContext && effectiveStartDate) {
          return getChallengeDayOptions(
-            challengeStartDate,
+            effectiveStartDate,
             effectiveTodayDate,
             totalChallengeDays ?? 7
          ).slice(0, 7);
       }
       return getCalendarWeekDayOptions(effectiveTodayDate).slice(0, 7);
-   }, [challengeStartDate, effectiveTodayDate, totalChallengeDays]);
+   }, [
+      hasChallengeContext,
+      effectiveStartDate,
+      effectiveTodayDate,
+      totalChallengeDays,
+   ]);
 
    const todayDayOption = useMemo(() => {
       return dayOptions.find((d) => d.isToday) || dayOptions[0];
@@ -351,7 +367,7 @@ export function CockpitTasksSection({
       () =>
          initialDayOption?.dayNumber ||
          todayDayOption?.dayNumber ||
-         todayDayNumber ||
+         (hasChallengeContext ? todayDayNumber : undefined) ||
          1
    );
 
@@ -3064,7 +3080,11 @@ export function CockpitTasksSection({
                   {/* 7-Day Pill Switcher (Fits all 7 days without horizontal scrolling) */}
                   <div
                      role="tablist"
-                     aria-label="Challenge Day Tabs"
+                     aria-label={
+                        hasChallengeContext
+                           ? "Challenge Day Tabs"
+                           : "Calendar Week Day Tabs"
+                     }
                      className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full pt-0.5 pb-1"
                   >
                      {dayOptions.map((opt) => {
@@ -4921,7 +4941,11 @@ export function CockpitTasksSection({
                            id="add-todo-day"
                            className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
                         >
-                           <span>Assigned Challenge Day</span>
+                           <span>
+                              {hasChallengeContext
+                                 ? "Assigned Challenge Day"
+                                 : "Assigned Day"}
+                           </span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(addTodoDateKey || selectedDateKey)}
                            </span>
@@ -5159,7 +5183,11 @@ export function CockpitTasksSection({
                            id="edit-task-day"
                            className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
                         >
-                           <span>Assigned Challenge Day</span>
+                           <span>
+                              {hasChallengeContext
+                                 ? "Assigned Challenge Day"
+                                 : "Assigned Day"}
+                           </span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(editTaskInputDueDate)}
                            </span>
