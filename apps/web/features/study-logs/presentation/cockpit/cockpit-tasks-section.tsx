@@ -881,7 +881,7 @@ export function CockpitTasksSection({
             const dateKey = getTaskDateKey(taskToDelete);
             const opt = dayOptions.find((d) => d.dateKey === dateKey);
             const isPast = opt?.isPast ?? dateKey < effectiveTodayDate;
-            if (isPast) {
+            if (hasChallengeContext && isPast) {
                return;
             }
          }
@@ -1086,7 +1086,7 @@ export function CockpitTasksSection({
 
       // If source is weekly
       if (sourceColumn === "weekly") {
-         if (isTargetPast) return;
+         if (hasChallengeContext && isTargetPast) return;
          const foundWeeklyCatIdx =
             sourceCatIdx !== undefined
                ? sourceCatIdx
@@ -1314,7 +1314,7 @@ export function CockpitTasksSection({
          targetOpt?.isPast ?? targetDateKey < effectiveTodayDate;
 
       if (sourceColumn === "weekly") {
-         if (isTargetPast) return;
+         if (hasChallengeContext && isTargetPast) return;
          if (catIdx < 0 || catIdx >= weeklyCategories.length) return;
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
@@ -1610,7 +1610,7 @@ export function CockpitTasksSection({
          })
       );
 
-      if (hasPastTasks) {
+      if (hasChallengeContext && hasPastTasks) {
          setDeleteCategoryModal(null);
          return;
       }
@@ -1740,7 +1740,7 @@ export function CockpitTasksSection({
          );
          const isPast =
             targetOpt?.isPast ?? resolvedDueDate < effectiveTodayDate;
-         if (isPast) {
+         if (hasChallengeContext && isPast) {
             return;
          }
       }
@@ -3334,6 +3334,9 @@ export function CockpitTasksSection({
                                                       className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
                                                          cat={cat}
                                                          catType="daily"
                                                          dailyCategories={
@@ -3403,6 +3406,9 @@ export function CockpitTasksSection({
                                     {isLoggedIn && (
                                        <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
                                              cat={cat}
                                              catType="daily"
                                              dailyCategories={dailyCategories}
@@ -3754,6 +3760,9 @@ export function CockpitTasksSection({
                                                                   className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
                                                                      task={task}
                                                                      catIdx={
                                                                         catIdx
@@ -3847,6 +3856,9 @@ export function CockpitTasksSection({
                                                    {isLoggedIn && (
                                                       <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
                                                             task={task}
                                                             catIdx={catIdx}
                                                             taskType="daily"
@@ -4095,6 +4107,9 @@ export function CockpitTasksSection({
                                                       className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
                                                          cat={cat}
                                                          catType="weekly"
                                                          dailyCategories={
@@ -4164,6 +4179,9 @@ export function CockpitTasksSection({
                                     {isLoggedIn && (
                                        <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
                                              cat={cat}
                                              catType="weekly"
                                              dailyCategories={dailyCategories}
@@ -4514,6 +4532,9 @@ export function CockpitTasksSection({
                                                                   className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
                                                                      task={task}
                                                                      catIdx={
                                                                         catIdx
@@ -4607,6 +4628,9 @@ export function CockpitTasksSection({
                                                    {isLoggedIn && (
                                                       <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
                                                             task={task}
                                                             catIdx={catIdx}
                                                             taskType="weekly"

@@ -917,5 +917,64 @@ describe("CockpitTasksSection", () => {
          expect(html).toContain("Locked</span>");
          expect(html).not.toContain("+ Add todo for Day 1");
       });
+      it("renders task and category options triggers and keeps adding unlocked on past days when not in an active challenge", () => {
+         const tasksWithPastDaily: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_daily_past",
+                  userId: "user_1",
+                  name: "Past Daily Routine",
+                  taskType: "DAILY",
+                  createdAt: new Date("2026-09-28T10:00:00Z"),
+                  updatedAt: new Date("2026-09-28T10:00:00Z"),
+               },
+            ],
+            dailyCategories: [
+               {
+                  id: "cat_daily_past",
+                  name: "Past Daily Routine",
+                  taskType: "DAILY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "t_past_daily",
+                        userId: "user_1",
+                        categoryId: "cat_daily_past",
+                        title: "Past Routine Task",
+                        taskType: "DAILY",
+                        isComplete: false,
+                        dueDate: "2026-09-28",
+                        createdAt: new Date("2026-09-28T10:00:00Z"),
+                        updatedAt: new Date("2026-09-28T10:00:00Z"),
+                        completedAt: null,
+                     },
+                  ],
+               },
+            ],
+            weeklyCategories: [],
+            totalDailyTasks: 1,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 0,
+            completedWeeklyTasks: 0,
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: tasksWithPastDaily,
+               todayDate: "2026-10-04",
+               initialSelectedDateKey: "2026-09-28",
+            })
+         );
+
+         expect(html).toContain(
+            'aria-label="Options for task Past Routine Task"'
+         );
+         expect(html).toContain(
+            'aria-label="Options for category Past Daily Routine"'
+         );
+         expect(html).not.toContain("Past day locked (new tasks blocked)");
+         expect(html).toContain("+ Add more todos for Mon");
+      });
    });
 });

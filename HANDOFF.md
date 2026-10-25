@@ -1420,6 +1420,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Updated personal planning empty state copy to `"Plan or log your tasks for {Day}."` and `"+ Add todo for {Day}"` when not in an active challenge.
    - Added `initialSelectedDateKey?: string` prop to `CockpitTasksSectionProps` for robust day selection and testing.
    - Updated `TaskMenuItems` and `CategoryMenuItems` with `isChallengeActive?: boolean` to unlock deletion and rescheduling on past days for personal planning.
+   - Explicitly passed `isChallengeActive={hasChallengeContext}` to all 8 `<TaskMenuItems>` and `<CategoryMenuItems>` instances in `cockpit-tasks-section.tsx`.
+   - Conditioned `handleDeleteTask`, `handleConfirmDeleteCategory`, `handleAddTodoSubmit`, and weekly-to-past-day move guards (`moveTaskToDay`, `moveCategoryToDayAction`) on `hasChallengeContext` so personal planning is never blocked.
 - **Slice Splitting (3-Stage Plan):**
    - Slice 1 (This Session): Core daily task operationalization & past-day lock lifting (GH #125 / KAN-34).
    - Slice 2: Multi-week arrow navigation & date picker selector for personal planning outside challenges (GH #184 / KAN-60).
