@@ -153,6 +153,36 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
       expect(html).toContain("Delete Task (Locked)");
    });
 
+   it("allows deletion when task is on a past day if not in an active challenge (GH-125)", () => {
+      const pastTask: TaskItem = {
+         ...mockTask,
+         dueDate: "2026-10-01",
+         createdAt: "2026-10-01T08:00:00Z",
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(TaskMenuItems, {
+            task: pastTask,
+            catIdx: 0,
+            taskType: "daily",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: mockDayOptions,
+            selectedDateKey: "2026-10-01",
+            isChallengeActive: false,
+            onSetStatus: vi.fn(),
+            onMoveToDay: vi.fn(),
+            onEditTask: vi.fn(),
+            onDeleteTask: vi.fn(),
+            Item: MockItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      expect(html).not.toContain("Delete Task (Locked)");
+      expect(html).toContain("Delete Task");
+   });
+
    it("renders CategoryMenuItems with Move Category, Rename, and Delete", () => {
       const html = renderToStaticMarkup(
          createElement(CategoryMenuItems, {
@@ -212,6 +242,43 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
       );
 
       expect(html).toContain("Delete Category (Locked)");
+   });
+
+   it("does NOT lock delete category option when category contains past tasks if not in an active challenge (GH-125)", () => {
+      const categoryWithPastTask: CategoryGroup = {
+         ...mockCategory,
+         tasks: [
+            {
+               id: "t_past",
+               text: "Past Task",
+               completed: true,
+               dueDate: "2026-10-01",
+               createdAt: "2026-10-01T00:00:00Z",
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CategoryMenuItems, {
+            cat: categoryWithPastTask,
+            catType: "daily",
+            dailyCategories: [categoryWithPastTask],
+            weeklyCategories: [],
+            selectedDateKey: "2026-10-02",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: mockDayOptions,
+            isChallengeActive: false,
+            onMoveCategoryToDay: vi.fn(),
+            onRenameCategory: vi.fn(),
+            onDeleteCategory: vi.fn(),
+            Item: MockItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      expect(html).not.toContain("Delete Category (Locked)");
+      expect(html).toContain("Delete Category");
    });
 
    it("does NOT lock delete category option for weekly challenge categories even with tasks on past dates (GH-130)", () => {

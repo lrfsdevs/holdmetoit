@@ -137,6 +137,7 @@ export interface CockpitTasksSectionProps {
    todayDate?: string;
    todayDayNumber?: number;
    totalChallengeDays?: number;
+   initialSelectedDateKey?: string;
    onOpenHoursModal?: (dayNumber?: number) => void;
    isAdmin?: boolean;
 }
@@ -152,12 +153,22 @@ export function CockpitTasksSection({
    todayDate,
    todayDayNumber,
    totalChallengeDays = 7,
+   initialSelectedDateKey,
    onOpenHoursModal,
    isAdmin = false,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
    const linkableChallengeId =
       challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
+   const isChallengeActive = challengeStatus
+      ? challengeStatus === "ACTIVE"
+      : Boolean(challengeStartDate);
+   const hasChallengeContext = Boolean(
+      (challengeStartDate || (challengeStatus === "ACTIVE" && todayDate)) &&
+      isChallengeActive
+   );
+   const effectiveStartDate =
+      challengeStartDate || (hasChallengeContext ? todayDate : undefined);
    const [addModalType, setAddModalType] = useState<"daily" | "weekly" | null>(
       null
    );
@@ -312,29 +323,52 @@ export function CockpitTasksSection({
    );
 
    const effectiveTodayDate = useMemo(() => {
+      if (!hasChallengeContext && challengeStatus === "COMPLETED") {
+         return new Date().toISOString().slice(0, 10);
+      }
       return todayDate || new Date().toISOString().slice(0, 10);
-   }, [todayDate]);
+   }, [hasChallengeContext, challengeStatus, todayDate]);
 
    const dayOptions: ChallengeDayOption[] = useMemo(() => {
-      if (challengeStartDate) {
+      if (hasChallengeContext && effectiveStartDate) {
          return getChallengeDayOptions(
-            challengeStartDate,
+            effectiveStartDate,
             effectiveTodayDate,
             totalChallengeDays ?? 7
          ).slice(0, 7);
       }
       return getCalendarWeekDayOptions(effectiveTodayDate).slice(0, 7);
-   }, [challengeStartDate, effectiveTodayDate, totalChallengeDays]);
+   }, [
+      hasChallengeContext,
+      effectiveStartDate,
+      effectiveTodayDate,
+      totalChallengeDays,
+   ]);
 
    const todayDayOption = useMemo(() => {
       return dayOptions.find((d) => d.isToday) || dayOptions[0];
    }, [dayOptions]);
 
+   const initialDayOption = useMemo(() => {
+      if (initialSelectedDateKey) {
+         return dayOptions.find((d) => d.dateKey === initialSelectedDateKey);
+      }
+      return undefined;
+   }, [dayOptions, initialSelectedDateKey]);
+
    const [selectedDateKey, setSelectedDateKey] = useState<string>(
-      () => todayDayOption?.dateKey || effectiveTodayDate
+      () =>
+         initialDayOption?.dateKey ||
+         initialSelectedDateKey ||
+         todayDayOption?.dateKey ||
+         effectiveTodayDate
    );
    const [selectedDayNumber, setSelectedDayNumber] = useState<number>(
-      () => todayDayOption?.dayNumber || todayDayNumber || 1
+      () =>
+         initialDayOption?.dayNumber ||
+         todayDayOption?.dayNumber ||
+         (hasChallengeContext ? todayDayNumber : undefined) ||
+         1
    );
 
    const activeDayOption = useMemo(() => {
@@ -349,6 +383,7 @@ export function CockpitTasksSection({
       activeDayOption?.isToday ?? selectedDateKey === effectiveTodayDate;
    const isActiveDayPast =
       activeDayOption?.isPast ?? selectedDateKey < effectiveTodayDate;
+   const isPastDayLocked = hasChallengeContext && isActiveDayPast;
 
    const handleSelectDay = (opt: ChallengeDayOption) => {
       setSelectedDateKey(opt.dateKey);
@@ -378,9 +413,10 @@ export function CockpitTasksSection({
       const rawDateKey = targetDateKey || selectedDateKey;
       const targetOpt = dayOptions.find((d) => d.dateKey === rawDateKey);
       const isTargetPast = targetOpt?.isPast ?? rawDateKey < effectiveTodayDate;
+      const isTargetLocked = hasChallengeContext && isTargetPast;
 
-      // If target day is in the past, clamp to today or the first available non-past day
-      const initialDateKey = isTargetPast
+      // If target day is in a locked past challenge day, clamp to today or the first available non-past day
+      const initialDateKey = isTargetLocked
          ? todayDayOption?.dateKey ||
            dayOptions.find((d) => !d.isPast)?.dateKey ||
            effectiveTodayDate
@@ -861,7 +897,7 @@ export function CockpitTasksSection({
             const dateKey = getTaskDateKey(taskToDelete);
             const opt = dayOptions.find((d) => d.dateKey === dateKey);
             const isPast = opt?.isPast ?? dateKey < effectiveTodayDate;
-            if (isPast) {
+            if (hasChallengeContext && isPast) {
                return;
             }
          }
@@ -937,7 +973,8 @@ export function CockpitTasksSection({
          const check = validateMoveTaskChallengeDay(
             originalDateKey,
             resolvedDueDate,
-            effectiveTodayDate
+            effectiveTodayDate,
+            { isChallengeActive: hasChallengeContext }
          );
          if (!check.ok) {
             return;
@@ -1065,7 +1102,7 @@ export function CockpitTasksSection({
 
       // If source is weekly
       if (sourceColumn === "weekly") {
-         if (isTargetPast) return;
+         if (hasChallengeContext && isTargetPast) return;
          const foundWeeklyCatIdx =
             sourceCatIdx !== undefined
                ? sourceCatIdx
@@ -1206,7 +1243,8 @@ export function CockpitTasksSection({
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
-         effectiveTodayDate
+         effectiveTodayDate,
+         { isChallengeActive: hasChallengeContext }
       );
       if (!validation.ok) return;
 
@@ -1292,7 +1330,7 @@ export function CockpitTasksSection({
          targetOpt?.isPast ?? targetDateKey < effectiveTodayDate;
 
       if (sourceColumn === "weekly") {
-         if (isTargetPast) return;
+         if (hasChallengeContext && isTargetPast) return;
          if (catIdx < 0 || catIdx >= weeklyCategories.length) return;
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
@@ -1428,7 +1466,8 @@ export function CockpitTasksSection({
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
-         effectiveTodayDate
+         effectiveTodayDate,
+         { isChallengeActive: hasChallengeContext }
       );
       if (!validation.ok) return;
 
@@ -1587,7 +1626,7 @@ export function CockpitTasksSection({
          })
       );
 
-      if (hasPastTasks) {
+      if (hasChallengeContext && hasPastTasks) {
          setDeleteCategoryModal(null);
          return;
       }
@@ -1717,7 +1756,7 @@ export function CockpitTasksSection({
          );
          const isPast =
             targetOpt?.isPast ?? resolvedDueDate < effectiveTodayDate;
-         if (isPast) {
+         if (hasChallengeContext && isPast) {
             return;
          }
       }
@@ -2021,7 +2060,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          e.dataTransfer.dropEffect = "none";
          return;
@@ -2053,7 +2092,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          e.dataTransfer.dropEffect = "none";
          return;
@@ -2087,7 +2126,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          e.dataTransfer.dropEffect = "none";
          return;
@@ -2115,7 +2154,8 @@ export function CockpitTasksSection({
          const validation = validateMoveTaskChallengeDay(
             sourceDateKey,
             opt.dateKey,
-            effectiveTodayDate
+            effectiveTodayDate,
+            { isChallengeActive: hasChallengeContext }
          );
          if (!validation.ok) {
             e.dataTransfer.dropEffect = "none";
@@ -2128,7 +2168,7 @@ export function CockpitTasksSection({
             return;
          }
       } else if (draggedItem.sourceColumn === "weekly") {
-         if (opt.isPast) {
+         if (hasChallengeContext && opt.isPast) {
             e.dataTransfer.dropEffect = "none";
             if (!dragOverInfo || dragOverInfo.targetDateKey !== opt.dateKey) {
                setDragOverInfo({
@@ -2164,7 +2204,8 @@ export function CockpitTasksSection({
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
-               effectiveTodayDate
+               effectiveTodayDate,
+               { isChallengeActive: hasChallengeContext }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2176,7 +2217,7 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (opt.isPast) {
+            if (hasChallengeContext && opt.isPast) {
                handleDragEnd();
                return;
             }
@@ -2196,7 +2237,8 @@ export function CockpitTasksSection({
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
-               effectiveTodayDate
+               effectiveTodayDate,
+               { isChallengeActive: hasChallengeContext }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2209,7 +2251,7 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (opt.isPast) {
+            if (hasChallengeContext && opt.isPast) {
                handleDragEnd();
                return;
             }
@@ -2252,7 +2294,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          handleDragEnd();
          return;
@@ -2404,7 +2446,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          handleDragEnd();
          return;
@@ -2665,7 +2707,7 @@ export function CockpitTasksSection({
       if (
          targetColumn === "daily" &&
          draggedItem.sourceColumn === "weekly" &&
-         isActiveDayPast
+         isPastDayLocked
       ) {
          handleDragEnd();
          return;
@@ -3010,7 +3052,7 @@ export function CockpitTasksSection({
                                  title="Today"
                               />
                            )}
-                           {isActiveDayPast && (
+                           {isPastDayLocked && (
                               <span className="text-label text-text-tertiary flex items-center gap-1 font-normal">
                                  <Lock className="h-3 w-3 text-text-tertiary" />
                                  Locked
@@ -3038,7 +3080,11 @@ export function CockpitTasksSection({
                   {/* 7-Day Pill Switcher (Fits all 7 days without horizontal scrolling) */}
                   <div
                      role="tablist"
-                     aria-label="Challenge Day Tabs"
+                     aria-label={
+                        hasChallengeContext
+                           ? "Challenge Day Tabs"
+                           : "Calendar Week Day Tabs"
+                     }
                      className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full pt-0.5 pb-1"
                   >
                      {dayOptions.map((opt) => {
@@ -3064,10 +3110,13 @@ export function CockpitTasksSection({
                               isDropAllowedOnOpt = validateMoveTaskChallengeDay(
                                  sourceKey,
                                  opt.dateKey,
-                                 effectiveTodayDate
+                                 effectiveTodayDate,
+                                 { isChallengeActive: hasChallengeContext }
                               ).ok;
                            } else if (draggedItem.sourceColumn === "weekly") {
-                              isDropAllowedOnOpt = !opt.isPast;
+                              isDropAllowedOnOpt = hasChallengeContext
+                                 ? !opt.isPast
+                                 : true;
                            }
                         }
 
@@ -3177,13 +3226,15 @@ export function CockpitTasksSection({
                               {formatDayDate(activeDayOption.dateKey)})
                            </p>
                            <p className="text-xs text-text-tertiary">
-                              {isActiveDayPast
+                              {isPastDayLocked
                                  ? "This challenge day has passed. New tasks cannot be added to past days."
                                  : isActiveDayToday
                                    ? "Organize your daily study commitments by adding your first task."
-                                   : `Plan ahead for ${activeDayOption.shortLabel} of the challenge.`}
+                                   : hasChallengeContext
+                                     ? `Plan ahead for ${activeDayOption.shortLabel} of the challenge.`
+                                     : `Plan or log your tasks for ${activeDayOption.shortLabel}.`}
                            </p>
-                           {isActiveDayPast ? (
+                           {isPastDayLocked ? (
                               <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-text-tertiary">
                                  <Lock className="h-3.5 w-3.5 text-text-tertiary" />
                                  <span>
@@ -3303,6 +3354,9 @@ export function CockpitTasksSection({
                                                       className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
                                                          cat={cat}
                                                          catType="daily"
                                                          dailyCategories={
@@ -3372,6 +3426,9 @@ export function CockpitTasksSection({
                                     {isLoggedIn && (
                                        <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
                                              cat={cat}
                                              catType="daily"
                                              dailyCategories={dailyCategories}
@@ -3723,6 +3780,9 @@ export function CockpitTasksSection({
                                                                   className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
                                                                      task={task}
                                                                      catIdx={
                                                                         catIdx
@@ -3816,6 +3876,9 @@ export function CockpitTasksSection({
                                                    {isLoggedIn && (
                                                       <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
                                                             task={task}
                                                             catIdx={catIdx}
                                                             taskType="daily"
@@ -3915,7 +3978,7 @@ export function CockpitTasksSection({
                </div>
 
                <div className="pt-2 text-center">
-                  {isActiveDayPast ? (
+                  {isPastDayLocked ? (
                      <Button
                         type="button"
                         disabled
@@ -4064,6 +4127,9 @@ export function CockpitTasksSection({
                                                       className="min-w-dropdown-min"
                                                    >
                                                       <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
                                                          cat={cat}
                                                          catType="weekly"
                                                          dailyCategories={
@@ -4133,6 +4199,9 @@ export function CockpitTasksSection({
                                     {isLoggedIn && (
                                        <ContextMenuContent className="min-w-dropdown-min">
                                           <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
                                              cat={cat}
                                              catType="weekly"
                                              dailyCategories={dailyCategories}
@@ -4483,6 +4552,9 @@ export function CockpitTasksSection({
                                                                   className="min-w-dropdown-min"
                                                                >
                                                                   <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
                                                                      task={task}
                                                                      catIdx={
                                                                         catIdx
@@ -4576,6 +4648,9 @@ export function CockpitTasksSection({
                                                    {isLoggedIn && (
                                                       <ContextMenuContent className="min-w-dropdown-min">
                                                          <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
                                                             task={task}
                                                             catIdx={catIdx}
                                                             taskType="weekly"
@@ -4866,7 +4941,11 @@ export function CockpitTasksSection({
                            id="add-todo-day"
                            className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
                         >
-                           <span>Assigned Challenge Day</span>
+                           <span>
+                              {hasChallengeContext
+                                 ? "Assigned Challenge Day"
+                                 : "Assigned Day"}
+                           </span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(addTodoDateKey || selectedDateKey)}
                            </span>
@@ -4878,8 +4957,10 @@ export function CockpitTasksSection({
                                  opt.dateKey;
                               const isPastDay =
                                  opt.isPast ?? opt.dateKey < effectiveTodayDate;
+                              const isDayLocked =
+                                 hasChallengeContext && isPastDay;
 
-                              if (isPastDay) {
+                              if (isDayLocked) {
                                  return (
                                     <button
                                        key={opt.dateKey}
@@ -5102,7 +5183,11 @@ export function CockpitTasksSection({
                            id="edit-task-day"
                            className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center justify-between"
                         >
-                           <span>Assigned Challenge Day</span>
+                           <span>
+                              {hasChallengeContext
+                                 ? "Assigned Challenge Day"
+                                 : "Assigned Day"}
+                           </span>
                            <span className="text-meta text-brand-2 font-semibold">
                               {formatDayDate(editTaskInputDueDate)}
                            </span>
@@ -5123,7 +5208,9 @@ export function CockpitTasksSection({
                               const isPastDay =
                                  opt.isPast ?? opt.dateKey < effectiveTodayDate;
                               const isBlockedPastDay =
-                                 isPastDay && !isOriginalDate;
+                                 hasChallengeContext &&
+                                 isPastDay &&
+                                 !isOriginalDate;
 
                               if (isBlockedPastDay) {
                                  return (

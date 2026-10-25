@@ -240,8 +240,12 @@ export type ValidateAddTaskDayResult =
    { ok: true } | { ok: false; code: "PAST_DAY_NOT_ALLOWED"; message: string };
 
 export function validateAddTaskChallengeDay(
-   isPastDay: boolean
+   isPastDay: boolean,
+   options?: { isChallengeActive?: boolean }
 ): ValidateAddTaskDayResult {
+   if (options?.isChallengeActive === false) {
+      return { ok: true };
+   }
    if (isPastDay) {
       return {
          ok: false,
@@ -265,11 +269,19 @@ export type ValidateMoveTaskDayResult =
  * - Tasks on previous (past) days can be moved to another day (today or future).
  * - Moving tasks from present or future days to a day that has already passed in the challenge is strictly forbidden.
  */
+export interface ValidateMoveTaskOptions {
+   isChallengeActive?: boolean;
+}
+
 export function validateMoveTaskChallengeDay(
    sourceDateKey: string,
    targetDateKey: string,
-   todayDateKey: string
+   todayDateKey: string,
+   options?: ValidateMoveTaskOptions
 ): ValidateMoveTaskDayResult {
+   if (options?.isChallengeActive === false) {
+      return { ok: true };
+   }
    const isTargetPast = targetDateKey < todayDateKey;
    const isSourcePast = sourceDateKey < todayDateKey;
 
