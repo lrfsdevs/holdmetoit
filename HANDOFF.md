@@ -1446,7 +1446,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Created `CockpitDatePickerPopover` and `CockpitWeekNavigator` featuring previous/next week chevrons (`‹` and `›`), calendar icon, week range button trigger, compact month calendar picker, weekday headers (`Mo`–`Su`), today indicator ring, and quick jump to today.
    - Integrated `CockpitWeekNavigator` into `CockpitTasksSection` Daily Todos header when `!hasChallengeContext`.
    - Wired `activeWeekAnchorDateKey` state with `handlePreviousWeek`, `handleNextWeek`, and `handleSelectDateFromPicker`.
-   - Fixed Today button jump/orphan wrap: anchored the `Today` snap button directly inside the `CockpitWeekNavigator` container with a vertical divider (`|`), ensuring the entire control remains a single inline non-breaking block.
+   - Fixed Today button jump & layout stabilization: structured Daily Todos header into a stable 2-row layout (Row 1: Section Title, Day Badge, and Completed Counter mirroring Weekly Todos; Row 2: Fixed Week Navigator directly above the 7-day pill switcher). Eliminates all vertical jumping and orphan wrapping.
    - Resolved Completed Challenge Week Locking: added `isChallengeDayDateLocked` in `challenge-day.ts` and forwarded `challengeStartDate` & `totalChallengeDays` from `home-cockpit-view.tsx` even when `challengeStatus === "COMPLETED"`. Ensures all days of a completed challenge from prior weeks remain strictly locked when the new calendar week starts, while new week days remain unlocked.
    - Preserved active challenge lockdown: calendar week navigation is hidden during active challenges where days are strictly bound to challenge duration.
 - **Quality Gates & Test Coverage:**
@@ -1457,5 +1457,6 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Full workspace test suite: ✅ 196 test files passed (1,879/1,879 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 errors.
-- **Jira Status:** `KAN-60` transitioned to `In Progress`. PR creation deferred until local user verification is complete.
-- **NEXT STEP:** Await user local verification of calendar week navigation, anchored Today button, and completed challenge locking; upon approval, submit PR to `dev` and transition `KAN-60` to `In Review`.
+- **Jira Status:** `KAN-60` transitioned from `In Progress` to `In Review` (id: 10006).
+- **GitHub PR & Issue Status:** Submitted PR [#188](https://github.com/lrfsdevs/holdmetoit/pull/188) from `krish` to `dev`; closed GitHub Issue [#184](https://github.com/lrfsdevs/holdmetoit/issues/184).
+- **NEXT STEP:** Peer review and merge PR #188 into `dev`, then proceed to next roadmap milestone or release cycle.
