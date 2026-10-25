@@ -18,6 +18,8 @@ import {
 import {
    getChallengeDayOptions,
    getCalendarWeekDayOptions,
+   getAdjacentWeekAnchor,
+   formatWeekRange,
    formatDayDate,
    validateMoveTaskChallengeDay,
    type ChallengeDayOption,
@@ -68,6 +70,7 @@ import {
    ContextMenuLabel,
 } from "@/components/ui/context-menu";
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
+import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -329,6 +332,9 @@ export function CockpitTasksSection({
       return todayDate || new Date().toISOString().slice(0, 10);
    }, [hasChallengeContext, challengeStatus, todayDate]);
 
+   const [activeWeekAnchorDateKey, setActiveWeekAnchorDateKey] =
+      useState<string>(() => initialSelectedDateKey || effectiveTodayDate);
+
    const dayOptions: ChallengeDayOption[] = useMemo(() => {
       if (hasChallengeContext && effectiveStartDate) {
          return getChallengeDayOptions(
@@ -337,11 +343,15 @@ export function CockpitTasksSection({
             totalChallengeDays ?? 7
          ).slice(0, 7);
       }
-      return getCalendarWeekDayOptions(effectiveTodayDate).slice(0, 7);
+      return getCalendarWeekDayOptions(
+         activeWeekAnchorDateKey,
+         effectiveTodayDate
+      ).slice(0, 7);
    }, [
       hasChallengeContext,
       effectiveStartDate,
       effectiveTodayDate,
+      activeWeekAnchorDateKey,
       totalChallengeDays,
    ]);
 
@@ -385,15 +395,65 @@ export function CockpitTasksSection({
       activeDayOption?.isPast ?? selectedDateKey < effectiveTodayDate;
    const isPastDayLocked = hasChallengeContext && isActiveDayPast;
 
+   const activeWeekDateKeys = useMemo(() => {
+      return dayOptions.map((d) => d.dateKey);
+   }, [dayOptions]);
+
+   const weekRangeLabel = useMemo(() => {
+      if (dayOptions.length >= 7) {
+         return formatWeekRange(dayOptions[0].dateKey, dayOptions[6].dateKey);
+      }
+      return "";
+   }, [dayOptions]);
+
    const handleSelectDay = (opt: ChallengeDayOption) => {
       setSelectedDateKey(opt.dateKey);
       setSelectedDayNumber(opt.dayNumber);
    };
 
    const handleJumpToToday = () => {
-      if (todayDayOption) {
-         setSelectedDateKey(todayDayOption.dateKey);
-         setSelectedDayNumber(todayDayOption.dayNumber);
+      setActiveWeekAnchorDateKey(effectiveTodayDate);
+      setSelectedDateKey(effectiveTodayDate);
+      try {
+         const parts = effectiveTodayDate.split("-").map(Number);
+         if (parts[0] && parts[1] && parts[2]) {
+            const dayOfWeek = new Date(
+               Date.UTC(parts[0], parts[1] - 1, parts[2])
+            ).getUTCDay();
+            setSelectedDayNumber(((dayOfWeek + 6) % 7) + 1);
+         }
+      } catch {
+         setSelectedDayNumber(1);
+      }
+   };
+
+   const handlePreviousWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeekAnchorDateKey, -1);
+      setActiveWeekAnchorDateKey(newAnchor);
+      const newSelected = getAdjacentWeekAnchor(selectedDateKey, -1);
+      setSelectedDateKey(newSelected);
+   };
+
+   const handleNextWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeekAnchorDateKey, 1);
+      setActiveWeekAnchorDateKey(newAnchor);
+      const newSelected = getAdjacentWeekAnchor(selectedDateKey, 1);
+      setSelectedDateKey(newSelected);
+   };
+
+   const handleSelectDateFromPicker = (targetDateKey: string) => {
+      setActiveWeekAnchorDateKey(targetDateKey);
+      setSelectedDateKey(targetDateKey);
+      try {
+         const parts = targetDateKey.split("-").map(Number);
+         if (parts[0] && parts[1] && parts[2]) {
+            const dayOfWeek = new Date(
+               Date.UTC(parts[0], parts[1] - 1, parts[2])
+            ).getUTCDay();
+            setSelectedDayNumber(((dayOfWeek + 6) % 7) + 1);
+         }
+      } catch {
+         setSelectedDayNumber(1);
       }
    };
 
@@ -3040,7 +3100,7 @@ export function CockpitTasksSection({
             >
                <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                     <div className="flex items-center gap-2">
+                     <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-lg font-bold text-white">
                            Daily Todos
                         </h3>
@@ -3059,6 +3119,17 @@ export function CockpitTasksSection({
                               </span>
                            )}
                         </span>
+                        {!hasChallengeContext && (
+                           <CockpitWeekNavigator
+                              selectedDateKey={selectedDateKey}
+                              todayDateKey={effectiveTodayDate}
+                              weekRangeLabel={weekRangeLabel}
+                              onPreviousWeek={handlePreviousWeek}
+                              onNextWeek={handleNextWeek}
+                              onSelectDate={handleSelectDateFromPicker}
+                              activeWeekDateKeys={activeWeekDateKeys}
+                           />
+                        )}
                         {!isActiveDayToday && (
                            <button
                               type="button"
