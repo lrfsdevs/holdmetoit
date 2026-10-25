@@ -3127,13 +3127,14 @@ export function CockpitTasksSection({
                      : "border-border-default"
                }`}
             >
-               <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                     <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-white">
+               <div className="space-y-3">
+                  {/* Row 1: Section Title, Day Badge, and Completed Counter (Mirrors Weekly Todos card) */}
+                  <div className="flex items-center justify-between gap-2">
+                     <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="text-lg font-bold text-white shrink-0">
                            Daily Todos
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-meta font-semibold bg-surface-nested text-text-secondary border border-border-strong inline-flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-meta font-semibold bg-surface-nested text-text-secondary border border-border-strong inline-flex items-center gap-1.5 shrink-0">
                            {activeDayOption.shortLabel}
                            {isActiveDayToday && (
                               <span
@@ -3148,19 +3149,6 @@ export function CockpitTasksSection({
                               </span>
                            )}
                         </span>
-                        {!hasChallengeContext && (
-                           <CockpitWeekNavigator
-                              selectedDateKey={selectedDateKey}
-                              todayDateKey={effectiveTodayDate}
-                              weekRangeLabel={weekRangeLabel}
-                              onPreviousWeek={handlePreviousWeek}
-                              onNextWeek={handleNextWeek}
-                              onSelectDate={handleSelectDateFromPicker}
-                              activeWeekDateKeys={activeWeekDateKeys}
-                              showToday={!isActiveDayToday}
-                              onJumpToToday={handleJumpToToday}
-                           />
-                        )}
                         {hasChallengeContext && !isActiveDayToday && (
                            <button
                               type="button"
@@ -3171,13 +3159,30 @@ export function CockpitTasksSection({
                            </button>
                         )}
                      </div>
-                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-text-secondary">
+                     <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
                            {completedDailyTasksForDay}/{totalDailyTasksForDay}{" "}
                            Completed
                         </span>
                      </div>
                   </div>
+
+                  {/* Row 2: Calendar Week Navigator (Fixed row directly above the 7-day pill switcher) */}
+                  {!hasChallengeContext && (
+                     <div className="flex items-center justify-start gap-2 pt-0.5">
+                        <CockpitWeekNavigator
+                           selectedDateKey={selectedDateKey}
+                           todayDateKey={effectiveTodayDate}
+                           weekRangeLabel={weekRangeLabel}
+                           onPreviousWeek={handlePreviousWeek}
+                           onNextWeek={handleNextWeek}
+                           onSelectDate={handleSelectDateFromPicker}
+                           activeWeekDateKeys={activeWeekDateKeys}
+                           showToday={!isActiveDayToday}
+                           onJumpToToday={handleJumpToToday}
+                        />
+                     </div>
+                  )}
 
                   {/* 7-Day Pill Switcher (Fits all 7 days without horizontal scrolling) */}
                   <div
