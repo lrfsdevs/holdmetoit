@@ -227,6 +227,8 @@ export interface CockpitWeekNavigatorProps {
    onNextWeek: () => void;
    onSelectDate: (dateKey: string) => void;
    activeWeekDateKeys?: string[];
+   showToday?: boolean;
+   onJumpToToday?: () => void;
    disabled?: boolean;
    className?: string;
 }
@@ -239,13 +241,15 @@ export function CockpitWeekNavigator({
    onNextWeek,
    onSelectDate,
    activeWeekDateKeys = [],
+   showToday = false,
+   onJumpToToday,
    disabled = false,
    className,
 }: CockpitWeekNavigatorProps) {
    return (
       <div
          className={cn(
-            "flex items-center gap-0.5 bg-surface-nested/80 border border-border-subtle hover:border-border-default rounded-lg px-1 py-0.5 transition-colors",
+            "inline-flex items-center gap-0.5 bg-surface-nested/80 border border-border-subtle hover:border-border-default rounded-lg px-1 py-0.5 transition-colors shrink-0",
             className
          )}
       >
@@ -277,6 +281,20 @@ export function CockpitWeekNavigator({
          >
             <ChevronRight className="h-3.5 w-3.5" />
          </button>
+
+         {showToday && onJumpToToday && (
+            <>
+               <div className="h-3.5 w-px bg-border-strong mx-0.5 shrink-0" />
+               <button
+                  type="button"
+                  onClick={onJumpToToday}
+                  aria-label="Today"
+                  className="px-1.5 py-0.5 rounded text-meta font-medium text-brand-2 hover:text-brand-1 hover:bg-surface-secondary transition-colors shrink-0"
+               >
+                  Today
+               </button>
+            </>
+         )}
       </div>
    );
 }

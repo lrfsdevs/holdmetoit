@@ -1069,5 +1069,24 @@ describe("CockpitTasksSection", () => {
 
          expect(html).not.toMatch(/<button[^>]*>Today<\/button>/);
       });
+
+      it("locks daily todos for a previous challenge week after the new week starts", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-12",
+               totalChallengeDays: 7,
+               challengeStatus: "COMPLETED",
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-15",
+            })
+         );
+
+         expect(html).toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).toContain("Locked");
+      });
    });
 });

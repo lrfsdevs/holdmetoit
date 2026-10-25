@@ -12,6 +12,7 @@ import {
    formatWeekRange,
    isSameCalendarWeek,
    getCalendarMonthGrid,
+   isChallengeDayDateLocked,
    validateStudyLogChallengeDay,
    validateAdminOverrideChallengeDay,
    isChallengeDayInPast,
@@ -588,6 +589,95 @@ describe("validateAddTaskChallengeDay", () => {
          isChallengeActive: false,
       });
       expect(result.ok).toBe(true);
+   });
+
+   it("rejects adding tasks when day is locked by a past completed challenge", () => {
+      const result = validateAddTaskChallengeDay(true, {
+         isChallengeActive: false,
+         isChallengeDayLocked: true,
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+         expect(result.code).toBe("PAST_DAY_NOT_ALLOWED");
+      }
+   });
+});
+
+describe("isChallengeDayDateLocked", () => {
+   const challengeStart = "2026-10-12"; // Monday
+   const totalDays = 7; // Ends 2026-10-18 (Sunday)
+
+   it("locks all days of a previous challenge week once the new week starts", () => {
+      const newWeekToday = "2026-10-19"; // Next Monday
+
+      // All 7 days of the completed challenge week should be locked
+      expect(
+         isChallengeDayDateLocked("2026-10-12", newWeekToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "COMPLETED",
+         })
+      ).toBe(true);
+
+      expect(
+         isChallengeDayDateLocked("2026-10-18", newWeekToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "COMPLETED",
+         })
+      ).toBe(true);
+
+      // Days in the new week are NOT locked
+      expect(
+         isChallengeDayDateLocked("2026-10-19", newWeekToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "COMPLETED",
+         })
+      ).toBe(false);
+
+      expect(
+         isChallengeDayDateLocked("2026-10-22", newWeekToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "COMPLETED",
+         })
+      ).toBe(false);
+   });
+
+   it("locks past days but keeps today and future unlocked during an ACTIVE challenge", () => {
+      const activeToday = "2026-10-15"; // Thursday (Day 4)
+
+      // Days 1-3 are past -> locked
+      expect(
+         isChallengeDayDateLocked("2026-10-12", activeToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "ACTIVE",
+         })
+      ).toBe(true);
+
+      // Day 4 (Today) -> unlocked
+      expect(
+         isChallengeDayDateLocked("2026-10-15", activeToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "ACTIVE",
+         })
+      ).toBe(false);
+
+      // Day 5 (Future) -> unlocked
+      expect(
+         isChallengeDayDateLocked("2026-10-16", activeToday, {
+            challengeStartDate: challengeStart,
+            totalChallengeDays: totalDays,
+            challengeStatus: "ACTIVE",
+         })
+      ).toBe(false);
+   });
+
+   it("returns false when no challenge is present", () => {
+      expect(isChallengeDayDateLocked("2026-10-12", "2026-10-25")).toBe(false);
    });
 });
 

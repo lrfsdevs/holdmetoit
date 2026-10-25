@@ -417,13 +417,75 @@ export function isChallengeDayInPast(
    return false;
 }
 
+export interface ChallengeWindowOptions {
+   challengeStartDate?: string;
+   totalChallengeDays?: number;
+   challengeStatus?: "UPCOMING" | "ACTIVE" | "COMPLETED";
+}
+
+/**
+ * Checks whether a given calendar date is locked by a past or concluded challenge.
+ *
+ * Rules:
+ * 1. If dateKey falls within a challenge's duration [challengeStartDate, challengeEndDate]:
+ *    - If challenge is ACTIVE: any date strictly before today is locked.
+ *    - If challenge is COMPLETED: once the new week starts (today > challengeEndKey),
+ *      all challenge days are locked. While still in that week, days prior to today are locked.
+ * 2. If dateKey is outside the challenge window (e.g. personal planning in the new week after challenge concluded):
+ *    - Not locked by the challenge.
+ */
+export function isChallengeDayDateLocked(
+   dateKey: string,
+   todayDateKey: string,
+   options?: ChallengeWindowOptions
+): boolean {
+   if (!options?.challengeStartDate) {
+      return false;
+   }
+
+   const totalDays = options.totalChallengeDays ?? 7;
+   const startKey = options.challengeStartDate.slice(0, 10);
+   const endKey = getChallengeDayDateKey(options.challengeStartDate, totalDays);
+
+   const isWithinChallenge = dateKey >= startKey && dateKey <= endKey;
+   if (!isWithinChallenge) {
+      return false;
+   }
+
+   if (options.challengeStatus === "ACTIVE") {
+      return dateKey < todayDateKey;
+   }
+
+   if (options.challengeStatus === "COMPLETED") {
+      const isNewWeekStarted = todayDateKey > endKey;
+      if (isNewWeekStarted) {
+         return true;
+      }
+      return dateKey < todayDateKey;
+   }
+
+   return dateKey < todayDateKey;
+}
+
 export type ValidateAddTaskDayResult =
    { ok: true } | { ok: false; code: "PAST_DAY_NOT_ALLOWED"; message: string };
 
+export interface ValidateAddTaskOptions {
+   isChallengeActive?: boolean;
+   isChallengeDayLocked?: boolean;
+}
+
 export function validateAddTaskChallengeDay(
    isPastDay: boolean,
-   options?: { isChallengeActive?: boolean }
+   options?: ValidateAddTaskOptions
 ): ValidateAddTaskDayResult {
+   if (options?.isChallengeDayLocked === true) {
+      return {
+         ok: false,
+         code: "PAST_DAY_NOT_ALLOWED",
+         message: "Adding new todo tasks to past challenge days is locked.",
+      };
+   }
    if (options?.isChallengeActive === false) {
       return { ok: true };
    }
@@ -452,6 +514,7 @@ export type ValidateMoveTaskDayResult =
  */
 export interface ValidateMoveTaskOptions {
    isChallengeActive?: boolean;
+   isTargetDayLocked?: boolean;
 }
 
 export function validateMoveTaskChallengeDay(
@@ -460,6 +523,14 @@ export function validateMoveTaskChallengeDay(
    todayDateKey: string,
    options?: ValidateMoveTaskOptions
 ): ValidateMoveTaskDayResult {
+   if (options?.isTargetDayLocked === true) {
+      return {
+         ok: false,
+         code: "TARGET_DAY_IN_PAST",
+         message:
+            "Cannot move tasks into a past challenge day that has already concluded.",
+      };
+   }
    if (options?.isChallengeActive === false) {
       return { ok: true };
    }

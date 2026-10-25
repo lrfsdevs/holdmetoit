@@ -179,4 +179,25 @@ describe("CockpitWeekNavigator", () => {
          ).disabled
       ).toBe(true);
    });
+
+   it("renders Today snap button inside the navigator when showToday is true", () => {
+      const onJumpToToday = vi.fn();
+      render(
+         <CockpitWeekNavigator
+            selectedDateKey="2026-10-21"
+            todayDateKey="2026-10-25"
+            weekRangeLabel="Oct 19 – 25"
+            onPreviousWeek={vi.fn()}
+            onNextWeek={vi.fn()}
+            onSelectDate={vi.fn()}
+            showToday={true}
+            onJumpToToday={onJumpToToday}
+         />
+      );
+
+      const todayBtn = screen.getByRole("button", { name: "Today" });
+      expect(todayBtn).toBeTruthy();
+      fireEvent.click(todayBtn);
+      expect(onJumpToToday).toHaveBeenCalledTimes(1);
+   });
 });

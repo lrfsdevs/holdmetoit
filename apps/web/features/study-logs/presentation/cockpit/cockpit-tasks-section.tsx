@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef, useMemo } from "react";
+import {
+   useState,
+   useEffect,
+   useTransition,
+   useRef,
+   useMemo,
+   useCallback,
+} from "react";
 import {
    ChevronDown,
    ChevronUp,
@@ -21,6 +28,7 @@ import {
    getAdjacentWeekAnchor,
    formatWeekRange,
    formatDayDate,
+   isChallengeDayDateLocked,
    validateMoveTaskChallengeDay,
    type ChallengeDayOption,
 } from "@/features/study-logs/domain/challenge-day";
@@ -393,7 +401,28 @@ export function CockpitTasksSection({
       activeDayOption?.isToday ?? selectedDateKey === effectiveTodayDate;
    const isActiveDayPast =
       activeDayOption?.isPast ?? selectedDateKey < effectiveTodayDate;
-   const isPastDayLocked = hasChallengeContext && isActiveDayPast;
+
+   const checkIsDayLocked = useCallback(
+      (dateKey: string): boolean => {
+         if (hasChallengeContext) {
+            return dateKey < effectiveTodayDate;
+         }
+         return isChallengeDayDateLocked(dateKey, effectiveTodayDate, {
+            challengeStartDate,
+            totalChallengeDays,
+            challengeStatus,
+         });
+      },
+      [
+         hasChallengeContext,
+         effectiveTodayDate,
+         challengeStartDate,
+         totalChallengeDays,
+         challengeStatus,
+      ]
+   );
+
+   const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
    const activeWeekDateKeys = useMemo(() => {
       return dayOptions.map((d) => d.dateKey);
@@ -457,28 +486,29 @@ export function CockpitTasksSection({
       }
    };
 
-   const getTaskDateKey = (task: TaskItem): string => {
-      if (task.dueDate) {
-         return typeof task.dueDate === "string"
-            ? task.dueDate.slice(0, 10)
-            : new Date(task.dueDate).toISOString().slice(0, 10);
-      }
-      if (task.createdAt) {
-         return new Date(task.createdAt).toISOString().slice(0, 10);
-      }
-      return effectiveTodayDate;
-   };
+   const getTaskDateKey = useCallback(
+      (task: TaskItem): string => {
+         if (task.dueDate) {
+            return typeof task.dueDate === "string"
+               ? task.dueDate.slice(0, 10)
+               : new Date(task.dueDate).toISOString().slice(0, 10);
+         }
+         if (task.createdAt) {
+            return new Date(task.createdAt).toISOString().slice(0, 10);
+         }
+         return effectiveTodayDate;
+      },
+      [effectiveTodayDate]
+   );
 
    const openAddDailyModal = (targetDateKey?: string) => {
       const rawDateKey = targetDateKey || selectedDateKey;
-      const targetOpt = dayOptions.find((d) => d.dateKey === rawDateKey);
-      const isTargetPast = targetOpt?.isPast ?? rawDateKey < effectiveTodayDate;
-      const isTargetLocked = hasChallengeContext && isTargetPast;
+      const isTargetLocked = checkIsDayLocked(rawDateKey);
 
       // If target day is in a locked past challenge day, clamp to today or the first available non-past day
       const initialDateKey = isTargetLocked
          ? todayDayOption?.dateKey ||
-           dayOptions.find((d) => !d.isPast)?.dateKey ||
+           dayOptions.find((d) => !checkIsDayLocked(d.dateKey))?.dateKey ||
            effectiveTodayDate
          : rawDateKey;
 
@@ -955,9 +985,7 @@ export function CockpitTasksSection({
          );
          if (taskToDelete) {
             const dateKey = getTaskDateKey(taskToDelete);
-            const opt = dayOptions.find((d) => d.dateKey === dateKey);
-            const isPast = opt?.isPast ?? dateKey < effectiveTodayDate;
-            if (hasChallengeContext && isPast) {
+            if (checkIsDayLocked(dateKey)) {
                return;
             }
          }
@@ -1162,7 +1190,7 @@ export function CockpitTasksSection({
 
       // If source is weekly
       if (sourceColumn === "weekly") {
-         if (hasChallengeContext && isTargetPast) return;
+         if (checkIsDayLocked(targetDateKey)) return;
          const foundWeeklyCatIdx =
             sourceCatIdx !== undefined
                ? sourceCatIdx
@@ -1390,7 +1418,7 @@ export function CockpitTasksSection({
          targetOpt?.isPast ?? targetDateKey < effectiveTodayDate;
 
       if (sourceColumn === "weekly") {
-         if (hasChallengeContext && isTargetPast) return;
+         if (checkIsDayLocked(targetDateKey)) return;
          if (catIdx < 0 || catIdx >= weeklyCategories.length) return;
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
@@ -1678,15 +1706,14 @@ export function CockpitTasksSection({
       const dailyTargetCat = dailyCategories.find((c) =>
          catId ? c.id === catId : catType === "daily" && c.name === targetName
       );
-      const hasPastTasks = Boolean(
+      const hasLockedTasks = Boolean(
          dailyTargetCat?.tasks.some((t) => {
             const dateKey = getTaskDateKey(t);
-            const opt = dayOptions.find((d) => d.dateKey === dateKey);
-            return opt?.isPast ?? dateKey < effectiveTodayDate;
+            return checkIsDayLocked(dateKey);
          })
       );
 
-      if (hasChallengeContext && hasPastTasks) {
+      if (hasLockedTasks) {
          setDeleteCategoryModal(null);
          return;
       }
@@ -1746,7 +1773,7 @@ export function CockpitTasksSection({
       return dailyCategories.flatMap((cat) =>
          cat.tasks.filter((t) => getTaskDateKey(t) === selectedDateKey)
       );
-   }, [dailyCategories, selectedDateKey, effectiveTodayDate]);
+   }, [dailyCategories, selectedDateKey, getTaskDateKey]);
 
    const completedDailyTasksForDay = dailyTasksForSelectedDay.filter(
       (t) => t.completed
@@ -1771,7 +1798,7 @@ export function CockpitTasksSection({
          }
       }
       return counts;
-   }, [dayOptions, dailyCategories, effectiveTodayDate]);
+   }, [dayOptions, dailyCategories, getTaskDateKey]);
 
    const totalWeeklyTasks = weeklyCategories.reduce(
       (acc, cat) => acc + cat.tasks.length,
@@ -1811,12 +1838,7 @@ export function CockpitTasksSection({
          addModalType === "daily" ? addTodoDateKey || selectedDateKey : null;
 
       if (addModalType === "daily" && resolvedDueDate) {
-         const targetOpt = dayOptions.find(
-            (d) => d.dateKey === resolvedDueDate
-         );
-         const isPast =
-            targetOpt?.isPast ?? resolvedDueDate < effectiveTodayDate;
-         if (hasChallengeContext && isPast) {
+         if (checkIsDayLocked(resolvedDueDate)) {
             return;
          }
       }
@@ -3128,13 +3150,15 @@ export function CockpitTasksSection({
                               onNextWeek={handleNextWeek}
                               onSelectDate={handleSelectDateFromPicker}
                               activeWeekDateKeys={activeWeekDateKeys}
+                              showToday={!isActiveDayToday}
+                              onJumpToToday={handleJumpToToday}
                            />
                         )}
-                        {!isActiveDayToday && (
+                        {hasChallengeContext && !isActiveDayToday && (
                            <button
                               type="button"
                               onClick={handleJumpToToday}
-                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors"
+                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors shrink-0"
                            >
                               Today
                            </button>
