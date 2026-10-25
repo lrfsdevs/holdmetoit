@@ -1446,14 +1446,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Created `CockpitDatePickerPopover` and `CockpitWeekNavigator` featuring previous/next week chevrons (`‹` and `›`), calendar icon, week range button trigger, compact month calendar picker, weekday headers (`Mo`–`Su`), today indicator ring, and quick jump to today.
    - Integrated `CockpitWeekNavigator` into `CockpitTasksSection` Daily Todos header when `!hasChallengeContext`.
    - Wired `activeWeekAnchorDateKey` state with `handlePreviousWeek`, `handleNextWeek`, and `handleSelectDateFromPicker`.
-   - Maintained inline `Today` snap button when navigated away from the current date or week.
+   - Fixed Today button jump/orphan wrap: anchored the `Today` snap button directly inside the `CockpitWeekNavigator` container with a vertical divider (`|`), ensuring the entire control remains a single inline non-breaking block.
+   - Resolved Completed Challenge Week Locking: added `isChallengeDayDateLocked` in `challenge-day.ts` and forwarded `challengeStartDate` & `totalChallengeDays` from `home-cockpit-view.tsx` even when `challengeStatus === "COMPLETED"`. Ensures all days of a completed challenge from prior weeks remain strictly locked when the new calendar week starts, while new week days remain unlocked.
    - Preserved active challenge lockdown: calendar week navigation is hidden during active challenges where days are strictly bound to challenge duration.
 - **Quality Gates & Test Coverage:**
-   - `apps/web/features/study-logs/presentation/cockpit/cockpit-date-picker-popover.test.tsx`: 7/7 tests passing.
-   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: 29/29 tests passing.
-   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: 3/3 tests passing.
-   - Full workspace test suite: ✅ 196 test files passed (1,872/1,872 tests green).
+   - `apps/web/features/study-logs/domain/challenge-day.test.ts`: 64/64 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-date-picker-popover.test.tsx`: 8/8 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: 30/30 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: 4/4 tests passing.
+   - Full workspace test suite: ✅ 196 test files passed (1,879/1,879 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 errors.
 - **Jira Status:** `KAN-60` transitioned to `In Progress`. PR creation deferred until local user verification is complete.
-- **NEXT STEP:** Await user local verification of calendar week navigation and date picker; upon approval, submit PR to `dev` and transition `KAN-60` to `In Review`.
+- **NEXT STEP:** Await user local verification of calendar week navigation, anchored Today button, and completed challenge locking; upon approval, submit PR to `dev` and transition `KAN-60` to `In Review`.
