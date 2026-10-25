@@ -1431,3 +1431,29 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors.
    - `npm run test:web`: ✅ 194 test files passed (1843/1843 tests green).
 - **NEXT STEP:** Submit PR from `krish` to `dev`, transition Jira `KAN-34` from `In Progress` to `In Review`, and proceed to Slice 2 (GH #184 / KAN-60).
+
+### Session 155 — 2026-10-25 (Calendar Week Paging & Compact Date Picker Navigation on `krish` — GH-#184 / KAN-60)
+
+- **Context & Objective:** Implemented Slice 2 of the Daily Tasks overhaul (GH #184 / KAN-60). Enables participants outside challenges to page across arbitrary calendar weeks (past and future), jump directly to any date via a compact monthly popover picker, and snap back to the current day.
+- **Domain Refinements (`challenge-day.ts`):**
+   - Decoupled anchor week from the current day in `getCalendarWeekDayOptions(anchorDate?, today?)`. `anchorDate` generates the Monday–Sunday week while `today` strictly governs `isToday`, `isYesterday`, `isPast`, and `isFuture`.
+   - Added `getAdjacentWeekAnchor(currentAnchor, offsetWeeks)` to safely calculate prior/next week anchor strings across month and year boundaries.
+   - Added `formatWeekRange(startDateKey, endDateKey)` to format clean range strings (e.g. `Oct 19 – 25`, `Oct 26 – Nov 1`, `Dec 28, 2026 – Jan 3, 2027`).
+   - Added `isSameCalendarWeek(dateKeyA, dateKeyB)` for ISO Monday–Sunday week boundary equality.
+   - Added `getCalendarMonthGrid(yearOrDate, monthIndex?)` returning Monday-aligned 7-column month grid structures (`CalendarMonthGrid`, `CalendarMonthCell`).
+   - Added 12 new unit tests in `challenge-day.test.ts` (60/60 domain tests passing).
+- **Presentation Layer Components (`cockpit-date-picker-popover.tsx` & `cockpit-tasks-section.tsx`):**
+   - Created `CockpitDatePickerPopover` and `CockpitWeekNavigator` featuring previous/next week chevrons (`‹` and `›`), calendar icon, week range button trigger, compact month calendar picker, weekday headers (`Mo`–`Su`), today indicator ring, and quick jump to today.
+   - Integrated `CockpitWeekNavigator` into `CockpitTasksSection` Daily Todos header when `!hasChallengeContext`.
+   - Wired `activeWeekAnchorDateKey` state with `handlePreviousWeek`, `handleNextWeek`, and `handleSelectDateFromPicker`.
+   - Maintained inline `Today` snap button when navigated away from the current date or week.
+   - Preserved active challenge lockdown: calendar week navigation is hidden during active challenges where days are strictly bound to challenge duration.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-date-picker-popover.test.tsx`: 7/7 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: 29/29 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: 3/3 tests passing.
+   - Full workspace test suite: ✅ 196 test files passed (1,872/1,872 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-60` transitioned to `In Progress`. PR creation deferred until local user verification is complete.
+- **NEXT STEP:** Await user local verification of calendar week navigation and date picker; upon approval, submit PR to `dev` and transition `KAN-60` to `In Review`.
