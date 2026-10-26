@@ -267,6 +267,7 @@ export function CronLogsPanel() {
    const [detailError, setDetailError] = useState<string | null>(null);
 
    const detailRequest = useRef(0);
+   const listRequest = useRef(0);
 
    const query = useCallback(
       (offset: number) => ({
@@ -284,6 +285,9 @@ export function CronLogsPanel() {
    }, []);
 
    const loadRuns = useCallback(async () => {
+      const requestId = listRequest.current + 1;
+      listRequest.current = requestId;
+      setIsLoadingMore(false);
       setIsLoading(true);
       setError(null);
 
@@ -291,6 +295,8 @@ export function CronLogsPanel() {
          listCronRunsAction(query(0)),
          loadOverview(),
       ]);
+
+      if (requestId !== listRequest.current) return;
 
       if (listResult.ok) {
          setRuns(listResult.data.items);
@@ -307,8 +313,11 @@ export function CronLogsPanel() {
    }, [loadRuns]);
 
    const loadMore = async () => {
+      const requestId = listRequest.current;
       setIsLoadingMore(true);
       const result = await listCronRunsAction(query(runs.length));
+
+      if (requestId !== listRequest.current) return;
 
       if (result.ok) {
          setRuns((previous) => {
