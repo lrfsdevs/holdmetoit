@@ -61,13 +61,11 @@ export async function listCronRunsAction(
    } catch (error) {
       if (isDevAccessError(error)) return FORBIDDEN;
 
+      console.error("listCronRunsAction failed", error);
       return {
          ok: false,
          code: "FETCH_CRON_LOGS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to load cron runs.",
+         message: "Failed to load cron runs.",
       };
    }
 }
