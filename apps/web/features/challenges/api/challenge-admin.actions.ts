@@ -72,7 +72,12 @@ const createChallengeSchema = z.object({
    startAt: z.string().min(1),
    endAt: z.string().min(1),
    eventBannerUrl: z.string().trim().min(1, BANNER_REQUIRED_MESSAGE),
-   punishmentPfpUrl: z.string().trim().min(1, PFP_REQUIRED_MESSAGE),
+   punishmentPfpUrl: z
+      .string()
+      .trim()
+      .nullable()
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val : null)),
    rewardCoins: z.number().int().min(0).max(10000).optional(),
    isBettingEnabled: z.boolean().optional(),
    teams: z
@@ -121,7 +126,14 @@ export async function createChallengeAction(
                "Please upload an event header image through its image picker.",
          };
       }
-      if (!isImageUrlAllowed(parsed.data.punishmentPfpUrl, "punishment-pfp")) {
+      if (
+         parsed.data.punishmentPfpUrl &&
+         Boolean(
+            parsed.data.punishmentPfpUrl &&
+            parsed.data.punishmentPfpUrl.trim() !== ""
+         ) &&
+         !isImageUrlAllowed(parsed.data.punishmentPfpUrl, "punishment-pfp")
+      ) {
          return {
             ok: false,
             code: "INVALID_PUNISHMENT_PFP",
@@ -473,6 +485,10 @@ export async function updateChallengeAction(
       }
       if (
          parsed.data.punishmentPfpUrl !== previousImages.punishmentPfpUrl &&
+         Boolean(
+            parsed.data.punishmentPfpUrl &&
+            parsed.data.punishmentPfpUrl.trim() !== ""
+         ) &&
          !isImageUrlAllowed(parsed.data.punishmentPfpUrl, "punishment-pfp")
       ) {
          return {
@@ -490,7 +506,10 @@ export async function updateChallengeAction(
             startAt: parsed.data.startAt,
             endAt: parsed.data.endAt,
             eventBannerUrl: parsed.data.eventBannerUrl,
-            punishmentPfpUrl: parsed.data.punishmentPfpUrl,
+            punishmentPfpUrl:
+               parsed.data.punishmentPfpUrl === previousImages.punishmentPfpUrl
+                  ? parsed.data.punishmentPfpUrl
+                  : parsed.data.punishmentPfpUrl?.trim() || null,
             rewardCoins: parsed.data.rewardCoins,
             isBettingEnabled: parsed.data.isBettingEnabled,
             teams: parsed.data.teams,

@@ -433,31 +433,56 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          );
       });
 
-      it.each(["eventBannerUrl", "punishmentPfpUrl"] as const)(
-         "requires %s even when the other image exists",
-         async (field) => {
-            const missing = { ...input };
-            Reflect.deleteProperty(missing, field);
-            for (const invalid of [
-               missing,
-               { ...input, [field]: "" },
-               { ...input, [field]: " \t\n " },
-               { ...input, [field]: null },
-            ]) {
-               await expect(
-                  createChallengeAction(
-                     invalid as Parameters<typeof createChallengeAction>[0]
-                  )
-               ).resolves.toMatchObject({
-                  ok: false,
-                  code: "INVALID_INPUT",
-               });
-            }
+      it("requires eventBannerUrl even when punishmentPfpUrl exists", async () => {
+         const missing = { ...input };
+         Reflect.deleteProperty(missing, "eventBannerUrl");
+         for (const invalid of [
+            missing,
+            { ...input, eventBannerUrl: "" },
+            { ...input, eventBannerUrl: " \t\n " },
+            { ...input, eventBannerUrl: null },
+         ]) {
+            await expect(
+               createChallengeAction(
+                  invalid as Parameters<typeof createChallengeAction>[0]
+               )
+            ).resolves.toMatchObject({
+               ok: false,
+               code: "INVALID_INPUT",
+            });
+         }
+         expect(challengeAdminRepo.createAdminChallenge).not.toHaveBeenCalled();
+      });
+
+      it("allows punishmentPfpUrl to be null, empty, or omitted at creation", async () => {
+         const missing = { ...input };
+         Reflect.deleteProperty(missing, "punishmentPfpUrl");
+         for (const valid of [
+            missing,
+            { ...input, punishmentPfpUrl: "" },
+            { ...input, punishmentPfpUrl: " \t\n " },
+            { ...input, punishmentPfpUrl: null },
+         ]) {
+            vi.clearAllMocks();
+            await expect(
+               createChallengeAction(
+                  valid as Parameters<typeof createChallengeAction>[0]
+               )
+            ).resolves.toEqual({
+               ok: true,
+               data: { challengeId: "c_1" },
+            });
             expect(
                challengeAdminRepo.createAdminChallenge
-            ).not.toHaveBeenCalled();
+            ).toHaveBeenCalledWith(
+               expect.objectContaining({
+                  eventBannerUrl: NEW_BANNER,
+                  punishmentPfpUrl: null,
+               }),
+               ADMIN
+            );
          }
-      );
+      });
 
       it.each([
          { eventBannerUrl: NEW_PFP, code: "INVALID_EVENT_BANNER" },
@@ -666,6 +691,23 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          }
       );
 
+      it("allows clearing a saved punishmentPfpUrl with null and cleans up the old image", async () => {
+         await expect(
+            updateChallengeAction({ ...UPDATE_INPUT, punishmentPfpUrl: null })
+         ).resolves.toEqual({ ok: true });
+         expect(challengeAdminRepo.updateAdminChallenge).toHaveBeenCalledWith(
+            "c_1",
+            expect.objectContaining({
+               eventBannerUrl: NEW_BANNER,
+               punishmentPfpUrl: null,
+            }),
+            ADMIN
+         );
+         expect(storage.deleteManagedChallengeImage).toHaveBeenCalledWith(
+            OLD_PFP
+         );
+      });
+
       it.each(["eventBannerUrl", "punishmentPfpUrl"] as const)(
          "allows a valid replacement for a stored null %s",
          async (field) => {
@@ -701,7 +743,6 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
             code: "INVALID_EVENT_BANNER",
          },
          { eventBannerUrl: null, code: "INVALID_EVENT_BANNER" },
-         { punishmentPfpUrl: null, code: "INVALID_PUNISHMENT_PFP" },
          {
             eventBannerUrl: "https://example.com/banner.png",
             code: "INVALID_EVENT_BANNER",
@@ -759,63 +800,28 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          }
       );
 
-      describe.each(["eventBannerUrl", "punishmentPfpUrl"] as const)(
-         "raw %s validation",
-         (field) => {
-            it.each([
-               "",
-               " \t\n ",
-               ` ${UPDATE_INPUT[field]}`,
-               `${UPDATE_INPUT[field]} `,
-               ` \t${UPDATE_INPUT[field]}\n `,
-            ])(
-               "rejects changed empty/whitespace/padded URLs without trimming (%j)",
-               async (rawUrl) => {
-                  await expect(
-                     updateChallengeAction({ ...UPDATE_INPUT, [field]: rawUrl })
-                  ).resolves.toMatchObject({
-                     ok: false,
-                     code:
-                        field === "eventBannerUrl"
-                           ? "INVALID_EVENT_BANNER"
-                           : "INVALID_PUNISHMENT_PFP",
-                  });
-                  expect(pfpRepo.findChallengeImageUrls).toHaveBeenCalledWith(
-                     "c_1"
-                  );
-                  expect(
-                     challengeAdminRepo.updateAdminChallenge
-                  ).not.toHaveBeenCalled();
-                  expect(
-                     pfpRepo.isChallengeImageReferenced
-                  ).not.toHaveBeenCalled();
-                  expect(
-                     storage.deleteManagedChallengeImage
-                  ).not.toHaveBeenCalled();
-               }
-            );
-
-            it("does not grandfather a different raw whitespace string", async () => {
-               const images = {
-                  eventBannerUrl: " \t ",
-                  punishmentPfpUrl: " \t ",
-               };
-               vi.mocked(pfpRepo.findChallengeImageUrls).mockResolvedValue(
-                  images
-               );
+      describe("raw eventBannerUrl validation", () => {
+         it.each([
+            "",
+            " \t\n ",
+            ` ${UPDATE_INPUT.eventBannerUrl}`,
+            `${UPDATE_INPUT.eventBannerUrl} `,
+            ` \t${UPDATE_INPUT.eventBannerUrl}\n `,
+         ])(
+            "rejects changed empty/whitespace/padded URLs without trimming (%j)",
+            async (rawUrl) => {
                await expect(
                   updateChallengeAction({
                      ...UPDATE_INPUT,
-                     ...images,
-                     [field]: " ",
+                     eventBannerUrl: rawUrl,
                   })
                ).resolves.toMatchObject({
                   ok: false,
-                  code:
-                     field === "eventBannerUrl"
-                        ? "INVALID_EVENT_BANNER"
-                        : "INVALID_PUNISHMENT_PFP",
+                  code: "INVALID_EVENT_BANNER",
                });
+               expect(pfpRepo.findChallengeImageUrls).toHaveBeenCalledWith(
+                  "c_1"
+               );
                expect(
                   challengeAdminRepo.updateAdminChallenge
                ).not.toHaveBeenCalled();
@@ -825,9 +831,75 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
                expect(
                   storage.deleteManagedChallengeImage
                ).not.toHaveBeenCalled();
+            }
+         );
+
+         it("does not grandfather a different raw whitespace string", async () => {
+            const images = {
+               eventBannerUrl: " \t ",
+               punishmentPfpUrl: " \t ",
+            };
+            vi.mocked(pfpRepo.findChallengeImageUrls).mockResolvedValue(images);
+            await expect(
+               updateChallengeAction({
+                  ...UPDATE_INPUT,
+                  ...images,
+                  eventBannerUrl: " ",
+               })
+            ).resolves.toMatchObject({
+               ok: false,
+               code: "INVALID_EVENT_BANNER",
             });
-         }
-      );
+            expect(
+               challengeAdminRepo.updateAdminChallenge
+            ).not.toHaveBeenCalled();
+            expect(pfpRepo.isChallengeImageReferenced).not.toHaveBeenCalled();
+            expect(storage.deleteManagedChallengeImage).not.toHaveBeenCalled();
+         });
+      });
+
+      describe("raw punishmentPfpUrl validation", () => {
+         it.each(["", " \t\n "])(
+            "clears punishment PFP when changed to empty/whitespace (%j)",
+            async (rawUrl) => {
+               await expect(
+                  updateChallengeAction({
+                     ...UPDATE_INPUT,
+                     punishmentPfpUrl: rawUrl,
+                  })
+               ).resolves.toEqual({ ok: true });
+               expect(
+                  challengeAdminRepo.updateAdminChallenge
+               ).toHaveBeenCalledWith(
+                  "c_1",
+                  expect.objectContaining({ punishmentPfpUrl: null }),
+                  ADMIN
+               );
+               expect(storage.deleteManagedChallengeImage).toHaveBeenCalledWith(
+                  OLD_PFP
+               );
+            }
+         );
+
+         it.each([
+            ` ${UPDATE_INPUT.punishmentPfpUrl}`,
+            `${UPDATE_INPUT.punishmentPfpUrl} `,
+            ` \t${UPDATE_INPUT.punishmentPfpUrl}\n `,
+         ])(
+            "rejects changed padded URLs without trimming (%j)",
+            async (rawUrl) => {
+               await expect(
+                  updateChallengeAction({
+                     ...UPDATE_INPUT,
+                     punishmentPfpUrl: rawUrl,
+                  })
+               ).resolves.toMatchObject({
+                  ok: false,
+                  code: "INVALID_PUNISHMENT_PFP",
+               });
+            }
+         );
+      });
 
       it("keeps both images when the update fails", async () => {
          vi.mocked(challengeAdminRepo.updateAdminChallenge).mockRejectedValue(
