@@ -373,4 +373,37 @@ describe("HomeCockpitView", () => {
       expect(html).toContain('data-testid="dashboard-wrapped"');
       expect(html).toContain('data-challenge-id="chal-wrapped-1"');
    });
+
+   it("passes personal planning props to CockpitTasksSection when challengeStatus is COMPLETED", () => {
+      const mockCockpit: any = {
+         challengeId: "chal-completed",
+         challengeTitle: "Expired Challenge",
+         challengeStatus: "COMPLETED",
+         challengeStartDate: "2026-10-05",
+         todayDate: "2026-10-11",
+         totalChallengeDays: 7,
+         participant: {
+            id: "part-1",
+            userId: "user-1",
+            displayName: "Krish",
+         },
+         logs: [],
+         userTasks: {
+            categories: [],
+            dailyCategories: [],
+            weeklyCategories: [],
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-1", displayName: "Krish" },
+            cockpit: mockCockpit,
+         })
+      );
+
+      expect(html).not.toContain("Past day locked (new tasks blocked)");
+      expect(html).not.toContain("This challenge day has passed.");
+      expect(html).toContain('aria-label="Calendar Week Day Tabs"');
+   });
 });

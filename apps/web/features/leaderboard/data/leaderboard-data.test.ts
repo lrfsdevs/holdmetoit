@@ -106,6 +106,56 @@ describe("buildScoreboardViewModel", () => {
       expect(result.currentUser.isEnrolled).toBe(false);
    });
 
+   it("exposes the caller's duo identity and edit eligibility", () => {
+      const result = buildScoreboardViewModel(
+         { ...mockChallenge, format: "DUOS" },
+         "user-1",
+         fixedNow
+      );
+
+      expect(result.currentUser.teamId).toBe("team-bees");
+      expect(result.currentUser.teamName).toBe("Honey Bees");
+      expect(result.currentUser.teamIcon).toBe("🐝");
+      expect(result.currentUser.canEditDuoTeam).toBe(true);
+   });
+
+   it("hides duo edit eligibility once results are locked", () => {
+      const result = buildScoreboardViewModel(
+         {
+            ...mockChallenge,
+            format: "DUOS",
+            resultsLockedAt: new Date("2026-09-04T00:00:00.000Z"),
+         },
+         "user-1",
+         fixedNow
+      );
+
+      expect(result.currentUser.canEditDuoTeam).toBe(false);
+   });
+
+   it("hides duo edit eligibility for non-duo formats", () => {
+      const result = buildScoreboardViewModel(
+         { ...mockChallenge, format: "TEAM_VS_TEAM" },
+         "user-1",
+         fixedNow
+      );
+
+      expect(result.currentUser.canEditDuoTeam).toBe(false);
+   });
+
+   it("hides duo edit eligibility for unenrolled viewers", () => {
+      const result = buildScoreboardViewModel(
+         { ...mockChallenge, format: "DUOS" },
+         "user-99",
+         fixedNow
+      );
+
+      expect(result.currentUser.teamId).toBeNull();
+      expect(result.currentUser.teamName).toBeNull();
+      expect(result.currentUser.teamIcon).toBeNull();
+      expect(result.currentUser.canEditDuoTeam).toBe(false);
+   });
+
    it("keeps differing hero and punishment image URLs separate", () => {
       const url =
          "https://example.supabase.co/storage/v1/object/public/holdmetoit-bucket/event-banners/upload.png";

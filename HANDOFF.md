@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
+> **Last Updated:** 2026-10-26 (Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -153,6 +153,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > [!IMPORTANT]
 > **EXACT NEXT STEP (For Incoming Agent):**
 >
+> 0. Validate Session 162's duo identity changes: run the full `npm run test:web` / `npm run build:web`, then manually exercise `/challenge/seed-duos-october-2026` (team-view default, no VS panel, edit name + emoji as `mock_duo_1`, invalid/multi-emoji rejection, dry-run clear-to-null, combined audit row, locked-results read-only) at 360px. Apply migration `20261029000000_team_active_name_ci_unique` to each environment (back up first; verify no active case-insensitive duplicate team names). The local DB migration history currently diverges from the repo, so resolve `prisma migrate status` before running `migrate deploy`.
 > 1. Create the `challenge_wrapped_v1` feature flag in the target DB via `/devboard` (key `challenge_wrapped_v1`, `isEnabled = true`, `rolloutMode = TARGETED` for testers → `GLOBAL` for everyone). Wrapped is fail-closed and stays dark until this row exists.
 > 2. Restore the remaining deleted P0 UIs:
 >    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
@@ -175,6 +176,113 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 163 — 2026-10-26 (Incomplete Task Rollover & Challenge Goal Scoping on `krish` · GH #185 / Jira KAN-61)
+
+- **Incomplete Task Rollover Helper (FEAT-TASK-03):** Implemented ergonomic 1-click rollover for carrying over incomplete daily study commitments from past days to Today.
+   - **Domain Isolation (`features/tasks/domain/task-rollover.ts`):** Pure calculation math and candidate filtering (`isTaskIncomplete`, `extractDateKey`, `getTaskDateKey`, `findRolloverCandidates`, `applyRolloverToCategories`, `getRolloverSummary`). 18 unit tests green in Vitest (`task-rollover.test.ts`).
+   - **Validation & Schema (`features/tasks/domain/task.validation.ts`):** Added `rolloverTasksSchema` validating array of UUIDs and target `YYYY-MM-DD` date key.
+   - **Data Layer (`features/tasks/data/task.repository.ts`):** Added `rolloverIncompleteTasks` updating target due dates in PostgreSQL with ownership verification.
+   - **API Actions (`features/tasks/api/task.actions.ts`):** Added `rolloverTasksAction` with session validation and structured logging.
+   - **Presentation Layer (`features/study-logs/presentation/cockpit/`):**
+      - Rendered Today Rollover Banner (`data-testid="rollover-today-banner"`) when past days contain incomplete tasks with 1-click "Roll over to Today" button (`data-testid="rollover-all-button"`) and dismiss button.
+      - Rendered Past Day Rollover Banner (`data-testid="rollover-past-day-banner"`) when viewing a past day with incomplete tasks.
+      - Added 1-click rollover icon button directly on past-day daily task cards.
+- **Challenge Goal Scoping (FEAT-DECL-02 / Law L6 Alignment):** Implemented explicit goal scoping for weekly tasks during active challenges to eliminate conflation between personal study goals and mandatory challenge commitments.
+   - **Domain Isolation (`features/tasks/domain/task-scope.ts`):** Pure scoping predicates (`getTaskScope`, `isChallengeScopedTask`, `isPersonalScopedTask`, `resolveTaskScopeChallengeId`, `canScopeTaskToChallenge`, `countScopedTasks`). 10 unit tests green (`task-scope.test.ts`).
+   - **Schema & Persistence:** Extended `createTask`, `updateTask`, `task-sync.repository.ts`, and client/server actions to support explicit `challengeId` assignment/nulling.
+   - **Law L6 Three-Condition Invariant:** Challenge results lock queries filter strictly by `taskType = "WEEKLY"` and `challengeId = challengeId`. Personal weekly tasks retain `challengeId = null`, guaranteeing that personal study goals are never evaluated at challenge lock or used for scoreboard tie-breaking.
+   - **Presentation Layer (`cockpit-tasks-section.tsx`, `cockpit-task-menu.tsx`):**
+      - Weekly Todos Header Challenge Goals pill (`data-testid="weekly-challenge-goals-badge"`): displays completed vs total challenge goals (e.g. `1/2 Goals`) during active challenges.
+      - Task Card Scope Badges: renders `Goal` badge (`data-testid="task-scope-challenge-badge"`) or `Personal` badge (`data-testid="task-scope-personal-badge"`).
+      - Add & Edit Modal Goal Scope Selector: toggle between Challenge Goal (mandatory under Law L6) and Personal Task.
+      - Context & Dropdown Menu: added 1-click "Set as Challenge Goal" and "Convert to Personal Goal" actions, plus "Roll over to Today" on past days.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 100% test coverage across tasks and cockpit presentation suites (149/149 task tests green, 52/52 cockpit presentation tests green).
+- **PR #191 Review Feedback Addressed (Commit `8d91a0b`):**
+   - **`task.repository.ts`:**
+      - Restricted `rolloverIncompleteTasks` where clause to `taskType: "DAILY"`, `isComplete: false`, and `status: { notIn: ["COMPLETED", "CROSSED_OUT"] }`.
+      - Hardened `updateTask` to reject challenge scoping for non-weekly tasks (`Only weekly tasks can be scoped to a challenge`) and validated non-null `challengeId` via `validateTaskChallengeId` verifying participant authorization, unlocked results, and unexpired challenge window.
+   - **`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`:**
+      - Updated `weeklyScopedCounts`, task goal badges, and menu checks to strictly compare `task.challengeId === linkableChallengeId`, added `linkableChallengeId` to memo dependencies, and scoped counts strictly to the active challenge.
+      - Updated individual past-day task button to call `handleRolloverIncompleteTasks({ sourceDateKey: selectedDateKey, taskId: task.id })` rather than `moveTaskToDay`, safely bypassing past-day challenge lock guards.
+   - **Domain & Test Hardening (`task-rollover.ts`, `task.repository.test.ts`, `task-rollover.test.ts`):**
+      - Supported `taskId` filtering in `findRolloverCandidates`.
+      - Added test coverage for invalid challenge ID rejection, non-weekly challenge scope rejection, and repository rollover predicates. Full task/cockpit test suite passing (218/218 tests green).
+
+### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
+
+- **Duo identity editor (FEAT-CHAL-06):** Participants in DUOS challenges can now edit their team **name and emoji**. Replaced the name-only API with `domain/duo-team-identity.ts`, `data/team.repository.ts#updateDuoTeamIdentity`, `api/update-duo-team-identity.actions.ts`, and `presentation/edit-duo-team-modal.tsx` (single-emoji input + preset palette + clear). This supersedes Session 161's `duo-team-name.ts` / `renameDuoTeamName` / `rename-duo-team.*` files.
+- **Emoji validation:** Grapheme-aware via `Intl.Segmenter`; exactly one emoji-like grapheme (Extended_Pictographic, regional-indicator flag, or keycap). Preserves ZWJ families, flags, VS16, and skin tones; blank clears to `null`.
+- **Audit:** One combined `HOUSE_IDENTITY_UPDATED` event per save on the `TEAM` entity, with `previousValue`/`newValue` = `{ name, iconEmoji }` and a reason naming the changed fields (`name`, `emoji`, or `name and emoji`). The team update and audit insert run in one Prisma transaction, so audit persistence failure rolls back the save; non-transactional audit callers remain fail-safe.
+- **Leaderboard data/UI:** `currentUser` now exposes `teamIcon` and `canEditDuoTeam`; hero shows `Your duo: {emoji} {name}` with an **Edit duo** action; the team-view pencil opens the shared editor.
+- **Admin audit:** `computeEventDetailsDiff` now reports `icon changed <old> → <new>` instead of the opaque `icon changed`; admin edits remain in the existing `EVENT_DETAILS_UPDATED` model.
+- **Trophy badges:** Challenge-standings `TrophyRoleBadge` pills (mobile, desktop, team view) are now gated by `global_leaderboard_v1` via `isGlobalLeaderboardEnabled` (page → `ChallengeView` → `ChallengeLeaderboardTab`, default `false`). Previously they rendered regardless of the flag.
+- **Test stability:** `features/e2e/solo-challenge-lifecycle.test.ts` now derives its challenge window relative to `Date.now()`; the old fixed `endAt` made enrollment fail once wall-clock time passed `2026-10-26T08:00Z`.
+- **Identity concurrency:** `updateDuoTeamIdentity` now opens a transaction, locks the `Challenge` and `ChallengeParticipant` rows with `FOR UPDATE`, then re-reads and validates authorization before updating the team and writing the audit row. This closes results-lock/withdrawal/roster races.
+- **Team-name uniqueness:** migration `20261029000000_team_active_name_ci_unique` drops `Team_challengeId_name_key` and creates a partial unique index on `(challengeId, LOWER(name)) WHERE "isDeleted" = false`. `schema.prisma` no longer declares `@@unique([challengeId, name])`; soft-deleted teams no longer block name reuse.
+- **Docs:** `FEATURES.md` §4.7, `docs/challenges/README.md` §8, and `docs/leaderboard/README.md` §7–8 updated.
+- **NEXT STEP:** run the full `npm run test:web` / `npm run build:web`, then complete the manual checks in §6 item 0.
+
+### Session 161 — 2026-10-26 (Duo battles: participant self-rename + DUOS leaderboard defaults on `afnan-jr`)
+
+- **Duo self-rename (FEAT-CHAL-06):** Any enrolled, non-withdrawn member may rename their DUOS team until `resultsLockedAt` is set. Added `domain/duo-team-name.ts`, `data/team.repository.ts` (`renameDuoTeamName`), `api/rename-duo-team.actions.ts`, and `presentation/rename-duo-team-modal.tsx`. Successful renames audit `HOUSE_IDENTITY_UPDATED` on the `TEAM` entity; names are case-insensitively unique per challenge.
+- **Leaderboard data:** `ChallengeScoreboardViewModel.currentUser` now exposes `teamId`, `teamName`, and `canRenameDuoTeam` (optional fields; derived without extra queries).
+- **Leaderboard UI:** DUOS hides the head-to-head “VS” panel (`showHeadToHead = format !== "DUOS"`); the top-3 podium remains. DUOS defaults to **View by Team** via `resolveLeaderboardViewMode(value, format)`, with canonical `?view=` handling (default omits the param) in `page.tsx`, `ChallengeView`, and the tab.
+- **Rename triggers:** Pencil control on the caller's own team card in team view + “Your duo … Rename” in the hero banner.
+- **Docs:** `FEATURES.md` §4.7 updated from pre-kickoff lock to results-lock freeze; `docs/challenges/README.md` §8 and `docs/leaderboard/README.md` §7 added.
+- **Verification:** `npm run typecheck:web` ✅; focused Vitest suites for domain, repository, action, data, leaderboard tab, hero banner, and challenge page ✅.
+- **NEXT STEP:** run the full `npm run test:web` and `npm run build:web`, then manually verify the seeded DUOS challenge (`seed-duos-october-2026`) as described in §6 item 0.
+
+### Session 160 — 2026-10-24 (Renamed DevBoard YPT Center tab to Cron Logs on `afnan-jr`)
+
+- **Tab:** DevBoard label changed from “YPT Center” to **“Cron Logs”**.
+- **Route param:** `?tab=ypt-center` → **`?tab=cron-logs`** (bare `/devboard` still defaults to Feature Flags).
+- **Code:** `DEVBOARD_TABS` value updated; `YptCenterPanel` → `CronLogsPanel`; files renamed to `cron-logs-panel.*` and `cron-logs-format.ts`.
+- **Docs:** `docs/cron-logs/README.md` and the ypt-bot doc use the new name/URL.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 159 — 2026-10-24 (Removed cron per-member tracking & undo on `afnan-jr`)
+
+- **Scope:** 30s ingest cadence made per-member `CronLogChange` rows too large and low-value; undo was removed entirely. `CronLog` is now the only cron table.
+- **Schema:** removed `CronLogChange`, its back-relations, and the `CronLog.changes` relation. Migration `20261028000000_drop_cron_log_changes` (`DROP TABLE IF EXISTS "CronLogChange"`).
+- **Bot:** removed change capture from `daily-study-log.js` (`cronLogId`, change rows, `changesWritten/changesFailed`), `cronLogId` plumbing in `run-ingest.js`/`server.js`, and `CRON_LOG_CHANGE_RETENTION_DAYS`. `pruneCronLogs` now prunes runs only.
+- **Web:** deleted the undo repository/actions/types/dialog and their tests; removed undo audit types + log events; simplified DTOs and YPT Center UI (no member diffs, no undo; detail = metadata + summary + error).
+- **Tests:** 92 bot tests, web suite green; deleted change-capture and undo tests.
+- **Docs:** `docs/cron-logs/README.md` rewritten as status-only; ypt-bot doc trimmed.
+- **DB apply step:** `DATABASE_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" DIRECT_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" npm run db:migrate -w @holdmetoit/database` (destructive: drops `CronLogChange`; Supabase still needs the migration).
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 158 — 2026-10-24 (DevBoard tab persistence on `afnan-jr`)
+
+- **Problem:** refreshing while on YPT Center remounted `DevBoardView` on Feature Flags.
+- **Fix:** active section is stored in `?tab=` (`flags` default, `ypt`, `ypt-center`). `app/devboard/page.tsx` reads `searchParams.tab`; `DevBoardView` initialises from `initialTab` and writes changes with `window.history.replaceState` (no server round-trip, no flag refetch).
+- **Helpers:** `features/feature-flags/domain/devboard-tabs.ts` (`DEVBOARD_TABS`, `resolveDevBoardTab`, array/invalid clamping).
+- **UX:** `/devboard?tab=ypt-center` deep-links and survives refresh; choosing Feature Flags removes the param; other query params are preserved.
+- **Tests:** resolver (4), page plumbing (4), jsdom interaction (5); existing DevBoard static tests unchanged.
+- **Docs:** `docs/cron-logs/README.md` §4.6 note.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 157 — 2026-10-24 (YPT Center UI under DevBoard on `afnan-jr`)
+
+- **UI:** new **YPT Center** tab in `/devboard` (third tab; Feature Flags and YPT Verification unchanged). Overview cards, job/status filters, paginated run list (25/page), responsive cards on mobile, and a run-detail Sheet.
+- **Detail:** run metadata, summary JSON, per-member `previous → new` duration/status diffs, Created/Undone badges, and per-member undo.
+- **Undo:** per-member and per-run confirmation dialog (reason ≥ 10 chars) wired to the existing admin undo actions; shows reverted/skipped counts, conflict warnings, and the `mayReapply` banner.
+- **Read actions:** new DEV-guarded `listCronRunsAction`, `getCronRunDetailAction`, `getCronOverviewAction`; repository now returns serializable DTOs with offset pagination and a 24h overview.
+- **Tests:** 9 panel tests (jsdom), 6 read-action tests, DevBoard tab assertion; full web suite green.
+- **Docs:** `docs/cron-logs/README.md` §4.6 added.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 156 — 2026-10-24 (ypt-bot: CronLog job runs, member change history & undo backend on `afnan-jr`)
+
+- **Schema:** new `CronJobStatus` enum, `CronLog` (run audit: job, trigger, status, timing, summary, error) and `CronLogChange` (per-member previous → new duration/status, undo flags). Back-relations added to `User` and `ChallengeParticipant`.
+- **Migration:** `packages/database/prisma/migrations/20261027000000_add_cron_logs/migration.sql`.
+- **Bot:** `src/db/cron-log-repository.js` (`withCronLog`, `recordCronRun`, `recoverInterruptedRuns`, `pruneCronLogs`); ingest change capture in `daily-study-log.js`; run wiring in `server.js` and `backup/scheduler.js`.
+- **Retention:** `CRON_LOG_RETENTION_DAYS=30`, `CRON_LOG_CHANGE_RETENTION_DAYS=9` (undo window).
+- **Web backend:** `features/cron-logs/{data,api,domain}` with admin undo actions for one member change or a whole run (compare-and-swap conflict guard, AuditLog, cache invalidation). No UI page yet.
+- **Audit:** `AuditEventType` += `CRON_RUN_UNDO`, `CRON_MEMBER_CHANGE_UNDO`; `AuditTargetType` += `CRON_LOG`.
+- **Docs:** new `docs/cron-logs/README.md`; ypt-bot doc + database-backups doc updated.
+- **DB apply step:** `DATABASE_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" DIRECT_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" npm run db:migrate -w @holdmetoit/database` (Prisma CLI otherwise targets Supabase).
+- **NEXT STEP:** build the admin run-history/undo page on top of `features/cron-logs` (no commit made yet).
 
 ### Session 155 — 2026-10-24 (ypt-bot: layered file structure on `afnan-jr`)
 
@@ -1406,3 +1514,57 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives with seamless 404 fallback to embed avatars or initials, and added `RefreshAvatarButton` on participant profile headers with clear status feedback (`"Avatar updated!"`, `"Avatar is up to date!"`, or `"Session expired — please log in again to sync"`), without client-supplied user IDs.
 - **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
 - **Quality Gates:** 0 typecheck errors, 0 lint errors, 193/193 test files (1817 tests) passing. PR #179 submitted from `krish` -> `dev`.
+
+### Session 154 — 2026-10-25 (Operational Daily Planning Checklist Outside Challenges on `krish` — GH-#125 / KAN-34)
+
+- **Root Cause Resolved:** Previously, daily tasks in the cockpit inherited anti-cheat past-day challenge locks (`PAST_DAY_NOT_ALLOWED`) unconditionally when rendering earlier days in a calendar week. However, under Law L6 (Three-Condition Invariant), challenges evaluate only challenge-linked weekly goals—daily tasks are purely personal planning tools and should never block non-challenge participants from logging or scheduling commitments on past days.
+- **Domain Refinement (`challenge-day.ts`):**
+   - Updated `validateAddTaskChallengeDay(isPastDay, options?: { isChallengeActive?: boolean })` to allow past-day task additions when `isChallengeActive === false`.
+   - Updated `validateMoveTaskChallengeDay(sourceDateKey, targetDateKey, todayDateKey, options?: ValidateMoveTaskOptions)` to allow moving tasks across any day when `options?.isChallengeActive === false`.
+   - Added unit test coverage across all cases in `challenge-day.test.ts` (48 tests passing).
+- **Presentation Layer Updates (`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`):**
+   - Added `hasChallengeContext = Boolean(challengeStartDate)` and derived `isPastDayLocked = hasChallengeContext && isActiveDayPast`.
+   - Conditioned all anti-cheat locking badges, empty states, disabled action buttons, and drag-and-drop guards on `isPastDayLocked` instead of `isActiveDayPast`.
+   - Updated personal planning empty state copy to `"Plan or log your tasks for {Day}."` and `"+ Add todo for {Day}"` when not in an active challenge.
+   - Added `initialSelectedDateKey?: string` prop to `CockpitTasksSectionProps` for robust day selection and testing.
+   - Updated `TaskMenuItems` and `CategoryMenuItems` with `isChallengeActive?: boolean` to unlock deletion and rescheduling on past days for personal planning.
+   - Explicitly passed `isChallengeActive={hasChallengeContext}` to all 8 `<TaskMenuItems>` and `<CategoryMenuItems>` instances in `cockpit-tasks-section.tsx`.
+   - Conditioned `handleDeleteTask`, `handleConfirmDeleteCategory`, `handleAddTodoSubmit`, and weekly-to-past-day move guards (`moveTaskToDay`, `moveCategoryToDayAction`) on `hasChallengeContext` so personal planning is never blocked.
+- **Slice Splitting (3-Stage Plan):**
+   - Slice 1 (This Session): Core daily task operationalization & past-day lock lifting (GH #125 / KAN-34).
+   - Slice 2: Multi-week arrow navigation & date picker selector for personal planning outside challenges (GH #184 / KAN-60).
+   - Slice 3: Weekly goals personal view & unlinked challenge status (GH #185 / KAN-61).
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+   - `npm run test:web`: ✅ 194 test files passed (1843/1843 tests green).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, transition Jira `KAN-34` from `In Progress` to `In Review`, and proceed to Slice 2 (GH #184 / KAN-60).
+
+### Session 155 — 2026-10-25 (Calendar Week Paging & Compact Date Picker Navigation on `krish` — GH-#184 / KAN-60)
+
+- **Context & Objective:** Implemented Slice 2 of the Daily Tasks overhaul (GH #184 / KAN-60). Enables participants outside challenges to page across arbitrary calendar weeks (past and future), jump directly to any date via a compact monthly popover picker, and snap back to the current day.
+- **Domain Refinements (`challenge-day.ts`):**
+   - Decoupled anchor week from the current day in `getCalendarWeekDayOptions(anchorDate?, today?)`. `anchorDate` generates the Monday–Sunday week while `today` strictly governs `isToday`, `isYesterday`, `isPast`, and `isFuture`.
+   - Added `getAdjacentWeekAnchor(currentAnchor, offsetWeeks)` to safely calculate prior/next week anchor strings across month and year boundaries.
+   - Added `formatWeekRange(startDateKey, endDateKey)` to format clean range strings (e.g. `Oct 19 – 25`, `Oct 26 – Nov 1`, `Dec 28, 2026 – Jan 3, 2027`).
+   - Added `isSameCalendarWeek(dateKeyA, dateKeyB)` for ISO Monday–Sunday week boundary equality.
+   - Added `getCalendarMonthGrid(yearOrDate, monthIndex?)` returning Monday-aligned 7-column month grid structures (`CalendarMonthGrid`, `CalendarMonthCell`).
+   - Added new unit tests in `challenge-day.test.ts` (earlier checkpoint: 60/60; final: 64/64 domain tests passing).
+- **Presentation Layer Components (`cockpit-date-picker-popover.tsx` & `cockpit-tasks-section.tsx`):**
+   - Created `CockpitDatePickerPopover` and `CockpitWeekNavigator` featuring previous/next week chevrons (`‹` and `›`), calendar icon, week range button trigger, compact month calendar picker, weekday headers (`Mo`–`Su`), today indicator ring, and quick jump to today.
+   - Integrated `CockpitWeekNavigator` into `CockpitTasksSection` Daily Todos header when `!hasChallengeContext`.
+   - Wired `activeWeekAnchorDateKey` state with `handlePreviousWeek`, `handleNextWeek`, and `handleSelectDateFromPicker`.
+   - Fixed Today button jump & layout stabilization: structured Daily Todos header into a stable 2-row layout (Row 1: Section Title, Day Badge, and Completed Counter mirroring Weekly Todos; Row 2: Fixed Week Navigator directly above the 7-day pill switcher). Eliminates all vertical jumping and orphan wrapping.
+   - Resolved Completed Challenge Week Locking: added `isChallengeDayDateLocked` in `challenge-day.ts` and forwarded `challengeStartDate` & `totalChallengeDays` from `home-cockpit-view.tsx` even when `challengeStatus === "COMPLETED"`. Ensures all days of a completed challenge from prior weeks remain strictly locked when the new calendar week starts, while new week days remain unlocked.
+   - Preserved active challenge lockdown: calendar week navigation is hidden during active challenges where days are strictly bound to challenge duration.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/domain/challenge-day.test.ts`: 64/64 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-date-picker-popover.test.tsx`: 8/8 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: 30/30 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: 4/4 tests passing.
+   - Full workspace test suite: ✅ 196 test files passed (1,879/1,879 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-60` transitioned from `In Progress` to `In Review` (id: 10006).
+- **GitHub PR & Issue Status:** Submitted PR [#188](https://github.com/lrfsdevs/holdmetoit/pull/188) from `krish` to `dev`; closed GitHub Issue [#184](https://github.com/lrfsdevs/holdmetoit/issues/184).
+- **NEXT STEP:** Peer review and merge PR #188 into `dev`, then proceed to next roadmap milestone or release cycle.

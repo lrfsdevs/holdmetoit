@@ -9,9 +9,9 @@ import { ingestGroupMembersToDailyStudyLogs } from "./daily-study-log.js";
  * Executes a single ingestion iteration across all configured YPT groups.
  * Uses multi-group aggregation to deduplicate members and handle errors gracefully.
  */
-export async function runIngest() {
+export async function runIngest({ runId = randomUUID() } = {}) {
    const start = Date.now();
-   const run = logger.child({ runId: randomUUID(), trigger: "runIngest" });
+   const run = logger.child({ runId, trigger: "runIngest" });
    run.info("Running YPT study logs ingestion...");
 
    if (!env.YPT_EMAIL || !env.YPT_PASSWORD) {
@@ -60,5 +60,10 @@ export async function runIngest() {
    );
 
    run.info("Ingestion cycle completed.", { durationMs: Date.now() - start });
-   return result;
+   return {
+      ...result,
+      fetchedMembers: aggregated.members.length,
+      successfulGroups: aggregated.successfulGroups,
+      configuredGroups: groupIds.length,
+   };
 }

@@ -11,6 +11,7 @@ import {
    createTaskSchema,
    deleteCategorySchema,
    deleteTaskSchema,
+   rolloverTasksSchema,
    toggleTaskSchema,
    updateCategorySchema,
    updateTaskSchema,
@@ -18,6 +19,7 @@ import {
    type CreateTaskInput,
    type DeleteCategoryInput,
    type DeleteTaskInput,
+   type RolloverTasksInput,
    type ToggleTaskInput,
    type UpdateCategoryInput,
    type UpdateTaskInput,
@@ -27,6 +29,7 @@ import {
    createTask,
    deleteCategory,
    deleteTask,
+   rolloverIncompleteTasks,
    toggleTask,
    updateCategory,
    updateTask,
@@ -70,6 +73,7 @@ export async function createTaskAction(
          isComplete: parsed.data.isComplete,
          status: parsed.data.status,
          dueDate: parsed.data.dueDate,
+         challengeId: parsed.data.challengeId,
       });
 
       revalidatePath("/");
@@ -284,6 +288,7 @@ export async function updateTaskAction(
          isComplete: parsed.data.isComplete,
          status: parsed.data.status,
          dueDate: parsed.data.dueDate,
+         challengeId: parsed.data.challengeId,
       });
 
       if (!updated) {
@@ -452,6 +457,56 @@ export async function deleteCategoryAction(
          ok: false,
          code: "PERSISTENCE_ERROR",
          message: "Could not delete category.",
+      };
+   }
+}
+
+export async function rolloverTasksAction(
+   input: RolloverTasksInput
+): Promise<TaskActionResult> {
+   try {
+      const user = await requireSessionUser();
+      const parsed = rolloverTasksSchema.safeParse(input);
+
+      if (!parsed.success) {
+         return {
+            ok: false,
+            code: "INVALID_INPUT",
+            message:
+               parsed.error.issues[0]?.message || "Invalid rollover input.",
+         };
+      }
+
+      const result = await rolloverIncompleteTasks({
+         userId: user.id,
+         taskIds: parsed.data.taskIds,
+         targetDateKey: parsed.data.targetDateKey,
+      });
+
+      revalidatePath("/");
+      invalidateUserTaskCache(user.id);
+      logger.info(logEvents.taskUpdated, {
+         context: {
+            userId: user.id,
+            action: "ROLLOVER",
+            count: result.count,
+            targetDateKey: parsed.data.targetDateKey,
+         },
+      });
+      return { ok: true, data: result };
+   } catch (error) {
+      if (error instanceof AuthError) {
+         logger.debug(logEvents.taskUpdated, {
+            context: { code: "UNAUTHORIZED" },
+            error,
+         });
+         return { ok: false, code: "UNAUTHORIZED", message: error.message };
+      }
+      logger.error(logEvents.taskUpdated, { error });
+      return {
+         ok: false,
+         code: "PERSISTENCE_ERROR",
+         message: "Could not roll over tasks. Please try again.",
       };
    }
 }

@@ -859,4 +859,234 @@ describe("CockpitTasksSection", () => {
       expect(html).toContain('title="' + longText + '"');
       expect(html).toContain("Show more");
    });
+   describe("Non-Challenge Personal Planning (GH-125 / KAN-34)", () => {
+      const emptyTasks: UserCategorizedTasks = {
+         categories: [],
+         dailyCategories: [],
+         weeklyCategories: [],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 0,
+         completedWeeklyTasks: 0,
+      };
+
+      it("enables adding tasks and displays personal planning copy on past days when not in an active challenge", () => {
+         // Monday 2026-09-28 is past relative to Sunday 2026-10-04
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-04",
+               initialSelectedDateKey: "2026-09-28",
+            })
+         );
+
+         // Should NOT show challenge locking indicators
+         expect(html).not.toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).not.toContain("Adding tasks to past days is locked");
+         expect(html).not.toContain("Past day locked (new tasks blocked)");
+         expect(html).not.toContain("Locked</span>");
+
+         // Should display helpful personal planning copy and active add button
+         expect(html).toContain("Plan or log your tasks for Mon.");
+         expect(html).toContain("+ Add todo for Mon");
+         expect(html).toContain("+ Add first todo for Mon");
+      });
+
+      it("preserves challenge locks and challenge copy on past days when an active challenge is present", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-09-28",
+               challengeId: "ch_active_1",
+               challengeStatus: "ACTIVE",
+               todayDate: "2026-10-04",
+               initialSelectedDateKey: "2026-09-28",
+            })
+         );
+
+         // Must preserve anti-cheat challenge locking indicators
+         expect(html).toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).toContain("Adding tasks to past days is locked");
+         expect(html).toContain("Past day locked (new tasks blocked)");
+         expect(html).toContain("Locked</span>");
+         expect(html).not.toContain("+ Add todo for Day 1");
+      });
+      it("renders task and category options triggers and keeps adding unlocked on past days when not in an active challenge", () => {
+         const tasksWithPastDaily: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_daily_past",
+                  userId: "user_1",
+                  name: "Past Daily Routine",
+                  taskType: "DAILY",
+                  createdAt: new Date("2026-09-28T10:00:00Z"),
+                  updatedAt: new Date("2026-09-28T10:00:00Z"),
+               },
+            ],
+            dailyCategories: [
+               {
+                  id: "cat_daily_past",
+                  name: "Past Daily Routine",
+                  taskType: "DAILY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "t_past_daily",
+                        userId: "user_1",
+                        categoryId: "cat_daily_past",
+                        title: "Past Routine Task",
+                        taskType: "DAILY",
+                        isComplete: false,
+                        dueDate: "2026-09-28",
+                        createdAt: new Date("2026-09-28T10:00:00Z"),
+                        updatedAt: new Date("2026-09-28T10:00:00Z"),
+                        completedAt: null,
+                     },
+                  ],
+               },
+            ],
+            weeklyCategories: [],
+            totalDailyTasks: 1,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 0,
+            completedWeeklyTasks: 0,
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: tasksWithPastDaily,
+               todayDate: "2026-10-04",
+               initialSelectedDateKey: "2026-09-28",
+            })
+         );
+
+         expect(html).toContain(
+            'aria-label="Options for task Past Routine Task"'
+         );
+         expect(html).toContain(
+            'aria-label="Options for category Past Daily Routine"'
+         );
+         expect(html).not.toContain("Past day locked (new tasks blocked)");
+         expect(html).toContain("+ Add more todos for Mon");
+      });
+
+      it("does not lock past days and ignores expired challenge start dates when challengeStatus is COMPLETED", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-05",
+               challengeId: "ch_completed_1",
+               challengeStatus: "COMPLETED",
+               todayDate: "2026-10-11",
+            })
+         );
+
+         expect(html).not.toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).not.toContain("Past day locked (new tasks blocked)");
+         expect(html).not.toContain("Adding tasks to past days is locked");
+         expect(html).toContain('aria-label="Calendar Week Day Tabs"');
+         expect(html).toContain("+ Add first todo");
+      });
+   });
+
+   describe("Calendar Week Navigation (GH #184 / KAN-60)", () => {
+      const emptyTasks: UserCategorizedTasks = {
+         categories: [],
+         dailyCategories: [],
+         weeklyCategories: [],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 0,
+         completedWeeklyTasks: 0,
+      };
+
+      it("renders week navigation chevrons and week range trigger when not in an active challenge", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+            })
+         );
+
+         expect(html).toContain('aria-label="Previous week"');
+         expect(html).toContain('aria-label="Next week"');
+         expect(html).toContain(
+            'aria-label="Current week: Oct 19 – 25. Click to pick date"'
+         );
+         expect(html).toContain("Oct 19 – 25");
+      });
+
+      it("does not render calendar week navigation during an active challenge", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-05",
+               challengeId: "ch_active_1",
+               challengeStatus: "ACTIVE",
+               todayDate: "2026-10-07",
+            })
+         );
+
+         expect(html).not.toContain('aria-label="Previous week"');
+         expect(html).not.toContain('aria-label="Next week"');
+         expect(html).toContain('aria-label="Challenge Day Tabs"');
+      });
+
+      it("renders Today snap button when initialSelectedDateKey is not today", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-20",
+            })
+         );
+
+         expect(html).toContain("Today");
+      });
+
+      it("hides Today snap button when selected date matches todayDate", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-25",
+            })
+         );
+
+         expect(html).not.toMatch(/<button[^>]*>Today<\/button>/);
+      });
+
+      it("locks daily todos for a previous challenge week after the new week starts", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-12",
+               totalChallengeDays: 7,
+               challengeStatus: "COMPLETED",
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-15",
+            })
+         );
+
+         expect(html).toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).toContain("Locked");
+      });
+   });
 });

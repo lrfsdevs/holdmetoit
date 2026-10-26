@@ -19,6 +19,7 @@ import {
    getChallengeDayNumber,
 } from "@/features/study-logs/domain/challenge-day";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { canEditDuoTeamIdentity } from "@/features/challenges/domain/duo-team-identity";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
 import type {
@@ -474,6 +475,23 @@ export function buildScoreboardViewModel(
             currentUserParticipant && !currentUserParticipant.isWithdrawn
          ),
          participantId: currentUserParticipant?.id ?? null,
+         teamId: currentUserParticipant?.teamId ?? null,
+         teamName: currentUserParticipant?.teamId
+            ? (teamLookup.get(currentUserParticipant.teamId)?.name ?? null)
+            : null,
+         teamIcon: currentUserParticipant?.teamId
+            ? (teamLookup.get(currentUserParticipant.teamId)?.iconEmoji ?? null)
+            : null,
+         canEditDuoTeam: Boolean(
+            currentUserParticipant &&
+            !currentUserParticipant.isWithdrawn &&
+            currentUserParticipant.teamId &&
+            challenge.format === "DUOS" &&
+            canEditDuoTeamIdentity({
+               status,
+               resultsLockedAt: challenge.resultsLockedAt,
+            })
+         ),
          isWrappedSeen: currentUserParticipant?.isWrappedSeen ?? false,
          isFeedbackFilled: currentUserParticipant?.isFeedbackFilled ?? false,
       },

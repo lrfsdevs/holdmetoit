@@ -170,20 +170,33 @@ export function getChallengeDayOptions(
 }
 
 export function getCalendarWeekDayOptions(
-   now: Date | string = new Date()
+   anchorDate: Date | string = new Date(),
+   today?: Date | string
 ): ChallengeDayOption[] {
-   const nowDate = toDate(now);
-   const nowYear = nowDate.getUTCFullYear();
-   const nowMonth = nowDate.getUTCMonth();
-   const nowDateNum = nowDate.getUTCDate();
-   const todayUtc = Date.UTC(nowYear, nowMonth, nowDateNum);
-   const todayObj = new Date(todayUtc);
-   const todayDateKey = formatUtcDateKey(todayObj);
+   const anchor = toDate(anchorDate);
+   const anchorYear = anchor.getUTCFullYear();
+   const anchorMonth = anchor.getUTCMonth();
+   const anchorDateNum = anchor.getUTCDate();
+   const anchorUtc = Date.UTC(anchorYear, anchorMonth, anchorDateNum);
+   const anchorObj = new Date(anchorUtc);
+
+   let todayUtc: number;
+   if (today !== undefined) {
+      const todayDate = toDate(today);
+      todayUtc = Date.UTC(
+         todayDate.getUTCFullYear(),
+         todayDate.getUTCMonth(),
+         todayDate.getUTCDate()
+      );
+   } else {
+      todayUtc = anchorUtc;
+   }
+   const todayDateKey = formatUtcDateKey(new Date(todayUtc));
 
    // ISO week: Monday = 1, Sunday = 7
-   const dayOfWeek = todayObj.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+   const dayOfWeek = anchorObj.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
    const daysSinceMonday = (dayOfWeek + 6) % 7;
-   const mondayUtc = todayUtc - daysSinceMonday * MILLISECONDS_PER_DAY;
+   const mondayUtc = anchorUtc - daysSinceMonday * MILLISECONDS_PER_DAY;
 
    const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
    const options: ChallengeDayOption[] = [];
@@ -219,6 +232,174 @@ export function getCalendarWeekDayOptions(
    return options;
 }
 
+export function getAdjacentWeekAnchor(
+   currentAnchor: Date | string,
+   offsetWeeks: number
+): string {
+   const anchor = toDate(currentAnchor);
+   const anchorUtc = Date.UTC(
+      anchor.getUTCFullYear(),
+      anchor.getUTCMonth(),
+      anchor.getUTCDate()
+   );
+   const targetUtc = anchorUtc + offsetWeeks * 7 * MILLISECONDS_PER_DAY;
+   return formatUtcDateKey(new Date(targetUtc));
+}
+
+export function formatWeekRange(
+   startDateKey: string,
+   endDateKey: string
+): string {
+   try {
+      const startParts = startDateKey.split("-").map(Number);
+      const endParts = endDateKey.split("-").map(Number);
+      if (
+         startParts.length === 3 &&
+         startParts[0] &&
+         startParts[1] &&
+         startParts[2] &&
+         endParts.length === 3 &&
+         endParts[0] &&
+         endParts[1] &&
+         endParts[2]
+      ) {
+         const startDate = new Date(
+            Date.UTC(startParts[0], startParts[1] - 1, startParts[2])
+         );
+         const endDate = new Date(
+            Date.UTC(endParts[0], endParts[1] - 1, endParts[2])
+         );
+
+         const startMonth = startDate.toLocaleDateString("en-US", {
+            month: "short",
+            timeZone: "UTC",
+         });
+         const endMonth = endDate.toLocaleDateString("en-US", {
+            month: "short",
+            timeZone: "UTC",
+         });
+         const startDay = startParts[2];
+         const endDay = endParts[2];
+         const startYear = startParts[0];
+         const endYear = endParts[0];
+
+         if (startYear !== endYear) {
+            return `${startMonth} ${startDay}, ${startYear} – ${endMonth} ${endDay}, ${endYear}`;
+         }
+         if (startMonth !== endMonth) {
+            return `${startMonth} ${startDay} – ${endMonth} ${endDay}`;
+         }
+         return `${startMonth} ${startDay} – ${endDay}`;
+      }
+   } catch {}
+   return `${startDateKey} – ${endDateKey}`;
+}
+
+export function isSameCalendarWeek(
+   dateKeyA: string,
+   dateKeyB: string
+): boolean {
+   try {
+      const getMondayUtc = (key: string): number => {
+         const [y, m, d] = key.split("-").map(Number);
+         if (!y || !m || !d) return NaN;
+         const utc = Date.UTC(y, m - 1, d);
+         const day = new Date(utc).getUTCDay();
+         const diff = (day + 6) % 7;
+         return utc - diff * MILLISECONDS_PER_DAY;
+      };
+
+      const monA = getMondayUtc(dateKeyA);
+      const monB = getMondayUtc(dateKeyB);
+      return !Number.isNaN(monA) && monA === monB;
+   } catch {
+      return false;
+   }
+}
+
+export interface CalendarMonthCell {
+   dateKey: string;
+   dayOfMonth: number;
+   isCurrentMonth: boolean;
+   weekdayIndex: number;
+}
+
+export interface CalendarMonthGrid {
+   year: number;
+   month: number;
+   monthName: string;
+   weeks: CalendarMonthCell[][];
+}
+
+export function getCalendarMonthGrid(
+   yearOrDate: number | Date | string,
+   monthIndex?: number
+): CalendarMonthGrid {
+   let targetYear: number;
+   let targetMonth: number;
+
+   if (typeof yearOrDate === "number" && monthIndex !== undefined) {
+      targetYear = yearOrDate;
+      targetMonth = monthIndex;
+   } else {
+      const d = toDate(yearOrDate as Date | string);
+      targetYear = d.getUTCFullYear();
+      targetMonth = d.getUTCMonth();
+   }
+
+   const firstDayOfMonthUtc = Date.UTC(targetYear, targetMonth, 1);
+   const firstDayObj = new Date(firstDayOfMonthUtc);
+   const monthName = firstDayObj.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+   });
+
+   // ISO week starting on Monday: (day + 6) % 7 gives days since Monday
+   const firstDayOfWeek = firstDayObj.getUTCDay();
+   const daysSinceMonday = (firstDayOfWeek + 6) % 7;
+   const gridStartUtc =
+      firstDayOfMonthUtc - daysSinceMonday * MILLISECONDS_PER_DAY;
+
+   // Last day of month
+   const lastDayOfMonthUtc = Date.UTC(targetYear, targetMonth + 1, 0);
+   const lastDayObj = new Date(lastDayOfMonthUtc);
+   const lastDayOfWeek = lastDayObj.getUTCDay();
+   const daysUntilSunday = (7 - (((lastDayOfWeek + 6) % 7) + 1)) % 7;
+   const gridEndUtc =
+      lastDayOfMonthUtc + daysUntilSunday * MILLISECONDS_PER_DAY;
+
+   const totalDays =
+      Math.round((gridEndUtc - gridStartUtc) / MILLISECONDS_PER_DAY) + 1;
+   const totalWeeks = Math.ceil(totalDays / 7);
+
+   const weeks: CalendarMonthCell[][] = [];
+
+   for (let w = 0; w < totalWeeks; w++) {
+      const week: CalendarMonthCell[] = [];
+      for (let d = 0; d < 7; d++) {
+         const currentUtc = gridStartUtc + (w * 7 + d) * MILLISECONDS_PER_DAY;
+         const currentObj = new Date(currentUtc);
+         const dateKey = formatUtcDateKey(currentObj);
+         const isCurrentMonth = currentObj.getUTCMonth() === targetMonth;
+         week.push({
+            dateKey,
+            dayOfMonth: currentObj.getUTCDate(),
+            isCurrentMonth,
+            weekdayIndex: d,
+         });
+      }
+      weeks.push(week);
+   }
+
+   return {
+      year: targetYear,
+      month: targetMonth,
+      monthName,
+      weeks,
+   };
+}
+
 export function isChallengeDayInPast(
    startAt: Date | string,
    target: { dayNumber?: number; dateKey?: string },
@@ -236,12 +417,74 @@ export function isChallengeDayInPast(
    return false;
 }
 
+export interface ChallengeWindowOptions {
+   challengeStartDate?: string;
+   totalChallengeDays?: number;
+   challengeStatus?: "UPCOMING" | "ACTIVE" | "COMPLETED";
+}
+
+/**
+ * Checks whether a given calendar date is locked by a past or concluded challenge.
+ *
+ * Rules:
+ * 1. If dateKey falls within a challenge's duration [challengeStartDate, challengeEndDate]:
+ *    - If challenge is ACTIVE: any date strictly before today is locked.
+ *    - If challenge is COMPLETED: once the new week starts (today > challengeEndKey),
+ *      all challenge days are locked. While still in that week, days prior to today are locked.
+ * 2. If dateKey is outside the challenge window (e.g. personal planning in the new week after challenge concluded):
+ *    - Not locked by the challenge.
+ */
+export function isChallengeDayDateLocked(
+   dateKey: string,
+   todayDateKey: string,
+   options?: ChallengeWindowOptions
+): boolean {
+   if (!options?.challengeStartDate) {
+      return false;
+   }
+
+   const totalDays = options.totalChallengeDays ?? 7;
+   const startKey = options.challengeStartDate.slice(0, 10);
+   const endKey = getChallengeDayDateKey(options.challengeStartDate, totalDays);
+
+   const isWithinChallenge = dateKey >= startKey && dateKey <= endKey;
+   if (!isWithinChallenge) {
+      return false;
+   }
+
+   if (options.challengeStatus === "COMPLETED" || todayDateKey > endKey) {
+      return true;
+   }
+
+   if (options.challengeStatus === "ACTIVE") {
+      return dateKey < todayDateKey;
+   }
+
+   return dateKey < todayDateKey;
+}
+
 export type ValidateAddTaskDayResult =
    { ok: true } | { ok: false; code: "PAST_DAY_NOT_ALLOWED"; message: string };
 
+export interface ValidateAddTaskOptions {
+   isChallengeActive?: boolean;
+   isChallengeDayLocked?: boolean;
+}
+
 export function validateAddTaskChallengeDay(
-   isPastDay: boolean
+   isPastDay: boolean,
+   options?: ValidateAddTaskOptions
 ): ValidateAddTaskDayResult {
+   if (options?.isChallengeDayLocked === true) {
+      return {
+         ok: false,
+         code: "PAST_DAY_NOT_ALLOWED",
+         message: "Adding new todo tasks to past challenge days is locked.",
+      };
+   }
+   if (options?.isChallengeActive === false) {
+      return { ok: true };
+   }
    if (isPastDay) {
       return {
          ok: false,
@@ -265,11 +508,28 @@ export type ValidateMoveTaskDayResult =
  * - Tasks on previous (past) days can be moved to another day (today or future).
  * - Moving tasks from present or future days to a day that has already passed in the challenge is strictly forbidden.
  */
+export interface ValidateMoveTaskOptions {
+   isChallengeActive?: boolean;
+   isTargetDayLocked?: boolean;
+}
+
 export function validateMoveTaskChallengeDay(
    sourceDateKey: string,
    targetDateKey: string,
-   todayDateKey: string
+   todayDateKey: string,
+   options?: ValidateMoveTaskOptions
 ): ValidateMoveTaskDayResult {
+   if (options?.isTargetDayLocked === true) {
+      return {
+         ok: false,
+         code: "TARGET_DAY_IN_PAST",
+         message:
+            "Cannot move tasks into a past challenge day that has already concluded.",
+      };
+   }
+   if (options?.isChallengeActive === false) {
+      return { ok: true };
+   }
    const isTargetPast = targetDateKey < todayDateKey;
    const isSourcePast = sourceDateKey < todayDateKey;
 

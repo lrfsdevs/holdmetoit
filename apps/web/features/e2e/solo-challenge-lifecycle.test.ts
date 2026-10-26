@@ -68,12 +68,17 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
       // ======================================================================
       // Step 1: Admin Creates Solo Challenge (SOLOS format)
       // ======================================================================
+      // Relative dates keep this lifecycle test from becoming "completed"
+      // as wall-clock time advances.
+      const challengeStart = new Date(Date.now() + 86400000);
+      const challengeEnd = new Date(Date.now() + 7 * 86400000);
+
       const mockSoloChallenge = {
          id: "chal_solo_ffa",
          title: "October Solo Free-For-All",
          format: "SOLOS" as const,
-         startAt: new Date("2026-10-19T08:00:00Z"),
-         endAt: new Date("2026-10-26T08:00:00Z"),
+         startAt: challengeStart,
+         endAt: challengeEnd,
          eventBannerUrl: "https://example.com/banner.png",
          punishmentPfpUrl: "https://example.com/forfeit.png",
          teams: [
@@ -96,8 +101,8 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
          {
             title: "October Solo Free-For-All",
             format: "SOLOS",
-            startAt: new Date("2026-10-19T08:00:00Z"),
-            endAt: new Date("2026-10-26T08:00:00Z"),
+            startAt: challengeStart,
+            endAt: challengeEnd,
             eventBannerUrl: "https://example.com/banner.png",
             punishmentPfpUrl: "https://example.com/forfeit.png",
             teams: [
@@ -109,9 +114,7 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
 
       expect(challenge.format).toBe("SOLOS");
       expect(challenge.teams[0].maxMembers).toBeNull();
-      expect(
-         calculateChallengeStatus(challenge, new Date("2026-10-18T12:00:00Z"))
-      ).toBe("UPCOMING");
+      expect(calculateChallengeStatus(challenge, new Date())).toBe("UPCOMING");
 
       // ======================================================================
       // Step 2: Multiple Scholars Enroll (Verifying Uncapped Solo Capacity)

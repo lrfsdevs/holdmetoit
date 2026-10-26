@@ -145,7 +145,9 @@ export function computeEventDetailsDiff(
             changes.push("color changed");
          }
          if ((oldTeam.iconEmoji || "") !== (team.iconEmoji || "")) {
-            changes.push("icon changed");
+            changes.push(
+               `icon changed ${oldTeam.iconEmoji || "—"} → ${team.iconEmoji || "—"}`
+            );
          }
          if ((oldTeam.mascotUrl || "") !== (team.mascotUrl || "")) {
             changes.push("mascot changed");

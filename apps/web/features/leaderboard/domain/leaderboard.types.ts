@@ -88,6 +88,14 @@ export interface ChallengeScoreboardViewModel {
       isLoggedIn: boolean;
       isEnrolled: boolean;
       participantId: string | null;
+      /** Caller's duo/team id for the current challenge, if assigned. */
+      teamId?: string | null;
+      /** Caller's current team name, if assigned. */
+      teamName?: string | null;
+      /** Caller's current team emoji, if assigned. */
+      teamIcon?: string | null;
+      /** True when the caller may edit their DUOS name/emoji right now. */
+      canEditDuoTeam?: boolean;
       isWrappedSeen: boolean;
       isFeedbackFilled: boolean;
    };

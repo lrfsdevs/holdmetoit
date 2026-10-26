@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { prisma } from "@/core/db";
 import {
    createAuditEnvelope,
@@ -22,14 +24,26 @@ export function _clearAuditTrailForTests(): void {
    inMemoryAuditTrail.length = 0;
 }
 
+export interface RecordAuditEventOptions {
+   /**
+    * When provided, actor hydration and the audit insert use this transaction
+    * client and persistence failures are rethrown so the caller's transaction
+    * rolls back together with the audited mutation.
+    */
+   transactionClient?: Prisma.TransactionClient;
+}
+
 /**
  * Appends a new immutable audit record to the system audit trail (FEAT-AUDIT-01).
  * Invariant: Strictly append-only. No update or delete operations are exposed.
  */
 export async function recordAuditEvent(
-   params: CreateAuditEventParams
+   params: CreateAuditEventParams,
+   options: RecordAuditEventOptions = {}
 ): Promise<AuditEvent> {
    const envelope = createAuditEnvelope(params);
+   const transactionClient = options.transactionClient;
+   const client = transactionClient ?? prisma;
 
    // In test environments or when forced, record in memory
    if (forceInMemoryForTests || process.env.NODE_ENV === "test") {
@@ -47,7 +61,7 @@ export async function recordAuditEvent(
 
       if ((!displayName || !image) && envelope.actorId) {
          try {
-            const actorUser = await prisma.user.findUnique({
+            const actorUser = await client.user.findUnique({
                where: { id: envelope.actorId },
                select: { displayName: true, image: true },
             });
@@ -60,7 +74,7 @@ export async function recordAuditEvent(
          }
       }
 
-      const created = await prisma.auditLog.create({
+      const created = await client.auditLog.create({
          data: {
             id: envelope.id,
             challengeId: envelope.challengeId ?? null,
@@ -95,6 +109,9 @@ export async function recordAuditEvent(
             },
             error,
          });
+      }
+      if (transactionClient) {
+         throw error;
       }
       return envelope;
    }
