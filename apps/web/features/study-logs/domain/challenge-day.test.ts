@@ -467,6 +467,13 @@ describe("validateAddTaskChallengeDay", () => {
       const result = validateAddTaskChallengeDay(false);
       expect(result.ok).toBe(true);
    });
+
+   it("allows adding tasks when day is in the past if not in an active challenge (GH-125)", () => {
+      const result = validateAddTaskChallengeDay(true, {
+         isChallengeActive: false,
+      });
+      expect(result.ok).toBe(true);
+   });
 });
 
 describe("validateMoveTaskChallengeDay", () => {
@@ -553,6 +560,26 @@ describe("validateMoveTaskChallengeDay", () => {
          pastDay1Key,
          pastDay1Key,
          todayKey
+      );
+      expect(res.ok).toBe(true);
+   });
+
+   it("allows moving tasks from today to a past day when not in an active challenge (GH-125)", () => {
+      const res = validateMoveTaskChallengeDay(
+         todayKey,
+         pastDay1Key,
+         todayKey,
+         { isChallengeActive: false }
+      );
+      expect(res.ok).toBe(true);
+   });
+
+   it("allows moving tasks between different past days when not in an active challenge (GH-125)", () => {
+      const res = validateMoveTaskChallengeDay(
+         pastDay1Key,
+         pastDay2Key,
+         todayKey,
+         { isChallengeActive: false }
       );
       expect(res.ok).toBe(true);
    });

@@ -65,7 +65,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
    const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
    const upcomingChallenge =
-      userId && (!cockpit || cockpit.challengeStatus === "UPCOMING")
+      userId && (!cockpit || cockpit.challengeStatus !== "ACTIVE")
          ? fetchedUpcomingChallenge
          : null;
 

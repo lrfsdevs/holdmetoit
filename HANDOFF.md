@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 158 on `afnan-jr`)
+> **Last Updated:** 2026-10-25 (Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 158 on `afnan-jr` · Session 155 on `dev` · Session 154 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -236,6 +236,35 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Handoff:** deleted `docs/ypt-bot/HANDOFF.md`; this root `HANDOFF.md` is the single relay document.
 - **Behavior:** unchanged; no DB or dependency changes.
 - **NEXT STEP:** none (no commit made — pending manual testing).
+
+### Session 155 — 2026-10-24 (Feat: Standardize Jira Issue Creation & GitHub Link for In-App Feedback; GH-167, KAN-53 on `krish`)
+
+- **Agent Role:** Data & Identity Agent, Admin Operations & Broadcaster Agent.
+- **Scope & Objectives:** Resolve GitHub Issue #167 / Jira KAN-53. Standardize Jira ticket creation when bug reports and enhancement suggestions are submitted from the app to match the project's Jira format (`jira-overhaul-update.csv`), prepend GitHub issue link and horizontal rule to description, attach native Jira Remote Web Links, and apply automated layer and module tags.
+- **Implementation Slices:**
+   1. **Domain Models & Formatting Logic (`Law L7`):**
+      - In `apps/web/features/feedback/domain/jira-issue.ts`:
+         - Updated `formatJiraSummary`: formats summary with prefix `[GH-#<number>] [FB-<codeNumber>] <Title>` when GitHub issue is present, gracefully falling back to `[FB-<codeNumber>] <Title>` within Jira's 255-character limit.
+         - Updated `buildJiraDescriptionAdf`: prepends `Original GitHub Issue: <url>` link followed by an ADF `{ type: "rule" }` horizontal divider node.
+         - Added `inferFeedbackTags(url, title, description)`: intelligently derives layer tags (`admin`, `frontend`) and module tags (`challenges`, `profile`, `study-logs`, `economy`, `ypt`, `wrapped`, `jira-sync`, `auth`) matching the project's standard Jira label taxonomy.
+         - Updated `normalizeJiraLabels` and `buildJiraIssueFields` to combine base labels, inferred tags, and type tags (`bug` / `enhancement`).
+   2. **Service Layer & Jira Remote Web Link:**
+      - In `apps/web/features/feedback/data/jira-issue.service.ts`:
+         - Added `postRemoteLink` calling Jira Cloud REST API `POST /rest/api/3/issue/{issueKey}/remotelink` to attach the GitHub issue into Jira's native "Web Links" widget with the official GitHub icon and `GitHub Issue #<number>` title.
+         - Preserved fail-soft error handling: remote link failures never block or fail Jira ticket creation.
+         - Hardened response validation to check `res.ok`, logging non-2xx HTTP statuses, network errors, and timeouts with issue key context.
+   3. **Route Dispatch Orchestration & Deployment Timeout:**
+      - In `apps/web/app/api/feedback/route.ts`:
+         - Re-sequenced side effects: Discord dispatch runs non-blocking in parallel; GitHub issue creation runs prior to Jira issue creation so created GitHub issue number and URL flow into Jira issue input.
+         - Configured `export const maxDuration = 30;` to ensure serverless function timeouts cover worst-case sequential GitHub retry, Jira creation, and remote-link dispatch.
+         - Maintained 100% fail-soft isolation: failures in GitHub or Jira do not affect user response or other side effects.
+   4. **Quality Gates & Unit Testing:**
+      - Comprehensive unit tests added in `jira-issue.test.ts`, `jira-issue.service.test.ts`, and `route.test.ts`.
+      - All 193 test files and 1,826 tests passing. Zero TypeScript errors (`tsc --noEmit`).
+- **Issue Lifecycle Policy (`AGENTS.md` §4.4):**
+   - GitHub Issue #167 and Jira Ticket KAN-53 assigned to Krish Jaiswal.
+   - Jira Ticket KAN-53 moved to `In Progress` (Stage 1), then transitioned to `In Review` (Stage 2) upon PR #181 creation.
+- **NEXT STEP:** Peer review and merge PR #181 from `krish` into `dev`.
 
 ### Session 154 — 2026-10-24 (ypt-bot: `npm start` is the single runtime entry point on `afnan-jr`)
 
@@ -1258,7 +1287,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 141 — 2026-10-19 (Automatic GitHub Issue Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a GitHub issue alongside the Discord embed, using a repo-scoped **fine-grained PAT** via the REST Issues API. Enabled only when `GITHUB_TOKEN` + `GITHUB_REPO` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` now runs Discord and GitHub in parallel (`Promise.allSettled`) after the DB commit. Neither can fail the submission. Results are persisted as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord and GitHub in parallel (`Promise.allSettled`). In Session 155, GitHub issue creation runs prior to Jira issue creation so created GitHub issue metadata links into Jira. Results persist as `githubStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue number/URL/sync timestamp.
 - **Issue content:** `[FB-N] title`, hidden `<!-- holdmetoit-feedback:FB-N -->` marker, type/page/reporter/LogRocket, description, and attachments (images as inline markdown, videos as links). Labels default to `bug` / `enhancement`; a GitHub `422` triggers one retry without labels. 10s request timeout; no automatic retry after a failure.
 - **Domain/data:** pure `features/feedback/domain/github-issue.ts` (title/body builder, limits 256/65,536, label/assignee normalization) and fail-soft `features/feedback/data/github-issue.service.ts` (`createGitHubIssue`, config resolution, error mapping).
 - **Schema:** `20261019010000_add_feedback_github_issue` adds `GitHubDeliveryStatus` and the four `Feedback` columns + index.
@@ -1269,7 +1298,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 142 — 2026-10-19 (Automatic Jira Ticket Creation from Feedback on `afnan-jr`)
 
 - **Scope:** Every bug report and suggestion now creates a **Jira Cloud** issue alongside Discord and GitHub, using a server-side API token (Basic auth). Enabled only when `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and `JIRA_PROJECT_KEY` are present; otherwise `SKIPPED`.
-- **Dispatch:** `POST /api/feedback` runs Discord, GitHub, and Jira in parallel (`Promise.allSettled`). None can fail the submission. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
+- **Dispatch:** _(Historical; superseded by Session 155 sequencing)_ `POST /api/feedback` originally ran Discord, GitHub, and Jira in parallel (`Promise.allSettled`). In Session 155, Discord runs concurrently in parallel while GitHub runs prior to Jira so the Jira ticket links directly to the created GitHub issue and attaches native remote web links. Results persist as `jiraStatus` (`PENDING | CREATED | FAILED | SKIPPED`) plus issue key/URL/sync timestamp.
 - **Mapping:** `bug → Task`, `enhancement → Story` (fixed). The target KAN project has no `Bug` issue type, so bugs use `Task` and remain distinguishable by the appended `bug` label. `JIRA_LABELS` defaults to `holdmetoit,feedback`; the type label is appended. Optional `JIRA_ASSIGNEE_ACCOUNT_ID`.
 - **Description:** Atlassian Document Format via a pure builder — plain-text marker `holdmetoit-feedback:FB-N`, type/page/reporter/LogRocket, description paragraphs, and attachment links (images and videos are links; Jira does not inline remote media).
 - **Domain/data:** `features/feedback/domain/jira-issue.ts` (summary 255, description text 30k, ADF helpers, labels) and fail-soft `features/feedback/data/jira-issue.service.ts` (config resolution, REST v3 POST, Jira `errors` extraction).
@@ -1428,3 +1457,28 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Presentation Layer:** Created `<UserAvatar>` in `apps/web/components/ui/user-avatar.tsx` using Radix UI primitives with seamless 404 fallback to embed avatars or initials, and added `RefreshAvatarButton` on participant profile headers with clear status feedback (`"Avatar updated!"`, `"Avatar is up to date!"`, or `"Session expired — please log in again to sync"`), without client-supplied user IDs.
 - **UI Rollout:** Migrated avatar markup across `header.tsx`, `participant-profile-header.tsx`, `challenge-leaderboard-tab.tsx`, `punishment-wall.tsx`, `admin-pardon-modal.tsx`, `event-audit-tab.tsx`, and `challenge-manage-tab.tsx`.
 - **Quality Gates:** 0 typecheck errors, 0 lint errors, 193/193 test files (1817 tests) passing. PR #179 submitted from `krish` -> `dev`.
+
+### Session 154 — 2026-10-25 (Operational Daily Planning Checklist Outside Challenges on `krish` — GH-#125 / KAN-34)
+
+- **Root Cause Resolved:** Previously, daily tasks in the cockpit inherited anti-cheat past-day challenge locks (`PAST_DAY_NOT_ALLOWED`) unconditionally when rendering earlier days in a calendar week. However, under Law L6 (Three-Condition Invariant), challenges evaluate only challenge-linked weekly goals—daily tasks are purely personal planning tools and should never block non-challenge participants from logging or scheduling commitments on past days.
+- **Domain Refinement (`challenge-day.ts`):**
+   - Updated `validateAddTaskChallengeDay(isPastDay, options?: { isChallengeActive?: boolean })` to allow past-day task additions when `isChallengeActive === false`.
+   - Updated `validateMoveTaskChallengeDay(sourceDateKey, targetDateKey, todayDateKey, options?: ValidateMoveTaskOptions)` to allow moving tasks across any day when `options?.isChallengeActive === false`.
+   - Added unit test coverage across all cases in `challenge-day.test.ts` (48 tests passing).
+- **Presentation Layer Updates (`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`):**
+   - Added `hasChallengeContext = Boolean(challengeStartDate)` and derived `isPastDayLocked = hasChallengeContext && isActiveDayPast`.
+   - Conditioned all anti-cheat locking badges, empty states, disabled action buttons, and drag-and-drop guards on `isPastDayLocked` instead of `isActiveDayPast`.
+   - Updated personal planning empty state copy to `"Plan or log your tasks for {Day}."` and `"+ Add todo for {Day}"` when not in an active challenge.
+   - Added `initialSelectedDateKey?: string` prop to `CockpitTasksSectionProps` for robust day selection and testing.
+   - Updated `TaskMenuItems` and `CategoryMenuItems` with `isChallengeActive?: boolean` to unlock deletion and rescheduling on past days for personal planning.
+   - Explicitly passed `isChallengeActive={hasChallengeContext}` to all 8 `<TaskMenuItems>` and `<CategoryMenuItems>` instances in `cockpit-tasks-section.tsx`.
+   - Conditioned `handleDeleteTask`, `handleConfirmDeleteCategory`, `handleAddTodoSubmit`, and weekly-to-past-day move guards (`moveTaskToDay`, `moveCategoryToDayAction`) on `hasChallengeContext` so personal planning is never blocked.
+- **Slice Splitting (3-Stage Plan):**
+   - Slice 1 (This Session): Core daily task operationalization & past-day lock lifting (GH #125 / KAN-34).
+   - Slice 2: Multi-week arrow navigation & date picker selector for personal planning outside challenges (GH #184 / KAN-60).
+   - Slice 3: Weekly goals personal view & unlinked challenge status (GH #185 / KAN-61).
+- **Quality Gates Verified:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+   - `npm run test:web`: ✅ 194 test files passed (1843/1843 tests green).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, transition Jira `KAN-34` from `In Progress` to `In Review`, and proceed to Slice 2 (GH #184 / KAN-60).
