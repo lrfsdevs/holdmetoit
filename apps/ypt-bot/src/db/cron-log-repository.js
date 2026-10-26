@@ -182,7 +182,10 @@ export async function pruneCronLogs(deps = {}) {
 
    const runs = await safeWrite(
       db.cronLog.deleteMany({
-         where: { startedAt: { lt: runCutoff } },
+         where: {
+            startedAt: { lt: runCutoff },
+            status: { not: "RUNNING" },
+         },
       }),
       { jobName: "pruneCronLogs" },
       log

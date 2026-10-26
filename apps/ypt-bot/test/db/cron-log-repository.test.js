@@ -215,6 +215,9 @@ describe("pruneCronLogs", () => {
          db.state.deletedRuns[0].where.startedAt.lt.toISOString(),
          expectedRunCutoff.toISOString()
       );
+      assert.deepEqual(db.state.deletedRuns[0].where.status, {
+         not: "RUNNING",
+      });
       assert.deepEqual(result, { runs: 3 });
    });
 });
