@@ -37,7 +37,7 @@
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
-| `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
+| `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                  | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
 | `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                              | Authenticated / Participant            |
@@ -1568,3 +1568,23 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Jira Status:** `KAN-60` transitioned from `In Progress` to `In Review` (id: 10006).
 - **GitHub PR & Issue Status:** Submitted PR [#188](https://github.com/lrfsdevs/holdmetoit/pull/188) from `krish` to `dev`; closed GitHub Issue [#184](https://github.com/lrfsdevs/holdmetoit/issues/184).
 - **NEXT STEP:** Peer review and merge PR #188 into `dev`, then proceed to next roadmap milestone or release cycle.
+
+### Session 164 — 2026-10-27 (Optional Punishment PFP & Safe Forfeit Avatar Omission on `krish`)
+
+- **Context & Objective:** Supported running challenges without forfeits by making the punishment PFP optional across the creation wizard, manage tab, and admin actions, adding a dedicated "No Punishment" placeholder badge and card to the Accountability Wall, and safely omitting the forfeit download button when no avatar is configured.
+- **Backend & Actions (`challenge-admin.actions.ts`):**
+   - Modified `createChallengeSchema` so `punishmentPfpUrl` is optional (`z.string().trim().nullable().optional()`), trimming non-empty strings and falling back to `null`.
+   - Updated `createChallengeAction` to only validate storage folder allowlists when `punishmentPfpUrl` is non-null.
+   - Updated `updateChallengeAction` so administrators can remove/clear an existing challenge's punishment PFP by submitting `null` or empty string without triggering `INVALID_PUNISHMENT_PFP`, while continuing to clean up replaced unreferenced storage images.
+- **Presentation Layer (`challenge-creator-wizard.tsx`, `challenge-image-input.tsx`, `punishment-wall.tsx`):**
+   - In `ChallengeCreatorWizard`: Removed required asterisk from "Assigned Punishment PFP" and marked as `(Optional)`; removed client-side block on empty PFP; enabled image clearing via `allowClear`.
+   - In `ChallengeImageInput`: Added "Remove" action when `allowClear` or `purpose === "punishment-pfp"` is active, properly revoking local object previews and discarding unsaved uploads.
+   - In `PunishmentWall`: Safely omitted "Download Forfeit PFP" button when `!hasPunishment` and wrapped URL with `toDownloadUrl` to prevent download failures. Rendered an emerald-accented `ShieldCheck` + `Sparkles` "No Forfeit" placeholder avatar graphic alongside reassuring copy indicating an honor-only sprint without forfeit pressure.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/challenges/api/challenge-admin.actions.test.ts`: 85/85 tests passing.
+   - `apps/web/features/challenges/presentation/challenge-images.test.tsx`: 29/29 tests passing.
+   - `apps/web/features/accountability/presentation/punishment-wall.test.tsx`: 5/5 tests passing.
+   - `apps/web/features/challenges/presentation/challenge-overview-tab.test.tsx`: 13/13 tests passing.
+   - Full workspace test suite: ✅ 208 test files passed (2,033/2,033 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+- **NEXT STEP:** Submit PR from `krish` to `dev` for peer review.
