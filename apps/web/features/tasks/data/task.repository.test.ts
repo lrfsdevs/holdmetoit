@@ -6,6 +6,7 @@ import {
    deleteCategory,
    deleteTask,
    getUserCategorizedTasks,
+   rolloverIncompleteTasks,
    toggleTask,
    updateCategory,
    updateTask,
@@ -736,6 +737,67 @@ describe("task.repository", () => {
 
          expect(result).toBeNull();
          expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("updates task challengeId to valid challenge or null", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+         } as never);
+         vi.mocked(prisma.task.update).mockResolvedValue({
+            id: "task_1",
+            challengeId: "chal_valid",
+         } as never);
+
+         const result = await updateTask({
+            taskId: "task_1",
+            userId: "user_1",
+            challengeId: "chal_valid",
+         });
+
+         expect(result).toBeDefined();
+         expect(prisma.task.update).toHaveBeenCalledWith({
+            where: { id: "task_1" },
+            data: { challengeId: "chal_valid" },
+            include: { category: true },
+         });
+
+         const toPersonal = await updateTask({
+            taskId: "task_1",
+            userId: "user_1",
+            challengeId: null,
+         });
+
+         expect(toPersonal).toBeDefined();
+         expect(prisma.task.update).toHaveBeenCalledWith({
+            where: { id: "task_1" },
+            data: { challengeId: null },
+            include: { category: true },
+         });
+      });
+   });
+
+   describe("rolloverIncompleteTasks", () => {
+      it("updates dueDate for all matching tasks", async () => {
+         vi.mocked(prisma.task.updateMany).mockResolvedValue({ count: 3 });
+
+         const result = await rolloverIncompleteTasks({
+            userId: "user_1",
+            taskIds: ["task_1", "task_2", "task_3"],
+            targetDateKey: "2026-10-26",
+         });
+
+         expect(result).toEqual({ count: 3 });
+         expect(prisma.task.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: { in: ["task_1", "task_2", "task_3"] },
+               userId: "user_1",
+               isDeleted: false,
+            },
+            data: {
+               dueDate: expect.any(Date),
+            },
+         });
       });
    });
 

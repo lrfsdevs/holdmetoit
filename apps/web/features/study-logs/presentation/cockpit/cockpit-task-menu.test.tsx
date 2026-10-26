@@ -541,4 +541,102 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
       deleteItem.onClick();
       expect(onDeleteCategory).toHaveBeenCalled();
    });
+
+   describe("Challenge Goal Scoping & Incomplete Rollover", () => {
+      it("renders Convert to Personal Goal for challenge-linked weekly task", () => {
+         const weeklyTask: TaskItem = {
+            id: "t_weekly_1",
+            text: "Pass midterms",
+            completed: false,
+            challengeId: "chal_active_123",
+         };
+         const onToggleChallengeScope = vi.fn();
+
+         const html = renderToStaticMarkup(
+            createElement(TaskMenuItems, {
+               task: weeklyTask,
+               catIdx: 0,
+               taskType: "weekly",
+               effectiveTodayDate: "2026-10-02",
+               dayOptions: mockDayOptions,
+               selectedDateKey: "2026-10-02",
+               linkableChallengeId: "chal_active_123",
+               onToggleChallengeScope,
+               onSetStatus: vi.fn(),
+               onMoveToDay: vi.fn(),
+               onEditTask: vi.fn(),
+               onDeleteTask: vi.fn(),
+               Item: MockItem,
+               Separator: MockSeparator,
+               Label: MockLabel,
+            })
+         );
+
+         expect(html).toContain("Goal Scope");
+         expect(html).toContain("Convert to Personal Goal");
+      });
+
+      it("renders Set as Challenge Goal for unlinked weekly task", () => {
+         const weeklyTask: TaskItem = {
+            id: "t_weekly_2",
+            text: "Personal book reading",
+            completed: false,
+            challengeId: null,
+         };
+         const onToggleChallengeScope = vi.fn();
+
+         const html = renderToStaticMarkup(
+            createElement(TaskMenuItems, {
+               task: weeklyTask,
+               catIdx: 0,
+               taskType: "weekly",
+               effectiveTodayDate: "2026-10-02",
+               dayOptions: mockDayOptions,
+               selectedDateKey: "2026-10-02",
+               linkableChallengeId: "chal_active_123",
+               onToggleChallengeScope,
+               onSetStatus: vi.fn(),
+               onMoveToDay: vi.fn(),
+               onEditTask: vi.fn(),
+               onDeleteTask: vi.fn(),
+               Item: MockItem,
+               Separator: MockSeparator,
+               Label: MockLabel,
+            })
+         );
+
+         expect(html).toContain("Goal Scope");
+         expect(html).toContain("Set as Challenge Goal");
+      });
+
+      it("renders Roll over to Today when daily task is on a past day", () => {
+         const pastDailyTask: TaskItem = {
+            id: "t_past_daily",
+            text: "Unfinished homework",
+            completed: false,
+            status: "TODO",
+            dueDate: "2026-10-01",
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(TaskMenuItems, {
+               task: pastDailyTask,
+               catIdx: 0,
+               taskType: "daily",
+               effectiveTodayDate: "2026-10-02",
+               dayOptions: mockDayOptions,
+               selectedDateKey: "2026-10-01",
+               onSetStatus: vi.fn(),
+               onMoveToDay: vi.fn(),
+               onEditTask: vi.fn(),
+               onDeleteTask: vi.fn(),
+               Item: MockItem,
+               Separator: MockSeparator,
+               Label: MockLabel,
+            })
+         );
+
+         expect(html).toContain("Roll over to Today");
+      });
+   });
 });

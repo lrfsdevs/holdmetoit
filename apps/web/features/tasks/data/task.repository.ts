@@ -426,6 +426,7 @@ export async function updateTask(params: {
    isComplete?: boolean;
    status?: TaskStatus;
    dueDate?: string | Date | null;
+   challengeId?: string | null;
 }) {
    const existing = await prisma.task.findFirst({
       where: {
@@ -445,6 +446,7 @@ export async function updateTask(params: {
       status?: TaskStatus;
       dueDate?: Date | null;
       completedAt?: Date | null;
+      challengeId?: string | null;
    } = {};
 
    if (params.title !== undefined) {
@@ -463,12 +465,33 @@ export async function updateTask(params: {
    if (params.dueDate !== undefined) {
       dataToUpdate.dueDate = params.dueDate ? new Date(params.dueDate) : null;
    }
+   if (params.challengeId !== undefined) {
+      dataToUpdate.challengeId = params.challengeId;
+   }
 
    return prisma.task.update({
       where: { id: params.taskId },
       data: dataToUpdate,
       include: {
          category: true,
+      },
+   });
+}
+
+export async function rolloverIncompleteTasks(params: {
+   userId: string;
+   taskIds: string[];
+   targetDateKey: string;
+}) {
+   const targetDate = new Date(params.targetDateKey);
+   return prisma.task.updateMany({
+      where: {
+         id: { in: params.taskIds },
+         userId: params.userId,
+         isDeleted: false,
+      },
+      data: {
+         dueDate: targetDate,
       },
    });
 }

@@ -5,6 +5,7 @@ import {
    createTaskAction,
    deleteCategoryAction,
    deleteTaskAction,
+   rolloverTasksAction,
    toggleTaskAction,
    updateCategoryAction,
    updateTaskAction,
@@ -30,6 +31,7 @@ vi.mock("@/features/tasks/data/task.repository", () => ({
    updateTask: vi.fn(),
    updateCategory: vi.fn(),
    deleteCategory: vi.fn(),
+   rolloverIncompleteTasks: vi.fn(),
 }));
 
 describe("task.actions", () => {
@@ -84,6 +86,30 @@ describe("task.actions", () => {
          expect(taskRepo.createTask).toHaveBeenCalledWith(
             expect.objectContaining({
                dueDate: "2026-10-06",
+            })
+         );
+      });
+
+      it("passes challengeId to createTask when provided", async () => {
+         vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
+            id: "user_1",
+         } as never);
+         vi.mocked(taskRepo.createTask).mockResolvedValue({
+            id: "t_1",
+            title: "Study notes",
+         } as never);
+
+         const result = await createTaskAction({
+            title: "Study notes",
+            taskType: "WEEKLY",
+            categoryId: "cat_1",
+            challengeId: "chal_scope_1",
+         });
+
+         expect(result.ok).toBe(true);
+         expect(taskRepo.createTask).toHaveBeenCalledWith(
+            expect.objectContaining({
+               challengeId: "chal_scope_1",
             })
          );
       });
@@ -290,6 +316,29 @@ describe("task.actions", () => {
          );
       });
 
+      it("passes challengeId to updateTask when provided", async () => {
+         vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
+            id: "user_1",
+         } as never);
+         vi.mocked(taskRepo.updateTask).mockResolvedValue({
+            id: "task_1",
+            title: "Same title",
+         } as never);
+
+         const result = await updateTaskAction({
+            taskId: "task_1",
+            challengeId: "chal_scope_update",
+         });
+
+         expect(result.ok).toBe(true);
+         expect(taskRepo.updateTask).toHaveBeenCalledWith(
+            expect.objectContaining({
+               taskId: "task_1",
+               challengeId: "chal_scope_update",
+            })
+         );
+      });
+
       it("returns NOT_FOUND when task does not exist", async () => {
          vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
             id: "user_1",
@@ -380,6 +429,57 @@ describe("task.actions", () => {
 
          expect(result.ok).toBe(false);
          expect(result.code).toBe("NOT_FOUND");
+      });
+   });
+
+   describe("rolloverTasksAction", () => {
+      it("rolls over incomplete tasks successfully", async () => {
+         vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
+            id: "user_1",
+         } as never);
+         vi.mocked(taskRepo.rolloverIncompleteTasks).mockResolvedValue({
+            count: 2,
+         } as never);
+
+         const result = await rolloverTasksAction({
+            taskIds: ["task_1", "task_2"],
+            targetDateKey: "2026-10-26",
+         });
+
+         expect(result.ok).toBe(true);
+         expect(taskRepo.rolloverIncompleteTasks).toHaveBeenCalledWith({
+            userId: "user_1",
+            taskIds: ["task_1", "task_2"],
+            targetDateKey: "2026-10-26",
+         });
+      });
+
+      it("returns INVALID_INPUT when taskIds array is empty", async () => {
+         vi.mocked(sessionModule.requireSessionUser).mockResolvedValue({
+            id: "user_1",
+         } as never);
+
+         const result = await rolloverTasksAction({
+            taskIds: [],
+            targetDateKey: "2026-10-26",
+         });
+
+         expect(result.ok).toBe(false);
+         expect(result.code).toBe("INVALID_INPUT");
+      });
+
+      it("returns UNAUTHORIZED when no session", async () => {
+         vi.mocked(sessionModule.requireSessionUser).mockRejectedValue(
+            new sessionModule.AuthError("Sign in required.")
+         );
+
+         const result = await rolloverTasksAction({
+            taskIds: ["task_1"],
+            targetDateKey: "2026-10-26",
+         });
+
+         expect(result.ok).toBe(false);
+         expect(result.code).toBe("UNAUTHORIZED");
       });
    });
 });

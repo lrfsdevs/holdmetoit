@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-26 (Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-26 (Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -176,6 +176,28 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 163 — 2026-10-26 (Incomplete Task Rollover & Challenge Goal Scoping on `krish` · GH #185 / Jira KAN-61)
+
+- **Incomplete Task Rollover Helper (FEAT-TASK-03):** Implemented ergonomic 1-click rollover for carrying over incomplete daily study commitments from past days to Today.
+   - **Domain Isolation (`features/tasks/domain/task-rollover.ts`):** Pure calculation math and candidate filtering (`isTaskIncomplete`, `extractDateKey`, `getTaskDateKey`, `findRolloverCandidates`, `applyRolloverToCategories`, `getRolloverSummary`). 18 unit tests green in Vitest (`task-rollover.test.ts`).
+   - **Validation & Schema (`features/tasks/domain/task.validation.ts`):** Added `rolloverTasksSchema` validating array of UUIDs and target `YYYY-MM-DD` date key.
+   - **Data Layer (`features/tasks/data/task.repository.ts`):** Added `rolloverIncompleteTasks` updating target due dates in PostgreSQL with ownership verification.
+   - **API Actions (`features/tasks/api/task.actions.ts`):** Added `rolloverTasksAction` with session validation and structured logging.
+   - **Presentation Layer (`features/study-logs/presentation/cockpit/`):**
+      - Rendered Today Rollover Banner (`data-testid="rollover-today-banner"`) when past days contain incomplete tasks with 1-click "Roll over to Today" button (`data-testid="rollover-all-button"`) and dismiss button.
+      - Rendered Past Day Rollover Banner (`data-testid="rollover-past-day-banner"`) when viewing a past day with incomplete tasks.
+      - Added 1-click rollover icon button directly on past-day daily task cards.
+- **Challenge Goal Scoping (FEAT-DECL-02 / Law L6 Alignment):** Implemented explicit goal scoping for weekly tasks during active challenges to eliminate conflation between personal study goals and mandatory challenge commitments.
+   - **Domain Isolation (`features/tasks/domain/task-scope.ts`):** Pure scoping predicates (`getTaskScope`, `isChallengeScopedTask`, `isPersonalScopedTask`, `resolveTaskScopeChallengeId`, `canScopeTaskToChallenge`, `countScopedTasks`). 10 unit tests green (`task-scope.test.ts`).
+   - **Schema & Persistence:** Extended `createTask`, `updateTask`, `task-sync.repository.ts`, and client/server actions to support explicit `challengeId` assignment/nulling.
+   - **Law L6 Three-Condition Invariant:** Challenge results lock queries filter strictly by `taskType = "WEEKLY"` and `challengeId = challengeId`. Personal weekly tasks retain `challengeId = null`, guaranteeing that personal study goals are never evaluated at challenge lock or used for scoreboard tie-breaking.
+   - **Presentation Layer (`cockpit-tasks-section.tsx`, `cockpit-task-menu.tsx`):**
+      - Weekly Todos Header Challenge Goals pill (`data-testid="weekly-challenge-goals-badge"`): displays completed vs total challenge goals (e.g. `1/2 Goals`) during active challenges.
+      - Task Card Scope Badges: renders `Goal` badge (`data-testid="task-scope-challenge-badge"`) or `Personal` badge (`data-testid="task-scope-personal-badge"`).
+      - Add & Edit Modal Goal Scope Selector: toggle between Challenge Goal (mandatory under Law L6) and Personal Task.
+      - Context & Dropdown Menu: added 1-click "Set as Challenge Goal" and "Convert to Personal Goal" actions, plus "Roll over to Today" on past days.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 100% test coverage across tasks and cockpit presentation suites (149/149 task tests green, 52/52 cockpit presentation tests green).
 
 ### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
 

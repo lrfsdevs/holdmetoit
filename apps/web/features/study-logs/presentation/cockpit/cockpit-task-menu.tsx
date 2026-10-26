@@ -8,6 +8,8 @@ import {
    ArrowRight,
    Pencil,
    Trash2,
+   Trophy,
+   User,
 } from "lucide-react";
 import {
    formatDayDate,
@@ -25,6 +27,8 @@ interface TaskMenuItemsProps {
    dayOptions: ChallengeDayOption[];
    selectedDateKey: string;
    isChallengeActive?: boolean;
+   linkableChallengeId?: string | null;
+   onToggleChallengeScope?: (newChallengeId: string | null) => void;
    onSetStatus: (status: TaskStatus) => void;
    onMoveToDay: (targetDateKey: string) => void;
    onEditTask: () => void;
@@ -40,6 +44,8 @@ export function TaskMenuItems({
    effectiveTodayDate,
    dayOptions,
    isChallengeActive = true,
+   linkableChallengeId,
+   onToggleChallengeScope,
    onSetStatus,
    onMoveToDay,
    onEditTask,
@@ -224,8 +230,16 @@ export function TaskMenuItems({
                      onClick={() => onMoveToDay(effectiveTodayDate)}
                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors text-left"
                   >
-                     <Calendar className="h-3.5 w-3.5 text-emerald-400" />
-                     <span>Move to Today</span>
+                     {moveDaysConfig.isSourcePast ? (
+                        <RotateCcw className="h-3.5 w-3.5 text-emerald-400" />
+                     ) : (
+                        <Calendar className="h-3.5 w-3.5 text-emerald-400" />
+                     )}
+                     <span>
+                        {moveDaysConfig.isSourcePast
+                           ? "Roll over to Today"
+                           : "Move to Today"}
+                     </span>
                   </Item>
                )}
                {moveDaysConfig.otherEligible.map((opt) => (
@@ -243,6 +257,40 @@ export function TaskMenuItems({
                ))}
             </>
          )}
+
+         {taskType === "weekly" &&
+            linkableChallengeId &&
+            onToggleChallengeScope && (
+               <>
+                  <Separator />
+                  <div className="px-3 py-1 text-label font-semibold tracking-wider uppercase text-text-tertiary">
+                     Goal Scope
+                  </div>
+                  {task.challengeId ? (
+                     <Item
+                        onSelect={() => onToggleChallengeScope(null)}
+                        onClick={() => onToggleChallengeScope(null)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-secondary rounded-lg hover:bg-surface-nested transition-colors text-left"
+                     >
+                        <User className="h-3.5 w-3.5 text-text-tertiary" />
+                        <span>Convert to Personal Goal</span>
+                     </Item>
+                  ) : (
+                     <Item
+                        onSelect={() =>
+                           onToggleChallengeScope(linkableChallengeId)
+                        }
+                        onClick={() =>
+                           onToggleChallengeScope(linkableChallengeId)
+                        }
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-amber-300 rounded-lg hover:bg-amber-500/10 transition-colors text-left"
+                     >
+                        <Trophy className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Set as Challenge Goal</span>
+                     </Item>
+                  )}
+               </>
+            )}
 
          <Separator />
 
