@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Download, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Download, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
+import { toDownloadUrl } from "@/features/challenges/domain/punishment-pfp";
 
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
 import type {
@@ -24,6 +25,9 @@ export interface PunishmentWallProps {
 export function PunishmentWall({ challenge }: PunishmentWallProps) {
    const { punishmentPfpUrl, standings, status } = challenge;
    const isCompleted = status === "COMPLETED";
+   const hasPunishment = Boolean(
+      punishmentPfpUrl && punishmentPfpUrl.trim().length > 0
+   );
 
    // 1. Determine flagged members based on challenge lifecycle
    let flaggedMembers: ScoreboardStandingEntry[] = [];
@@ -51,24 +55,37 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
          {/* Section Header */}
          <div className="flex flex-col gap-4 pb-4 border-b border-border-default sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-feedback-error-bg text-feedback-error-text border border-feedback-error/30 shrink-0">
-                  <ShieldAlert className="h-5 w-5" />
+               <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl border shrink-0 ${
+                     hasPunishment
+                        ? "bg-feedback-error-bg text-feedback-error-text border-feedback-error/30"
+                        : "bg-feedback-success-bg text-feedback-success-text border-feedback-success/30"
+                  }`}
+               >
+                  {hasPunishment ? (
+                     <ShieldAlert className="h-5 w-5" />
+                  ) : (
+                     <ShieldCheck className="h-5 w-5" />
+                  )}
                </div>
                <div>
                   <h3 className="text-lg font-bold text-white">
-                     Forfeits & Accountability Wall
+                     {hasPunishment
+                        ? "Forfeits & Accountability Wall"
+                        : "Accountability & Goals Wall"}
                   </h3>
                   <p className="text-xs text-text-tertiary">
-                     Three-Condition Rule (Law L6): Meeting target hours &
-                     weekly goals protects your avatar.
+                     {hasPunishment
+                        ? "Three-Condition Rule (Law L6): Meeting target hours & weekly goals protects your avatar."
+                        : "Honor Sprint: Deficit and weekly goal tracking active with zero forfeit penalties."}
                   </p>
                </div>
             </div>
 
             {/* Direct Forfeit Asset Download Button (FEAT-PUN-03) */}
-            {punishmentPfpUrl && (
+            {hasPunishment && punishmentPfpUrl && (
                <a
-                  href={punishmentPfpUrl}
+                  href={toDownloadUrl(punishmentPfpUrl, "forfeit-avatar.png")}
                   download="forfeit-avatar.png"
                   target="_blank"
                   rel="noreferrer"
@@ -84,7 +101,7 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
             {/* Forfeit Asset Showcase Card */}
             <div className="md:col-span-5 p-4 rounded-2xl bg-surface-secondary border border-border-default flex items-center gap-4">
-               {punishmentPfpUrl ? (
+               {hasPunishment && punishmentPfpUrl ? (
                   <>
                      <div className="relative h-20 w-20 sm:h-22 sm:w-22 shrink-0 rounded-2xl overflow-hidden border-2 border-feedback-error/40 shadow-md bg-surface-elevated">
                         <Image
@@ -106,20 +123,38 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
                      </div>
                   </>
                ) : (
-                  <div className="flex items-center gap-3 py-1">
-                     <div className="h-10 w-10 rounded-xl bg-surface-elevated border border-border-default flex items-center justify-center shrink-0">
-                        <Shield className="h-5 w-5 text-text-tertiary" />
+                  <>
+                     <div
+                        className="relative flex h-20 w-20 sm:h-22 sm:w-22 shrink-0 items-center justify-center rounded-2xl border-2 border-feedback-success/30 bg-surface-elevated shadow-md overflow-hidden"
+                        data-testid="no-punishment-placeholder"
+                        aria-label="No punishment assigned"
+                     >
+                        <div className="flex flex-col items-center justify-center gap-1">
+                           <div className="relative">
+                              <ShieldCheck className="h-7 w-7 text-feedback-success-text" />
+                              <Sparkles className="absolute -top-1 -right-1 h-3.5 w-3.5 text-brand-1" />
+                           </div>
+                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-feedback-success-text font-mono">
+                              No Forfeit
+                           </span>
+                        </div>
                      </div>
-                     <div>
-                        <p className="text-xs font-semibold text-white">
-                           No Custom Forfeit Avatar Set
+                     <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-micro font-bold uppercase tracking-wider bg-feedback-success-bg text-feedback-success-text border border-feedback-success/30">
+                              No Punishment
+                           </span>
+                        </div>
+                        <p className="text-xs font-bold text-white">
+                           No Punishment This Sprint
                         </p>
-                        <p className="text-meta text-text-tertiary">
-                           Accountability rules still apply. Hosts can upload an
-                           avatar via the Challenge Manage tab.
+                        <p className="text-meta text-text-tertiary leading-relaxed">
+                           No forfeit avatar is assigned for this event. Focus
+                           on crushing your weekly goals and climbing the
+                           leaderboard!
                         </p>
                      </div>
-                  </div>
+                  </>
                )}
             </div>
 

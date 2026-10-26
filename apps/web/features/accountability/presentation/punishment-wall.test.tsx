@@ -55,6 +55,24 @@ describe("PunishmentWall (FEAT-PUN-02 / FEAT-PUN-03)", () => {
       expect(html).toContain("https://example.com/forfeit.png");
    });
 
+   it("renders no-punishment placeholder and omits download button when forfeit avatar is not configured", () => {
+      const html = renderToStaticMarkup(
+         createElement(PunishmentWall, {
+            challenge: {
+               ...baseChallenge,
+               punishmentPfpUrl: null,
+            },
+         })
+      );
+
+      expect(html).toContain("Accountability &amp; Goals Wall");
+      expect(html).toContain("No Punishment This Sprint");
+      expect(html).toContain("No Forfeit");
+      expect(html).toContain('data-testid="no-punishment-placeholder"');
+      expect(html).not.toContain("Download Forfeit PFP");
+      expect(html).not.toContain("<img");
+   });
+
    it("renders clean zero-state when all active participants are on pace with zero deficits", () => {
       const challenge: ChallengeScoreboardViewModel = {
          ...baseChallenge,
