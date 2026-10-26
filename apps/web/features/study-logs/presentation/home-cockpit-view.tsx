@@ -170,9 +170,10 @@ export function HomeCockpitView({
             userId={user?.id || cockpit?.participant.userId || null}
             userTasks={effectiveUserTasks}
             challengeStartDate={
-               cockpit?.challengeStatus === "ACTIVE"
-                  ? cockpit.challengeStartDate || cockpit.todayDate
-                  : undefined
+               cockpit?.challengeStartDate ||
+               (cockpit?.challengeStatus === "ACTIVE"
+                  ? cockpit.todayDate
+                  : undefined)
             }
             challengeId={
                cockpit?.challengeStatus === "ACTIVE" ||
@@ -181,21 +182,13 @@ export function HomeCockpitView({
                   : undefined
             }
             challengeStatus={cockpit?.challengeStatus}
-            todayDate={
-               cockpit?.challengeStatus === "ACTIVE"
-                  ? cockpit.todayDate
-                  : undefined
-            }
+            todayDate={cockpit?.todayDate}
             todayDayNumber={
                cockpit?.challengeStatus === "ACTIVE"
                   ? cockpit.todayDayNumber
                   : undefined
             }
-            totalChallengeDays={
-               cockpit?.challengeStatus === "ACTIVE"
-                  ? cockpit.totalChallengeDays
-                  : undefined
-            }
+            totalChallengeDays={cockpit?.totalChallengeDays}
             onOpenHoursModal={openHoursModal}
             isAdmin={effectiveIsAdmin}
          />

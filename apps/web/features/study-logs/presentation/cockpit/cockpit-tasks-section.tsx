@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef, useMemo } from "react";
+import {
+   useState,
+   useEffect,
+   useTransition,
+   useRef,
+   useMemo,
+   useCallback,
+} from "react";
 import {
    ChevronDown,
    ChevronUp,
@@ -18,7 +25,10 @@ import {
 import {
    getChallengeDayOptions,
    getCalendarWeekDayOptions,
+   getAdjacentWeekAnchor,
+   formatWeekRange,
    formatDayDate,
+   isChallengeDayDateLocked,
    validateMoveTaskChallengeDay,
    type ChallengeDayOption,
 } from "@/features/study-logs/domain/challenge-day";
@@ -68,6 +78,8 @@ import {
    ContextMenuLabel,
 } from "@/components/ui/context-menu";
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
+import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
+import { cn } from "@/lib/utils";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -329,6 +341,9 @@ export function CockpitTasksSection({
       return todayDate || new Date().toISOString().slice(0, 10);
    }, [hasChallengeContext, challengeStatus, todayDate]);
 
+   const [activeWeekAnchorDateKey, setActiveWeekAnchorDateKey] =
+      useState<string>(() => initialSelectedDateKey || effectiveTodayDate);
+
    const dayOptions: ChallengeDayOption[] = useMemo(() => {
       if (hasChallengeContext && effectiveStartDate) {
          return getChallengeDayOptions(
@@ -337,11 +352,15 @@ export function CockpitTasksSection({
             totalChallengeDays ?? 7
          ).slice(0, 7);
       }
-      return getCalendarWeekDayOptions(effectiveTodayDate).slice(0, 7);
+      return getCalendarWeekDayOptions(
+         activeWeekAnchorDateKey,
+         effectiveTodayDate
+      ).slice(0, 7);
    }, [
       hasChallengeContext,
       effectiveStartDate,
       effectiveTodayDate,
+      activeWeekAnchorDateKey,
       totalChallengeDays,
    ]);
 
@@ -383,7 +402,39 @@ export function CockpitTasksSection({
       activeDayOption?.isToday ?? selectedDateKey === effectiveTodayDate;
    const isActiveDayPast =
       activeDayOption?.isPast ?? selectedDateKey < effectiveTodayDate;
-   const isPastDayLocked = hasChallengeContext && isActiveDayPast;
+
+   const checkIsDayLocked = useCallback(
+      (dateKey: string): boolean => {
+         if (hasChallengeContext) {
+            return dateKey < effectiveTodayDate;
+         }
+         return isChallengeDayDateLocked(dateKey, effectiveTodayDate, {
+            challengeStartDate,
+            totalChallengeDays,
+            challengeStatus,
+         });
+      },
+      [
+         hasChallengeContext,
+         effectiveTodayDate,
+         challengeStartDate,
+         totalChallengeDays,
+         challengeStatus,
+      ]
+   );
+
+   const isPastDayLocked = checkIsDayLocked(selectedDateKey);
+
+   const activeWeekDateKeys = useMemo(() => {
+      return dayOptions.map((d) => d.dateKey);
+   }, [dayOptions]);
+
+   const weekRangeLabel = useMemo(() => {
+      if (dayOptions.length >= 7) {
+         return formatWeekRange(dayOptions[0].dateKey, dayOptions[6].dateKey);
+      }
+      return "";
+   }, [dayOptions]);
 
    const handleSelectDay = (opt: ChallengeDayOption) => {
       setSelectedDateKey(opt.dateKey);
@@ -391,34 +442,74 @@ export function CockpitTasksSection({
    };
 
    const handleJumpToToday = () => {
-      if (todayDayOption) {
-         setSelectedDateKey(todayDayOption.dateKey);
-         setSelectedDayNumber(todayDayOption.dayNumber);
+      setActiveWeekAnchorDateKey(effectiveTodayDate);
+      setSelectedDateKey(effectiveTodayDate);
+      try {
+         const parts = effectiveTodayDate.split("-").map(Number);
+         if (parts[0] && parts[1] && parts[2]) {
+            const dayOfWeek = new Date(
+               Date.UTC(parts[0], parts[1] - 1, parts[2])
+            ).getUTCDay();
+            setSelectedDayNumber(((dayOfWeek + 6) % 7) + 1);
+         }
+      } catch {
+         setSelectedDayNumber(1);
       }
    };
 
-   const getTaskDateKey = (task: TaskItem): string => {
-      if (task.dueDate) {
-         return typeof task.dueDate === "string"
-            ? task.dueDate.slice(0, 10)
-            : new Date(task.dueDate).toISOString().slice(0, 10);
-      }
-      if (task.createdAt) {
-         return new Date(task.createdAt).toISOString().slice(0, 10);
-      }
-      return effectiveTodayDate;
+   const handlePreviousWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeekAnchorDateKey, -1);
+      setActiveWeekAnchorDateKey(newAnchor);
+      const newSelected = getAdjacentWeekAnchor(selectedDateKey, -1);
+      setSelectedDateKey(newSelected);
    };
+
+   const handleNextWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeekAnchorDateKey, 1);
+      setActiveWeekAnchorDateKey(newAnchor);
+      const newSelected = getAdjacentWeekAnchor(selectedDateKey, 1);
+      setSelectedDateKey(newSelected);
+   };
+
+   const handleSelectDateFromPicker = (targetDateKey: string) => {
+      setActiveWeekAnchorDateKey(targetDateKey);
+      setSelectedDateKey(targetDateKey);
+      try {
+         const parts = targetDateKey.split("-").map(Number);
+         if (parts[0] && parts[1] && parts[2]) {
+            const dayOfWeek = new Date(
+               Date.UTC(parts[0], parts[1] - 1, parts[2])
+            ).getUTCDay();
+            setSelectedDayNumber(((dayOfWeek + 6) % 7) + 1);
+         }
+      } catch {
+         setSelectedDayNumber(1);
+      }
+   };
+
+   const getTaskDateKey = useCallback(
+      (task: TaskItem): string => {
+         if (task.dueDate) {
+            return typeof task.dueDate === "string"
+               ? task.dueDate.slice(0, 10)
+               : new Date(task.dueDate).toISOString().slice(0, 10);
+         }
+         if (task.createdAt) {
+            return new Date(task.createdAt).toISOString().slice(0, 10);
+         }
+         return effectiveTodayDate;
+      },
+      [effectiveTodayDate]
+   );
 
    const openAddDailyModal = (targetDateKey?: string) => {
       const rawDateKey = targetDateKey || selectedDateKey;
-      const targetOpt = dayOptions.find((d) => d.dateKey === rawDateKey);
-      const isTargetPast = targetOpt?.isPast ?? rawDateKey < effectiveTodayDate;
-      const isTargetLocked = hasChallengeContext && isTargetPast;
+      const isTargetLocked = checkIsDayLocked(rawDateKey);
 
       // If target day is in a locked past challenge day, clamp to today or the first available non-past day
       const initialDateKey = isTargetLocked
          ? todayDayOption?.dateKey ||
-           dayOptions.find((d) => !d.isPast)?.dateKey ||
+           dayOptions.find((d) => !checkIsDayLocked(d.dateKey))?.dateKey ||
            effectiveTodayDate
          : rawDateKey;
 
@@ -710,6 +801,8 @@ export function CockpitTasksSection({
             (t) => t.id === taskId
          );
          if (!targetTask) return;
+         const targetDateKey = getTaskDateKey(targetTask);
+         if (checkIsDayLocked(targetDateKey)) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
@@ -895,9 +988,7 @@ export function CockpitTasksSection({
          );
          if (taskToDelete) {
             const dateKey = getTaskDateKey(taskToDelete);
-            const opt = dayOptions.find((d) => d.dateKey === dateKey);
-            const isPast = opt?.isPast ?? dateKey < effectiveTodayDate;
-            if (hasChallengeContext && isPast) {
+            if (checkIsDayLocked(dateKey)) {
                return;
             }
          }
@@ -970,11 +1061,18 @@ export function CockpitTasksSection({
               ? new Date(editTaskModal.createdAt).toISOString().slice(0, 10)
               : effectiveTodayDate;
 
+         if (checkIsDayLocked(resolvedDueDate)) {
+            return;
+         }
+
          const check = validateMoveTaskChallengeDay(
             originalDateKey,
             resolvedDueDate,
             effectiveTodayDate,
-            { isChallengeActive: hasChallengeContext }
+            {
+               isChallengeActive: hasChallengeContext,
+               isTargetDayLocked: checkIsDayLocked(resolvedDueDate),
+            }
          );
          if (!check.ok) {
             return;
@@ -1102,7 +1200,7 @@ export function CockpitTasksSection({
 
       // If source is weekly
       if (sourceColumn === "weekly") {
-         if (hasChallengeContext && isTargetPast) return;
+         if (checkIsDayLocked(targetDateKey)) return;
          const foundWeeklyCatIdx =
             sourceCatIdx !== undefined
                ? sourceCatIdx
@@ -1240,11 +1338,15 @@ export function CockpitTasksSection({
       if (!foundTask || foundCatIdx === undefined) return;
 
       const sourceDateKey = getTaskDateKey(foundTask);
+      if (checkIsDayLocked(sourceDateKey)) return;
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
          effectiveTodayDate,
-         { isChallengeActive: hasChallengeContext }
+         {
+            isChallengeActive: hasChallengeContext,
+            isTargetDayLocked: checkIsDayLocked(targetDateKey),
+         }
       );
       if (!validation.ok) return;
 
@@ -1330,7 +1432,7 @@ export function CockpitTasksSection({
          targetOpt?.isPast ?? targetDateKey < effectiveTodayDate;
 
       if (sourceColumn === "weekly") {
-         if (hasChallengeContext && isTargetPast) return;
+         if (checkIsDayLocked(targetDateKey)) return;
          if (catIdx < 0 || catIdx >= weeklyCategories.length) return;
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
@@ -1463,11 +1565,15 @@ export function CockpitTasksSection({
       if (!sourceCat) return;
 
       const sourceDateKey = selectedDateKey;
+      if (checkIsDayLocked(sourceDateKey)) return;
       const validation = validateMoveTaskChallengeDay(
          sourceDateKey,
          targetDateKey,
          effectiveTodayDate,
-         { isChallengeActive: hasChallengeContext }
+         {
+            isChallengeActive: hasChallengeContext,
+            isTargetDayLocked: checkIsDayLocked(targetDateKey),
+         }
       );
       if (!validation.ok) return;
 
@@ -1618,15 +1724,14 @@ export function CockpitTasksSection({
       const dailyTargetCat = dailyCategories.find((c) =>
          catId ? c.id === catId : catType === "daily" && c.name === targetName
       );
-      const hasPastTasks = Boolean(
+      const hasLockedTasks = Boolean(
          dailyTargetCat?.tasks.some((t) => {
             const dateKey = getTaskDateKey(t);
-            const opt = dayOptions.find((d) => d.dateKey === dateKey);
-            return opt?.isPast ?? dateKey < effectiveTodayDate;
+            return checkIsDayLocked(dateKey);
          })
       );
 
-      if (hasChallengeContext && hasPastTasks) {
+      if (hasLockedTasks) {
          setDeleteCategoryModal(null);
          return;
       }
@@ -1686,7 +1791,7 @@ export function CockpitTasksSection({
       return dailyCategories.flatMap((cat) =>
          cat.tasks.filter((t) => getTaskDateKey(t) === selectedDateKey)
       );
-   }, [dailyCategories, selectedDateKey, effectiveTodayDate]);
+   }, [dailyCategories, selectedDateKey, getTaskDateKey]);
 
    const completedDailyTasksForDay = dailyTasksForSelectedDay.filter(
       (t) => t.completed
@@ -1711,7 +1816,7 @@ export function CockpitTasksSection({
          }
       }
       return counts;
-   }, [dayOptions, dailyCategories, effectiveTodayDate]);
+   }, [dayOptions, dailyCategories, getTaskDateKey]);
 
    const totalWeeklyTasks = weeklyCategories.reduce(
       (acc, cat) => acc + cat.tasks.length,
@@ -1751,12 +1856,7 @@ export function CockpitTasksSection({
          addModalType === "daily" ? addTodoDateKey || selectedDateKey : null;
 
       if (addModalType === "daily" && resolvedDueDate) {
-         const targetOpt = dayOptions.find(
-            (d) => d.dateKey === resolvedDueDate
-         );
-         const isPast =
-            targetOpt?.isPast ?? resolvedDueDate < effectiveTodayDate;
-         if (hasChallengeContext && isPast) {
+         if (checkIsDayLocked(resolvedDueDate)) {
             return;
          }
       }
@@ -2151,11 +2251,18 @@ export function CockpitTasksSection({
 
       if (draggedItem.sourceColumn === "daily") {
          const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+         if (checkIsDayLocked(sourceDateKey)) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+         }
          const validation = validateMoveTaskChallengeDay(
             sourceDateKey,
             opt.dateKey,
             effectiveTodayDate,
-            { isChallengeActive: hasChallengeContext }
+            {
+               isChallengeActive: hasChallengeContext,
+               isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+            }
          );
          if (!validation.ok) {
             e.dataTransfer.dropEffect = "none";
@@ -2168,7 +2275,10 @@ export function CockpitTasksSection({
             return;
          }
       } else if (draggedItem.sourceColumn === "weekly") {
-         if (hasChallengeContext && opt.isPast) {
+         if (
+            checkIsDayLocked(opt.dateKey) ||
+            (hasChallengeContext && opt.isPast)
+         ) {
             e.dataTransfer.dropEffect = "none";
             if (!dragOverInfo || dragOverInfo.targetDateKey !== opt.dateKey) {
                setDragOverInfo({
@@ -2201,11 +2311,18 @@ export function CockpitTasksSection({
       if (draggedItem.type === "category") {
          if (draggedItem.sourceColumn === "daily") {
             const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+            if (checkIsDayLocked(sourceDateKey)) {
+               handleDragEnd();
+               return;
+            }
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
                effectiveTodayDate,
-               { isChallengeActive: hasChallengeContext }
+               {
+                  isChallengeActive: hasChallengeContext,
+                  isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+               }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2217,7 +2334,10 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (hasChallengeContext && opt.isPast) {
+            if (
+               checkIsDayLocked(opt.dateKey) ||
+               (hasChallengeContext && opt.isPast)
+            ) {
                handleDragEnd();
                return;
             }
@@ -2234,11 +2354,18 @@ export function CockpitTasksSection({
       if (draggedItem.type === "task" && draggedItem.id) {
          if (draggedItem.sourceColumn === "daily") {
             const sourceDateKey = draggedItem.sourceDateKey || selectedDateKey;
+            if (checkIsDayLocked(sourceDateKey)) {
+               handleDragEnd();
+               return;
+            }
             const validation = validateMoveTaskChallengeDay(
                sourceDateKey,
                opt.dateKey,
                effectiveTodayDate,
-               { isChallengeActive: hasChallengeContext }
+               {
+                  isChallengeActive: hasChallengeContext,
+                  isTargetDayLocked: checkIsDayLocked(opt.dateKey),
+               }
             );
             if (!validation.ok) {
                handleDragEnd();
@@ -2251,7 +2378,10 @@ export function CockpitTasksSection({
                "daily"
             );
          } else if (draggedItem.sourceColumn === "weekly") {
-            if (hasChallengeContext && opt.isPast) {
+            if (
+               checkIsDayLocked(opt.dateKey) ||
+               (hasChallengeContext && opt.isPast)
+            ) {
                handleDragEnd();
                return;
             }
@@ -2292,8 +2422,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -2444,8 +2573,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -2705,8 +2833,7 @@ export function CockpitTasksSection({
       }
 
       if (
-         targetColumn === "daily" &&
-         draggedItem.sourceColumn === "weekly" &&
+         (targetColumn === "daily" || draggedItem.sourceColumn === "daily") &&
          isPastDayLocked
       ) {
          handleDragEnd();
@@ -3038,13 +3165,14 @@ export function CockpitTasksSection({
                      : "border-border-default"
                }`}
             >
-               <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                     <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-bold text-white">
+               <div className="space-y-3">
+                  {/* Row 1: Section Title, Day Badge, and Completed Counter (Mirrors Weekly Todos card) */}
+                  <div className="flex items-center justify-between gap-2">
+                     <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="text-lg font-bold text-white shrink-0">
                            Daily Todos
                         </h3>
-                        <span className="px-2 py-0.5 rounded-full text-meta font-semibold bg-surface-nested text-text-secondary border border-border-strong inline-flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-full text-meta font-semibold bg-surface-nested text-text-secondary border border-border-strong inline-flex items-center gap-1.5 shrink-0">
                            {activeDayOption.shortLabel}
                            {isActiveDayToday && (
                               <span
@@ -3059,23 +3187,40 @@ export function CockpitTasksSection({
                               </span>
                            )}
                         </span>
-                        {!isActiveDayToday && (
+                        {hasChallengeContext && !isActiveDayToday && (
                            <button
                               type="button"
                               onClick={handleJumpToToday}
-                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors"
+                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors shrink-0"
                            >
                               Today
                            </button>
                         )}
                      </div>
-                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-text-secondary">
+                     <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
                            {completedDailyTasksForDay}/{totalDailyTasksForDay}{" "}
                            Completed
                         </span>
                      </div>
                   </div>
+
+                  {/* Row 2: Calendar Week Navigator (Fixed row directly above the 7-day pill switcher) */}
+                  {!hasChallengeContext && (
+                     <div className="flex items-center justify-start gap-2 pt-0.5">
+                        <CockpitWeekNavigator
+                           selectedDateKey={selectedDateKey}
+                           todayDateKey={effectiveTodayDate}
+                           weekRangeLabel={weekRangeLabel}
+                           onPreviousWeek={handlePreviousWeek}
+                           onNextWeek={handleNextWeek}
+                           onSelectDate={handleSelectDateFromPicker}
+                           activeWeekDateKeys={activeWeekDateKeys}
+                           showToday={!isActiveDayToday}
+                           onJumpToToday={handleJumpToToday}
+                        />
+                     </div>
+                  )}
 
                   {/* 7-Day Pill Switcher (Fits all 7 days without horizontal scrolling) */}
                   <div
@@ -3107,16 +3252,23 @@ export function CockpitTasksSection({
                            if (draggedItem.sourceColumn === "daily") {
                               const sourceKey =
                                  draggedItem.sourceDateKey || selectedDateKey;
-                              isDropAllowedOnOpt = validateMoveTaskChallengeDay(
-                                 sourceKey,
-                                 opt.dateKey,
-                                 effectiveTodayDate,
-                                 { isChallengeActive: hasChallengeContext }
-                              ).ok;
+                              isDropAllowedOnOpt =
+                                 !checkIsDayLocked(sourceKey) &&
+                                 validateMoveTaskChallengeDay(
+                                    sourceKey,
+                                    opt.dateKey,
+                                    effectiveTodayDate,
+                                    {
+                                       isChallengeActive: hasChallengeContext,
+                                       isTargetDayLocked: checkIsDayLocked(
+                                          opt.dateKey
+                                       ),
+                                    }
+                                 ).ok;
                            } else if (draggedItem.sourceColumn === "weekly") {
-                              isDropAllowedOnOpt = hasChallengeContext
-                                 ? !opt.isPast
-                                 : true;
+                              isDropAllowedOnOpt =
+                                 !checkIsDayLocked(opt.dateKey) &&
+                                 (hasChallengeContext ? !opt.isPast : true);
                            }
                         }
 
@@ -3567,13 +3719,22 @@ export function CockpitTasksSection({
                                                                         status ===
                                                                         "COMPLETED"
                                                                      }
-                                                                     onClick={() =>
+                                                                     onClick={() => {
+                                                                        if (
+                                                                           isPastDayLocked
+                                                                        )
+                                                                           return;
                                                                         toggleDailyTask(
                                                                            catIdx,
                                                                            task.id
-                                                                        )
-                                                                     }
-                                                                     className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
+                                                                        );
+                                                                     }}
+                                                                     className={cn(
+                                                                        "flex items-start gap-3 flex-1 min-w-0",
+                                                                        isPastDayLocked
+                                                                           ? "cursor-not-allowed opacity-75"
+                                                                           : "cursor-pointer"
+                                                                     )}
                                                                      title={
                                                                         status ===
                                                                         "COMPLETED"

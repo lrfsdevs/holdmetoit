@@ -998,4 +998,95 @@ describe("CockpitTasksSection", () => {
          expect(html).toContain("+ Add first todo");
       });
    });
+
+   describe("Calendar Week Navigation (GH #184 / KAN-60)", () => {
+      const emptyTasks: UserCategorizedTasks = {
+         categories: [],
+         dailyCategories: [],
+         weeklyCategories: [],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 0,
+         completedWeeklyTasks: 0,
+      };
+
+      it("renders week navigation chevrons and week range trigger when not in an active challenge", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+            })
+         );
+
+         expect(html).toContain('aria-label="Previous week"');
+         expect(html).toContain('aria-label="Next week"');
+         expect(html).toContain(
+            'aria-label="Current week: Oct 19 – 25. Click to pick date"'
+         );
+         expect(html).toContain("Oct 19 – 25");
+      });
+
+      it("does not render calendar week navigation during an active challenge", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-05",
+               challengeId: "ch_active_1",
+               challengeStatus: "ACTIVE",
+               todayDate: "2026-10-07",
+            })
+         );
+
+         expect(html).not.toContain('aria-label="Previous week"');
+         expect(html).not.toContain('aria-label="Next week"');
+         expect(html).toContain('aria-label="Challenge Day Tabs"');
+      });
+
+      it("renders Today snap button when initialSelectedDateKey is not today", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-20",
+            })
+         );
+
+         expect(html).toContain("Today");
+      });
+
+      it("hides Today snap button when selected date matches todayDate", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-25",
+            })
+         );
+
+         expect(html).not.toMatch(/<button[^>]*>Today<\/button>/);
+      });
+
+      it("locks daily todos for a previous challenge week after the new week starts", () => {
+         const html = renderToStaticMarkup(
+            createElement(CockpitTasksSection, {
+               isLoggedIn: true,
+               userTasks: emptyTasks,
+               challengeStartDate: "2026-10-12",
+               totalChallengeDays: 7,
+               challengeStatus: "COMPLETED",
+               todayDate: "2026-10-25",
+               initialSelectedDateKey: "2026-10-15",
+            })
+         );
+
+         expect(html).toContain(
+            "This challenge day has passed. New tasks cannot be added to past days."
+         );
+         expect(html).toContain("Locked");
+      });
+   });
 });
