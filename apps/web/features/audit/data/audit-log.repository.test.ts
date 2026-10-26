@@ -1,11 +1,19 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { prisma } from "@/core/db";
 import {
    _clearAuditTrailForTests,
    _setUseInMemoryAuditTrailForTests,
    getAuditTrail,
    recordAuditEvent,
 } from "./audit-log.repository";
+
+vi.mock("@/core/db", () => ({
+   prisma: {
+      user: { findUnique: vi.fn() },
+      auditLog: { create: vi.fn(), findMany: vi.fn() },
+   },
+}));
 
 describe("audit log repository (FEAT-AUDIT-01)", () => {
    beforeEach(() => {
@@ -65,5 +73,54 @@ describe("audit log repository (FEAT-AUDIT-01)", () => {
 
       const allEvents = await getAuditTrail();
       expect(allEvents).toHaveLength(2);
+   });
+
+   it("uses the transaction client and rethrows on persistence failure", async () => {
+      _setUseInMemoryAuditTrailForTests(false);
+
+      const tx = {
+         user: { findUnique: vi.fn().mockResolvedValue(null) },
+         auditLog: {
+            create: vi
+               .fn()
+               .mockRejectedValue(new Error("transaction insert failed")),
+         },
+      };
+
+      await expect(
+         recordAuditEvent(
+            {
+               actorId: "user_1",
+               actorUsername: "Afnan",
+               actionType: "HOUSE_IDENTITY_UPDATED",
+               targetEntityId: "team_1",
+               targetEntityType: "TEAM",
+               challengeId: "c_1",
+            },
+            { transactionClient: tx as never }
+         )
+      ).rejects.toThrow("transaction insert failed");
+
+      expect(tx.auditLog.create).toHaveBeenCalled();
+      expect(prisma.auditLog.create).not.toHaveBeenCalled();
+   });
+
+   it("keeps swallowing persistence failures for non-transactional callers", async () => {
+      _setUseInMemoryAuditTrailForTests(false);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.auditLog.create).mockRejectedValue(
+         new Error("audit db down")
+      );
+
+      await expect(
+         recordAuditEvent({
+            actorId: "user_1",
+            actorUsername: "Afnan",
+            actionType: "HOUSE_IDENTITY_UPDATED",
+            targetEntityId: "team_1",
+            targetEntityType: "TEAM",
+            challengeId: "c_1",
+         })
+      ).resolves.toBeTruthy();
    });
 });

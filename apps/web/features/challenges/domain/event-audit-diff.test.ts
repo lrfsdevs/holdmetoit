@@ -130,4 +130,30 @@ describe("event-audit-diff domain utility", () => {
          'updated house "Honeybees" (renamed to "Honeybees")'
       );
    });
+
+   it("includes before/after glyphs for emoji-only changes", () => {
+      const diff = computeEventDetailsDiff(baseExisting, {
+         ...baseExisting,
+         teams: [
+            { ...baseExisting.teams[0]!, iconEmoji: "🦊" },
+            baseExisting.teams[1]!,
+         ],
+      });
+
+      expect(diff.hasChanges).toBe(true);
+      expect(diff.fieldChanges).toContain("teams");
+      expect(diff.summary).toContain(
+         'updated house "Bees" (icon changed 🐝 → 🦊)'
+      );
+      expect(diff.previousValue).toMatchObject({
+         teams: expect.arrayContaining([
+            expect.objectContaining({ id: "team_1", iconEmoji: "🐝" }),
+         ]),
+      });
+      expect(diff.newValue).toMatchObject({
+         teams: expect.arrayContaining([
+            expect.objectContaining({ id: "team_1", iconEmoji: "🦊" }),
+         ]),
+      });
+   });
 });

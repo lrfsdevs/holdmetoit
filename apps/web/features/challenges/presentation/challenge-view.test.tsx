@@ -64,10 +64,15 @@ vi.mock("./challenge-overview-tab", () => ({
 vi.mock(
    "@/features/leaderboard/presentation/challenge-leaderboard-tab",
    () => ({
-      ChallengeLeaderboardTab: () =>
+      ChallengeLeaderboardTab: ({ isGlobalLeaderboardEnabled }: any) =>
          createElement(
             "div",
-            { "data-testid": "leaderboard-tab-content" },
+            {
+               "data-testid": "leaderboard-tab-content",
+               "data-global-leaderboard-enabled": String(
+                  Boolean(isGlobalLeaderboardEnabled)
+               ),
+            },
             "Leaderboard Content"
          ),
    })
@@ -197,6 +202,31 @@ describe("ChallengeView", () => {
          );
          expect(html).toContain("Leaderboard Content");
          expect(html).not.toContain("Overview Content");
+      });
+
+      it("defaults the global-leaderboard trophy badge flag to off", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: mockChallenge,
+               initialTab: "leaderboard",
+               isAdmin: false,
+            })
+         );
+
+         expect(html).toContain('data-global-leaderboard-enabled="false"');
+      });
+
+      it("forwards the global-leaderboard flag to the leaderboard tab", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeView, {
+               challenge: mockChallenge,
+               initialTab: "leaderboard",
+               isAdmin: false,
+               isGlobalLeaderboardEnabled: true,
+            })
+         );
+
+         expect(html).toContain('data-global-leaderboard-enabled="true"');
       });
 
       it("gracefully redirects initialTab='about' to Overview content", () => {
