@@ -34,6 +34,8 @@ interface ChallengeViewProps {
    isBettingEnabled?: boolean;
    /** Server-evaluated `challenge_withdrawal_v1`. Gates the overview withdraw button. */
    isWithdrawalEnabled?: boolean;
+   /** Server-evaluated `global_leaderboard_v1`. Gates trophy rank badges in standings. */
+   isGlobalLeaderboardEnabled?: boolean;
 }
 
 /** Renders the challenge shell and coordinates its active tab. */
@@ -48,6 +50,7 @@ export function ChallengeView({
    isWrappedEnabled = true,
    isBettingEnabled = true,
    isWithdrawalEnabled = false,
+   isGlobalLeaderboardEnabled = false,
 }: ChallengeViewProps) {
    const isSummaryVisible =
       isWrappedEnabled && Boolean(challenge.resultsLockedAt);
@@ -179,6 +182,7 @@ export function ChallengeView({
                   challenge={challenge}
                   isAdmin={isAdmin}
                   initialViewMode={resolvedLeaderboardViewMode}
+                  isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
                />
             </div>
          )}

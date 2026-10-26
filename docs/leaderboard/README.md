@@ -123,3 +123,12 @@ Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
 `docs/challenges/README.md` §8.
+
+## 8. Trophy Rank Badges in Challenge Standings
+
+`TrophyRoleBadge` pills inside `/challenge/[id]?tab=leaderboard` (mobile cards, desktop table,
+and team view) are gated by the same `global_leaderboard_v1` flag as the `/leaderboard` route.
+The challenge page evaluates `isFeatureEnabled(FEATURE_FLAG_KEYS.globalLeaderboard)` and
+passes `isGlobalLeaderboardEnabled` through `ChallengeView` to `ChallengeLeaderboardTab`.
+The prop defaults to `false`, so the badges fail closed when the flag is missing or disabled.
+Trophy balances remain in the view model; only the badge rendering is gated.

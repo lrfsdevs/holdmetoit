@@ -96,6 +96,9 @@ export default async function ChallengePage({
    const isWithdrawalEnabled = await isFeatureEnabled(
       FEATURE_FLAG_KEYS.withdrawal
    );
+   const isGlobalLeaderboardEnabled = await isFeatureEnabled(
+      FEATURE_FLAG_KEYS.globalLeaderboard
+   );
 
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
@@ -149,6 +152,7 @@ export default async function ChallengePage({
          isWrappedEnabled={isWrappedEnabled}
          isBettingEnabled={isBettingEnabled}
          isWithdrawalEnabled={isWithdrawalEnabled}
+         isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
       />
    );
 }

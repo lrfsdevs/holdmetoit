@@ -578,4 +578,30 @@ describe("ChallengeLeaderboardTab", () => {
          `/challenge/${duoChallenge.id}/participant/part-duo-1?view=individual`
       );
    });
+
+   it("only renders trophy rank badges when the global leaderboard flag is enabled", () => {
+      const challengeWithTrophies: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         standings: [{ ...mockChallenge.standings[0]!, trophies: 12 }],
+      };
+
+      const hiddenHtml = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: challengeWithTrophies,
+         })
+      );
+
+      expect(hiddenHtml).not.toContain('data-testid="trophy-role-badge"');
+      expect(hiddenHtml).not.toContain("Recruit");
+
+      const shownHtml = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: challengeWithTrophies,
+            isGlobalLeaderboardEnabled: true,
+         })
+      );
+
+      expect(shownHtml).toContain('data-testid="trophy-role-badge"');
+      expect(shownHtml).toContain("Recruit");
+   });
 });

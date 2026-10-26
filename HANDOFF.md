@@ -184,7 +184,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Audit:** One combined `HOUSE_IDENTITY_UPDATED` event per save on the `TEAM` entity, with `previousValue`/`newValue` = `{ name, iconEmoji }` and a reason naming the changed fields (`name`, `emoji`, or `name and emoji`). No row for a no-op save.
 - **Leaderboard data/UI:** `currentUser` now exposes `teamIcon` and `canEditDuoTeam`; hero shows `Your duo: {emoji} {name}` with an **Edit duo** action; the team-view pencil opens the shared editor.
 - **Admin audit:** `computeEventDetailsDiff` now reports `icon changed <old> → <new>` instead of the opaque `icon changed`; admin edits remain in the existing `EVENT_DETAILS_UPDATED` model.
-- **Docs:** `FEATURES.md` §4.7, `docs/challenges/README.md` §8, and `docs/leaderboard/README.md` §7 updated.
+- **Trophy badges:** Challenge-standings `TrophyRoleBadge` pills (mobile, desktop, team view) are now gated by `global_leaderboard_v1` via `isGlobalLeaderboardEnabled` (page → `ChallengeView` → `ChallengeLeaderboardTab`, default `false`). Previously they rendered regardless of the flag.
+- **Docs:** `FEATURES.md` §4.7, `docs/challenges/README.md` §8, and `docs/leaderboard/README.md` §7–8 updated.
 - **NEXT STEP:** run the full `npm run test:web` / `npm run build:web`, then complete the manual checks in §6 item 0.
 
 ### Session 161 — 2026-10-26 (Duo battles: participant self-rename + DUOS leaderboard defaults on `afnan-jr`)

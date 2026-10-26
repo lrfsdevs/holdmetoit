@@ -96,6 +96,8 @@ interface ChallengeLeaderboardTabProps {
    challenge: ChallengeScoreboardViewModel;
    isAdmin?: boolean;
    initialViewMode?: LeaderboardViewMode;
+   /** Server-evaluated `global_leaderboard_v1`. Gates trophy rank badges. */
+   isGlobalLeaderboardEnabled?: boolean;
 }
 
 /** Renders challenge standings, team totals, and leaderboard view modes. */
@@ -103,6 +105,7 @@ export function ChallengeLeaderboardTab({
    challenge,
    isAdmin = false,
    initialViewMode,
+   isGlobalLeaderboardEnabled = false,
 }: ChallengeLeaderboardTabProps) {
    const [searchQuery, setSearchQuery] = useState("");
    const [selectedTeamId, setSelectedTeamId] = useState("ALL");
@@ -955,15 +958,16 @@ export function ChallengeLeaderboardTab({
                                                       >
                                                          {entry.displayName}
                                                       </Link>
-                                                      {typeof entry.trophies ===
-                                                         "number" && (
-                                                         <TrophyRoleBadge
-                                                            trophies={
-                                                               entry.trophies
-                                                            }
-                                                            size="sm"
-                                                         />
-                                                      )}
+                                                      {isGlobalLeaderboardEnabled &&
+                                                         typeof entry.trophies ===
+                                                            "number" && (
+                                                            <TrophyRoleBadge
+                                                               trophies={
+                                                                  entry.trophies
+                                                               }
+                                                               size="sm"
+                                                            />
+                                                         )}
                                                       <YptStatusPill
                                                          status={entry.status}
                                                       />
@@ -1113,12 +1117,14 @@ export function ChallengeLeaderboardTab({
                                        >
                                           {entry.displayName}
                                        </Link>
-                                       {typeof entry.trophies === "number" && (
-                                          <TrophyRoleBadge
-                                             trophies={entry.trophies}
-                                             size="sm"
-                                          />
-                                       )}
+                                       {isGlobalLeaderboardEnabled &&
+                                          typeof entry.trophies ===
+                                             "number" && (
+                                             <TrophyRoleBadge
+                                                trophies={entry.trophies}
+                                                size="sm"
+                                             />
+                                          )}
                                        <YptStatusPill status={entry.status} />
                                        <span
                                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold border shrink-0"
@@ -1272,13 +1278,16 @@ export function ChallengeLeaderboardTab({
                                                 >
                                                    {entry.displayName}
                                                 </Link>
-                                                {typeof entry.trophies ===
-                                                   "number" && (
-                                                   <TrophyRoleBadge
-                                                      trophies={entry.trophies}
-                                                      size="sm"
-                                                   />
-                                                )}
+                                                {isGlobalLeaderboardEnabled &&
+                                                   typeof entry.trophies ===
+                                                      "number" && (
+                                                      <TrophyRoleBadge
+                                                         trophies={
+                                                            entry.trophies
+                                                         }
+                                                         size="sm"
+                                                      />
+                                                   )}
                                                 <YptStatusPill
                                                    status={entry.status}
                                                 />

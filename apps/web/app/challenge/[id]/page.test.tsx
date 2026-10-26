@@ -35,6 +35,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
       initialRosterTeamFilter,
       initialRosterPage,
       isWrappedEnabled,
+      isGlobalLeaderboardEnabled,
    }: {
       initialTab: string;
       isAdmin: boolean;
@@ -43,6 +44,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
       initialRosterTeamFilter?: string;
       initialRosterPage?: number;
       isWrappedEnabled?: boolean;
+      isGlobalLeaderboardEnabled?: boolean;
    }) =>
       createElement(
          "div",
@@ -55,6 +57,9 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
             "data-roster-team": initialRosterTeamFilter,
             "data-roster-page": String(initialRosterPage),
             "data-is-wrapped-enabled": String(isWrappedEnabled),
+            "data-is-global-leaderboard-enabled": String(
+               isGlobalLeaderboardEnabled
+            ),
          },
          `ChallengeView: tab=${initialTab}, admin=${isAdmin}`
       ),
@@ -214,6 +219,22 @@ describe("ChallengePage (Server Component)", () => {
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-initial-view-mode="individual"');
+   });
+
+   it("passes the global leaderboard flag through to ChallengeView", async () => {
+      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-is-global-leaderboard-enabled="true"');
+   });
+
+   it("passes a disabled global leaderboard flag through to ChallengeView", async () => {
+      vi.mocked(isFeatureEnabled).mockResolvedValue(false);
+
+      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-is-global-leaderboard-enabled="false"');
    });
 
    it("passes search, team, and page from searchParams to ChallengeView", async () => {
