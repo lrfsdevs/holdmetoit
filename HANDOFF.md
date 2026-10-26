@@ -198,6 +198,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Add & Edit Modal Goal Scope Selector: toggle between Challenge Goal (mandatory under Law L6) and Personal Task.
       - Context & Dropdown Menu: added 1-click "Set as Challenge Goal" and "Convert to Personal Goal" actions, plus "Roll over to Today" on past days.
 - **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 100% test coverage across tasks and cockpit presentation suites (149/149 task tests green, 52/52 cockpit presentation tests green).
+- **PR #191 Review Feedback Addressed (Commit `8d91a0b`):**
+   - **`task.repository.ts`:**
+      - Restricted `rolloverIncompleteTasks` where clause to `taskType: "DAILY"`, `isComplete: false`, and `status: { notIn: ["COMPLETED", "CROSSED_OUT"] }`.
+      - Hardened `updateTask` to reject challenge scoping for non-weekly tasks (`Only weekly tasks can be scoped to a challenge`) and validated non-null `challengeId` via `validateTaskChallengeId` verifying participant authorization, unlocked results, and unexpired challenge window.
+   - **`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`:**
+      - Updated `weeklyScopedCounts`, task goal badges, and menu checks to strictly compare `task.challengeId === linkableChallengeId`, added `linkableChallengeId` to memo dependencies, and scoped counts strictly to the active challenge.
+      - Updated individual past-day task button to call `handleRolloverIncompleteTasks({ sourceDateKey: selectedDateKey, taskId: task.id })` rather than `moveTaskToDay`, safely bypassing past-day challenge lock guards.
+   - **Domain & Test Hardening (`task-rollover.ts`, `task.repository.test.ts`, `task-rollover.test.ts`):**
+      - Supported `taskId` filtering in `findRolloverCandidates`.
+      - Added test coverage for invalid challenge ID rejection, non-weekly challenge scope rejection, and repository rollover predicates. Full task/cockpit test suite passing (218/218 tests green).
 
 ### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
 
