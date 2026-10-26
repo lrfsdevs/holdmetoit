@@ -1587,4 +1587,5 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `apps/web/features/challenges/presentation/challenge-overview-tab.test.tsx`: 13/13 tests passing.
    - Full workspace test suite: ✅ 208 test files passed (2,033/2,033 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
-- **NEXT STEP:** Submit PR from `krish` to `dev` for peer review.
+- **GitHub PR:** Submitted PR [#193](https://github.com/lrfsdevs/holdmetoit/pull/193) from `krish` to `dev`.
+- **NEXT STEP:** Peer review and merge PR #193 into `dev`.
