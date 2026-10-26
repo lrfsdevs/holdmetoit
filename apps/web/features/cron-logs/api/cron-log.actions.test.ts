@@ -123,17 +123,25 @@ describe("cron-log read actions", () => {
       expect(overviewResult).toEqual({ ok: true, data: OVERVIEW });
    });
 
-   it("maps repository failures", async () => {
+   it("maps repository failures without leaking internals", async () => {
+      const consoleError = vi
+         .spyOn(console, "error")
+         .mockImplementation(() => {});
       vi.mocked(repoModule.listCronRuns).mockRejectedValue(
          new Error("db down")
       );
 
-      const result = await listCronRunsAction({});
+      try {
+         const result = await listCronRunsAction({});
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-         expect(result.code).toBe("FETCH_CRON_LOGS_FAILED");
-         expect(result.message).toBe("db down");
+         expect(result.ok).toBe(false);
+         if (!result.ok) {
+            expect(result.code).toBe("FETCH_CRON_LOGS_FAILED");
+            expect(result.message).toBe("Failed to load cron runs.");
+         }
+         expect(consoleError).toHaveBeenCalled();
+      } finally {
+         consoleError.mockRestore();
       }
    });
 });
