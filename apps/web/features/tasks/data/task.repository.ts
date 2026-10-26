@@ -466,7 +466,26 @@ export async function updateTask(params: {
       dataToUpdate.dueDate = params.dueDate ? new Date(params.dueDate) : null;
    }
    if (params.challengeId !== undefined) {
-      dataToUpdate.challengeId = params.challengeId;
+      if (params.challengeId !== null) {
+         if (existing.taskType !== "WEEKLY") {
+            throw new Error("Only weekly tasks can be scoped to a challenge");
+         }
+         const validatedChallengeId = await validateTaskChallengeId(
+            params.userId,
+            params.challengeId
+         );
+         if (
+            !validatedChallengeId ||
+            validatedChallengeId !== params.challengeId
+         ) {
+            throw new Error(
+               "Invalid challenge ID: user is not an active participant in this challenge"
+            );
+         }
+         dataToUpdate.challengeId = validatedChallengeId;
+      } else {
+         dataToUpdate.challengeId = null;
+      }
    }
 
    return prisma.task.update({
@@ -488,6 +507,11 @@ export async function rolloverIncompleteTasks(params: {
       where: {
          id: { in: params.taskIds },
          userId: params.userId,
+         taskType: "DAILY",
+         isComplete: false,
+         status: {
+            notIn: ["COMPLETED", "CROSSED_OUT"],
+         },
          isDeleted: false,
       },
       data: {

@@ -34,6 +34,7 @@ vi.mock("@/core/db", () => {
       },
       challengeParticipant: {
          findMany: vi.fn(),
+         findFirst: vi.fn(),
       },
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
@@ -45,6 +46,9 @@ describe("task.repository", () => {
       vi.clearAllMocks();
       vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue(
          [] as never
+      );
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+         null as never
       );
    });
 
@@ -743,6 +747,10 @@ describe("task.repository", () => {
          vi.mocked(prisma.task.findFirst).mockResolvedValue({
             id: "task_1",
             userId: "user_1",
+            taskType: "WEEKLY",
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "chal_valid",
          } as never);
          vi.mocked(prisma.task.update).mockResolvedValue({
             id: "task_1",
@@ -775,6 +783,41 @@ describe("task.repository", () => {
             include: { category: true },
          });
       });
+
+      it("rejects challengeId assignment when taskType is not WEEKLY", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+            taskType: "DAILY",
+         } as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "chal_valid",
+            })
+         ).rejects.toThrow("Only weekly tasks can be scoped to a challenge");
+      });
+
+      it("rejects invalid or unauthorized challengeId assignment", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+            taskType: "WEEKLY",
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+            null as never
+         );
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "chal_unauthorized",
+            })
+         ).rejects.toThrow("Invalid challenge ID");
+      });
    });
 
    describe("rolloverIncompleteTasks", () => {
@@ -792,6 +835,11 @@ describe("task.repository", () => {
             where: {
                id: { in: ["task_1", "task_2", "task_3"] },
                userId: "user_1",
+               taskType: "DAILY",
+               isComplete: false,
+               status: {
+                  notIn: ["COMPLETED", "CROSSED_OUT"],
+               },
                isDeleted: false,
             },
             data: {

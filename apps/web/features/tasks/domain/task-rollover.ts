@@ -101,12 +101,13 @@ export function getYesterdayDateKey(todayDateKey: string): string {
 export function findRolloverCandidates<TTask extends RolloverTaskSource>(
    categories: readonly RolloverCategorySource<TTask>[],
    todayDateKey: string,
-   options?: { sourceDateKey?: string }
+   options?: { sourceDateKey?: string; taskId?: string }
 ): RolloverCandidate<TTask>[] {
    const candidates: RolloverCandidate<TTask>[] = [];
 
    categories.forEach((category, categoryIndex) => {
       category.tasks.forEach((task) => {
+         if (options?.taskId && task.id !== options.taskId) return;
          if (!isTaskIncomplete(task)) return;
 
          const taskDateKey = getTaskDateKey(task, todayDateKey);

@@ -1543,12 +1543,27 @@ export function CockpitTasksSection({
    }, [dailyCategories, effectiveTodayDate, selectedDateKey]);
 
    const weeklyScopedCounts = useMemo(() => {
+      if (!linkableChallengeId) {
+         return {
+            totalChallengeGoals: 0,
+            completedChallengeGoals: 0,
+            totalPersonalGoals: 0,
+            completedPersonalGoals: 0,
+            totalTasks: 0,
+            completedTasks: 0,
+         };
+      }
       const allWeeklyTasks = weeklyCategories.flatMap((c) => c.tasks);
-      return countScopedTasks(allWeeklyTasks);
-   }, [weeklyCategories]);
+      const scopedTasks = allWeeklyTasks.map((t) => ({
+         ...t,
+         challengeId:
+            t.challengeId === linkableChallengeId ? linkableChallengeId : null,
+      }));
+      return countScopedTasks(scopedTasks);
+   }, [weeklyCategories, linkableChallengeId]);
 
    const handleRolloverIncompleteTasks = useCallback(
-      (options?: { sourceDateKey?: string }) => {
+      (options?: { sourceDateKey?: string; taskId?: string }) => {
          const candidates = findRolloverCandidates(
             dailyCategories,
             effectiveTodayDate,
@@ -4239,11 +4254,13 @@ export function CockpitTasksSection({
                                                                      e
                                                                   ) => {
                                                                      e.stopPropagation();
-                                                                     moveTaskToDay(
-                                                                        task.id,
-                                                                        effectiveTodayDate,
-                                                                        catIdx,
-                                                                        "daily"
+                                                                     handleRolloverIncompleteTasks(
+                                                                        {
+                                                                           sourceDateKey:
+                                                                              selectedDateKey,
+                                                                           taskId:
+                                                                              task.id,
+                                                                        }
                                                                      );
                                                                   }}
                                                                   className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-text-tertiary hover:text-emerald-400 rounded hover:bg-surface-elevated transition-all shrink-0 mt-0.5"
@@ -5082,7 +5099,8 @@ export function CockpitTasksSection({
                                                          {Boolean(
                                                             linkableChallengeId
                                                          ) &&
-                                                            (task.challengeId ? (
+                                                            (task.challengeId ===
+                                                            linkableChallengeId ? (
                                                                <span
                                                                   data-testid="task-scope-challenge-badge"
                                                                   className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-label font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-0.5"
@@ -5093,7 +5111,7 @@ export function CockpitTasksSection({
                                                                      Goal
                                                                   </span>
                                                                </span>
-                                                            ) : (
+                                                            ) : !task.challengeId ? (
                                                                <span
                                                                   data-testid="task-scope-personal-badge"
                                                                   className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-label font-medium bg-surface-nested text-text-tertiary border border-border-subtle mt-0.5"
@@ -5104,7 +5122,7 @@ export function CockpitTasksSection({
                                                                      Personal
                                                                   </span>
                                                                </span>
-                                                            ))}
+                                                            ) : null)}
                                                          {isLoggedIn && (
                                                             <DropdownMenu
                                                                modal={false}

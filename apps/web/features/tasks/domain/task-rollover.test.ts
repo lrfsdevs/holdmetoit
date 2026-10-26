@@ -177,6 +177,28 @@ describe("task-rollover domain", () => {
          expect(yesterdayOnly[0].taskId).toBe("task-yesterday");
       });
 
+      it("filters by specific taskId if provided", () => {
+         const specificTaskOnly = findRolloverCandidates(
+            categories,
+            "2026-10-26",
+            {
+               sourceDateKey: "2026-10-24",
+               taskId: "task-old-1",
+            }
+         );
+         expect(specificTaskOnly).toHaveLength(1);
+         expect(specificTaskOnly[0].taskId).toBe("task-old-1");
+
+         const nonExistentTask = findRolloverCandidates(
+            categories,
+            "2026-10-26",
+            {
+               taskId: "task-does-not-exist",
+            }
+         );
+         expect(nonExistentTask).toHaveLength(0);
+      });
+
       it("returns empty array if no past tasks are incomplete", () => {
          const cleanCategories: RolloverCategorySource[] = [
             {

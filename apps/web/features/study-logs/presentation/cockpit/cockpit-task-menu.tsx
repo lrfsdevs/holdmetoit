@@ -266,7 +266,7 @@ export function TaskMenuItems({
                   <div className="px-3 py-1 text-label font-semibold tracking-wider uppercase text-text-tertiary">
                      Goal Scope
                   </div>
-                  {task.challengeId ? (
+                  {task.challengeId === linkableChallengeId ? (
                      <Item
                         onSelect={() => onToggleChallengeScope(null)}
                         onClick={() => onToggleChallengeScope(null)}
