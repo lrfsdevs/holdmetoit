@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
-import { AlertCircle, ImagePlus, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, ImagePlus, Loader2, RefreshCw, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 import {
@@ -20,7 +20,8 @@ import { ChallengeImageCropper } from "@/features/challenges/presentation/challe
 interface ChallengeImageInputProps {
    purpose: ChallengeImagePurpose;
    value: string | null;
-   onChange: (url: string) => void;
+   onChange: (url: string | null) => void;
+   allowClear?: boolean;
    /** URL persisted on the challenge. Uploads other than this are discardable. */
    savedValue?: string | null;
    onBusyChange?: (busy: boolean) => void;
@@ -100,6 +101,7 @@ export function ChallengeImageInput({
    onBusyChange,
    disabled = false,
    error = null,
+   allowClear = false,
    label = purpose === "event-banner"
       ? "Event Header Image"
       : "Assigned Punishment PFP",
@@ -169,6 +171,17 @@ export function ChallengeImageInput({
       } finally {
          setBusy(false);
       }
+   };
+
+   const handleClear = () => {
+      if (disabled || busyRef.current) return;
+      if (value && value !== savedValue) {
+         void discardChallengeImageUploadAction(value).catch(() => {});
+      }
+      setLocalError(null);
+      setLocalPreview(null);
+      setLastFile(null);
+      onChange(null);
    };
 
    const handleSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,24 +263,38 @@ export function ChallengeImageInput({
                   aria-describedby={`${inputId}-help ${inputId}-format${shownError ? ` ${inputId}-error` : ""}`}
                   aria-invalid={!!shownError}
                />
-               <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={disabled || uploading}
-                  aria-label={`${uploading ? "Uploading" : value ? "Replace" : "Upload"} ${label}`}
-                  className="inline-flex min-h-control-sm max-w-full items-center gap-2 rounded-xl border border-input-border bg-input-bg px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-input-bg disabled:cursor-not-allowed disabled:opacity-50"
-               >
-                  {uploading ? (
-                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                     <ImagePlus className="h-4 w-4" aria-hidden />
+               <div className="flex flex-wrap items-center gap-2">
+                  <button
+                     type="button"
+                     onClick={() => fileRef.current?.click()}
+                     disabled={disabled || uploading}
+                     aria-label={`${uploading ? "Uploading" : value ? "Replace" : "Upload"} ${label}`}
+                     className="inline-flex min-h-control-sm max-w-full items-center gap-2 rounded-xl border border-input-border bg-input-bg px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-input-bg disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                     {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                     ) : (
+                        <ImagePlus className="h-4 w-4" aria-hidden />
+                     )}
+                     {uploading
+                        ? "Uploading..."
+                        : value
+                          ? "Replace image"
+                          : "Upload image"}
+                  </button>
+                  {value && (allowClear || purpose === "punishment-pfp") && (
+                     <button
+                        type="button"
+                        onClick={handleClear}
+                        disabled={disabled || uploading}
+                        aria-label={`Remove ${label}`}
+                        className="inline-flex min-h-control-sm items-center gap-1.5 rounded-xl border border-border-default bg-surface-secondary px-3 text-xs font-semibold text-text-secondary hover:text-feedback-error-text transition-colors hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-50"
+                     >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                        <span>Remove</span>
+                     </button>
                   )}
-                  {uploading
-                     ? "Uploading..."
-                     : value
-                       ? "Replace image"
-                       : "Upload image"}
-               </button>
+               </div>
                <p
                   id={`${inputId}-format`}
                   className="text-meta text-text-tertiary"
