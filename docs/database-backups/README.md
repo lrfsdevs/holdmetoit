@@ -144,6 +144,10 @@ Expected log sequence (`backup_started` → `backup_dump_completed` → `backup_
 `startDailyBackupScheduler()` inside the HTTP `listen` callback. The scheduler exports
 `{ stop }` for tests/shutdown.
 
+Each run writes a `CronLog` row (`jobName: DB_BACKUP`) with status, timing, dump
+size/object path, prune count, and errors. See
+[`docs/cron-logs/README.md`](../cron-logs/README.md).
+
 ### 4.4 Restore
 
 ```bash

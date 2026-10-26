@@ -47,6 +47,7 @@ describe("startDailyBackupScheduler", () => {
                calls.push(options);
                return { skipped: false };
             },
+            record: async (_meta, fn) => fn(),
             log: createLoggerStub(),
          });
 
@@ -73,6 +74,7 @@ describe("startDailyBackupScheduler", () => {
                calls.push(options);
                return { skipped: false };
             },
+            record: async (_meta, fn) => fn(),
             log: createLoggerStub(),
          });
 

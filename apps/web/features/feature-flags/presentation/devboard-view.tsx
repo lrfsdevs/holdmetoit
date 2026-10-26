@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Flag, Plus, UserCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, Flag, Plus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,11 @@ import type {
    RolloutModeType,
 } from "../domain/feature-flags.types";
 import {
+   DEFAULT_DEVBOARD_TAB,
+   resolveDevBoardTab,
+   type DevBoardTab,
+} from "../domain/devboard-tabs";
+import {
    DevBoardHeader,
    type FilterStatus,
    type SortOption,
@@ -37,13 +42,18 @@ import { FlagEditorModal } from "./flag-editor-modal";
 import { FlagTable } from "./flag-table";
 import { TesterSelectorDialog } from "./tester-selector-dialog";
 import { YptVerificationPanel } from "@/features/ypt/presentation/ypt-verification-panel";
+import { CronLogsPanel } from "@/features/cron-logs/presentation/cron-logs-panel";
 
 interface DevBoardViewProps {
    initialFlags: FeatureFlagEntity[];
+   initialTab?: DevBoardTab | string;
 }
 
 /** Renders the feature-flag administration surface from server-provided flags. */
-export function DevBoardView({ initialFlags }: DevBoardViewProps) {
+export function DevBoardView({
+   initialFlags,
+   initialTab = DEFAULT_DEVBOARD_TAB,
+}: DevBoardViewProps) {
    const [flags, setFlags] = useState<FeatureFlagEntity[]>(initialFlags);
    const [searchQuery, setSearchQuery] = useState("");
    const [activeFilter, setActiveFilter] = useState<FilterStatus>("ALL");
@@ -52,8 +62,34 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
       () => new Set()
    );
 
-   // Section switcher (Feature Flags | YPT Verification)
-   const [section, setSection] = useState<"flags" | "ypt">("flags");
+   // Section switcher (Feature Flags | YPT Verification | Cron Logs)
+   const [section, setSection] = useState<DevBoardTab>(() =>
+      resolveDevBoardTab(initialTab)
+   );
+
+   useEffect(() => {
+      setSection(resolveDevBoardTab(initialTab));
+   }, [initialTab]);
+
+   const handleSectionChange = (value: string) => {
+      const next = resolveDevBoardTab(value);
+      setSection(next);
+
+      if (typeof window === "undefined") return;
+
+      const url = new URL(window.location.href);
+      if (next === DEFAULT_DEVBOARD_TAB) {
+         url.searchParams.delete("tab");
+      } else {
+         url.searchParams.set("tab", next);
+      }
+
+      window.history.replaceState(
+         null,
+         "",
+         `${url.pathname}${url.search}${url.hash}`
+      );
+   };
 
    // Modals state
    const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -319,10 +355,10 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
       <div className="space-y-6">
          <Tabs
             value={section}
-            onValueChange={(value) => setSection(value as "flags" | "ypt")}
+            onValueChange={handleSectionChange}
             className="space-y-6"
          >
-            {/* Section Switcher: Feature Flags | YPT Verification */}
+            {/* Section Switcher: Feature Flags | YPT Verification | Cron Logs */}
             <TabsList
                aria-label="DevBoard sections"
                className="inline-flex flex-wrap items-center justify-start gap-1.5 rounded-2xl! border border-border-default bg-surface-primary p-1"
@@ -340,6 +376,13 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
                >
                   <UserCheck className="h-3.5 w-3.5" />
                   YPT Verification
+               </TabsTrigger>
+               <TabsTrigger
+                  value="cron-logs"
+                  className="inline-flex items-center gap-1.5 rounded-xl! px-3.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 data-[state=active]:border data-[state=active]:border-border-strong data-[state=active]:bg-surface-nested data-[state=active]:text-text-primary data-[state=inactive]:hover:bg-surface-tertiary"
+               >
+                  <Activity className="h-3.5 w-3.5" />
+                  Cron Logs
                </TabsTrigger>
             </TabsList>
 
@@ -411,6 +454,10 @@ export function DevBoardView({ initialFlags }: DevBoardViewProps) {
 
             <TabsContent value="ypt" className="mt-0">
                <YptVerificationPanel />
+            </TabsContent>
+
+            <TabsContent value="cron-logs" className="mt-0">
+               <CronLogsPanel />
             </TabsContent>
          </Tabs>
 

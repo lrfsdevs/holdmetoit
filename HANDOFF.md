@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-24 (Session 155 on `dev` · Session 152 on `krish`)
+> **Last Updated:** 2026-10-24 (Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 158 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -175,6 +175,57 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 160 — 2026-10-24 (Renamed DevBoard YPT Center tab to Cron Logs on `afnan-jr`)
+
+- **Tab:** DevBoard label changed from “YPT Center” to **“Cron Logs”**.
+- **Route param:** `?tab=ypt-center` → **`?tab=cron-logs`** (bare `/devboard` still defaults to Feature Flags).
+- **Code:** `DEVBOARD_TABS` value updated; `YptCenterPanel` → `CronLogsPanel`; files renamed to `cron-logs-panel.*` and `cron-logs-format.ts`.
+- **Docs:** `docs/cron-logs/README.md` and the ypt-bot doc use the new name/URL.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 159 — 2026-10-24 (Removed cron per-member tracking & undo on `afnan-jr`)
+
+- **Scope:** 30s ingest cadence made per-member `CronLogChange` rows too large and low-value; undo was removed entirely. `CronLog` is now the only cron table.
+- **Schema:** removed `CronLogChange`, its back-relations, and the `CronLog.changes` relation. Migration `20261028000000_drop_cron_log_changes` (`DROP TABLE IF EXISTS "CronLogChange"`).
+- **Bot:** removed change capture from `daily-study-log.js` (`cronLogId`, change rows, `changesWritten/changesFailed`), `cronLogId` plumbing in `run-ingest.js`/`server.js`, and `CRON_LOG_CHANGE_RETENTION_DAYS`. `pruneCronLogs` now prunes runs only.
+- **Web:** deleted the undo repository/actions/types/dialog and their tests; removed undo audit types + log events; simplified DTOs and YPT Center UI (no member diffs, no undo; detail = metadata + summary + error).
+- **Tests:** 92 bot tests, web suite green; deleted change-capture and undo tests.
+- **Docs:** `docs/cron-logs/README.md` rewritten as status-only; ypt-bot doc trimmed.
+- **DB apply step:** `DATABASE_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" DIRECT_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" npm run db:migrate -w @holdmetoit/database` (destructive: drops `CronLogChange`; Supabase still needs the migration).
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 158 — 2026-10-24 (DevBoard tab persistence on `afnan-jr`)
+
+- **Problem:** refreshing while on YPT Center remounted `DevBoardView` on Feature Flags.
+- **Fix:** active section is stored in `?tab=` (`flags` default, `ypt`, `ypt-center`). `app/devboard/page.tsx` reads `searchParams.tab`; `DevBoardView` initialises from `initialTab` and writes changes with `window.history.replaceState` (no server round-trip, no flag refetch).
+- **Helpers:** `features/feature-flags/domain/devboard-tabs.ts` (`DEVBOARD_TABS`, `resolveDevBoardTab`, array/invalid clamping).
+- **UX:** `/devboard?tab=ypt-center` deep-links and survives refresh; choosing Feature Flags removes the param; other query params are preserved.
+- **Tests:** resolver (4), page plumbing (4), jsdom interaction (5); existing DevBoard static tests unchanged.
+- **Docs:** `docs/cron-logs/README.md` §4.6 note.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 157 — 2026-10-24 (YPT Center UI under DevBoard on `afnan-jr`)
+
+- **UI:** new **YPT Center** tab in `/devboard` (third tab; Feature Flags and YPT Verification unchanged). Overview cards, job/status filters, paginated run list (25/page), responsive cards on mobile, and a run-detail Sheet.
+- **Detail:** run metadata, summary JSON, per-member `previous → new` duration/status diffs, Created/Undone badges, and per-member undo.
+- **Undo:** per-member and per-run confirmation dialog (reason ≥ 10 chars) wired to the existing admin undo actions; shows reverted/skipped counts, conflict warnings, and the `mayReapply` banner.
+- **Read actions:** new DEV-guarded `listCronRunsAction`, `getCronRunDetailAction`, `getCronOverviewAction`; repository now returns serializable DTOs with offset pagination and a 24h overview.
+- **Tests:** 9 panel tests (jsdom), 6 read-action tests, DevBoard tab assertion; full web suite green.
+- **Docs:** `docs/cron-logs/README.md` §4.6 added.
+- **NEXT STEP:** none (no commit made yet).
+
+### Session 156 — 2026-10-24 (ypt-bot: CronLog job runs, member change history & undo backend on `afnan-jr`)
+
+- **Schema:** new `CronJobStatus` enum, `CronLog` (run audit: job, trigger, status, timing, summary, error) and `CronLogChange` (per-member previous → new duration/status, undo flags). Back-relations added to `User` and `ChallengeParticipant`.
+- **Migration:** `packages/database/prisma/migrations/20261027000000_add_cron_logs/migration.sql`.
+- **Bot:** `src/db/cron-log-repository.js` (`withCronLog`, `recordCronRun`, `recoverInterruptedRuns`, `pruneCronLogs`); ingest change capture in `daily-study-log.js`; run wiring in `server.js` and `backup/scheduler.js`.
+- **Retention:** `CRON_LOG_RETENTION_DAYS=30`, `CRON_LOG_CHANGE_RETENTION_DAYS=9` (undo window).
+- **Web backend:** `features/cron-logs/{data,api,domain}` with admin undo actions for one member change or a whole run (compare-and-swap conflict guard, AuditLog, cache invalidation). No UI page yet.
+- **Audit:** `AuditEventType` += `CRON_RUN_UNDO`, `CRON_MEMBER_CHANGE_UNDO`; `AuditTargetType` += `CRON_LOG`.
+- **Docs:** new `docs/cron-logs/README.md`; ypt-bot doc + database-backups doc updated.
+- **DB apply step:** `DATABASE_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" DIRECT_URL="postgresql://postgres:postgres@localhost:5433/holdmetoit" npm run db:migrate -w @holdmetoit/database` (Prisma CLI otherwise targets Supabase).
+- **NEXT STEP:** build the admin run-history/undo page on top of `features/cron-logs` (no commit made yet).
 
 ### Session 155 — 2026-10-24 (ypt-bot: layered file structure on `afnan-jr`)
 
