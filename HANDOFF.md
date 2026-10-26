@@ -153,7 +153,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > [!IMPORTANT]
 > **EXACT NEXT STEP (For Incoming Agent):**
 >
-> 0. Validate Session 162's duo identity changes: run the full `npm run test:web` / `npm run build:web`, then manually exercise `/challenge/seed-duos-october-2026` (team-view default, no VS panel, edit name + emoji as `mock_duo_1`, invalid/multi-emoji rejection, dry-run clear-to-null, combined audit row, locked-results read-only) at 360px.
+> 0. Validate Session 162's duo identity changes: run the full `npm run test:web` / `npm run build:web`, then manually exercise `/challenge/seed-duos-october-2026` (team-view default, no VS panel, edit name + emoji as `mock_duo_1`, invalid/multi-emoji rejection, dry-run clear-to-null, combined audit row, locked-results read-only) at 360px. Apply migration `20261029000000_team_active_name_ci_unique` to each environment (back up first; verify no active case-insensitive duplicate team names). The local DB migration history currently diverges from the repo, so resolve `prisma migrate status` before running `migrate deploy`.
 > 1. Create the `challenge_wrapped_v1` feature flag in the target DB via `/devboard` (key `challenge_wrapped_v1`, `isEnabled = true`, `rolloutMode = TARGETED` for testers → `GLOBAL` for everyone). Wrapped is fail-closed and stays dark until this row exists.
 > 2. Restore the remaining deleted P0 UIs:
 >    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
@@ -186,6 +186,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Admin audit:** `computeEventDetailsDiff` now reports `icon changed <old> → <new>` instead of the opaque `icon changed`; admin edits remain in the existing `EVENT_DETAILS_UPDATED` model.
 - **Trophy badges:** Challenge-standings `TrophyRoleBadge` pills (mobile, desktop, team view) are now gated by `global_leaderboard_v1` via `isGlobalLeaderboardEnabled` (page → `ChallengeView` → `ChallengeLeaderboardTab`, default `false`). Previously they rendered regardless of the flag.
 - **Test stability:** `features/e2e/solo-challenge-lifecycle.test.ts` now derives its challenge window relative to `Date.now()`; the old fixed `endAt` made enrollment fail once wall-clock time passed `2026-10-26T08:00Z`.
+- **Identity concurrency:** `updateDuoTeamIdentity` now opens a transaction, locks the `Challenge` and `ChallengeParticipant` rows with `FOR UPDATE`, then re-reads and validates authorization before updating the team and writing the audit row. This closes results-lock/withdrawal/roster races.
+- **Team-name uniqueness:** migration `20261029000000_team_active_name_ci_unique` drops `Team_challengeId_name_key` and creates a partial unique index on `(challengeId, LOWER(name)) WHERE "isDeleted" = false`. `schema.prisma` no longer declares `@@unique([challengeId, name])`; soft-deleted teams no longer block name reuse.
 - **Docs:** `FEATURES.md` §4.7, `docs/challenges/README.md` §8, and `docs/leaderboard/README.md` §7–8 updated.
 - **NEXT STEP:** run the full `npm run test:web` / `npm run build:web`, then complete the manual checks in §6 item 0.
 

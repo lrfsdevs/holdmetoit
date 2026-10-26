@@ -33,7 +33,7 @@ All features are strictly tagged with their planned deployment phase:
 | `FEAT-CHAL-03`  | Automated Countdown Timer & Expiration                         | Challenge Ops       | `[P1]` | System                |  ⚠️ Timestamp lifecycle active; background worker pending   |
 | `FEAT-CHAL-04`  | Auto-Balancer Snake Draft & 15h Cap                            | Challenge Ops       | `[V1]` | Admin                 |                         ⏸️ Planned                          |
 | `FEAT-CHAL-05`  | Event Lock & Freeze Final Results                              | Challenge Ops       | `[P0]` | Admin                 |  ✅ `DONE` (`resultsLockedAt`, idempotent lock, 10s undo)   |
-| `FEAT-CHAL-06`  | Duo Partner Self-Naming & Dynamic Team Identities              | Challenge Ops       | `[P0]` | Participant, Admin    |  ⚠️ Team identities live; participant self-naming pending   |
+| `FEAT-CHAL-06`  | Duo Partner Self-Naming & Dynamic Team Identities              | Challenge Ops       | `[P0]` | Participant, Admin    |        ✅ `DONE` (name + emoji self-editing + audit)        |
 | `FEAT-AUDIT-01` | Append-Only Immutable System Audit Trail                       | Admin & Audit       | `[P0]` | Admin, System         |  ✅ `DONE` (PostgreSQL `AuditLog` model + Event Audit tab)  |
 | `FEAT-DECL-01`  | Declared Target Hours (`HH:MM:SS`)                             | Declarations        | `[P0]` | Participant           |                          ✅ `DONE`                          |
 | `FEAT-DECL-02`  | Mandatory Weekly Goals Checklist                               | Declarations        | `[P0]` | Participant           |      ✅ `DONE` (challenge-linked tasks + soft delete)       |

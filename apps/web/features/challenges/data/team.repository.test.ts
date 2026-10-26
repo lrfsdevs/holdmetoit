@@ -14,6 +14,7 @@ const prismaMock = vi.hoisted(() => {
          findFirst: vi.fn(),
          update: vi.fn(),
       },
+      $queryRaw: vi.fn(),
       $transaction: vi.fn(),
    };
 
@@ -83,6 +84,9 @@ function baseParams(overrides: Record<string, unknown> = {}) {
 describe("updateDuoTeamIdentity", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([
+         { id: "chal-1" },
+      ] as never);
       vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
          activeChallenge() as never
       );
@@ -107,6 +111,7 @@ describe("updateDuoTeamIdentity", () => {
          where: { id: "team-1" },
          data: { name: "Caffeine & Calculus", iconEmoji: "🔥" },
       });
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
       expect(result.name).toBe("Caffeine & Calculus");
       expect(recordAuditEvent).toHaveBeenCalledWith(
          expect.objectContaining({

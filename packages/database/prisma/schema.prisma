@@ -166,7 +166,9 @@ model Team {
   participants ChallengeParticipant[]
   wagers       Wager[]
 
-  @@unique([challengeId, name])
+  // Active team names are case-insensitively unique per challenge via the
+  // partial unique index on (challengeId, lower(name)) WHERE isDeleted = false
+  // created in migration 20261029000000_team_active_name_ci_unique.
   @@index([challengeId, isDeleted])
 }
 

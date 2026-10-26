@@ -120,7 +120,7 @@ Participants in `DUOS` challenges can edit their own duo team **name and emoji**
 
 - **Who:** Any enrolled, non-withdrawn member of the duo team (`ChallengeParticipant.teamId` must be set).
 - **When:** While the challenge is `UPCOMING` or `ACTIVE` **and** `Challenge.resultsLockedAt` is null. Identities freeze at results lock; completed events are read-only.
-- **Name validation:** Trimmed, 1–40 characters. Names must be unique per challenge, compared case-insensitively (`@@unique([challengeId, name])` is the DB backstop).
+- **Name validation:** Trimmed, 1–40 characters. Names must be unique per challenge, compared case-insensitively. The DB backstop is a partial unique index on `(challengeId, LOWER(name))` for active (`isDeleted = false`) teams, so soft-deleted teams do not block name reuse.
 - **Emoji validation:** Empty clears the icon (`null`). Otherwise the input must be exactly one grapheme (`Intl.Segmenter`) and emoji-like (`Extended_Pictographic`, a regional-indicator pair, or a keycap). ZWJ families, flags, VS16 sequences, and skin tones are preserved intact.
 - **Administrators:** The Manage tab remains the host override and is not affected by the participant window.
 
@@ -141,6 +141,7 @@ Participants in `DUOS` challenges can edit their own duo team **name and emoji**
 - Success invalidates the `challengeScoreboard` + `challengeMetadata` cache tags, clears the team-color cache, and revalidates `/challenge/:id`, `/`, and `/challenges`.
 - Every successful save writes **one** `HOUSE_IDENTITY_UPDATED` audit event targeting the `TEAM` entity. `previousValue` and `newValue` both contain `{ name, iconEmoji }`, and the reason names the changed fields (`… updated their duo team name`, `… emoji`, or `… name and emoji`).
 - The team update and audit insert run in the **same Prisma transaction**; an audit persistence failure rolls back the identity save. Other non-transactional audit callers keep the existing fail-safe behavior.
+- Before authorization, the transaction locks the `Challenge` and `ChallengeParticipant` rows with `FOR UPDATE`, so a concurrent results lock, withdrawal, or roster edit cannot interleave with the identity save.
 - Duplicate names, invalid emoji, locked results, wrong format, and missing teams return typed error codes (`DUPLICATE_NAME`, `INVALID_EMOJI`, `RESULTS_LOCKED`, `INVALID_FORMAT`, `NOT_IN_TEAM`).
 
 ### Edge Cases
