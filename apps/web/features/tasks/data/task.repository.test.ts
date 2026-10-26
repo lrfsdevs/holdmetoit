@@ -6,6 +6,7 @@ import {
    deleteCategory,
    deleteTask,
    getUserCategorizedTasks,
+   rolloverIncompleteTasks,
    toggleTask,
    updateCategory,
    updateTask,
@@ -33,6 +34,7 @@ vi.mock("@/core/db", () => {
       },
       challengeParticipant: {
          findMany: vi.fn(),
+         findFirst: vi.fn(),
       },
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
@@ -44,6 +46,9 @@ describe("task.repository", () => {
       vi.clearAllMocks();
       vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue(
          [] as never
+      );
+      vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+         null as never
       );
    });
 
@@ -736,6 +741,111 @@ describe("task.repository", () => {
 
          expect(result).toBeNull();
          expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("updates task challengeId to valid challenge or null", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+            taskType: "WEEKLY",
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "chal_valid",
+         } as never);
+         vi.mocked(prisma.task.update).mockResolvedValue({
+            id: "task_1",
+            challengeId: "chal_valid",
+         } as never);
+
+         const result = await updateTask({
+            taskId: "task_1",
+            userId: "user_1",
+            challengeId: "chal_valid",
+         });
+
+         expect(result).toBeDefined();
+         expect(prisma.task.update).toHaveBeenCalledWith({
+            where: { id: "task_1" },
+            data: { challengeId: "chal_valid" },
+            include: { category: true },
+         });
+
+         const toPersonal = await updateTask({
+            taskId: "task_1",
+            userId: "user_1",
+            challengeId: null,
+         });
+
+         expect(toPersonal).toBeDefined();
+         expect(prisma.task.update).toHaveBeenCalledWith({
+            where: { id: "task_1" },
+            data: { challengeId: null },
+            include: { category: true },
+         });
+      });
+
+      it("rejects challengeId assignment when taskType is not WEEKLY", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+            taskType: "DAILY",
+         } as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "chal_valid",
+            })
+         ).rejects.toThrow("Only weekly tasks can be scoped to a challenge");
+      });
+
+      it("rejects invalid or unauthorized challengeId assignment", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            userId: "user_1",
+            taskType: "WEEKLY",
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue(
+            null as never
+         );
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "chal_unauthorized",
+            })
+         ).rejects.toThrow("Invalid challenge ID");
+      });
+   });
+
+   describe("rolloverIncompleteTasks", () => {
+      it("updates dueDate for all matching tasks", async () => {
+         vi.mocked(prisma.task.updateMany).mockResolvedValue({ count: 3 });
+
+         const result = await rolloverIncompleteTasks({
+            userId: "user_1",
+            taskIds: ["task_1", "task_2", "task_3"],
+            targetDateKey: "2026-10-26",
+         });
+
+         expect(result).toEqual({ count: 3 });
+         expect(prisma.task.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: { in: ["task_1", "task_2", "task_3"] },
+               userId: "user_1",
+               taskType: "DAILY",
+               isComplete: false,
+               status: {
+                  notIn: ["COMPLETED", "CROSSED_OUT"],
+               },
+               isDeleted: false,
+            },
+            data: {
+               dueDate: expect.any(Date),
+            },
+         });
       });
    });
 

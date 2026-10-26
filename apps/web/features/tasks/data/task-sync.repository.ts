@@ -289,6 +289,21 @@ export async function processBatchSync(
                            ? new Date(String(payload.dueDate))
                            : null;
                      }
+                     if (payload.challengeId !== undefined) {
+                        const rawChalId = payload.challengeId;
+                        if (
+                           typeof rawChalId === "string" &&
+                           rawChalId.trim().length > 0
+                        ) {
+                           dataToUpdate.challengeId =
+                              await validateTaskChallengeId(
+                                 userId,
+                                 rawChalId.trim()
+                              );
+                        } else {
+                           dataToUpdate.challengeId = null;
+                        }
+                     }
                      if (payload.status) {
                         const status = payload.status as TaskStatus;
                         dataToUpdate.status = status;

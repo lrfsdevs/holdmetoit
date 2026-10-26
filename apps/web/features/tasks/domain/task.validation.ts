@@ -32,6 +32,7 @@ export const createTaskSchema = z
          .regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be in YYYY-MM-DD format.")
          .nullable()
          .optional(),
+      challengeId: z.string().trim().min(1).nullable().optional(),
    })
    .refine((data) => Boolean(data.categoryId || data.newCategoryName), {
       message:
@@ -82,16 +83,18 @@ export const updateTaskSchema = z
          .regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be in YYYY-MM-DD format.")
          .nullable()
          .optional(),
+      challengeId: z.string().trim().min(1).nullable().optional(),
    })
    .refine(
       (data) =>
          data.title !== undefined ||
          data.isComplete !== undefined ||
          data.status !== undefined ||
-         data.dueDate !== undefined,
+         data.dueDate !== undefined ||
+         data.challengeId !== undefined,
       {
          message:
-            "Either title, isComplete, status, or dueDate must be provided.",
+            "Either title, isComplete, status, dueDate, or challengeId must be provided.",
       }
    );
 
@@ -109,6 +112,19 @@ export const deleteCategorySchema = z.object({
    categoryId: z.string().trim().min(1, "Category ID is required."),
 });
 
+export const rolloverTasksSchema = z.object({
+   taskIds: z
+      .array(z.string().trim().min(1))
+      .min(1, "At least one task ID must be provided."),
+   targetDateKey: z
+      .string()
+      .trim()
+      .regex(
+         /^\d{4}-\d{2}-\d{2}$/,
+         "Target date must be in YYYY-MM-DD format."
+      ),
+});
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type ToggleTaskInput = z.infer<typeof toggleTaskSchema>;
 export type DeleteTaskInput = z.infer<typeof deleteTaskSchema>;
@@ -116,3 +132,4 @@ export type CreateCategoryInput = z.input<typeof createCategorySchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 export type DeleteCategoryInput = z.infer<typeof deleteCategorySchema>;
+export type RolloverTasksInput = z.infer<typeof rolloverTasksSchema>;
