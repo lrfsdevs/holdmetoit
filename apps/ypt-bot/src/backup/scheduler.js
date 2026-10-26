@@ -12,6 +12,7 @@ import {
    listAllObjects,
    runDatabaseBackup,
 } from "./runner.js";
+import { CRON_JOBS, withCronLog } from "../db/cron-log-repository.js";
 
 /**
  * Starts the 00:00 UTC scheduler. Returns null when backups are disabled.
@@ -38,6 +39,7 @@ export function startDailyBackupScheduler(options = {}) {
          ? options.clock
          : () => new Date(options.clock || Date.now());
    const run = options.run || runDatabaseBackup;
+   const record = options.record || withCronLog;
    const catchUpDelayMs = options.catchUpDelayMs ?? 60 * 1000;
 
    let stopped = false;
@@ -57,12 +59,16 @@ export function startDailyBackupScheduler(options = {}) {
 
       inFlight = true;
       try {
-         const result = await run({
-            log:
-               typeof log.child === "function"
-                  ? log.child({ trigger: reason })
-                  : log,
-         });
+         const result = await record(
+            { jobName: CRON_JOBS.DB_BACKUP, trigger: reason },
+            () =>
+               run({
+                  log:
+                     typeof log.child === "function"
+                        ? log.child({ trigger: reason })
+                        : log,
+               })
+         );
          log.info("backup_run_finished", { reason, ...result });
       } catch (error) {
          log.error("backup_failed", { reason, error: error.message });
@@ -105,6 +111,10 @@ export function startDailyBackupScheduler(options = {}) {
             log.info("backup_catch_up_not_due", {
                lastBackupAt: lastBackupAt ? lastBackupAt.toISOString() : null,
             });
+            await record(
+               { jobName: CRON_JOBS.DB_BACKUP, trigger: "catch-up" },
+               async () => ({ skipped: true, reason: "not_due" })
+            );
             return;
          }
 

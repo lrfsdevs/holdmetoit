@@ -3,6 +3,15 @@ import { createHealthServer } from "./http/health-server.js";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { startDailyBackupScheduler } from "./backup/scheduler.js";
+import {
+   CRON_JOBS,
+   pruneCronLogs,
+   recordCronRun,
+   recoverInterruptedRuns,
+   withCronLog,
+} from "./db/cron-log-repository.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Fail fast when the runtime is missing configuration the ingest loop needs.
@@ -28,16 +37,28 @@ function validateConfig() {
 }
 
 let ingestInFlight = false;
+let firstIngest = true;
 
 async function ingestTick() {
    if (ingestInFlight) {
+      await recordCronRun({
+         jobName: CRON_JOBS.YPT_INGEST,
+         trigger: "overlap",
+         summary: { reason: "previous_run_in_flight" },
+      });
       logger.warn("Ingest tick skipped: previous run still in flight");
       return;
    }
 
    ingestInFlight = true;
+   const trigger = firstIngest ? "startup" : "interval";
+   firstIngest = false;
+
    try {
-      await runIngest();
+      await withCronLog(
+         { jobName: CRON_JOBS.YPT_INGEST, trigger },
+         ({ runId }) => runIngest({ runId })
+      );
    } catch (error) {
       logger.error("Ingest error", error);
    } finally {
@@ -62,11 +83,15 @@ async function startServer() {
          startDailyBackupScheduler();
       });
 
+      await recoverInterruptedRuns();
+      await pruneCronLogs();
+
       logger.info("Ingest loop started.", {
          intervalSeconds: env.POLL_INTERVAL_IDLE_SEC,
       });
       ingestTick();
       setInterval(ingestTick, env.POLL_INTERVAL_IDLE_SEC * 1000);
+      setInterval(pruneCronLogs, DAY_MS).unref();
    } catch (error) {
       logger.error("Initialization error", error);
       process.exit(1);

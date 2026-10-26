@@ -19,6 +19,10 @@ vi.mock("@/features/ypt/presentation/ypt-verification-panel", () => ({
    YptVerificationPanel: () => null,
 }));
 
+vi.mock("@/features/cron-logs/presentation/cron-logs-panel", () => ({
+   CronLogsPanel: () => null,
+}));
+
 describe("DevBoardView Presentation", () => {
    it("renders empty state when there are no feature flags", () => {
       const html = renderToStaticMarkup(
@@ -99,13 +103,14 @@ describe("DevBoardView Presentation", () => {
       expect(html).not.toContain("#a78bfa");
    });
 
-   it("renders the Feature Flags | YPT Verification section switcher", () => {
+   it("renders the Feature Flags | YPT Verification | Cron Logs switcher", () => {
       const html = renderToStaticMarkup(
          createElement(DevBoardView, { initialFlags: [] })
       );
 
       expect(html).toContain("Feature Flags");
       expect(html).toContain("YPT Verification");
+      expect(html).toContain("Cron Logs");
       expect(html).toContain('role="tablist"');
       expect(html).toContain('aria-selected="true"');
    });
