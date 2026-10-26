@@ -176,7 +176,7 @@ describe("updateDuoTeamIdentityAction", () => {
       expect(result).toEqual({
          ok: false,
          code: "UPDATE_FAILED",
-         message: "db down",
+         message: "Failed to update your duo team.",
       });
    });
 });

@@ -140,6 +140,7 @@ Participants in `DUOS` challenges can edit their own duo team **name and emoji**
 - The editor offers a single-emoji text field plus a preset palette. Blank input clears the emoji and the UI falls back to `🛡️`.
 - Success invalidates the `challengeScoreboard` + `challengeMetadata` cache tags, clears the team-color cache, and revalidates `/challenge/:id`, `/`, and `/challenges`.
 - Every successful save writes **one** `HOUSE_IDENTITY_UPDATED` audit event targeting the `TEAM` entity. `previousValue` and `newValue` both contain `{ name, iconEmoji }`, and the reason names the changed fields (`… updated their duo team name`, `… emoji`, or `… name and emoji`).
+- The team update and audit insert run in the **same Prisma transaction**; an audit persistence failure rolls back the identity save. Other non-transactional audit callers keep the existing fail-safe behavior.
 - Duplicate names, invalid emoji, locked results, wrong format, and missing teams return typed error codes (`DUPLICATE_NAME`, `INVALID_EMOJI`, `RESULTS_LOCKED`, `INVALID_FORMAT`, `NOT_IN_TEAM`).
 
 ### Edge Cases

@@ -135,11 +135,39 @@ export async function updateDuoTeamIdentity({
       }
    }
 
+   const changedFields: string[] = [];
+   if (nameChanged) changedFields.push("name");
+   if (emojiChanged) changedFields.push("emoji");
+
    let updatedTeam: Team;
    try {
-      updatedTeam = await prisma.team.update({
-         where: { id: team.id },
-         data: { name: normalizedName, iconEmoji: normalizedEmoji },
+      updatedTeam = await prisma.$transaction(async (tx) => {
+         const updated = await tx.team.update({
+            where: { id: team.id },
+            data: { name: normalizedName, iconEmoji: normalizedEmoji },
+         });
+
+         await recordAuditEvent(
+            {
+               actorId: userId,
+               actorUsername: actor.username,
+               actorDisplayName: actor.displayName,
+               actionType: "HOUSE_IDENTITY_UPDATED",
+               targetEntityId: team.id,
+               targetEntityType: "TEAM",
+               targetEntityName: normalizedName,
+               challengeId,
+               previousValue: {
+                  name: team.name,
+                  iconEmoji: team.iconEmoji ?? null,
+               },
+               newValue: { name: normalizedName, iconEmoji: normalizedEmoji },
+               auditReason: `${actor.displayName ?? actor.username} updated their duo team ${changedFields.join(" and ")}`,
+            },
+            { transactionClient: tx }
+         );
+
+         return updated;
       });
    } catch (error) {
       if (
@@ -153,24 +181,6 @@ export async function updateDuoTeamIdentity({
       }
       throw error;
    }
-
-   const changedFields: string[] = [];
-   if (nameChanged) changedFields.push("name");
-   if (emojiChanged) changedFields.push("emoji");
-
-   await recordAuditEvent({
-      actorId: userId,
-      actorUsername: actor.username,
-      actorDisplayName: actor.displayName,
-      actionType: "HOUSE_IDENTITY_UPDATED",
-      targetEntityId: team.id,
-      targetEntityType: "TEAM",
-      targetEntityName: normalizedName,
-      challengeId,
-      previousValue: { name: team.name, iconEmoji: team.iconEmoji ?? null },
-      newValue: { name: normalizedName, iconEmoji: normalizedEmoji },
-      auditReason: `${actor.displayName ?? actor.username} updated their duo team ${changedFields.join(" and ")}`,
-   });
 
    return updatedTeam;
 }

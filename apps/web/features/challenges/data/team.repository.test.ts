@@ -5,8 +5,8 @@ import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
 import { DuoTeamIdentityError } from "@/features/challenges/domain/duo-team-identity";
 import { updateDuoTeamIdentity } from "./team.repository";
 
-vi.mock("@/core/db", () => ({
-   prisma: {
+const prismaMock = vi.hoisted(() => {
+   const mock = {
       challenge: { findUnique: vi.fn() },
       challengeParticipant: { findUnique: vi.fn() },
       team: {
@@ -14,7 +14,18 @@ vi.mock("@/core/db", () => ({
          findFirst: vi.fn(),
          update: vi.fn(),
       },
-   },
+      $transaction: vi.fn(),
+   };
+
+   mock.$transaction.mockImplementation(
+      async (callback: (tx: typeof mock) => unknown) => callback(mock)
+   );
+
+   return mock;
+});
+
+vi.mock("@/core/db", () => ({
+   prisma: prismaMock,
 }));
 
 vi.mock("@/features/audit/data/audit-log.repository", () => ({
@@ -107,7 +118,8 @@ describe("updateDuoTeamIdentity", () => {
             previousValue: { name: "Old Duo Name", iconEmoji: "🔥" },
             newValue: { name: "Caffeine & Calculus", iconEmoji: "🔥" },
             auditReason: "Afnan updated their duo team name",
-         })
+         }),
+         { transactionClient: expect.anything() }
       );
    });
 
@@ -128,7 +140,8 @@ describe("updateDuoTeamIdentity", () => {
             previousValue: { name: "Old Duo Name", iconEmoji: "🔥" },
             newValue: { name: "Old Duo Name", iconEmoji: "🦊" },
             auditReason: "Afnan updated their duo team emoji",
-         })
+         }),
+         { transactionClient: expect.anything() }
       );
    });
 
@@ -147,7 +160,8 @@ describe("updateDuoTeamIdentity", () => {
             previousValue: { name: "Old Duo Name", iconEmoji: "🔥" },
             newValue: { name: "Night Owls", iconEmoji: "🦉" },
             auditReason: "Afnan updated their duo team name and emoji",
-         })
+         }),
+         { transactionClient: expect.anything() }
       );
    });
 
@@ -166,7 +180,8 @@ describe("updateDuoTeamIdentity", () => {
          expect.objectContaining({
             newValue: { name: "Old Duo Name", iconEmoji: null },
             auditReason: "Afnan updated their duo team emoji",
-         })
+         }),
+         { transactionClient: expect.anything() }
       );
    });
 
@@ -175,6 +190,19 @@ describe("updateDuoTeamIdentity", () => {
 
       expect(prisma.team.update).not.toHaveBeenCalled();
       expect(recordAuditEvent).not.toHaveBeenCalled();
+   });
+
+   it("propagates audit failures so the transaction rolls back", async () => {
+      vi.mocked(recordAuditEvent).mockRejectedValue(
+         new Error("audit store down")
+      );
+
+      await expect(
+         updateDuoTeamIdentity(baseParams({ iconEmoji: "🦊" }))
+      ).rejects.toThrow("audit store down");
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.team.update).toHaveBeenCalled();
    });
 
    it("rejects an invalid emoji before touching the database", async () => {

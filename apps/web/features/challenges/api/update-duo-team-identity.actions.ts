@@ -116,10 +116,7 @@ export async function updateDuoTeamIdentityAction(
       return {
          ok: false,
          code: "UPDATE_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to update your duo team.",
+         message: "Failed to update your duo team.",
       };
    }
 }
