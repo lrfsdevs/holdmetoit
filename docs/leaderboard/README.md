@@ -104,3 +104,22 @@ wrapper; it returns `FEATURE_DISABLED` when the flag is off.
 3. **Global GA:** `rolloutMode = GLOBAL`.
 4. **Decommission:** remove the flag and the `/leaderboard` route; trophy settlement and
    `TrophyRoleBadge` can remain for profile/wallet surfaces.
+
+## 7. Challenge Leaderboard (`/challenge/[id]?tab=leaderboard`)
+
+The per-challenge standings are separate from the global trophy board. Two format rules apply:
+
+1. **DUOS defaults to “View by Team.”** `resolveLeaderboardViewMode(value, format)` returns
+   `"team"` when no explicit `?view=` is present and the challenge format is `DUOS`; every
+   other format (and every explicit param) is unchanged. The canonical URL omits `?view=`
+   for the format's default mode, so switching a duo back to the default removes the param
+   rather than writing `?view=team`.
+2. **No head-to-head panel for DUOS.** The large “Team A VS Team B” matchup/tug-of-war panel
+   renders for `TEAM_VS_TEAM` only (`showHeadToHead = challenge.format !== "DUOS"`). Duo
+   battles rely on the top-3 podium and the team-view cards instead. `matchHeader.hasMatchup`
+   is intentionally untouched because Discord embeds still derive their description from it.
+
+Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
+`currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
+team-view header shows the pencil control only for the caller's own team. See
+`docs/challenges/README.md` §8.

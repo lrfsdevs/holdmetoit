@@ -141,15 +141,16 @@ All features are strictly tagged with their planned deployment phase:
 - **Description:** An immutable, tamper-proof audit log recording administrative actions, manual hours adjustments, pardons, and challenge kickoff/lock transitions.
 - **Implementation Note:** Events are generated via `recordAuditEvent` in `features/audit/data/audit-log.repository.ts`, persisted to the relational `AuditLog` database model (with in-memory fallback), and rendered in the admin Event Audit tab (`/challenge/:id?tab=audit`).
 
-### §4.7 Duo Partner Self-Naming & Pre-Kickoff Locking `[P0]`
+### §4.7 Duo Partner Self-Identity Editing (Name + Emoji) `[P0]`
 
 - **Feature ID:** `FEAT-CHAL-06`
-- **Description:** In `DUOS` format events (pairs of $N=2$ accountability partners), team naming autonomy is granted directly to the participants forming each pair.
+- **Description:** In `DUOS` format events (pairs of $N=2$ accountability partners), team identity autonomy is granted directly to the participants forming each pair. Both the duo name and its emoji are editable.
 - **Rules & User Flow:**
-   1. **Self-Naming Window (`UPCOMING` Phase):** When enrolled into a Duo slot during the pre-kickoff phase, either partner can input or edit their custom Duo Name (e.g., _"Caffeine & Calculus"_, _"Midnight Chai"_, _"Late-Night Bio Chemists"_).
-   2. **Real-Time Synchronization:** When partner A updates the duo name, partner B sees the updated team badge immediately in their Cockpit and on the event roster.
-   3. **Permanent Pre-Kickoff Lock:** Once the event host triggers kickoff (`ACTIVE`), duo team names become permanently read-only along with declared target hours and weekly goals.
-   4. **Host Override Absolute (Law L5):** Community hosts retain administrative authority to rename offensive, disruptive, or duplicate duo names from `/admin/challenges/:id/roster` at any time, with all edits recorded in the audit trail (`FEAT-AUDIT-01`).
+   1. **Self-Identity Window (`UPCOMING` + `ACTIVE`):** Either partner can edit the duo name (e.g., _"Caffeine & Calculus"_, _"Midnight Chai"_) and its single emoji while the event has not completed and `resultsLockedAt` is null. Presets are offered, but free-text single-emoji input is accepted.
+   2. **Real-Time Synchronization:** When partner A updates the duo identity, partner B sees the updated badge on their next load of the Cockpit, challenge hero, leaderboard, and event roster.
+   3. **Results-Lock Freeze:** Duo names and emojis become read-only when the host locks final results (`resultsLockedAt` set). A completed-but-unlocked event is also treated as read-only.
+   4. **Host Override Absolute (Law L5):** Community hosts retain administrative authority to rename offensive, disruptive, or duplicate duo names and adjust team emojis from the Manage tab at any time, with all edits recorded in the audit trail (`FEAT-AUDIT-01`).
+   5. **Implementation Note:** Participant edits go through `updateDuoTeamIdentityAction` / `updateDuoTeamIdentity` (name duplicate-checked case-insensitively per challenge, emoji validated as one grapheme). Each save emits one `HOUSE_IDENTITY_UPDATED` audit event on the `TEAM` entity with `previousValue`/`newValue` containing both `name` and `iconEmoji`, plus a reason naming the changed fields.
 
 ---
 

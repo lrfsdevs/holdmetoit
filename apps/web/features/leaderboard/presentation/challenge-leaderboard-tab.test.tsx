@@ -11,6 +11,25 @@ vi.mock("next/navigation", () => ({
    }),
 }));
 
+vi.mock("@/features/challenges/presentation/edit-duo-team-modal", () => ({
+   EditDuoTeamModal: ({
+      isOpen,
+      currentName,
+      currentEmoji,
+   }: {
+      isOpen: boolean;
+      currentName: string;
+      currentEmoji: string;
+   }) =>
+      isOpen
+         ? createElement(
+              "div",
+              { "data-testid": "edit-duo-modal" },
+              `${currentEmoji} ${currentName}`
+           )
+         : null,
+}));
+
 describe("ChallengeLeaderboardTab", () => {
    const mockChallenge: ChallengeScoreboardViewModel = {
       id: "test-challenge-1",
@@ -450,6 +469,113 @@ describe("ChallengeLeaderboardTab", () => {
       );
       expect(defaultHtml).not.toContain(
          `/challenge/${todayChallenge.id}/participant/part-test-123?`
+      );
+   });
+
+   it("keeps the head-to-head VS panel for team-vs-team challenges", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: mockChallenge,
+         })
+      );
+
+      expect(html).toContain("Total Challenge Log");
+      expect(html).toMatch(/>\s*VS\s*</);
+   });
+
+   it("removes the head-to-head VS panel for DUOS challenges", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: { ...mockChallenge, format: "DUOS" },
+         })
+      );
+
+      expect(html).not.toContain("Total Challenge Log");
+      expect(html).not.toMatch(/>\s*VS\s*</);
+      // Top-3 podium still provides the summary.
+      expect(html).toContain("Top Contributor · Rank 1");
+   });
+
+   it("defaults DUOS challenges to the team view without an explicit view prop", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: { ...mockChallenge, format: "DUOS" },
+         })
+      );
+
+      expect(html).toContain(
+         "grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"
+      );
+      expect(html).toContain("Leading House");
+   });
+
+   it("shows the edit control only on the caller's duo and only when allowed", () => {
+      const duoChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         format: "DUOS",
+         currentUser: {
+            ...mockChallenge.currentUser,
+            teamId: "team-serpents",
+            teamName: "Serpents",
+            teamIcon: "🐍",
+            canEditDuoTeam: true,
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, { challenge: duoChallenge })
+      );
+
+      expect(html).toContain('data-testid="edit-duo-team-team-serpents"');
+      expect(html).not.toContain('data-testid="edit-duo-team-team-raven"');
+
+      const lockedHtml = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: {
+               ...duoChallenge,
+               currentUser: {
+                  ...duoChallenge.currentUser,
+                  canEditDuoTeam: false,
+               },
+            },
+         })
+      );
+
+      expect(lockedHtml).not.toContain('data-testid="edit-duo-team-');
+   });
+
+   it("canonicalizes DUOS participant links against the team default", () => {
+      const duoChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         format: "DUOS",
+         standings: [
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-duo-1",
+            },
+         ],
+      };
+
+      const teamHtml = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, { challenge: duoChallenge })
+      );
+
+      expect(teamHtml).toContain(
+         `/challenge/${duoChallenge.id}/participant/part-duo-1"`
+      );
+      expect(teamHtml).not.toContain(
+         `/challenge/${duoChallenge.id}/participant/part-duo-1?view=team`
+      );
+
+      const individualHtml = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: duoChallenge,
+            initialViewMode: "individual",
+         })
+      );
+
+      expect(individualHtml).toContain(
+         `/challenge/${duoChallenge.id}/participant/part-duo-1?view=individual`
       );
    });
 });

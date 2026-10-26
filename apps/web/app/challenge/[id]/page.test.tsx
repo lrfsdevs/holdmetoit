@@ -30,6 +30,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
    ChallengeView: ({
       initialTab,
       isAdmin,
+      initialLeaderboardViewMode,
       initialRosterSearch,
       initialRosterTeamFilter,
       initialRosterPage,
@@ -37,6 +38,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
    }: {
       initialTab: string;
       isAdmin: boolean;
+      initialLeaderboardViewMode?: string;
       initialRosterSearch?: string;
       initialRosterTeamFilter?: string;
       initialRosterPage?: number;
@@ -48,6 +50,7 @@ vi.mock("@/features/challenges/presentation/challenge-view", () => ({
             "data-testid": "challenge-view",
             "data-initial-tab": initialTab,
             "data-is-admin": String(isAdmin),
+            "data-initial-view-mode": initialLeaderboardViewMode,
             "data-roster-search": initialRosterSearch,
             "data-roster-team": initialRosterTeamFilter,
             "data-roster-page": String(initialRosterPage),
@@ -177,6 +180,40 @@ describe("ChallengePage (Server Component)", () => {
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-initial-tab="overview"');
+   });
+
+   it("defaults non-duo challenges to the individual leaderboard view", async () => {
+      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-initial-view-mode="individual"');
+   });
+
+   it("defaults DUOS challenges to the team leaderboard view", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         format: "DUOS",
+      } as any);
+
+      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-initial-view-mode="team"');
+   });
+
+   it("lets an explicit view param override the DUOS default", async () => {
+      vi.mocked(getChallengeScoreboard).mockResolvedValue({
+         ...mockScoreboard,
+         format: "DUOS",
+      } as any);
+
+      const pageJsx = await ChallengePage({
+         params: { id: "chal-1" },
+         searchParams: { view: "individual" },
+      });
+      const html = renderToStaticMarkup(pageJsx);
+
+      expect(html).toContain('data-initial-view-mode="individual"');
    });
 
    it("passes search, team, and page from searchParams to ChallengeView", async () => {

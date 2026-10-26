@@ -36,6 +36,7 @@ import {
    AdminTargetOverrideModal,
    type AdminTargetOverrideParticipant,
 } from "@/features/challenges/presentation/admin-target-override-modal";
+import { EditDuoTeamModal } from "@/features/challenges/presentation/edit-duo-team-modal";
 import { DataPagination } from "@/components/ui/data-pagination";
 import {
    Table,
@@ -101,7 +102,7 @@ interface ChallengeLeaderboardTabProps {
 export function ChallengeLeaderboardTab({
    challenge,
    isAdmin = false,
-   initialViewMode = "individual",
+   initialViewMode,
 }: ChallengeLeaderboardTabProps) {
    const [searchQuery, setSearchQuery] = useState("");
    const [selectedTeamId, setSelectedTeamId] = useState("ALL");
@@ -109,18 +110,21 @@ export function ChallengeLeaderboardTab({
       "ALL" | "on-track" | "catch-up"
    >("ALL");
    const teamViewEnabled = supportsTeamView(challenge.format);
-   const [requestedViewMode, setViewMode] =
-      useState<LeaderboardViewMode>(initialViewMode);
+   const defaultViewMode = resolveLeaderboardViewMode(null, challenge.format);
+   const resolvedInitialViewMode = initialViewMode ?? defaultViewMode;
+   const [requestedViewMode, setViewMode] = useState<LeaderboardViewMode>(
+      resolvedInitialViewMode
+   );
    const viewMode: LeaderboardViewMode =
       requestedViewMode === "team" && !teamViewEnabled
          ? "individual"
          : requestedViewMode;
 
    useEffect(() => {
-      if (initialViewMode) {
-         setViewMode(initialViewMode);
+      if (resolvedInitialViewMode) {
+         setViewMode(resolvedInitialViewMode);
       }
-   }, [initialViewMode]);
+   }, [resolvedInitialViewMode]);
 
    useEffect(() => {
       const syncViewFromUrl = () => {
@@ -133,6 +137,8 @@ export function ChallengeLeaderboardTab({
                viewParam === "individual"
             ) {
                setViewMode(viewParam);
+            } else {
+               setViewMode(defaultViewMode);
             }
          }
       };
@@ -140,7 +146,7 @@ export function ChallengeLeaderboardTab({
       syncViewFromUrl();
       window.addEventListener("popstate", syncViewFromUrl);
       return () => window.removeEventListener("popstate", syncViewFromUrl);
-   }, []);
+   }, [defaultViewMode]);
 
    const handleViewModeChange = (mode: LeaderboardViewMode) => {
       setViewMode(mode);
@@ -148,7 +154,7 @@ export function ChallengeLeaderboardTab({
 
       if (typeof window !== "undefined") {
          const url = new URL(window.location.href);
-         if (mode === "individual") {
+         if (mode === defaultViewMode) {
             url.searchParams.delete("view");
          } else {
             url.searchParams.set("view", mode);
@@ -162,7 +168,7 @@ export function ChallengeLeaderboardTab({
    };
 
    const getParticipantProfileUrl = (participantId: string) => {
-      const query = viewMode !== "individual" ? `?view=${viewMode}` : "";
+      const query = viewMode !== defaultViewMode ? `?view=${viewMode}` : "";
       return `/challenge/${challenge.id}/participant/${participantId}${query}`;
    };
 
@@ -207,7 +213,10 @@ export function ChallengeLeaderboardTab({
       setIsTargetOverrideModalOpen(true);
    };
 
-   const { matchHeader, teams, standings } = challenge;
+   const { matchHeader, teams, standings, currentUser } = challenge;
+
+   const [isEditOpen, setIsEditOpen] = useState(false);
+   const showHeadToHead = challenge.format !== "DUOS";
 
    const teamA = matchHeader.teamA ?? teams[0];
    const teamB = matchHeader.teamB ?? teams[1];
@@ -303,7 +312,7 @@ export function ChallengeLeaderboardTab({
    return (
       <div className="space-y-8">
          {/* 1. Head-to-Head Battle Progress Matchup (Leaderboard 142:2183) */}
-         {teamA && teamB ? (
+         {showHeadToHead && teamA && teamB ? (
             <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-lg space-y-6">
                <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center">
                   {/* Team A Card */}
@@ -840,6 +849,21 @@ export function ChallengeLeaderboardTab({
                                              <h4 className="text-base font-bold text-white truncate">
                                                 {t.name}
                                              </h4>
+                                             {t.id === currentUser.teamId &&
+                                                currentUser.canEditDuoTeam && (
+                                                   <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                         setIsEditOpen(true)
+                                                      }
+                                                      data-testid={`edit-duo-team-${t.id}`}
+                                                      aria-label="Edit your duo name and emoji"
+                                                      title="Edit your duo name and emoji"
+                                                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-border-strong bg-surface-elevated text-text-tertiary transition-colors hover:border-feedback-success/40 hover:text-white"
+                                                   >
+                                                      <Pencil className="h-3.5 w-3.5" />
+                                                   </button>
+                                                )}
                                              <span
                                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badgeTint}`}
                                              >
@@ -1429,6 +1453,18 @@ export function ChallengeLeaderboardTab({
                />
             </>
          )}
+
+         {currentUser.teamId &&
+            currentUser.teamName &&
+            currentUser.canEditDuoTeam && (
+               <EditDuoTeamModal
+                  challengeId={challenge.id}
+                  currentName={currentUser.teamName}
+                  currentEmoji={currentUser.teamIcon ?? ""}
+                  isOpen={isEditOpen}
+                  onOpenChange={setIsEditOpen}
+               />
+            )}
       </div>
    );
 }

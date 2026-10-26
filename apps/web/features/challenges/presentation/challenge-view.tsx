@@ -15,7 +15,10 @@ import { EventAuditTab } from "@/features/audit/presentation/event-audit-tab";
 import { ChallengeSummaryTab } from "@/features/wrapped/presentation/challenge-summary-tab";
 import { ChallengeWrappedModal } from "@/features/wrapped/presentation/challenge-wrapped-modal";
 
-import type { LeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
+import {
+   resolveLeaderboardViewMode,
+   type LeaderboardViewMode,
+} from "@/features/leaderboard/domain/leaderboard";
 
 interface ChallengeViewProps {
    challenge: ChallengeScoreboardViewModel;
@@ -38,7 +41,7 @@ export function ChallengeView({
    challenge,
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
-   initialLeaderboardViewMode = "individual",
+   initialLeaderboardViewMode,
    initialRosterSearch = "",
    initialRosterTeamFilter = "ALL",
    initialRosterPage = 1,
@@ -48,6 +51,9 @@ export function ChallengeView({
 }: ChallengeViewProps) {
    const isSummaryVisible =
       isWrappedEnabled && Boolean(challenge.resultsLockedAt);
+   const resolvedLeaderboardViewMode =
+      initialLeaderboardViewMode ??
+      resolveLeaderboardViewMode(null, challenge.format);
 
    const [activeTab, setActiveTab] = useState<ChallengeTab>(() =>
       resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
@@ -172,7 +178,7 @@ export function ChallengeView({
                <ChallengeLeaderboardTab
                   challenge={challenge}
                   isAdmin={isAdmin}
-                  initialViewMode={initialLeaderboardViewMode}
+                  initialViewMode={resolvedLeaderboardViewMode}
                />
             </div>
          )}

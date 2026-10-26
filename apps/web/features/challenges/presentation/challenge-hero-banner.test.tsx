@@ -102,6 +102,25 @@ vi.mock("./enrollment-modal", () => ({
          : null,
 }));
 
+vi.mock("./edit-duo-team-modal", () => ({
+   EditDuoTeamModal: ({
+      isOpen,
+      currentName,
+      currentEmoji,
+   }: {
+      isOpen: boolean;
+      currentName: string;
+      currentEmoji: string;
+   }) =>
+      isOpen
+         ? createElement(
+              "div",
+              { "data-testid": "edit-duo-modal" },
+              `${currentEmoji} ${currentName}`
+           )
+         : null,
+}));
+
 const uploadedUrl =
    "https://example.supabase.co/storage/v1/object/public/holdmetoit-bucket/event-banners/banner.png";
 const challenge: ChallengeScoreboardViewModel = {
@@ -309,5 +328,75 @@ describe("ChallengeHeroBanner", () => {
       expect(html).toContain('href="/challenges"');
       expect(html).toContain("Back to challenges");
       expect(html).not.toContain("Back to home");
+   });
+
+   it("shows the caller's duo emoji, name, and edit action while unlocked", () => {
+      const html = render({
+         ...challenge,
+         format: "DUOS",
+         teams: [],
+         matchHeader: { ...challenge.matchHeader },
+         currentUser: {
+            isLoggedIn: true,
+            isEnrolled: true,
+            participantId: "part-1",
+            teamId: "team-1",
+            teamName: "Caffeine & Calculus",
+            teamIcon: "🦊",
+            canEditDuoTeam: true,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
+         },
+      });
+
+      expect(html).toContain("Your duo:");
+      expect(html).toContain("🦊");
+      expect(html).toContain("Caffeine &amp; Calculus");
+      expect(html).toContain('data-testid="hero-edit-duo-button"');
+      expect(html).toContain("Edit duo");
+   });
+
+   it("keeps the duo identity visible without an edit action when locked", () => {
+      const html = render({
+         ...challenge,
+         format: "DUOS",
+         currentUser: {
+            isLoggedIn: true,
+            isEnrolled: true,
+            participantId: "part-1",
+            teamId: "team-1",
+            teamName: "Midnight Chai",
+            teamIcon: "🌙",
+            canEditDuoTeam: false,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
+         },
+      });
+
+      expect(html).toContain("Your duo:");
+      expect(html).toContain("🌙");
+      expect(html).toContain("Midnight Chai");
+      expect(html).not.toContain('data-testid="hero-edit-duo-button"');
+   });
+
+   it("does not show the duo identity block for non-duo formats", () => {
+      const html = render({
+         ...challenge,
+         format: "TEAM_VS_TEAM",
+         currentUser: {
+            isLoggedIn: true,
+            isEnrolled: true,
+            participantId: "part-1",
+            teamId: "team-1",
+            teamName: "Honey Bees",
+            teamIcon: "🐝",
+            canEditDuoTeam: true,
+            isWrappedSeen: false,
+            isFeedbackFilled: false,
+         },
+      });
+
+      expect(html).not.toContain("Your duo:");
+      expect(html).not.toContain('data-testid="hero-edit-duo-button"');
    });
 });

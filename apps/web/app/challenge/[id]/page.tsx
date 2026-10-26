@@ -127,7 +127,8 @@ export default async function ChallengePage({
       { isSummaryVisible }
    );
    const initialLeaderboardViewMode = resolveLeaderboardViewMode(
-      searchParams?.view
+      searchParams?.view,
+      challenge.format
    );
 
    const initialRosterSearch = searchParams?.search ?? "";

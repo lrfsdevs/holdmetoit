@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-25 (Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 158 on `afnan-jr` · Session 155 on `dev` · Session 154 on `krish`)
+> **Last Updated:** 2026-10-26 (Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -153,6 +153,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > [!IMPORTANT]
 > **EXACT NEXT STEP (For Incoming Agent):**
 >
+> 0. Validate Session 162's duo identity changes: run the full `npm run test:web` / `npm run build:web`, then manually exercise `/challenge/seed-duos-october-2026` (team-view default, no VS panel, edit name + emoji as `mock_duo_1`, invalid/multi-emoji rejection, dry-run clear-to-null, combined audit row, locked-results read-only) at 360px.
 > 1. Create the `challenge_wrapped_v1` feature flag in the target DB via `/devboard` (key `challenge_wrapped_v1`, `isEnabled = true`, `rolloutMode = TARGETED` for testers → `GLOBAL` for everyone). Wrapped is fail-closed and stays dark until this row exists.
 > 2. Restore the remaining deleted P0 UIs:
 >    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
@@ -175,6 +176,26 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
+
+- **Duo identity editor (FEAT-CHAL-06):** Participants in DUOS challenges can now edit their team **name and emoji**. Replaced the name-only API with `domain/duo-team-identity.ts`, `data/team.repository.ts#updateDuoTeamIdentity`, `api/update-duo-team-identity.actions.ts`, and `presentation/edit-duo-team-modal.tsx` (single-emoji input + preset palette + clear). This supersedes Session 161's `duo-team-name.ts` / `renameDuoTeamName` / `rename-duo-team.*` files.
+- **Emoji validation:** Grapheme-aware via `Intl.Segmenter`; exactly one emoji-like grapheme (Extended_Pictographic, regional-indicator flag, or keycap). Preserves ZWJ families, flags, VS16, and skin tones; blank clears to `null`.
+- **Audit:** One combined `HOUSE_IDENTITY_UPDATED` event per save on the `TEAM` entity, with `previousValue`/`newValue` = `{ name, iconEmoji }` and a reason naming the changed fields (`name`, `emoji`, or `name and emoji`). No row for a no-op save.
+- **Leaderboard data/UI:** `currentUser` now exposes `teamIcon` and `canEditDuoTeam`; hero shows `Your duo: {emoji} {name}` with an **Edit duo** action; the team-view pencil opens the shared editor.
+- **Admin audit:** `computeEventDetailsDiff` now reports `icon changed <old> → <new>` instead of the opaque `icon changed`; admin edits remain in the existing `EVENT_DETAILS_UPDATED` model.
+- **Docs:** `FEATURES.md` §4.7, `docs/challenges/README.md` §8, and `docs/leaderboard/README.md` §7 updated.
+- **NEXT STEP:** run the full `npm run test:web` / `npm run build:web`, then complete the manual checks in §6 item 0.
+
+### Session 161 — 2026-10-26 (Duo battles: participant self-rename + DUOS leaderboard defaults on `afnan-jr`)
+
+- **Duo self-rename (FEAT-CHAL-06):** Any enrolled, non-withdrawn member may rename their DUOS team until `resultsLockedAt` is set. Added `domain/duo-team-name.ts`, `data/team.repository.ts` (`renameDuoTeamName`), `api/rename-duo-team.actions.ts`, and `presentation/rename-duo-team-modal.tsx`. Successful renames audit `HOUSE_IDENTITY_UPDATED` on the `TEAM` entity; names are case-insensitively unique per challenge.
+- **Leaderboard data:** `ChallengeScoreboardViewModel.currentUser` now exposes `teamId`, `teamName`, and `canRenameDuoTeam` (optional fields; derived without extra queries).
+- **Leaderboard UI:** DUOS hides the head-to-head “VS” panel (`showHeadToHead = format !== "DUOS"`); the top-3 podium remains. DUOS defaults to **View by Team** via `resolveLeaderboardViewMode(value, format)`, with canonical `?view=` handling (default omits the param) in `page.tsx`, `ChallengeView`, and the tab.
+- **Rename triggers:** Pencil control on the caller's own team card in team view + “Your duo … Rename” in the hero banner.
+- **Docs:** `FEATURES.md` §4.7 updated from pre-kickoff lock to results-lock freeze; `docs/challenges/README.md` §8 and `docs/leaderboard/README.md` §7 added.
+- **Verification:** `npm run typecheck:web` ✅; focused Vitest suites for domain, repository, action, data, leaderboard tab, hero banner, and challenge page ✅.
+- **NEXT STEP:** run the full `npm run test:web` and `npm run build:web`, then manually verify the seeded DUOS challenge (`seed-duos-october-2026`) as described in §6 item 0.
 
 ### Session 160 — 2026-10-24 (Renamed DevBoard YPT Center tab to Cron Logs on `afnan-jr`)
 
