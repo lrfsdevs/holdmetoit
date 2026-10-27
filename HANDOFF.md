@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 210 files green (2058/2058 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 210 files green (2063/2063 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -1596,17 +1596,14 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Persistent Storage Utility (`cockpit-tasks-storage.ts`):**
    - Added user-scoped localStorage key generation (`holdmetoit:collapsed_categories:${userId || "guest"}`).
    - Implemented `readCollapsedCategoryIds(userId)` and `writeCollapsedCategoryIds(userId, ids)` with SSR safeguards and storage exception protection (quota/private browsing).
-   - Implemented `isCategoryCollapsed(cat, collapsedIds)` with primary ID checking and category name fallback.
-   - Implemented `toggleCategoryCollapseKey(cat, currentCollapsed)` returning pure Set updates.
+   - Implemented `isCategoryCollapsed` and `toggleCategoryCollapseKey` returning pure Set updates (refined to board-isolated keys in Session 166 and cookie sync in Session 167).
    - 100% unit test coverage in `cockpit-tasks-storage.test.ts` (18/18 tests passing).
 - **Presentation Layer Integration (`cockpit-tasks-section.tsx`):**
    - Initialized `collapsedCategoryIds` state and `collapsedCategoryIdsRef` from `readCollapsedCategoryIds(userId)`.
-   - Wired category collapse initialization in both `dailyCategories` and `weeklyCategories` state declarations using `isCategoryCollapsed`.
    - Preserved category collapsed states during `hydrateFromIndexedDB` and background `TASKS_SYNCED_EVENT` sync triggers.
-   - Updated `toggleDailyCollapse` and `toggleWeeklyCollapse` to update `collapsedCategoryIds` state, write to `localStorage`, and update component category state in lockstep.
-   - Preserved `cat.isCollapsed` state when adding new tasks to existing categories, while newly created categories default to expanded.
+   - Updated `toggleDailyCollapse` and `toggleWeeklyCollapse` to manage collapse state via Set keys in storage and memory.
    - Added automatic cleanup of deleted category IDs in `handleConfirmDeleteCategory` to prevent localStorage leakage.
-   - Added `storage` event listener for seamless multi-tab synchronization.
+   - Added `storage` event listener for multi-tab synchronization.
 - **Quality Gates & Test Coverage:**
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: 18/18 tests passing.
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: 6/6 tests passing.
@@ -1614,8 +1611,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 errors.
 - **Jira Status:** `KAN-63` transitioned from `In Progress` to `In Review` (id: 31).
-- **GitHub Issue Status:** Ready for PR submission to `dev` resolving GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194).
-- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+- **Status:** Initial persistence foundation; subsequent edge-cases resolved in Sessions 166–168.
 
 ### Session 166 — 2026-10-28 (Resolve Hydration Mismatch, Cross-Board Collapse Isolation & Stale Goal Flicker — GH-#194 / KAN-63)
 
@@ -1633,7 +1629,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-63` remains `In Review`.
-- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+- **Status:** Cross-board scoping and flicker fixes; refined in Sessions 167–168.
 
 ### Session 167 — 2026-10-28 (Instant SSR Cookie Pre-Rendering & Single Source of Truth for Collapse State — GH-#194 / KAN-63)
 
@@ -1653,7 +1649,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-63` remains `In Review`.
-- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+- **Status:** SSR pre-rendering & single source of truth; refined in Session 168.
 
 ### Session 168 — 2026-10-28 (Deterministic Category Ordering Across SSR & IndexedDB Hydration — GH-#194 / KAN-63)
 
@@ -1679,4 +1675,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-63` remains `In Review`.
-- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+- **GitHub PR:** Submitted PR [#197](https://github.com/lrfsdevs/holdmetoit/pull/197) from `krish` to `dev`.
+- **Status:** PR submitted and verified.
+
+### Session 169 — 2026-10-28 (Address CodeRabbit Review Feedback on PR #197 — GH-#194 / KAN-63)
+
+- **Review Feedback Addressed on [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197):**
+   1. **`collapsedCategoryIds` Initializer (`cockpit-tasks-section.tsx` lines 308–324):** Updated state initializer check to `initialCollapsedCategoryIds !== undefined`, ensuring empty arrays (`[]`) from server cookie are respected without falling back prematurely to client-side localStorage.
+   2. **Cache Seeding Local Record Protection (`cockpit-tasks-section.tsx` lines 753–780):** In `hydrateFromIndexedDB` initial cache seeding, preserved existing local categories and tasks whose `syncState !== "synced"` by filtering out their IDs from seed writes, preventing uncommitted local edits from being overwritten by server seeds.
+   3. **Initial Category SortOrder Calculation (`cockpit-tasks-section.tsx` lines 2436–2450):** Derived `initialSortOrder` once from board categories as `highestOrder + 1` (defaulting empty board to baseline -1 $\rightarrow$ 0) and reused the value across both `putLocalCategory` and queued mutation rather than relying on category count.
+   4. **Untrusted Review Data Handling:** Verified and rejected review recommendation to unconditionally apply empty localStorage sets over `initialCollapsedCategoryIds` in post-mount effect; verified it caused premature expansion flash and regression in unit test `pre-renders in collapsed state without flash when initialCollapsedCategoryIds is passed from server cookie`.
+   5. **`HANDOFF.md` Maintenance:** Updated test gate to 2,063/2,063 tests, pruned superseded Session 165 `isCategoryCollapsed` fallback/`cat.isCollapsed` details, and consolidated repeated stale NEXT STEP entries.
+- **Quality Gates:**
+   - `npm run test:web -- cockpit-tasks`: ✅ 6 test files passed (72/72 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **GitHub PR:** Pushed updates to [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197) (`krish` $\rightarrow$ `dev`).
+- **NEXT STEP:** Peer review and merge PR #197 into `dev`.

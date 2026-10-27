@@ -308,10 +308,7 @@ export function CockpitTasksSection({
    const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<
       Set<string>
    >(() => {
-      if (
-         initialCollapsedCategoryIds &&
-         initialCollapsedCategoryIds.length > 0
-      ) {
+      if (initialCollapsedCategoryIds !== undefined) {
          return new Set(
             initialCollapsedCategoryIds.filter(
                (k) =>
@@ -756,8 +753,35 @@ export function CockpitTasksSection({
                      syncState: "synced",
                   }));
 
-                  await putLocalCategories(seedCats);
-                  await putLocalTasks(seedTasks);
+                  const existingCats = await getAllLocalCategories(
+                     userId ?? null
+                  );
+                  const existingTasks = await getAllLocalTasks(userId ?? null);
+
+                  const pendingCatIds = new Set(
+                     existingCats
+                        .filter((c) => c.syncState && c.syncState !== "synced")
+                        .map((c) => c.id)
+                  );
+                  const pendingTaskIds = new Set(
+                     existingTasks
+                        .filter((t) => t.syncState && t.syncState !== "synced")
+                        .map((t) => t.id)
+                  );
+
+                  const catsToSeed = seedCats.filter(
+                     (c) => !pendingCatIds.has(c.id)
+                  );
+                  const tasksToSeed = seedTasks.filter(
+                     (t) => !pendingTaskIds.has(t.id)
+                  );
+
+                  if (catsToSeed.length > 0) {
+                     await putLocalCategories(catsToSeed);
+                  }
+                  if (tasksToSeed.length > 0) {
+                     await putLocalTasks(tasksToSeed);
+                  }
                }
                return;
             }
@@ -2414,11 +2438,16 @@ export function CockpitTasksSection({
 
       const nowIso = new Date().toISOString();
 
+      let initialSortOrder = 0;
       if (isNew && targetCatId) {
-         const initialSortOrder =
-            addModalType === "daily"
-               ? dailyCategories.length
-               : weeklyCategories.length;
+         const boardCategories =
+            addModalType === "daily" ? dailyCategories : weeklyCategories;
+         const highestOrder = boardCategories.reduce(
+            (max, c) => Math.max(max, c.sortOrder ?? 0),
+            -1
+         );
+         initialSortOrder = highestOrder + 1;
+
          putLocalCategory({
             id: targetCatId,
             userId: userId ?? null,
@@ -2451,10 +2480,6 @@ export function CockpitTasksSection({
 
       if (isLoggedIn && userId) {
          if (isNew && targetCatId) {
-            const initialSortOrder =
-               addModalType === "daily"
-                  ? dailyCategories.length
-                  : weeklyCategories.length;
             enqueueMutation({
                id: crypto.randomUUID(),
                entityType: "CATEGORY",
