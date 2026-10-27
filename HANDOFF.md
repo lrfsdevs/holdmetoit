@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-26 (Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 187 files green (1777/1777 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 210 files green (2058/2058 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -1589,3 +1589,30 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
 - **GitHub PR:** Submitted PR [#193](https://github.com/lrfsdevs/holdmetoit/pull/193) from `krish` to `dev`.
 - **NEXT STEP:** Peer review and merge PR #193 into `dev`.
+
+### Session 165 — 2026-10-28 (Persist Category Collapsed State Across Navigation, Refresh & Sync on `krish` — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed issue where Cockpit Todo list categories lost their collapsed state on page refresh, client navigation across routes, and background IndexedDB sync events (`TASKS_SYNCED_EVENT`), blowing open all tasks and causing visual clutter.
+- **Persistent Storage Utility (`cockpit-tasks-storage.ts`):**
+   - Added user-scoped localStorage key generation (`holdmetoit:collapsed_categories:${userId || "guest"}`).
+   - Implemented `readCollapsedCategoryIds(userId)` and `writeCollapsedCategoryIds(userId, ids)` with SSR safeguards and storage exception protection (quota/private browsing).
+   - Implemented `isCategoryCollapsed(cat, collapsedIds)` with primary ID checking and category name fallback.
+   - Implemented `toggleCategoryCollapseKey(cat, currentCollapsed)` returning pure Set updates.
+   - 100% unit test coverage in `cockpit-tasks-storage.test.ts` (18/18 tests passing).
+- **Presentation Layer Integration (`cockpit-tasks-section.tsx`):**
+   - Initialized `collapsedCategoryIds` state and `collapsedCategoryIdsRef` from `readCollapsedCategoryIds(userId)`.
+   - Wired category collapse initialization in both `dailyCategories` and `weeklyCategories` state declarations using `isCategoryCollapsed`.
+   - Preserved category collapsed states during `hydrateFromIndexedDB` and background `TASKS_SYNCED_EVENT` sync triggers.
+   - Updated `toggleDailyCollapse` and `toggleWeeklyCollapse` to update `collapsedCategoryIds` state, write to `localStorage`, and update component category state in lockstep.
+   - Preserved `cat.isCollapsed` state when adding new tasks to existing categories, while newly created categories default to expanded.
+   - Added automatic cleanup of deleted category IDs in `handleConfirmDeleteCategory` to prevent localStorage leakage.
+   - Added `storage` event listener for seamless multi-tab synchronization.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: 18/18 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: 6/6 tests passing.
+   - Full workspace test suite: ✅ 210 test files passed (2,058/2,058 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-63` transitioned from `In Progress` to `In Review` (id: 31).
+- **GitHub Issue Status:** Ready for PR submission to `dev` resolving GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194).
+- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
