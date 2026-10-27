@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1650,6 +1650,32 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added tests for cookie pre-rendered collapse and repeated interleaved toggling (10 tests passing).
 - **Quality Gates:**
    - Full workspace test suite: ✅ 210 test files passed (2,062/2,062 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+
+### Session 168 — 2026-10-28 (Deterministic Category Ordering Across SSR & IndexedDB Hydration — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed category order instability on page reload where categories rendered in one position and then jumped/moved positions ~1 second later when background sync completed.
+- **Root Cause Analysis:**
+   1. **Missing Tiebreaker in Client Sort vs Server Query:** Categories default to `sortOrder: 0`. In PostgreSQL (`task.repository.ts`), categories with identical `sortOrder` were ordered by `createdAt: "asc"`. In client-side IndexedDB hydration (`hydrateFromIndexedDB`), `.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))` had no tiebreaker, preserving IndexedDB's arbitrary primary-key (UUID) iteration order. On reload, the server rendered categories in `createdAt` order, and ~1 second later background sync (`TASKS_SYNCED_EVENT`) triggered `hydrateFromIndexedDB`, which swapped categories into UUID order.
+   2. **Incomplete Mutation on Category Drag & Drop:** When dragging categories to reorder them in the UI, only the single dragged category was enqueued with `action: "MOVE"`. The remaining categories never had their updated `sortOrder` written to PostgreSQL, leaving the database with outdated/default sort orders.
+   3. **Timestamp Overwrite in Local Storage:** Category reordering was writing `createdAt: nowIso` into IndexedDB, clobbering the original creation timestamps.
+- **Resolution & Architecture:**
+   1. **Deterministic Multi-Key Sorting:** Aligned PostgreSQL queries and IndexedDB sorting with identical deterministic comparator: `sortOrder: "asc"` $\rightarrow$ `createdAt: "asc"` $\rightarrow$ `id: "asc"`.
+   2. **Full-Column REORDER Mutations:** On category drag-and-drop, enqueued `action: "REORDER"` mutations for both daily and weekly columns with the full list of `categoryIds`, ensuring PostgreSQL persists `sortOrder: 0, 1, 2, ...` for all categories.
+   3. **Preserved Creation Timestamps:** Kept original `createdAt` on categories when persisting local reorders.
+   4. **Initial Category SortOrder Propagation:** Passed `sortOrder` on category creation in `processBatchSync` and `handleSaveTask`.
+   5. **Added Integration Test:** Verified in `cockpit-tasks-collapse-persistence.test.tsx` that category ordering remains 100% stable between initial SSR render and background sync without jumping positions.
+- **Files Modified & Verified:**
+   - `apps/web/features/tasks/domain/task.types.ts`: Added `createdAt` and `updatedAt` to `CategoryGroup`.
+   - `apps/web/features/tasks/data/task.repository.ts`: Added deterministic `id: "asc"` tiebreaker and populated `createdAt`/`updatedAt` on `CategoryGroup`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Supported `sortOrder` on category creation.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added deterministic sorting in `hydrateFromIndexedDB`, preserved `createdAt`, and enqueued `action: "REORDER"` mutations on category and task drop.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration test for deterministic category ordering across background sync.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,063/2,063 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-63` remains `In Review`.
