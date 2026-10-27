@@ -197,8 +197,8 @@ export function ChallengeCreatorWizard() {
       setBannerError(
          eventBannerUrl ? null : "Please upload an event header image."
       );
-      setPfpError(punishmentPfpUrl ? null : "Please upload a punishment PFP.");
-      if (!eventBannerUrl || !punishmentPfpUrl) return;
+      setPfpError(null);
+      if (!eventBannerUrl) return;
 
       if (!isUtcDateRangeValid(startAt, endAt)) {
          setErrorMsg("End date must be strictly after the start date.");
@@ -496,12 +496,14 @@ export function ChallengeCreatorWizard() {
          </section>
 
          <section className="space-y-4 pt-3 border-t border-border-subtle">
-            <h3 className="text-base font-bold text-white tracking-tight">
-               Assigned Punishment PFP{" "}
-               <span className="text-feedback-error-text" aria-label="required">
-                  *
+            <div className="flex items-center gap-2">
+               <h3 className="text-base font-bold text-white tracking-tight">
+                  Assigned Punishment PFP
+               </h3>
+               <span className="text-xs font-normal text-text-tertiary">
+                  (Optional)
                </span>
-            </h3>
+            </div>
             <ChallengeImageInput
                purpose="punishment-pfp"
                value={punishmentPfpUrl}
@@ -512,6 +514,7 @@ export function ChallengeCreatorWizard() {
                onBusyChange={setIsPfpUploading}
                disabled={isSubmitting}
                error={pfpError}
+               allowClear
             />
          </section>
 
