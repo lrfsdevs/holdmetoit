@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 import {
+   COLLAPSED_CATEGORIES_COOKIE,
    isCategoryCollapsed,
    readCollapsedCategoryIds,
 } from "./cockpit-tasks-storage";
@@ -143,10 +144,14 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
 
    beforeEach(() => {
       window.localStorage.clear();
+      document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
       vi.clearAllMocks();
    });
 
-   afterEach(cleanup);
+   afterEach(() => {
+      cleanup();
+      document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+   });
 
    it("collapsing a daily category updates localStorage and hides its tasks", () => {
       render(
@@ -521,5 +526,114 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
 
       // Stale old task must NEVER appear on mount
       expect(screen.queryByText("Old Stale Task From Last Month")).toBeNull();
+   });
+   it("pre-renders in collapsed state without flash when initialCollapsedCategoryIds is passed from server cookie", () => {
+      render(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userId: "user_test",
+            userTasks: testTasks,
+            todayDate: "2026-10-04",
+            initialCollapsedCategoryIds: ["daily:cat_daily_1"],
+         })
+      );
+
+      // Morning Focus is pre-rendered collapsed immediately
+      expect(screen.queryByText("Review Math Notes")).toBeNull();
+      // Evening Routine remains open
+      expect(screen.getByText("Read Physics Chapter")).toBeTruthy();
+   });
+
+   it("reliably preserves daily collapse across multiple toggles of weekly category with identical name", () => {
+      const sharedTasks: UserCategorizedTasks = {
+         ...testTasks,
+         dailyCategories: [
+            {
+               id: "cat_daily_work",
+               name: "Work",
+               taskType: "DAILY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_d_work",
+                     userId: "user_test",
+                     categoryId: "cat_daily_work",
+                     title: "Daily Work Task",
+                     isComplete: false,
+                     dueDate: "2026-10-04",
+                     taskType: "DAILY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_work",
+               name: "Work",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_w_work",
+                     userId: "user_test",
+                     categoryId: "cat_weekly_work",
+                     title: "Weekly Work Milestone",
+                     isComplete: false,
+                     taskType: "WEEKLY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+      };
+
+      render(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userId: "user_test",
+            userTasks: sharedTasks,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      const workHeaders = screen.getAllByText("Work");
+      expect(workHeaders.length).toBe(2);
+      const dailyHeader = workHeaders[0];
+      const weeklyHeader = workHeaders[1];
+
+      // 1. Collapse the Daily category
+      fireEvent.click(dailyHeader);
+      expect(screen.queryByText("Daily Work Task")).toBeNull();
+      expect(screen.getByText("Weekly Work Milestone")).toBeTruthy();
+
+      // 2. Collapse Weekly
+      fireEvent.click(weeklyHeader);
+      expect(screen.queryByText("Weekly Work Milestone")).toBeNull();
+      // Daily MUST STILL BE COLLAPSED!
+      expect(screen.queryByText("Daily Work Task")).toBeNull();
+
+      // 3. Uncollapse Weekly
+      fireEvent.click(weeklyHeader);
+      expect(screen.getByText("Weekly Work Milestone")).toBeTruthy();
+      // Daily MUST STILL BE COLLAPSED! It should NOT randomly expand!
+      expect(screen.queryByText("Daily Work Task")).toBeNull();
+
+      // 4. Collapse Weekly again
+      fireEvent.click(weeklyHeader);
+      expect(screen.queryByText("Weekly Work Milestone")).toBeNull();
+      expect(screen.queryByText("Daily Work Task")).toBeNull();
+
+      // 5. Uncollapse Daily explicitly
+      fireEvent.click(dailyHeader);
+      expect(screen.getByText("Daily Work Task")).toBeTruthy();
+      // Weekly remains collapsed
+      expect(screen.queryByText("Weekly Work Milestone")).toBeNull();
    });
 });

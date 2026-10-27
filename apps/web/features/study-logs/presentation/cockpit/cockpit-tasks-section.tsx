@@ -175,6 +175,7 @@ export interface CockpitTasksSectionProps {
    initialSelectedDateKey?: string;
    onOpenHoursModal?: (dayNumber?: number) => void;
    isAdmin?: boolean;
+   initialCollapsedCategoryIds?: string[];
 }
 
 /** Renders the participant's categorized task board and task actions. */
@@ -191,6 +192,7 @@ export function CockpitTasksSection({
    initialSelectedDateKey,
    onOpenHoursModal,
    isAdmin = false,
+   initialCollapsedCategoryIds,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
    const linkableChallengeId =
@@ -300,18 +302,33 @@ export function CockpitTasksSection({
       position?: "above" | "below";
    } | null>(null);
 
-   const [isHydrated, setIsHydrated] = useState(false);
    const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<
       Set<string>
-   >(() => new Set());
+   >(() => {
+      if (
+         initialCollapsedCategoryIds &&
+         initialCollapsedCategoryIds.length > 0
+      ) {
+         return new Set(
+            initialCollapsedCategoryIds.filter(
+               (k) =>
+                  typeof k === "string" &&
+                  (k.startsWith("daily:") || k.startsWith("weekly:"))
+            )
+         );
+      }
+      return readCollapsedCategoryIds(userId);
+   });
    const collapsedCategoryIdsRef = useRef<Set<string>>(collapsedCategoryIds);
    collapsedCategoryIdsRef.current = collapsedCategoryIds;
 
    useEffect(() => {
-      setIsHydrated(true);
       const stored = readCollapsedCategoryIds(userId);
-      setCollapsedCategoryIds(stored);
-      collapsedCategoryIdsRef.current = stored;
+      if (stored.size > 0) {
+         setCollapsedCategoryIds(stored);
+         collapsedCategoryIdsRef.current = stored;
+         writeCollapsedCategoryIds(userId, stored);
+      }
    }, [userId]);
 
    useEffect(() => {
@@ -926,21 +943,6 @@ export function CockpitTasksSection({
       setCollapsedCategoryIds(nextCollapsed);
       collapsedCategoryIdsRef.current = nextCollapsed;
       writeCollapsedCategoryIds(userId, nextCollapsed);
-
-      setDailyCategories((prev) =>
-         prev.map((cat, i) =>
-            i === index
-               ? {
-                    ...cat,
-                    isCollapsed: isCategoryCollapsed(
-                       "daily",
-                       cat,
-                       nextCollapsed
-                    ),
-                 }
-               : cat
-         )
-      );
    };
 
    const toggleWeeklyCollapse = (index: number) => {
@@ -955,21 +957,6 @@ export function CockpitTasksSection({
       setCollapsedCategoryIds(nextCollapsed);
       collapsedCategoryIdsRef.current = nextCollapsed;
       writeCollapsedCategoryIds(userId, nextCollapsed);
-
-      setWeeklyCategories((prev) =>
-         prev.map((cat, i) =>
-            i === index
-               ? {
-                    ...cat,
-                    isCollapsed: isCategoryCollapsed(
-                       "weekly",
-                       cat,
-                       nextCollapsed
-                    ),
-                 }
-               : cat
-         )
-      );
    };
 
    const setTaskStatus = (
@@ -3916,13 +3903,11 @@ export function CockpitTasksSection({
                            if (dayTasks.length === 0 && cat.tasks.length > 0)
                               return null;
 
-                           const isCollapsed = isHydrated
-                              ? isCategoryCollapsed(
-                                   "daily",
-                                   cat,
-                                   collapsedCategoryIds
-                                ) || cat.isCollapsed
-                              : false;
+                           const isCollapsed = isCategoryCollapsed(
+                              "daily",
+                              cat,
+                              collapsedCategoryIds
+                           );
 
                            const isCatDragging =
                               draggedItem?.type === "category" &&
@@ -4791,13 +4776,11 @@ export function CockpitTasksSection({
                         </div>
                      ) : (
                         weeklyCategories.map((cat, catIdx) => {
-                           const isCollapsed = isHydrated
-                              ? isCategoryCollapsed(
-                                   "weekly",
-                                   cat,
-                                   collapsedCategoryIds
-                                ) || cat.isCollapsed
-                              : false;
+                           const isCollapsed = isCategoryCollapsed(
+                              "weekly",
+                              cat,
+                              collapsedCategoryIds
+                           );
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "weekly" &&
