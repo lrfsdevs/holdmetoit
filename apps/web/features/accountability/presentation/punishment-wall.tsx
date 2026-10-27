@@ -77,7 +77,7 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
                   <p className="text-xs text-text-tertiary">
                      {hasPunishment
                         ? "Three-Condition Rule (Law L6): Meeting target hours & weekly goals protects your avatar."
-                        : "Honor Sprint: Deficit and weekly goal tracking active with zero forfeit penalties."}
+                        : "Three-Condition Rule (Law L6): Deficit and weekly goal tracking active with no forfeit avatar configured."}
                   </p>
                </div>
             </div>
@@ -127,14 +127,14 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
                      <div
                         className="relative flex h-20 w-20 sm:h-22 sm:w-22 shrink-0 items-center justify-center rounded-2xl border-2 border-feedback-success/30 bg-surface-elevated shadow-md overflow-hidden"
                         data-testid="no-punishment-placeholder"
-                        aria-label="No punishment assigned"
+                        aria-label="No forfeit avatar configured"
                      >
                         <div className="flex flex-col items-center justify-center gap-1">
                            <div className="relative">
                               <ShieldCheck className="h-7 w-7 text-feedback-success-text" />
                               <Sparkles className="absolute -top-1 -right-1 h-3.5 w-3.5 text-brand-1" />
                            </div>
-                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-feedback-success-text font-mono">
+                           <span className="text-meta font-extrabold uppercase tracking-wider text-feedback-success-text font-mono">
                               No Forfeit
                            </span>
                         </div>
@@ -142,14 +142,14 @@ export function PunishmentWall({ challenge }: PunishmentWallProps) {
                      <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-micro font-bold uppercase tracking-wider bg-feedback-success-bg text-feedback-success-text border border-feedback-success/30">
-                              No Punishment
+                              No Forfeit Avatar
                            </span>
                         </div>
                         <p className="text-xs font-bold text-white">
-                           No Punishment This Sprint
+                           No Forfeit Avatar Configured
                         </p>
                         <p className="text-meta text-text-tertiary leading-relaxed">
-                           No forfeit avatar is assigned for this event. Focus
+                           No forfeit avatar is configured for this event. Focus
                            on crushing your weekly goals and climbing the
                            leaderboard!
                         </p>

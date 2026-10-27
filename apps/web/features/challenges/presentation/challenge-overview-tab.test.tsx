@@ -297,7 +297,7 @@ describe("ChallengeOverviewTab", () => {
       );
 
       expect(html).toContain("Accountability &amp; Goals Wall");
-      expect(html).toContain("No Punishment This Sprint");
+      expect(html).toContain("No Forfeit Avatar Configured");
       expect(html).toContain("No Forfeit");
       expect(html).not.toContain("Download Forfeit PFP");
       expect(html).not.toContain("Dual-Failure Invariant (Law L6)");
