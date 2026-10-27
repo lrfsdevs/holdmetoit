@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1630,6 +1630,26 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration tests for cross-board isolation and stale goal flicker prevention (8 tests passing).
 - **Quality Gates:**
    - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 68 tests passing across 6 test suites.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+
+### Session 167 — 2026-10-28 (Instant SSR Cookie Pre-Rendering & Single Source of Truth for Collapse State — GH-#194 / KAN-63)
+
+- **Context & Objective:** Perfected category collapse UX on reload and resolved intermittent cross-category expand/collapse bugs:
+   1. **Instant Zero-Flicker Reload via SSR Cookie Pre-Rendering:** Eliminated the initial layout shift / flash where reload opened all categories before snapping into collapsed state. Synchronized user-scoped collapse state into `holdmetoit_collapsed_categories` cookie alongside `localStorage`. Next.js SSR (`app/page.tsx`) reads the cookie on request and passes `initialCollapsedCategoryIds` through `HomeCockpitView` to `CockpitTasksSection`. Categories pre-render already collapsed from the first HTML frame with 100% hydration matching.
+   2. **Single Source of Truth & Pure Board Isolation:** Eliminated the dual-state desync (`isCategoryCollapsed || cat.isCollapsed`) that caused categories to randomly remain collapsed or unexpectedly expand. `collapsedCategoryIds` is now the sole source of truth in `CockpitTasksSection`, and toggling does not mutate the `dailyCategories`/`weeklyCategories` array state.
+   3. **Sanitized Storage & Legacy Cleanup:** Removed unscoped `cat.id` fallback in `isCategoryCollapsed` and filtered out legacy unscoped keys in `readCollapsedCategoryIds`. Daily categories strictly use `daily:` prefix and Weekly categories strictly use `weekly:` prefix.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added user-scoped cookie synchronization (`COLLAPSED_CATEGORIES_COOKIE`), pruned unscoped fallback, and filtered legacy keys.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added cookie read/write tests and strict prefix isolation assertions (18 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `initialCollapsedCategoryIds` prop, made `collapsedCategoryIds` sole source of truth, simplified toggle handlers, and removed `isHydrated` delay.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Threaded `initialCollapsedCategoryIds` down to `CockpitTasksSection`.
+   - `apps/web/app/page.tsx`: Read and parsed user-scoped cookie in server component and passed to `HomeCockpitView`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added tests for cookie pre-rendered collapse and repeated interleaved toggling (10 tests passing).
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,062/2,062 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-63` remains `In Review`.
