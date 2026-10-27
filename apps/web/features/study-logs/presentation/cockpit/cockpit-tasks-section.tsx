@@ -40,6 +40,13 @@ import {
    moveCategoryToDay,
    moveTaskBetweenCategories,
 } from "@/features/tasks/domain/task-reorder";
+import {
+   getCollapsedCategoriesStorageKey,
+   isCategoryCollapsed,
+   readCollapsedCategoryIds,
+   toggleCategoryCollapseKey,
+   writeCollapsedCategoryIds,
+} from "./cockpit-tasks-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -292,8 +299,36 @@ export function CockpitTasksSection({
       position?: "above" | "below";
    } | null>(null);
 
+   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<
+      Set<string>
+   >(() => readCollapsedCategoryIds(userId));
+   const collapsedCategoryIdsRef = useRef<Set<string>>(collapsedCategoryIds);
+   collapsedCategoryIdsRef.current = collapsedCategoryIds;
+
+   useEffect(() => {
+      const stored = readCollapsedCategoryIds(userId);
+      setCollapsedCategoryIds(stored);
+      collapsedCategoryIdsRef.current = stored;
+   }, [userId]);
+
+   useEffect(() => {
+      if (typeof window === "undefined") return;
+      const handleStorage = (e: StorageEvent) => {
+         if (e.key === getCollapsedCategoriesStorageKey(userId)) {
+            const stored = readCollapsedCategoryIds(userId);
+            setCollapsedCategoryIds(stored);
+            collapsedCategoryIdsRef.current = stored;
+         }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => {
+         window.removeEventListener("storage", handleStorage);
+      };
+   }, [userId]);
+
    const [dailyCategories, setDailyCategories] = useState<CategoryGroup[]>(
       () => {
+         const initialCollapsed = readCollapsedCategoryIds(userId);
          if (
             userTasks?.dailyCategories &&
             userTasks.dailyCategories.length > 0
@@ -303,7 +338,7 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
-                  isCollapsed: false,
+                  isCollapsed: isCategoryCollapsed(c, initialCollapsed),
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
                      .map((t) => ({
@@ -327,6 +362,7 @@ export function CockpitTasksSection({
 
    const [weeklyCategories, setWeeklyCategories] = useState<CategoryGroup[]>(
       () => {
+         const initialCollapsed = readCollapsedCategoryIds(userId);
          if (
             userTasks?.weeklyCategories &&
             userTasks.weeklyCategories.length > 0
@@ -336,7 +372,7 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
-                  isCollapsed: false,
+                  isCollapsed: isCategoryCollapsed(c, initialCollapsed),
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
                      .map((t) => ({
@@ -632,6 +668,11 @@ export function CockpitTasksSection({
 
                const tasksToHeal: LocalTaskRecord[] = [];
 
+               const activeCollapsed =
+                  collapsedCategoryIdsRef.current.size > 0
+                     ? collapsedCategoryIdsRef.current
+                     : readCollapsedCategoryIds(userId);
+
                const dailyCats = sortedCats
                   .filter(
                      (c) =>
@@ -644,7 +685,7 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: false,
+                     isCollapsed: isCategoryCollapsed(c, activeCollapsed),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -687,7 +728,7 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: false,
+                     isCollapsed: isCategoryCollapsed(c, activeCollapsed),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -794,17 +835,49 @@ export function CockpitTasksSection({
    }, [userId, userTasks]);
 
    const toggleDailyCollapse = (index: number) => {
+      const targetCat = dailyCategories[index];
+      if (!targetCat) return;
+
+      const nextCollapsed = toggleCategoryCollapseKey(
+         targetCat,
+         collapsedCategoryIds
+      );
+      setCollapsedCategoryIds(nextCollapsed);
+      collapsedCategoryIdsRef.current = nextCollapsed;
+      writeCollapsedCategoryIds(userId, nextCollapsed);
+
       setDailyCategories((prev) =>
          prev.map((cat, i) =>
-            i === index ? { ...cat, isCollapsed: !cat.isCollapsed } : cat
+            i === index
+               ? {
+                    ...cat,
+                    isCollapsed: isCategoryCollapsed(cat, nextCollapsed),
+                 }
+               : cat
          )
       );
    };
 
    const toggleWeeklyCollapse = (index: number) => {
+      const targetCat = weeklyCategories[index];
+      if (!targetCat) return;
+
+      const nextCollapsed = toggleCategoryCollapseKey(
+         targetCat,
+         collapsedCategoryIds
+      );
+      setCollapsedCategoryIds(nextCollapsed);
+      collapsedCategoryIdsRef.current = nextCollapsed;
+      writeCollapsedCategoryIds(userId, nextCollapsed);
+
       setWeeklyCategories((prev) =>
          prev.map((cat, i) =>
-            i === index ? { ...cat, isCollapsed: !cat.isCollapsed } : cat
+            i === index
+               ? {
+                    ...cat,
+                    isCollapsed: isCategoryCollapsed(cat, nextCollapsed),
+                 }
+               : cat
          )
       );
    };
@@ -1975,6 +2048,17 @@ export function CockpitTasksSection({
          deleteLocalCategory(catId).catch(() => {});
       }
 
+      if (catId || targetName) {
+         setCollapsedCategoryIds((prev) => {
+            const next = new Set(prev);
+            if (catId) next.delete(catId);
+            if (targetName) next.delete(targetName);
+            writeCollapsedCategoryIds(userId, next);
+            collapsedCategoryIdsRef.current = next;
+            return next;
+         });
+      }
+
       if (isLoggedIn && userId && catId) {
          enqueueMutation({
             id: crypto.randomUUID(),
@@ -2128,7 +2212,7 @@ export function CockpitTasksSection({
                      ? {
                           ...cat,
                           id: cat.id || targetCatId,
-                          isCollapsed: false,
+                          isCollapsed: cat.isCollapsed,
                           tasks: [...cat.tasks, newTask],
                        }
                      : cat
@@ -2171,7 +2255,7 @@ export function CockpitTasksSection({
                      ? {
                           ...cat,
                           id: cat.id || targetCatId,
-                          isCollapsed: false,
+                          isCollapsed: cat.isCollapsed,
                           tasks: [...cat.tasks, newTask],
                        }
                      : cat
@@ -3734,6 +3818,10 @@ export function CockpitTasksSection({
                            if (dayTasks.length === 0 && cat.tasks.length > 0)
                               return null;
 
+                           const isCollapsed =
+                              isCategoryCollapsed(cat, collapsedCategoryIds) ||
+                              cat.isCollapsed;
+
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "daily" &&
@@ -3886,7 +3974,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuContent>
                                                 </DropdownMenu>
                                              )}
-                                             {cat.isCollapsed ? (
+                                             {isCollapsed ? (
                                                 <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
                                                 <ChevronUp className="h-4 w-4 text-text-tertiary" />
@@ -3943,7 +4031,7 @@ export function CockpitTasksSection({
                                     )}
                                  </ContextMenu>
 
-                                 {!cat.isCollapsed && (
+                                 {!isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {dayTasks.length === 0 ? (
                                           <p className="text-xs text-text-tertiary py-1">
@@ -4601,6 +4689,9 @@ export function CockpitTasksSection({
                         </div>
                      ) : (
                         weeklyCategories.map((cat, catIdx) => {
+                           const isCollapsed =
+                              isCategoryCollapsed(cat, collapsedCategoryIds) ||
+                              cat.isCollapsed;
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "weekly" &&
@@ -4753,7 +4844,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuContent>
                                                 </DropdownMenu>
                                              )}
-                                             {cat.isCollapsed ? (
+                                             {isCollapsed ? (
                                                 <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
                                                 <ChevronUp className="h-4 w-4 text-text-tertiary" />
@@ -4810,7 +4901,7 @@ export function CockpitTasksSection({
                                     )}
                                  </ContextMenu>
 
-                                 {!cat.isCollapsed && (
+                                 {!isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {cat.tasks.length === 0 ? (
                                           <p className="text-xs text-text-tertiary py-1">
