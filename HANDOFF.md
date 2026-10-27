@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1615,4 +1615,22 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors.
 - **Jira Status:** `KAN-63` transitioned from `In Progress` to `In Review` (id: 31).
 - **GitHub Issue Status:** Ready for PR submission to `dev` resolving GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194).
+- **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
+
+### Session 166 — 2026-10-28 (Resolve Hydration Mismatch, Cross-Board Collapse Isolation & Stale Goal Flicker — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed three UI defects uncovered during browser testing of category collapse persistence (GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194) / Jira Ticket `KAN-63`):
+   1. **React Hydration Error:** Fixed `Error: Hydration failed because the initial UI does not match what was rendered on the server` by ensuring initial SSR and client render match completely (`isHydrated` defaults to `false`, flips to `true` on mount in `useEffect`).
+   2. **Cross-Board Category Coupling:** Fixed issue where toggling a category in Weekly Goals also collapsed/expanded categories with identical names in Daily Goals. Scoped collapse storage keys by board type (`"daily"` vs `"weekly"`): `daily:${id}`, `weekly:${id}`, `daily:name:${name}`, `weekly:name:${name}`, while maintaining backward compatibility with legacy unscoped IDs.
+   3. **Stale Task Flash on Initial Mount:** Fixed split-second flicker where stale cached IndexedDB tasks were rendered before fresh server goals or cloud sync finished. When `hasServerTasks` is true and there are no un-synced offline mutations (`pendingMutations.length === 0`), `hydrateFromIndexedDB` seeds IndexedDB in the background and avoids overwriting fresh React state until background sync completes (`TASKS_SYNCED_EVENT`).
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Scoped collapse identifiers to `TaskCategoryType = "daily" | "weekly"`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for board-scoped collapse isolation (17 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `isHydrated` guard, board-scoped toggle handlers, deletion cleanup, and flicker prevention in `hydrateFromIndexedDB`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration tests for cross-board isolation and stale goal flicker prevention (8 tests passing).
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 68 tests passing across 6 test suites.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
 - **NEXT STEP:** Submit PR from `krish` to `dev` for issue #194, review and merge into `dev`.
