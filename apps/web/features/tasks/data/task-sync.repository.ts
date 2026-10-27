@@ -69,12 +69,17 @@ export async function processBatchSync(
                            });
                         }
                      } else {
+                        const initialSortOrder =
+                           typeof payload.sortOrder === "number"
+                              ? payload.sortOrder
+                              : 0;
                         await tx.category.create({
                            data: {
                               id: catId,
                               userId,
                               name: explicitName,
                               taskType,
+                              sortOrder: initialSortOrder,
                            },
                         });
                      }

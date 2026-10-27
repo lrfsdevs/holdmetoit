@@ -106,10 +106,14 @@ async function getUserCategorizedTasksFromDatabase(
       include: {
          tasks: {
             where: { isDeleted: false },
-            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            orderBy: [
+               { sortOrder: "asc" },
+               { createdAt: "asc" },
+               { id: "asc" },
+            ],
          },
       },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
    });
 
    const categoryItems: CategoryItem[] = categories.map((c) => ({
@@ -160,6 +164,8 @@ async function getUserCategorizedTasksFromDatabase(
             name: c.name,
             taskType: "DAILY" as const,
             sortOrder: c.sortOrder,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
             isCollapsed: false,
             isDeleted: c.isDeleted,
             deletionTime: c.deletionTime,
@@ -197,6 +203,8 @@ async function getUserCategorizedTasksFromDatabase(
             name: c.name,
             taskType: "WEEKLY" as const,
             sortOrder: c.sortOrder,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
             isCollapsed: false,
             isDeleted: c.isDeleted,
             deletionTime: c.deletionTime,

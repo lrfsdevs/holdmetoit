@@ -636,4 +636,227 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
       // Weekly remains collapsed
       expect(screen.queryByText("Weekly Work Milestone")).toBeNull();
    });
+   it("preserves category order deterministically without jumping positions on sync", async () => {
+      const { getAllLocalCategories, getAllLocalTasks } =
+         await import("@/features/tasks/data/local/task-idb");
+
+      const orderedTasks = {
+         categories: [
+            {
+               id: "cat_1_first",
+               userId: "user_test",
+               name: "First Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               isDeleted: false,
+               createdAt: new Date("2026-10-01T08:00:00Z"),
+               updatedAt: new Date("2026-10-01T08:00:00Z"),
+            },
+            {
+               id: "cat_2_second",
+               userId: "user_test",
+               name: "Second Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               isDeleted: false,
+               createdAt: new Date("2026-10-01T09:00:00Z"),
+               updatedAt: new Date("2026-10-01T09:00:00Z"),
+            },
+            {
+               id: "cat_3_third",
+               userId: "user_test",
+               name: "Third Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               isDeleted: false,
+               createdAt: new Date("2026-10-01T10:00:00Z"),
+               updatedAt: new Date("2026-10-01T10:00:00Z"),
+            },
+         ],
+         dailyCategories: [
+            {
+               id: "cat_1_first",
+               name: "First Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               createdAt: "2026-10-01T08:00:00Z",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t1",
+                     userId: "user_test",
+                     categoryId: "cat_1_first",
+                     title: "Task 1",
+                     isComplete: false,
+                     dueDate: "2026-10-04",
+                     taskType: "DAILY" as const,
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T08:00:00Z"),
+                     updatedAt: new Date("2026-10-01T08:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+            {
+               id: "cat_2_second",
+               name: "Second Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               createdAt: "2026-10-01T09:00:00Z",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t2",
+                     userId: "user_test",
+                     categoryId: "cat_2_second",
+                     title: "Task 2",
+                     isComplete: false,
+                     dueDate: "2026-10-04",
+                     taskType: "DAILY" as const,
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T09:00:00Z"),
+                     updatedAt: new Date("2026-10-01T09:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+            {
+               id: "cat_3_third",
+               name: "Third Category",
+               taskType: "DAILY" as const,
+               sortOrder: 0,
+               createdAt: "2026-10-01T10:00:00Z",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t3",
+                     userId: "user_test",
+                     categoryId: "cat_3_third",
+                     title: "Task 3",
+                     isComplete: false,
+                     dueDate: "2026-10-04",
+                     taskType: "DAILY" as const,
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         weeklyCategories: [],
+         totalDailyTasks: 3,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 0,
+         completedWeeklyTasks: 0,
+      };
+
+      // Mock IndexedDB returning in arbitrary / reversed order
+      vi.mocked(getAllLocalCategories).mockResolvedValue([
+         {
+            id: "cat_3_third",
+            userId: "user_test",
+            name: "Third Category",
+            taskType: "DAILY",
+            sortOrder: 0,
+            createdAt: "2026-10-01T10:00:00Z",
+            updatedAt: "2026-10-01T10:00:00Z",
+            syncState: "synced",
+         },
+         {
+            id: "cat_1_first",
+            userId: "user_test",
+            name: "First Category",
+            taskType: "DAILY",
+            sortOrder: 0,
+            createdAt: "2026-10-01T08:00:00Z",
+            updatedAt: "2026-10-01T08:00:00Z",
+            syncState: "synced",
+         },
+         {
+            id: "cat_2_second",
+            userId: "user_test",
+            name: "Second Category",
+            taskType: "DAILY",
+            sortOrder: 0,
+            createdAt: "2026-10-01T09:00:00Z",
+            updatedAt: "2026-10-01T09:00:00Z",
+            syncState: "synced",
+         },
+      ]);
+
+      vi.mocked(getAllLocalTasks).mockResolvedValue([
+         {
+            id: "t1",
+            userId: "user_test",
+            categoryId: "cat_1_first",
+            title: "Task 1",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            dueDate: "2026-10-04",
+            createdAt: "2026-10-01T08:00:00Z",
+            updatedAt: "2026-10-01T08:00:00Z",
+            completedAt: null,
+            syncState: "synced",
+         },
+         {
+            id: "t2",
+            userId: "user_test",
+            categoryId: "cat_2_second",
+            title: "Task 2",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            dueDate: "2026-10-04",
+            createdAt: "2026-10-01T09:00:00Z",
+            updatedAt: "2026-10-01T09:00:00Z",
+            completedAt: null,
+            syncState: "synced",
+         },
+         {
+            id: "t3",
+            userId: "user_test",
+            categoryId: "cat_3_third",
+            title: "Task 3",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            dueDate: "2026-10-04",
+            createdAt: "2026-10-01T10:00:00Z",
+            updatedAt: "2026-10-01T10:00:00Z",
+            completedAt: null,
+            syncState: "synced",
+         },
+      ]);
+
+      const { container } = render(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userId: "user_test",
+            userTasks: orderedTasks,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      // Verify initial SSR order
+      const getCategoryTitles = () =>
+         Array.from(
+            container.querySelectorAll('[data-drag-card="category"]')
+         ).map((el) => el.textContent || "");
+
+      expect(getCategoryTitles()[0]).toContain("First Category");
+      expect(getCategoryTitles()[1]).toContain("Second Category");
+      expect(getCategoryTitles()[2]).toContain("Third Category");
+
+      // Trigger background sync event (holdmetoit:tasks-synced)
+      await act(async () => {
+         window.dispatchEvent(new CustomEvent("holdmetoit:tasks-synced"));
+      });
+
+      // Verify order has NOT jumped or changed after hydration!
+      expect(getCategoryTitles()[0]).toContain("First Category");
+      expect(getCategoryTitles()[1]).toContain("Second Category");
+      expect(getCategoryTitles()[2]).toContain("Third Category");
+   });
 });

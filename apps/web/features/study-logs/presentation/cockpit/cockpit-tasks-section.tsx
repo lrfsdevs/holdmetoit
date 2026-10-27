@@ -159,6 +159,9 @@ export interface CategoryGroup {
    id?: string;
    name: string;
    isCollapsed: boolean;
+   sortOrder?: number;
+   createdAt?: string | Date;
+   updatedAt?: string | Date;
    tasks: TaskItem[];
 }
 
@@ -357,6 +360,17 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
+                  sortOrder: c.sortOrder ?? 0,
+                  createdAt: c.createdAt
+                     ? typeof c.createdAt === "string"
+                        ? c.createdAt
+                        : c.createdAt.toISOString()
+                     : undefined,
+                  updatedAt: c.updatedAt
+                     ? typeof c.updatedAt === "string"
+                        ? c.updatedAt
+                        : c.updatedAt.toISOString()
+                     : undefined,
                   isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
@@ -390,6 +404,17 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
+                  sortOrder: c.sortOrder ?? 0,
+                  createdAt: c.createdAt
+                     ? typeof c.createdAt === "string"
+                        ? c.createdAt
+                        : c.createdAt.toISOString()
+                     : undefined,
+                  updatedAt: c.updatedAt
+                     ? typeof c.updatedAt === "string"
+                        ? c.updatedAt
+                        : c.updatedAt.toISOString()
+                     : undefined,
                   isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
@@ -750,10 +775,32 @@ export function CockpitTasksSection({
 
                const sortedCats = [...localCats]
                   .filter((c) => !c.isDeleted)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                  .sort((a, b) => {
+                     const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+                     if (orderDiff !== 0) return orderDiff;
+                     const aTime = a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : 0;
+                     const bTime = b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : 0;
+                     if (aTime !== bTime) return aTime - bTime;
+                     return (a.id || "").localeCompare(b.id || "");
+                  });
                const sortedTasks = [...localTasks]
                   .filter((t) => !t.isDeleted)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                  .sort((a, b) => {
+                     const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+                     if (orderDiff !== 0) return orderDiff;
+                     const aTime = a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : 0;
+                     const bTime = b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : 0;
+                     if (aTime !== bTime) return aTime - bTime;
+                     return (a.id || "").localeCompare(b.id || "");
+                  });
 
                const tasksToHeal: LocalTaskRecord[] = [];
 
@@ -774,6 +821,9 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
+                     sortOrder: c.sortOrder ?? 0,
+                     createdAt: c.createdAt,
+                     updatedAt: c.updatedAt,
                      isCollapsed: isCategoryCollapsed(
                         "daily",
                         c,
@@ -821,6 +871,9 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
+                     sortOrder: c.sortOrder ?? 0,
+                     createdAt: c.createdAt,
+                     updatedAt: c.updatedAt,
                      isCollapsed: isCategoryCollapsed(
                         "weekly",
                         c,
@@ -2362,11 +2415,16 @@ export function CockpitTasksSection({
       const nowIso = new Date().toISOString();
 
       if (isNew && targetCatId) {
+         const initialSortOrder =
+            addModalType === "daily"
+               ? dailyCategories.length
+               : weeklyCategories.length;
          putLocalCategory({
             id: targetCatId,
             userId: userId ?? null,
             name: targetCategoryName,
             taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+            sortOrder: initialSortOrder,
             createdAt: nowIso,
             updatedAt: nowIso,
             syncState: "pending",
@@ -2393,6 +2451,10 @@ export function CockpitTasksSection({
 
       if (isLoggedIn && userId) {
          if (isNew && targetCatId) {
+            const initialSortOrder =
+               addModalType === "daily"
+                  ? dailyCategories.length
+                  : weeklyCategories.length;
             enqueueMutation({
                id: crypto.randomUUID(),
                entityType: "CATEGORY",
@@ -2401,6 +2463,7 @@ export function CockpitTasksSection({
                   id: targetCatId,
                   name: targetCategoryName,
                   taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+                  sortOrder: initialSortOrder,
                },
                createdAt: Date.now(),
                retryCount: 0,
@@ -2890,6 +2953,22 @@ export function CockpitTasksSection({
                })
             );
             putLocalTasks(tasksToUpdate).catch(() => {});
+
+            if (isLoggedIn && userId) {
+               const taskIds = targetCatGroup.tasks
+                  .map((t) => t.id)
+                  .filter((id) => Boolean(id));
+               if (taskIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "TASK",
+                     action: "REORDER",
+                     payload: { taskIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+            }
          } else {
             const isMovedComplete = Boolean(
                res.movedTask.completed ?? res.movedTask.isComplete
@@ -3062,7 +3141,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "DAILY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3074,7 +3157,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "WEEKLY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3083,22 +3170,54 @@ export function CockpitTasksSection({
             putLocalCategories(allCatsToUpdate).catch(() => {});
 
             if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "CATEGORY",
-                  action: "MOVE",
-                  payload: {
-                     categoryId: res.movedCategory.id,
-                     taskType: res.targetTaskType,
-                     sortOrder: destIndex,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
+               const dailyCatIds = res.dailyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (dailyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: dailyCatIds },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               const weeklyCatIds = res.weeklyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (weeklyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: weeklyCatIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               if (draggedItem.sourceColumn !== targetColumn) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "MOVE",
+                     payload: {
+                        categoryId: res.movedCategory.id,
+                        taskType: res.targetTaskType,
+                        sortOrder: destIndex,
+                     },
+                     createdAt: Date.now() + 2,
+                     retryCount: 0,
                   })
-                  .catch(() => {});
+                     .then(() => {
+                        scheduleSync(userId);
+                     })
+                     .catch(() => {});
+               } else {
+                  scheduleSync(userId);
+               }
 
                if (
                   isMovingWeeklyToDaily &&
@@ -3306,7 +3425,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "DAILY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3318,7 +3441,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "WEEKLY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3327,22 +3454,54 @@ export function CockpitTasksSection({
             putLocalCategories(allCatsToUpdate).catch(() => {});
 
             if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "CATEGORY",
-                  action: "MOVE",
-                  payload: {
-                     categoryId: res.movedCategory.id,
-                     taskType: res.targetTaskType,
-                     sortOrder: destIndex,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
+               const dailyCatIds = res.dailyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (dailyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: dailyCatIds },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               const weeklyCatIds = res.weeklyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (weeklyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: weeklyCatIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               if (draggedItem.sourceColumn !== targetColumn) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "MOVE",
+                     payload: {
+                        categoryId: res.movedCategory.id,
+                        taskType: res.targetTaskType,
+                        sortOrder: destIndex,
+                     },
+                     createdAt: Date.now() + 2,
+                     retryCount: 0,
                   })
-                  .catch(() => {});
+                     .then(() => {
+                        scheduleSync(userId);
+                     })
+                     .catch(() => {});
+               } else {
+                  scheduleSync(userId);
+               }
             }
          }
       } else if (draggedItem.type === "task" && draggedItem.id) {
