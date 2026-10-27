@@ -120,6 +120,7 @@ import {
    enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
+   getAllQueuedMutations,
    logTaskSync,
    putLocalCategories,
    putLocalCategory,
@@ -299,13 +300,15 @@ export function CockpitTasksSection({
       position?: "above" | "below";
    } | null>(null);
 
+   const [isHydrated, setIsHydrated] = useState(false);
    const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<
       Set<string>
-   >(() => readCollapsedCategoryIds(userId));
+   >(() => new Set());
    const collapsedCategoryIdsRef = useRef<Set<string>>(collapsedCategoryIds);
    collapsedCategoryIdsRef.current = collapsedCategoryIds;
 
    useEffect(() => {
+      setIsHydrated(true);
       const stored = readCollapsedCategoryIds(userId);
       setCollapsedCategoryIds(stored);
       collapsedCategoryIdsRef.current = stored;
@@ -328,7 +331,6 @@ export function CockpitTasksSection({
 
    const [dailyCategories, setDailyCategories] = useState<CategoryGroup[]>(
       () => {
-         const initialCollapsed = readCollapsedCategoryIds(userId);
          if (
             userTasks?.dailyCategories &&
             userTasks.dailyCategories.length > 0
@@ -338,7 +340,7 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
-                  isCollapsed: isCategoryCollapsed(c, initialCollapsed),
+                  isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
                      .map((t) => ({
@@ -362,7 +364,6 @@ export function CockpitTasksSection({
 
    const [weeklyCategories, setWeeklyCategories] = useState<CategoryGroup[]>(
       () => {
-         const initialCollapsed = readCollapsedCategoryIds(userId);
          if (
             userTasks?.weeklyCategories &&
             userTasks.weeklyCategories.length > 0
@@ -372,7 +373,7 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
-                  isCollapsed: isCategoryCollapsed(c, initialCollapsed),
+                  isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
                      .map((t) => ({
@@ -638,7 +639,7 @@ export function CockpitTasksSection({
       const handleSyncEvent = () => {
          if (!isCancelled) {
             logTaskSync("Live task sync event received, re-hydrating view...");
-            hydrateFromIndexedDB();
+            hydrateFromIndexedDB({ isSyncEvent: true });
          }
       };
 
@@ -646,8 +647,79 @@ export function CockpitTasksSection({
          window.addEventListener(TASKS_SYNCED_EVENT, handleSyncEvent);
       }
 
-      async function hydrateFromIndexedDB() {
+      async function hydrateFromIndexedDB(options?: { isSyncEvent?: boolean }) {
          try {
+            const isSyncEvent = options?.isSyncEvent ?? false;
+            const pendingMutations = await getAllQueuedMutations();
+            const hasServerTasks = Boolean(
+               userTasks &&
+               (userTasks.dailyCategories?.length > 0 ||
+                  userTasks.weeklyCategories?.length > 0)
+            );
+
+            // On initial mount with no pending offline mutations and fresh server data,
+            // do not overwrite fresh React state with stale IndexedDB records to prevent
+            // a visual flash of old goals before sync finishes.
+            if (
+               !isSyncEvent &&
+               hasServerTasks &&
+               pendingMutations.length === 0
+            ) {
+               logTaskSync(
+                  "Skipping initial IndexedDB state overwrite; seeding cache from server userTasks..."
+               );
+               if (
+                  userTasks &&
+                  userTasks.categories &&
+                  userTasks.categories.length > 0
+               ) {
+                  const seedCats: LocalCategoryRecord[] = userTasks.categories
+                     .filter((c) => !c.isDeleted)
+                     .map((c) => ({
+                        id: c.id,
+                        userId: userId || null,
+                        name: c.name,
+                        taskType: c.taskType,
+                        sortOrder: c.sortOrder ?? 0,
+                        createdAt: new Date(c.createdAt).toISOString(),
+                        updatedAt: new Date(c.updatedAt).toISOString(),
+                        syncState: "synced",
+                     }));
+
+                  const seedTasks: LocalTaskRecord[] = [
+                     ...userTasks.dailyCategories
+                        .filter((c) => !c.isDeleted)
+                        .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
+                     ...userTasks.weeklyCategories
+                        .filter((c) => !c.isDeleted)
+                        .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
+                  ].map((t) => ({
+                     id: t.id,
+                     userId: userId || null,
+                     categoryId: t.categoryId,
+                     challengeId: t.challengeId ?? null,
+                     title: t.title,
+                     taskType: t.taskType,
+                     sortOrder: t.sortOrder ?? 0,
+                     isComplete: t.isComplete,
+                     status:
+                        (t.status as TaskStatus) ||
+                        (t.isComplete ? "COMPLETED" : "TODO"),
+                     dueDate: t.dueDate ?? null,
+                     createdAt: new Date(t.createdAt).toISOString(),
+                     updatedAt: new Date(t.updatedAt).toISOString(),
+                     completedAt: t.completedAt
+                        ? new Date(t.completedAt).toISOString()
+                        : null,
+                     syncState: "synced",
+                  }));
+
+                  await putLocalCategories(seedCats);
+                  await putLocalTasks(seedTasks);
+               }
+               return;
+            }
+
             const localTasks = await getAllLocalTasks(userId ?? null);
             const localCats = await getAllLocalCategories(userId ?? null);
 
@@ -685,7 +757,11 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: isCategoryCollapsed(c, activeCollapsed),
+                     isCollapsed: isCategoryCollapsed(
+                        "daily",
+                        c,
+                        activeCollapsed
+                     ),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -728,7 +804,11 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: isCategoryCollapsed(c, activeCollapsed),
+                     isCollapsed: isCategoryCollapsed(
+                        "weekly",
+                        c,
+                        activeCollapsed
+                     ),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -823,7 +903,7 @@ export function CockpitTasksSection({
          }
       }
 
-      hydrateFromIndexedDB();
+      hydrateFromIndexedDB({ isSyncEvent: false });
 
       return () => {
          isCancelled = true;
@@ -839,6 +919,7 @@ export function CockpitTasksSection({
       if (!targetCat) return;
 
       const nextCollapsed = toggleCategoryCollapseKey(
+         "daily",
          targetCat,
          collapsedCategoryIds
       );
@@ -851,7 +932,11 @@ export function CockpitTasksSection({
             i === index
                ? {
                     ...cat,
-                    isCollapsed: isCategoryCollapsed(cat, nextCollapsed),
+                    isCollapsed: isCategoryCollapsed(
+                       "daily",
+                       cat,
+                       nextCollapsed
+                    ),
                  }
                : cat
          )
@@ -863,6 +948,7 @@ export function CockpitTasksSection({
       if (!targetCat) return;
 
       const nextCollapsed = toggleCategoryCollapseKey(
+         "weekly",
          targetCat,
          collapsedCategoryIds
       );
@@ -875,7 +961,11 @@ export function CockpitTasksSection({
             i === index
                ? {
                     ...cat,
-                    isCollapsed: isCategoryCollapsed(cat, nextCollapsed),
+                    isCollapsed: isCategoryCollapsed(
+                       "weekly",
+                       cat,
+                       nextCollapsed
+                    ),
                  }
                : cat
          )
@@ -2051,8 +2141,16 @@ export function CockpitTasksSection({
       if (catId || targetName) {
          setCollapsedCategoryIds((prev) => {
             const next = new Set(prev);
-            if (catId) next.delete(catId);
-            if (targetName) next.delete(targetName);
+            if (catId) {
+               next.delete(catId);
+               next.delete(`daily:${catId}`);
+               next.delete(`weekly:${catId}`);
+            }
+            if (targetName) {
+               next.delete(targetName);
+               next.delete(`daily:name:${targetName}`);
+               next.delete(`weekly:name:${targetName}`);
+            }
             writeCollapsedCategoryIds(userId, next);
             collapsedCategoryIdsRef.current = next;
             return next;
@@ -3818,9 +3916,13 @@ export function CockpitTasksSection({
                            if (dayTasks.length === 0 && cat.tasks.length > 0)
                               return null;
 
-                           const isCollapsed =
-                              isCategoryCollapsed(cat, collapsedCategoryIds) ||
-                              cat.isCollapsed;
+                           const isCollapsed = isHydrated
+                              ? isCategoryCollapsed(
+                                   "daily",
+                                   cat,
+                                   collapsedCategoryIds
+                                ) || cat.isCollapsed
+                              : false;
 
                            const isCatDragging =
                               draggedItem?.type === "category" &&
@@ -4689,9 +4791,13 @@ export function CockpitTasksSection({
                         </div>
                      ) : (
                         weeklyCategories.map((cat, catIdx) => {
-                           const isCollapsed =
-                              isCategoryCollapsed(cat, collapsedCategoryIds) ||
-                              cat.isCollapsed;
+                           const isCollapsed = isHydrated
+                              ? isCategoryCollapsed(
+                                   "weekly",
+                                   cat,
+                                   collapsedCategoryIds
+                                ) || cat.isCollapsed
+                              : false;
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "weekly" &&

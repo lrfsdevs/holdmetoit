@@ -4,7 +4,10 @@ import { createElement, act } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
-import { readCollapsedCategoryIds } from "./cockpit-tasks-storage";
+import {
+   isCategoryCollapsed,
+   readCollapsedCategoryIds,
+} from "./cockpit-tasks-storage";
 
 vi.mock("@/features/tasks/api/task.actions", () => ({
    createTaskAction: vi.fn(),
@@ -24,6 +27,9 @@ vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
       ...actual,
       getAllLocalCategories: vi.fn().mockResolvedValue([]),
       getAllLocalTasks: vi.fn().mockResolvedValue([]),
+      getAllQueuedMutations: vi.fn().mockResolvedValue([]),
+      putLocalCategories: vi.fn().mockResolvedValue(undefined),
+      putLocalTasks: vi.fn().mockResolvedValue(undefined),
       seedFromUserTasks: vi.fn().mockResolvedValue(undefined),
       putLocalCategory: vi.fn().mockResolvedValue(undefined),
       deleteLocalCategory: vi.fn().mockResolvedValue(undefined),
@@ -167,8 +173,20 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
 
       // Verify localStorage was updated with user scoping
       const collapsedIds = readCollapsedCategoryIds("user_test");
-      expect(collapsedIds.has("cat_daily_1")).toBe(true);
-      expect(collapsedIds.has("cat_daily_2")).toBe(false);
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_1", name: "Morning Focus" },
+            collapsedIds
+         )
+      ).toBe(true);
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_2", name: "Evening Routine" },
+            collapsedIds
+         )
+      ).toBe(false);
    });
 
    it("clicking a collapsed daily category header uncollapses it and removes it from localStorage", () => {
@@ -186,16 +204,24 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
       // First click collapses it
       fireEvent.click(morningHeader);
       expect(screen.queryByText("Review Math Notes")).toBeNull();
-      expect(readCollapsedCategoryIds("user_test").has("cat_daily_1")).toBe(
-         true
-      );
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_1", name: "Morning Focus" },
+            readCollapsedCategoryIds("user_test")
+         )
+      ).toBe(true);
 
       // Second click uncollapses it
       fireEvent.click(morningHeader);
       expect(screen.getByText("Review Math Notes")).toBeTruthy();
-      expect(readCollapsedCategoryIds("user_test").has("cat_daily_1")).toBe(
-         false
-      );
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_1", name: "Morning Focus" },
+            readCollapsedCategoryIds("user_test")
+         )
+      ).toBe(false);
    });
 
    it("collapsing a weekly category persists to localStorage and hides weekly tasks", () => {
@@ -216,14 +242,20 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
       expect(screen.queryByText("Complete 100 LeetCode problems")).toBeNull();
 
       const collapsedIds = readCollapsedCategoryIds("user_test");
-      expect(collapsedIds.has("cat_weekly_1")).toBe(true);
+      expect(
+         isCategoryCollapsed(
+            "weekly",
+            { id: "cat_weekly_1", name: "Weekly Milestones" },
+            collapsedIds
+         )
+      ).toBe(true);
    });
 
    it("preserves collapsed category state across page refresh / remounting", () => {
       // Simulate existing collapsed state in localStorage prior to component mounting
       window.localStorage.setItem(
          "holdmetoit:collapsed_categories:user_test",
-         JSON.stringify(["cat_daily_1", "cat_weekly_1"])
+         JSON.stringify(["daily:cat_daily_1", "weekly:cat_weekly_1"])
       );
 
       const { unmount } = render(
@@ -329,9 +361,165 @@ describe("CockpitTasksSection - Category Collapse Persistence (GH #194 / KAN-63)
 
       // Should be stored in guest scope
       const guestCollapsed = readCollapsedCategoryIds(null);
-      expect(guestCollapsed.has("cat_daily_1")).toBe(true);
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_1", name: "Morning Focus" },
+            guestCollapsed
+         )
+      ).toBe(true);
 
       // User scope should remain untouched
       expect(readCollapsedCategoryIds("user_test").size).toBe(0);
+   });
+
+   it("collapsing a category in weekly goals does NOT collapse the daily category with the same name", () => {
+      const crossBoardTasks: UserCategorizedTasks = {
+         ...testTasks,
+         dailyCategories: [
+            {
+               id: "cat_daily_shared",
+               name: "General",
+               taskType: "DAILY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_daily_shared",
+                     userId: "user_test",
+                     categoryId: "cat_daily_shared",
+                     title: "Daily General Task",
+                     isComplete: false,
+                     dueDate: "2026-10-04",
+                     taskType: "DAILY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_shared",
+               name: "General",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task_weekly_shared",
+                     userId: "user_test",
+                     categoryId: "cat_weekly_shared",
+                     title: "Weekly General Milestone",
+                     isComplete: false,
+                     taskType: "WEEKLY",
+                     isDeleted: false,
+                     createdAt: new Date("2026-10-01T10:00:00Z"),
+                     updatedAt: new Date("2026-10-01T10:00:00Z"),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         totalDailyTasks: 1,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 1,
+         completedWeeklyTasks: 0,
+      };
+
+      render(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userId: "user_test",
+            userTasks: crossBoardTasks,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      // Both tasks should be visible initially
+      expect(screen.getByText("Daily General Task")).toBeTruthy();
+      expect(screen.getByText("Weekly General Milestone")).toBeTruthy();
+
+      // Find all headers named "General" (one in Daily, one in Weekly)
+      const generalHeaders = screen.getAllByText("General");
+      expect(generalHeaders.length).toBe(2);
+
+      // Collapse the Weekly category header (second one in the DOM)
+      fireEvent.click(generalHeaders[1]);
+
+      // Weekly General Milestone is hidden
+      expect(screen.queryByText("Weekly General Milestone")).toBeNull();
+
+      // Daily General Task MUST STILL BE VISIBLE!
+      expect(screen.getByText("Daily General Task")).toBeTruthy();
+
+      // Verify the storage state is strictly scoped
+      const collapsedIds = readCollapsedCategoryIds("user_test");
+      expect(
+         isCategoryCollapsed(
+            "weekly",
+            { id: "cat_weekly_shared", name: "General" },
+            collapsedIds
+         )
+      ).toBe(true);
+      expect(
+         isCategoryCollapsed(
+            "daily",
+            { id: "cat_daily_shared", name: "General" },
+            collapsedIds
+         )
+      ).toBe(false);
+   });
+
+   it("does not flash/overwrite fresh server tasks with stale IndexedDB cache on initial mount", async () => {
+      const { getAllLocalCategories, getAllLocalTasks, getAllQueuedMutations } =
+         await import("@/features/tasks/data/local/task-idb");
+
+      // Stale data in IndexedDB from a previous session
+      vi.mocked(getAllLocalCategories).mockResolvedValue([
+         {
+            id: "cat_old",
+            userId: "user_test",
+            name: "Old Stale Category",
+            taskType: "DAILY",
+            sortOrder: 0,
+            createdAt: "2026-09-01T10:00:00Z",
+            updatedAt: "2026-09-01T10:00:00Z",
+            syncState: "synced",
+         },
+      ]);
+      vi.mocked(getAllLocalTasks).mockResolvedValue([
+         {
+            id: "task_old",
+            userId: "user_test",
+            categoryId: "cat_old",
+            title: "Old Stale Task From Last Month",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            dueDate: "2026-10-04",
+            createdAt: "2026-09-01T10:00:00Z",
+            updatedAt: "2026-09-01T10:00:00Z",
+            completedAt: null,
+            syncState: "synced",
+         },
+      ]);
+      vi.mocked(getAllQueuedMutations).mockResolvedValue([]);
+
+      render(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userId: "user_test",
+            userTasks: testTasks,
+            todayDate: "2026-10-04",
+         })
+      );
+
+      // Fresh server tasks should be displayed
+      expect(screen.getByText("Review Math Notes")).toBeTruthy();
+      expect(screen.getByText("Read Physics Chapter")).toBeTruthy();
+
+      // Stale old task must NEVER appear on mount
+      expect(screen.queryByText("Old Stale Task From Last Month")).toBeNull();
    });
 });
