@@ -1,9 +1,11 @@
 /**
- * Local storage utility for persisting task category collapse state across
- * page refreshes, client-side route navigation, and background IndexedDB sync events.
+ * Local storage & cookie utility for persisting task category collapse state across
+ * page refreshes, SSR hydration, client-side route navigation, and background IndexedDB sync events.
  */
 
 export type TaskCategoryType = "daily" | "weekly";
+
+export const COLLAPSED_CATEGORIES_COOKIE = "holdmetoit_collapsed_categories";
 
 const STORAGE_KEY_PREFIX = "holdmetoit:collapsed_categories:";
 
@@ -18,58 +20,92 @@ export function getCollapsedCategoriesStorageKey(
    return `${STORAGE_KEY_PREFIX}${normalizedUser}`;
 }
 
+function readCookiePayload(): Record<string, string[]> {
+   if (typeof document === "undefined" || !document.cookie) {
+      return {};
+   }
+   try {
+      const match = document.cookie.match(
+         new RegExp(`(?:^|; )${COLLAPSED_CATEGORIES_COOKIE}=([^;]*)`)
+      );
+      if (match && match[1]) {
+         const parsed: unknown = JSON.parse(decodeURIComponent(match[1]));
+         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return parsed as Record<string, string[]>;
+         }
+         if (Array.isArray(parsed)) {
+            return { all: parsed as string[] };
+         }
+      }
+   } catch {
+      // Ignore
+   }
+   return {};
+}
+
 /**
- * Reads the set of collapsed category identifiers from localStorage.
+ * Reads the set of collapsed category identifiers from localStorage (or fallback cookie).
  * Safely handles SSR, missing keys, corrupted JSON, and private browsing exceptions.
+ * Automatically filters out any legacy unscoped entries so old tests don't corrupt state.
  */
 export function readCollapsedCategoryIds(userId?: string | null): Set<string> {
    if (typeof window === "undefined") {
       return new Set();
    }
 
+   const isValidKey = (k: unknown): k is string =>
+      typeof k === "string" &&
+      (k.startsWith("daily:") || k.startsWith("weekly:"));
+
+   const scope = userId && userId.trim().length > 0 ? userId.trim() : "guest";
+
    try {
-      if (!window.localStorage) {
-         return new Set();
+      if (window.localStorage) {
+         const key = getCollapsedCategoriesStorageKey(userId);
+         const raw = window.localStorage.getItem(key);
+         if (raw) {
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+               const valid = parsed.filter(isValidKey);
+               if (valid.length > 0) {
+                  return new Set(valid);
+               }
+            } else if (
+               parsed &&
+               typeof parsed === "object" &&
+               Array.isArray((parsed as { keys?: unknown }).keys)
+            ) {
+               const valid = (parsed as { keys: unknown[] }).keys.filter(
+                  isValidKey
+               );
+               if (valid.length > 0) {
+                  return new Set(valid);
+               }
+            }
+         }
       }
-
-      const key = getCollapsedCategoriesStorageKey(userId);
-      const raw = window.localStorage.getItem(key);
-      if (!raw) {
-         return new Set();
-      }
-
-      const parsed: unknown = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-         return new Set(
-            parsed.filter(
-               (item): item is string =>
-                  typeof item === "string" && item.trim().length > 0
-            )
-         );
-      }
-
-      if (
-         parsed &&
-         typeof parsed === "object" &&
-         Array.isArray((parsed as { keys?: unknown }).keys)
-      ) {
-         return new Set(
-            (parsed as { keys: unknown[] }).keys.filter(
-               (item): item is string =>
-                  typeof item === "string" && item.trim().length > 0
-            )
-         );
-      }
-
-      return new Set();
    } catch {
-      return new Set();
+      // Ignore
    }
+
+   // Fallback to cookie if localStorage had no valid keys
+   try {
+      const payload = readCookiePayload();
+      const list = payload[scope] || payload["all"];
+      if (Array.isArray(list)) {
+         return new Set(list.filter(isValidKey));
+      }
+   } catch {
+      // Ignore
+   }
+
+   return new Set();
 }
 
 /**
- * Persists the set of collapsed category identifiers to localStorage.
- * Safely handles SSR and quota/security errors.
+ * Persists the set of collapsed category identifiers to localStorage AND cookie.
+ * Writing to a cookie enables Next.js SSR to pre-render the exact collapsed states,
+ * eliminating the visual flash/pop on page reload with zero hydration mismatch.
  */
 export function writeCollapsedCategoryIds(
    userId: string | null | undefined,
@@ -79,24 +115,38 @@ export function writeCollapsedCategoryIds(
       return;
    }
 
-   try {
-      if (!window.localStorage) {
-         return;
-      }
+   const array = Array.from(collapsedIds).filter(
+      (id): id is string =>
+         typeof id === "string" &&
+         (id.startsWith("daily:") || id.startsWith("weekly:"))
+   );
 
-      const key = getCollapsedCategoriesStorageKey(userId);
-      const array = Array.from(collapsedIds).filter(
-         (id) => typeof id === "string" && id.trim().length > 0
-      );
-      window.localStorage.setItem(key, JSON.stringify(array));
+   const scope = userId && userId.trim().length > 0 ? userId.trim() : "guest";
+
+   try {
+      if (window.localStorage) {
+         const key = getCollapsedCategoriesStorageKey(userId);
+         window.localStorage.setItem(key, JSON.stringify(array));
+      }
    } catch {
       // Gracefully ignore storage quota or sandbox permission errors
+   }
+
+   try {
+      if (typeof document !== "undefined") {
+         const currentPayload = readCookiePayload();
+         currentPayload[scope] = array;
+         const cookieValue = encodeURIComponent(JSON.stringify(currentPayload));
+         document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=${cookieValue}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+   } catch {
+      // Gracefully ignore cookie write failures
    }
 }
 
 /**
  * Checks whether a given category is collapsed for the specified board type ("daily" | "weekly").
- * Supports board-isolated identifiers to prevent category name collisions across boards.
+ * Strictly checks board-isolated identifiers to guarantee daily and weekly categories never collide.
  */
 export function isCategoryCollapsed(
    boardTypeOrCat: TaskCategoryType | { id?: string | null; name: string },
@@ -116,22 +166,17 @@ export function isCategoryCollapsed(
       collapsedIds = catOrCollapsedIds as Set<string>;
    }
 
-   if (!collapsedIds) {
+   if (!collapsedIds || collapsedIds.size === 0) {
       return false;
    }
 
-   // 1. Check exact board-scoped ID
+   // 1. Check exact board-scoped ID (e.g. "daily:cat_123" or "weekly:cat_456")
    if (cat.id && collapsedIds.has(`${boardType}:${cat.id}`)) {
       return true;
    }
 
-   // 2. Check exact board-scoped name
+   // 2. Check exact board-scoped name (e.g. "daily:name:General" or "weekly:name:General")
    if (cat.name && collapsedIds.has(`${boardType}:name:${cat.name}`)) {
-      return true;
-   }
-
-   // 3. Backward compatibility fallback for legacy unscoped ID
-   if (cat.id && collapsedIds.has(cat.id)) {
       return true;
    }
 
@@ -173,15 +218,18 @@ export function toggleCategoryCollapseKey(
    if (isCurrentlyCollapsed) {
       if (idKey) next.delete(idKey);
       if (nameKey) next.delete(nameKey);
+      // Clean up any legacy unscoped keys if present to prevent pollution
       if (cat.id) next.delete(cat.id);
       if (cat.name) next.delete(cat.name);
-      if (cat.name) next.delete(`${boardType}:${cat.name}`);
    } else {
       if (idKey) {
          next.add(idKey);
       } else if (nameKey) {
          next.add(nameKey);
       }
+      // Ensure any legacy unscoped keys are removed
+      if (cat.id) next.delete(cat.id);
+      if (cat.name) next.delete(cat.name);
    }
 
    return next;

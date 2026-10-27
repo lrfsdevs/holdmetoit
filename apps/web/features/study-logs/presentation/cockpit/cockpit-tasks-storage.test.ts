@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+   COLLAPSED_CATEGORIES_COOKIE,
    getCollapsedCategoriesStorageKey,
    isCategoryCollapsed,
    readCollapsedCategoryIds,
@@ -11,6 +12,7 @@ import {
 describe("cockpit-tasks-storage", () => {
    beforeEach(() => {
       window.localStorage.clear();
+      document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=; path=/; max-age=0`;
       vi.restoreAllMocks();
    });
 
@@ -61,24 +63,44 @@ describe("cockpit-tasks-storage", () => {
       it("supports parsing an object payload with a keys property", () => {
          window.localStorage.setItem(
             "holdmetoit:collapsed_categories:user_1",
-            JSON.stringify({ keys: ["cat-a", "cat-b"] })
+            JSON.stringify({ keys: ["daily:cat-a", "weekly:cat-b"] })
          );
 
          const result = readCollapsedCategoryIds("user_1");
          expect(result.size).toBe(2);
-         expect(result.has("cat-a")).toBe(true);
-         expect(result.has("cat-b")).toBe(true);
+         expect(result.has("daily:cat-a")).toBe(true);
+         expect(result.has("weekly:cat-b")).toBe(true);
       });
 
-      it("filters out invalid, empty, or whitespace-only IDs", () => {
+      it("filters out invalid, empty, or legacy unscoped IDs", () => {
          window.localStorage.setItem(
             "holdmetoit:collapsed_categories:user_1",
-            JSON.stringify(["valid-id", "", "   ", 123, null, undefined])
+            JSON.stringify([
+               "daily:valid-id",
+               "unscoped-id",
+               "",
+               "   ",
+               123,
+               null,
+               undefined,
+            ])
          );
 
          const result = readCollapsedCategoryIds("user_1");
          expect(result.size).toBe(1);
-         expect(result.has("valid-id")).toBe(true);
+         expect(result.has("daily:valid-id")).toBe(true);
+         expect(result.has("unscoped-id")).toBe(false);
+      });
+
+      it("reads from cookie when localStorage is empty", () => {
+         document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=${encodeURIComponent(
+            JSON.stringify(["daily:from-cookie", "weekly:from-cookie"])
+         )}; path=/`;
+
+         const result = readCollapsedCategoryIds("user_1");
+         expect(result.size).toBe(2);
+         expect(result.has("daily:from-cookie")).toBe(true);
+         expect(result.has("weekly:from-cookie")).toBe(true);
       });
 
       it("returns an empty set safely when corrupted JSON is stored", () => {
@@ -102,7 +124,7 @@ describe("cockpit-tasks-storage", () => {
    });
 
    describe("writeCollapsedCategoryIds", () => {
-      it("writes a Set of category IDs to the user-scoped localStorage key", () => {
+      it("writes board-scoped category IDs to localStorage AND cookie", () => {
          const ids = new Set(["daily:cat-1", "weekly:cat-2"]);
          writeCollapsedCategoryIds("user_test", ids);
 
@@ -110,6 +132,10 @@ describe("cockpit-tasks-storage", () => {
             "holdmetoit:collapsed_categories:user_test"
          );
          expect(raw).toBe(JSON.stringify(["daily:cat-1", "weekly:cat-2"]));
+
+         expect(document.cookie).toContain(
+            encodeURIComponent(JSON.stringify(["daily:cat-1", "weekly:cat-2"]))
+         );
       });
 
       it("writes an Array of category IDs to guest scope when userId is omitted", () => {
@@ -127,7 +153,7 @@ describe("cockpit-tasks-storage", () => {
          });
 
          expect(() => {
-            writeCollapsedCategoryIds("user_1", new Set(["cat-1"]));
+            writeCollapsedCategoryIds("user_1", new Set(["daily:cat-1"]));
          }).not.toThrow();
       });
    });
@@ -175,7 +201,7 @@ describe("cockpit-tasks-storage", () => {
          ).toBe(false);
       });
 
-      it("supports legacy unscoped category IDs as backward-compatible fallback", () => {
+      it("ignores legacy unscoped category IDs to prevent cross-board collision", () => {
          const collapsed = new Set(["cat-legacy-1"]);
          expect(
             isCategoryCollapsed(
@@ -183,7 +209,7 @@ describe("cockpit-tasks-storage", () => {
                { id: "cat-legacy-1", name: "Old Category" },
                collapsed
             )
-         ).toBe(true);
+         ).toBe(false);
       });
 
       it("returns false for newly created categories with unrecorded keys", () => {

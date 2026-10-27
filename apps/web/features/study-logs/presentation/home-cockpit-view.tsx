@@ -45,6 +45,7 @@ export interface HomeCockpitViewProps {
    userTasks?: UserCategorizedTasks | null;
    isAdmin?: boolean;
    profileUrl?: string;
+   initialCollapsedCategoryIds?: string[];
 }
 
 /** Renders the authenticated home cockpit and its participant workflows. */
@@ -59,6 +60,7 @@ export function HomeCockpitView({
    userTasks,
    isAdmin,
    profileUrl,
+   initialCollapsedCategoryIds,
 }: HomeCockpitViewProps) {
    const effectiveIsAdmin = isAdmin ?? hasAdminPrivileges(user?.role);
    const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
@@ -191,6 +193,7 @@ export function HomeCockpitView({
             totalChallengeDays={cockpit?.totalChallengeDays}
             onOpenHoursModal={openHoursModal}
             isAdmin={effectiveIsAdmin}
+            initialCollapsedCategoryIds={initialCollapsedCategoryIds}
          />
 
          <DailyHoursModal
