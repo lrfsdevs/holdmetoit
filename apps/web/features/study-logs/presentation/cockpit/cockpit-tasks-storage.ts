@@ -3,6 +3,8 @@
  * page refreshes, client-side route navigation, and background IndexedDB sync events.
  */
 
+export type TaskCategoryType = "daily" | "weekly";
+
 const STORAGE_KEY_PREFIX = "holdmetoit:collapsed_categories:";
 
 /**
@@ -93,42 +95,92 @@ export function writeCollapsedCategoryIds(
 }
 
 /**
- * Checks whether a given category is collapsed based on its id or name.
+ * Checks whether a given category is collapsed for the specified board type ("daily" | "weekly").
+ * Supports board-isolated identifiers to prevent category name collisions across boards.
  */
 export function isCategoryCollapsed(
-   cat: { id?: string | null; name: string },
-   collapsedIds: Set<string>
+   boardTypeOrCat: TaskCategoryType | { id?: string | null; name: string },
+   catOrCollapsedIds: { id?: string | null; name: string } | Set<string>,
+   maybeCollapsedIds?: Set<string>
 ): boolean {
+   let boardType: TaskCategoryType = "daily";
+   let cat: { id?: string | null; name: string };
+   let collapsedIds: Set<string> | undefined;
+
+   if (typeof boardTypeOrCat === "string") {
+      boardType = boardTypeOrCat;
+      cat = catOrCollapsedIds as { id?: string | null; name: string };
+      collapsedIds = maybeCollapsedIds;
+   } else {
+      cat = boardTypeOrCat;
+      collapsedIds = catOrCollapsedIds as Set<string>;
+   }
+
+   if (!collapsedIds) {
+      return false;
+   }
+
+   // 1. Check exact board-scoped ID
+   if (cat.id && collapsedIds.has(`${boardType}:${cat.id}`)) {
+      return true;
+   }
+
+   // 2. Check exact board-scoped name
+   if (cat.name && collapsedIds.has(`${boardType}:name:${cat.name}`)) {
+      return true;
+   }
+
+   // 3. Backward compatibility fallback for legacy unscoped ID
    if (cat.id && collapsedIds.has(cat.id)) {
       return true;
    }
-   if (cat.name && collapsedIds.has(cat.name)) {
-      return true;
-   }
+
    return false;
 }
 
 /**
  * Computes the new Set of collapsed category keys when a category is toggled.
+ * Strictly scopes keys by board type ("daily" or "weekly") so actions on one board never affect the other.
  */
 export function toggleCategoryCollapseKey(
-   cat: { id?: string | null; name: string },
-   currentCollapsed: Set<string>
+   boardTypeOrCat: TaskCategoryType | { id?: string | null; name: string },
+   catOrCurrentCollapsed: { id?: string | null; name: string } | Set<string>,
+   maybeCurrentCollapsed?: Set<string>
 ): Set<string> {
-   const next = new Set(currentCollapsed);
-   const isCurrentlyCollapsed = isCategoryCollapsed(cat, currentCollapsed);
+   let boardType: TaskCategoryType = "daily";
+   let cat: { id?: string | null; name: string };
+   let currentCollapsed: Set<string>;
+
+   if (typeof boardTypeOrCat === "string") {
+      boardType = boardTypeOrCat;
+      cat = catOrCurrentCollapsed as { id?: string | null; name: string };
+      currentCollapsed = maybeCurrentCollapsed as Set<string>;
+   } else {
+      cat = boardTypeOrCat;
+      currentCollapsed = catOrCurrentCollapsed as Set<string>;
+   }
+
+   const next = new Set(currentCollapsed || []);
+   const isCurrentlyCollapsed = isCategoryCollapsed(
+      boardType,
+      cat,
+      currentCollapsed
+   );
+
+   const idKey = cat.id ? `${boardType}:${cat.id}` : null;
+   const nameKey = cat.name ? `${boardType}:name:${cat.name}` : null;
 
    if (isCurrentlyCollapsed) {
-      if (cat.id) {
-         next.delete(cat.id);
-      }
-      if (cat.name) {
-         next.delete(cat.name);
-      }
+      if (idKey) next.delete(idKey);
+      if (nameKey) next.delete(nameKey);
+      if (cat.id) next.delete(cat.id);
+      if (cat.name) next.delete(cat.name);
+      if (cat.name) next.delete(`${boardType}:${cat.name}`);
    } else {
-      const keyToAdd = cat.id || cat.name;
-      if (keyToAdd) {
-         next.add(keyToAdd);
+      if (idKey) {
+         next.add(idKey);
+      } else if (nameKey) {
+         next.add(nameKey);
       }
    }
 

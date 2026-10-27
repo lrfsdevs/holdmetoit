@@ -49,13 +49,13 @@ describe("cockpit-tasks-storage", () => {
       it("reads and parses an array of category IDs from localStorage", () => {
          window.localStorage.setItem(
             "holdmetoit:collapsed_categories:user_1",
-            JSON.stringify(["cat-1", "cat-2"])
+            JSON.stringify(["daily:cat-1", "weekly:cat-2"])
          );
 
          const result = readCollapsedCategoryIds("user_1");
          expect(result.size).toBe(2);
-         expect(result.has("cat-1")).toBe(true);
-         expect(result.has("cat-2")).toBe(true);
+         expect(result.has("daily:cat-1")).toBe(true);
+         expect(result.has("weekly:cat-2")).toBe(true);
       });
 
       it("supports parsing an object payload with a keys property", () => {
@@ -103,22 +103,22 @@ describe("cockpit-tasks-storage", () => {
 
    describe("writeCollapsedCategoryIds", () => {
       it("writes a Set of category IDs to the user-scoped localStorage key", () => {
-         const ids = new Set(["cat-1", "cat-2"]);
+         const ids = new Set(["daily:cat-1", "weekly:cat-2"]);
          writeCollapsedCategoryIds("user_test", ids);
 
          const raw = window.localStorage.getItem(
             "holdmetoit:collapsed_categories:user_test"
          );
-         expect(raw).toBe(JSON.stringify(["cat-1", "cat-2"]));
+         expect(raw).toBe(JSON.stringify(["daily:cat-1", "weekly:cat-2"]));
       });
 
       it("writes an Array of category IDs to guest scope when userId is omitted", () => {
-         writeCollapsedCategoryIds(null, ["cat-guest-1"]);
+         writeCollapsedCategoryIds(null, ["daily:cat-guest-1"]);
 
          const raw = window.localStorage.getItem(
             "holdmetoit:collapsed_categories:guest"
          );
-         expect(raw).toBe(JSON.stringify(["cat-guest-1"]));
+         expect(raw).toBe(JSON.stringify(["daily:cat-guest-1"]));
       });
 
       it("safely handles storage quota exceptions without throwing", () => {
@@ -133,35 +133,65 @@ describe("cockpit-tasks-storage", () => {
    });
 
    describe("isCategoryCollapsed", () => {
-      it("returns true when category ID is in the collapsed set", () => {
-         const collapsed = new Set(["cat-uuid-1"]);
-         expect(
-            isCategoryCollapsed({ id: "cat-uuid-1", name: "Daily" }, collapsed)
-         ).toBe(true);
-      });
+      it("isolates daily from weekly categories with same name and id", () => {
+         const collapsed = new Set(["weekly:cat-common"]);
 
-      it("returns true when category name is in the collapsed set as fallback", () => {
-         const collapsed = new Set(["Weekly Goals"]);
+         // Collapsed in weekly
          expect(
             isCategoryCollapsed(
-               { id: "some-other-id", name: "Weekly Goals" },
+               "weekly",
+               { id: "cat-common", name: "Math" },
+               collapsed
+            )
+         ).toBe(true);
+
+         // NOT collapsed in daily
+         expect(
+            isCategoryCollapsed(
+               "daily",
+               { id: "cat-common", name: "Math" },
+               collapsed
+            )
+         ).toBe(false);
+      });
+
+      it("isolates daily from weekly categories using board-scoped name", () => {
+         const collapsed = new Set(["weekly:name:General"]);
+
+         expect(
+            isCategoryCollapsed(
+               "weekly",
+               { id: "weekly-id-1", name: "General" },
+               collapsed
+            )
+         ).toBe(true);
+
+         expect(
+            isCategoryCollapsed(
+               "daily",
+               { id: "daily-id-1", name: "General" },
+               collapsed
+            )
+         ).toBe(false);
+      });
+
+      it("supports legacy unscoped category IDs as backward-compatible fallback", () => {
+         const collapsed = new Set(["cat-legacy-1"]);
+         expect(
+            isCategoryCollapsed(
+               "daily",
+               { id: "cat-legacy-1", name: "Old Category" },
                collapsed
             )
          ).toBe(true);
       });
 
-      it("returns false when neither ID nor name is in the collapsed set", () => {
-         const collapsed = new Set(["cat-uuid-1"]);
-         expect(
-            isCategoryCollapsed({ id: "cat-uuid-2", name: "Work" }, collapsed)
-         ).toBe(false);
-      });
-
-      it("returns false for newly created categories with empty collapsed set", () => {
-         const collapsed = new Set<string>();
+      it("returns false for newly created categories with unrecorded keys", () => {
+         const collapsed = new Set(["daily:cat-1", "weekly:cat-2"]);
          expect(
             isCategoryCollapsed(
-               { id: "new-cat-uuid", name: "New Category" },
+               "daily",
+               { id: "cat-new", name: "New Category" },
                collapsed
             )
          ).toBe(false);
@@ -169,36 +199,74 @@ describe("cockpit-tasks-storage", () => {
    });
 
    describe("toggleCategoryCollapseKey", () => {
-      it("adds category ID when toggling an expanded category", () => {
-         const initial = new Set<string>();
-         const next = toggleCategoryCollapseKey(
-            { id: "cat-1", name: "Work" },
-            initial
+      it("toggles weekly category without affecting daily category of the same name", () => {
+         let collapsed = new Set<string>();
+
+         // Collapse weekly "Math"
+         collapsed = toggleCategoryCollapseKey(
+            "weekly",
+            { id: "cat-math", name: "Math" },
+            collapsed
          );
 
-         expect(next.has("cat-1")).toBe(true);
-         expect(initial.has("cat-1")).toBe(false); // pure, does not mutate original
+         expect(collapsed.has("weekly:cat-math")).toBe(true);
+         expect(
+            isCategoryCollapsed(
+               "weekly",
+               { id: "cat-math", name: "Math" },
+               collapsed
+            )
+         ).toBe(true);
+         expect(
+            isCategoryCollapsed(
+               "daily",
+               { id: "cat-math", name: "Math" },
+               collapsed
+            )
+         ).toBe(false);
+
+         // Uncollapse weekly "Math"
+         collapsed = toggleCategoryCollapseKey(
+            "weekly",
+            { id: "cat-math", name: "Math" },
+            collapsed
+         );
+
+         expect(collapsed.has("weekly:cat-math")).toBe(false);
+         expect(
+            isCategoryCollapsed(
+               "weekly",
+               { id: "cat-math", name: "Math" },
+               collapsed
+            )
+         ).toBe(false);
       });
 
-      it("adds category name when category ID is missing", () => {
-         const initial = new Set<string>();
-         const next = toggleCategoryCollapseKey(
-            { id: undefined, name: "Chores" },
-            initial
+      it("toggles daily category without affecting weekly category of the same name", () => {
+         let collapsed = new Set<string>();
+
+         // Collapse daily "Physics"
+         collapsed = toggleCategoryCollapseKey(
+            "daily",
+            { id: "cat-physics", name: "Physics" },
+            collapsed
          );
 
-         expect(next.has("Chores")).toBe(true);
-      });
-
-      it("removes both ID and name when toggling a collapsed category", () => {
-         const initial = new Set(["cat-1", "Work"]);
-         const next = toggleCategoryCollapseKey(
-            { id: "cat-1", name: "Work" },
-            initial
-         );
-
-         expect(next.has("cat-1")).toBe(false);
-         expect(next.has("Work")).toBe(false);
+         expect(collapsed.has("daily:cat-physics")).toBe(true);
+         expect(
+            isCategoryCollapsed(
+               "daily",
+               { id: "cat-physics", name: "Physics" },
+               collapsed
+            )
+         ).toBe(true);
+         expect(
+            isCategoryCollapsed(
+               "weekly",
+               { id: "cat-physics", name: "Physics" },
+               collapsed
+            )
+         ).toBe(false);
       });
    });
 });
