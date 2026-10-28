@@ -98,6 +98,8 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
       const dailyQuickAdd = screen.getByTestId("quick-add-daily-button");
       expect(dailyQuickAdd).toBeTruthy();
       expect(dailyQuickAdd.getAttribute("aria-label")).toMatch(/Add todo for/i);
+      expect(dailyQuickAdd.className).toContain("min-h-control-sm");
+      expect(dailyQuickAdd.className).toContain("min-w-control-sm");
 
       // Clicking Daily header quick-add opens Daily modal
       fireEvent.click(dailyQuickAdd);
@@ -111,6 +113,8 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
       const weeklyQuickAdd = screen.getByTestId("quick-add-weekly-button");
       expect(weeklyQuickAdd).toBeTruthy();
       expect(weeklyQuickAdd.getAttribute("aria-label")).toBe("Add weekly todo");
+      expect(weeklyQuickAdd.className).toContain("min-h-control-sm");
+      expect(weeklyQuickAdd.className).toContain("min-w-control-sm");
 
       // Clicking Weekly header quick-add opens Weekly modal
       fireEvent.click(weeklyQuickAdd);
@@ -161,11 +165,36 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
       expect(screen.getByText("Add Weekly Todo")).toBeTruthy();
    });
 
-   it("applies scroll containment classes on task category containers for both columns", () => {
+   it("applies scroll containment classes and enables scrolling for long lists exceeding bounded height", () => {
+      const manyDailyTasks: UserCategorizedTasks = {
+         ...sampleTasks,
+         dailyCategories: [
+            {
+               id: "cat_daily_1",
+               name: "Morning Focus",
+               taskType: "DAILY",
+               isCollapsed: false,
+               tasks: Array.from({ length: 20 }, (_, i) => ({
+                  id: `t_daily_${i}`,
+                  userId: "user_1",
+                  categoryId: "cat_daily_1",
+                  title: `Study Session #${i + 1}`,
+                  taskType: "DAILY",
+                  isComplete: false,
+                  dueDate: "2026-10-28",
+                  createdAt: new Date("2026-10-28T10:00:00Z"),
+                  updatedAt: new Date("2026-10-28T10:00:00Z"),
+                  completedAt: null,
+               })),
+            },
+         ],
+         totalDailyTasks: 20,
+      };
+
       const { container } = render(
          createElement(CockpitTasksSection, {
             isLoggedIn: true,
-            userTasks: sampleTasks,
+            userTasks: manyDailyTasks,
             todayDate: "2026-10-28",
          })
       );
@@ -181,6 +210,24 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
          expect(el.className).toContain("pr-1");
          expect(el.className).toContain("scrollbar-obsidian");
       });
+
+      // Verify that the container element can be scrolled when items exceed bounded height
+      const dailyScrollEl = scrollContainers[0] as HTMLElement;
+      Object.defineProperty(dailyScrollEl, "scrollHeight", {
+         value: 1200,
+         configurable: true,
+      });
+      Object.defineProperty(dailyScrollEl, "clientHeight", {
+         value: 520,
+         configurable: true,
+      });
+      expect(dailyScrollEl.scrollHeight).toBeGreaterThan(
+         dailyScrollEl.clientHeight
+      );
+
+      // Verify scroll event dispatch and position update
+      fireEvent.scroll(dailyScrollEl, { target: { scrollTop: 200 } });
+      expect(dailyScrollEl.scrollTop).toBe(200);
    });
 
    it("renders mobile segmented switcher and switches active view on click", () => {
@@ -207,9 +254,19 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
       expect(dailyTab).toBeTruthy();
       expect(weeklyTab).toBeTruthy();
 
-      // Default state: Daily active
+      // Mobile tabs satisfy minimum 44px touch target height
+      expect(dailyTab?.className).toContain("min-h-control-sm");
+      expect(weeklyTab?.className).toContain("min-h-control-sm");
+
+      const dailyBoard = screen.getByTestId("daily-tasks-board");
+      const weeklyBoard = screen.getByTestId("weekly-tasks-board");
+
+      // Default state: Daily active (Daily board visible with flex, Weekly board hidden on mobile)
       expect(dailyTab?.getAttribute("aria-selected")).toBe("true");
       expect(weeklyTab?.getAttribute("aria-selected")).toBe("false");
+      expect(dailyBoard.className).toContain("flex");
+      expect(dailyBoard.className).not.toContain("hidden sm:flex");
+      expect(weeklyBoard.className).toContain("hidden sm:flex");
 
       // Switch to Weekly view
       if (weeklyTab) {
@@ -218,6 +275,9 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
 
       expect(dailyTab?.getAttribute("aria-selected")).toBe("false");
       expect(weeklyTab?.getAttribute("aria-selected")).toBe("true");
+      expect(dailyBoard.className).toContain("hidden sm:flex");
+      expect(weeklyBoard.className).toContain("flex");
+      expect(weeklyBoard.className).not.toContain("hidden sm:flex");
 
       // Switch back to Daily view
       if (dailyTab) {
@@ -226,5 +286,8 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
 
       expect(dailyTab?.getAttribute("aria-selected")).toBe("true");
       expect(weeklyTab?.getAttribute("aria-selected")).toBe("false");
+      expect(dailyBoard.className).toContain("flex");
+      expect(dailyBoard.className).not.toContain("hidden sm:flex");
+      expect(weeklyBoard.className).toContain("hidden sm:flex");
    });
 });

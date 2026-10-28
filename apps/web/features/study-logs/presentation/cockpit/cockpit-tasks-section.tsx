@@ -3760,7 +3760,7 @@ export function CockpitTasksSection({
                role="tab"
                aria-selected={mobileActiveTab === "daily"}
                onClick={() => setMobileActiveTab("daily")}
-               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+               className={`flex-1 min-h-control-sm py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   mobileActiveTab === "daily"
                      ? "bg-white text-black shadow-sm"
                      : "text-text-tertiary hover:text-white"
@@ -3782,7 +3782,7 @@ export function CockpitTasksSection({
                role="tab"
                aria-selected={mobileActiveTab === "weekly"}
                onClick={() => setMobileActiveTab("weekly")}
-               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+               className={`flex-1 min-h-control-sm py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                   mobileActiveTab === "weekly"
                      ? "bg-white text-black shadow-sm"
                      : "text-text-tertiary hover:text-white"
@@ -3804,6 +3804,7 @@ export function CockpitTasksSection({
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Daily Todos */}
             <div
+               data-testid="daily-tasks-board"
                onDragOver={(e) => handleColumnDragOver(e, "daily")}
                onDrop={(e) => handleColumnDrop(e, "daily")}
                className={`rounded-2xl border bg-surface-primary p-5 sm:p-6 shadow-md flex-col justify-between space-y-5 transition-all ${
@@ -3859,7 +3860,7 @@ export function CockpitTasksSection({
                               onClick={() => openAddDailyModal(selectedDateKey)}
                               aria-label={`Add todo for ${activeDayOption.shortLabel}`}
                               data-testid="quick-add-daily-button"
-                              className="h-7 px-2.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center gap-1 shrink-0"
+                              className="h-11 min-h-control-sm min-w-control-sm px-3.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center justify-center gap-1 shrink-0"
                               title={`Add todo for ${activeDayOption.shortLabel}`}
                            >
                               <Plus className="h-3.5 w-3.5" />
@@ -5024,6 +5025,7 @@ export function CockpitTasksSection({
 
             {/* Weekly Todos */}
             <div
+               data-testid="weekly-tasks-board"
                onDragOver={(e) => handleColumnDragOver(e, "weekly")}
                onDrop={(e) => handleColumnDrop(e, "weekly")}
                className={`rounded-2xl border bg-surface-primary p-5 sm:p-6 shadow-md flex-col justify-between space-y-5 transition-all ${mobileActiveTab === "weekly" ? "flex" : "hidden sm:flex"} ${
@@ -5066,7 +5068,7 @@ export function CockpitTasksSection({
                            onClick={openAddWeeklyModal}
                            aria-label="Add weekly todo"
                            data-testid="quick-add-weekly-button"
-                           className="h-7 px-2.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center gap-1 shrink-0"
+                           className="h-11 min-h-control-sm min-w-control-sm px-3.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center justify-center gap-1 shrink-0"
                            title="Add weekly todo"
                         >
                            <Plus className="h-3.5 w-3.5" />

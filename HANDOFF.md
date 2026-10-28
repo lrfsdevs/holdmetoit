@@ -737,47 +737,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - No Gacha pull buttons, no pity counters, no trading, no combat/battle stats, no secondary currency, no production migrations or deployments.
 - **NEXT STEP (superseded by Session 119):** The catalogue importer was removed; the catalogue now lives in the DB. See Session 119.
 
-### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119 (importer removed; schema normalized)
+### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119
 
-- **Scope:** Inspected, verified, and integrated the complete Pokémon metadata bundle (`pokemon_metadata.json`, `pokemon_metadata.csv`, `pokemon_metadata.sqlite`) covering Generations 1 through 9 (1,351 entries), distinguished canonical species from alternate forms, separated source lore classification from HoldMeToIt game economy rarity, implemented an idempotent CLI importer with `--dry-run`, and connected Generation and Classification filters into the Pokédex UI.
-- **Triple-Format Dataset Inspection (Step 1 & Step 2):**
-   - Confirmed 100% record parity across all three files: exactly 1,351 rows, 37 columns, zero field or row discrepancies.
-   - Selected `pokemon_metadata.json` as canonical repeatable import format (natively parsed types/abilities, avoids native SQLite C-bindings).
-   - Provenance: PokéAPI / Veekun open-source relational database dump and Pokémon Showdown battle sprites mirrored by PokéAPI on GitHub.
-   - IP & Licensing: Trademarks and copyright belong to Nintendo, Creatures Inc., and GAME FREAK Inc. Non-commercial fair-use educational study gamification without redistribution. Resilient fallback SVG Pokéball silhouettes prevent external host dependency breakage.
-- **Species vs. Form Distinction (Step 3):**
-   - 1,025 canonical species (`is_default_form: true`, National Dex #1 to #1025).
-   - 326 alternate forms (`is_default_form: false`, IDs 10001..10326) consolidated into `species.metadata.forms`.
-   - Strictly prevents duplicate Pokédex entries and unique constraint collisions on `pokedexNumber`.
-- **Lore vs. Game Economy Rarity Separation (Step 4):**
-   - Stored source classifications (`is_legendary`, `is_mythical`, `is_baby`) as distinct boolean flags in `PokemonSpecies`.
-   - HoldMeToIt Game Rarity (`PokemonRarity`) calculated via approved domain heuristic (`calculateHoldMeToItRarity` in `features/pokemon/domain/pokemon-rarity.ts`):
-      - Mythical -> `MYTHICAL` (23 species, 2.2%)
-      - Legendary -> `LEGENDARY` (71 species, 6.9%)
-      - BST >= 540 -> `EPIC` (59 species, 5.8%)
-      - 450 <= BST < 540 -> `RARE` (372 species, 36.3%)
-      - 320 <= BST < 450 -> `UNCOMMON` (262 species, 25.6%)
-      - BST < 320 -> `NORMAL` (238 species, 23.2%)
-   - Non-negotiable: Combat stats and rarity do NOT alter study coin generation rates, challenge deficits, or betting odds.
-- **Repeatable CLI Importer (`scripts/import-pokemon-bundle.ts` & `features/pokemon/data/pokemon-bundle-importer.ts`) (Step 5):**
-   - Command: `npm run db:import:pokemon`
-   - Flags: `--dry-run`, `--limit=<N>`, `--file=<path>`.
-   - Idempotent upserts on `slug` preserving existing user collections (`UserPokemon`), wallets, wagers, and study logs.
-   - Zod validation on all records against `UpsertPokemonSpeciesSchema`.
-- **Pokédex Presentation Integration (Step 7):**
-   - Added Generation Filter (Gen 1 to Gen 9) in `pokemon-filter-bar.tsx`.
-   - Added Source Classification Quick Filter (All, Legendary, Mythical, Standard) in `pokemon-filter-bar.tsx`.
-   - Added Mythical / Legendary visual badges in `PokemonCard.tsx` and `PokemonDetailModal.tsx`.
-   - Added physical dimensions (Height, Weight) and alternate form variant chips in `PokemonDetailModal.tsx`.
-   - Verified collection progress denominator dynamically tracks available canonical species count (1,025).
-- **Quality Gates Verified:**
-   - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (127 test files, 1269/1269 tests green, 12 new importer tests).
-   - `npm run build` passed (production build clean across all routes).
-   - Dry run validated 100% of the 1,025 species with 0 rejected records.
-- **Strict Data Protection (Step 9):**
-   - Zero database resets, zero destructive migrations, zero touches on participant wallets, ledger transactions, or challenge records.
-- **NEXT STEP (superseded by Session 119):** Live DB upsert completed; the importer and `npm run db:import:pokemon` were removed in Session 119.
+- **Historical Summary:** Initial exploratory importer spike covering Generations 1–9 (1,351 entries). Completely superseded by Session 119 where metadata was normalized into PostgreSQL tables (`PokemonSpecies`, `PokemonForm`, `PokemonAbility`) and the standalone importer script was deleted.
 
 ### Session 112 — 2026-10-16 (Frontend Design System Audit & Token Refactoring of Economy & Pokédex on `afnan`)
 
@@ -1726,4 +1688,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-64` transitioned from `In Progress` to `In Review` (id: 31).
 - **GitHub PR & Issue Status:** Submitted PR [#198](https://github.com/lrfsdevs/holdmetoit/pull/198) (`krish` $\rightarrow$ `dev`); closed GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195).
+- **CodeRabbit Review Addressed (2026-10-28):**
+   1. **Touch Target Sizing (`cockpit-tasks-section.tsx`):** Applied `min-h-control-sm` (44px) to Daily and Weekly mobile segmented switcher buttons, and updated card header quick-add buttons to `h-11 min-h-control-sm min-w-control-sm px-3.5` (satisfying WCAG 2.5.5 and DESIGN.md §5.2 44x44px minimum touch targets without arbitrary CSS size lint violations).
+   2. **Scroll Containment & Board Toggle Tests (`cockpit-tasks-quick-add-and-scroll.test.tsx`):** Added 20-item overflowing test asserting `scrollHeight > clientHeight` and scroll event dispatching within `.scrollbar-obsidian` card container; attached `data-testid="daily-tasks-board"` and `data-testid="weekly-tasks-board"` to verify `flex` vs. `hidden sm:flex` class toggling across tab switches.
+   3. **Handoff Pruning (§9.3):** Pruned superseded Session 111 importer spike down to a concise historical note.
 - **NEXT STEP:** Peer review and merge PR #198 into `dev`.
