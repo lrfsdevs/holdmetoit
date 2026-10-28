@@ -569,15 +569,34 @@ export function CockpitTasksSection({
    }, [userId, effectiveTodayDate]);
 
    const activeWeekDateKeys = useMemo(() => {
-      return dayOptions.map((d) => d.dateKey);
-   }, [dayOptions]);
+      const calendarDays = getCalendarWeekDayOptions(
+         activeWeekAnchorDateKey,
+         effectiveTodayDate
+      );
+      const keys = new Set(calendarDays.map((d) => d.dateKey));
+      dayOptions.forEach((d) => keys.add(d.dateKey));
+      return Array.from(keys);
+   }, [activeWeekAnchorDateKey, effectiveTodayDate, dayOptions]);
 
    const weekRangeLabel = useMemo(() => {
-      if (dayOptions.length >= 7) {
-         return formatWeekRange(dayOptions[0].dateKey, dayOptions[6].dateKey);
+      const calendarDays = getCalendarWeekDayOptions(
+         activeWeekAnchorDateKey,
+         effectiveTodayDate
+      );
+      if (calendarDays.length >= 7) {
+         return formatWeekRange(
+            calendarDays[0].dateKey,
+            calendarDays[6].dateKey
+         );
+      }
+      if (dayOptions.length > 0) {
+         return formatWeekRange(
+            dayOptions[0].dateKey,
+            dayOptions[dayOptions.length - 1].dateKey
+         );
       }
       return "";
-   }, [dayOptions]);
+   }, [activeWeekAnchorDateKey, effectiveTodayDate, dayOptions]);
 
    const handleSelectDay = (opt: ChallengeDayOption) => {
       setSelectedDateKey(opt.dateKey);
