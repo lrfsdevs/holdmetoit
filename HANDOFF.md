@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-26 (Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 187 files green (1777/1777 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 210 files green (2063/2063 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -1589,3 +1589,107 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
 - **GitHub PR:** Submitted PR [#193](https://github.com/lrfsdevs/holdmetoit/pull/193) from `krish` to `dev`.
 - **NEXT STEP:** Peer review and merge PR #193 into `dev`.
+
+### Session 165 — 2026-10-28 (Persist Category Collapsed State Across Navigation, Refresh & Sync on `krish` — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed issue where Cockpit Todo list categories lost their collapsed state on page refresh, client navigation across routes, and background IndexedDB sync events (`TASKS_SYNCED_EVENT`), blowing open all tasks and causing visual clutter.
+- **Persistent Storage Utility (`cockpit-tasks-storage.ts`):**
+   - Added user-scoped localStorage key generation (`holdmetoit:collapsed_categories:${userId || "guest"}`).
+   - Implemented `readCollapsedCategoryIds(userId)` and `writeCollapsedCategoryIds(userId, ids)` with SSR safeguards and storage exception protection (quota/private browsing).
+   - Implemented `isCategoryCollapsed` and `toggleCategoryCollapseKey` returning pure Set updates (refined to board-isolated keys in Session 166 and cookie sync in Session 167).
+   - 100% unit test coverage in `cockpit-tasks-storage.test.ts` (18/18 tests passing).
+- **Presentation Layer Integration (`cockpit-tasks-section.tsx`):**
+   - Initialized `collapsedCategoryIds` state and `collapsedCategoryIdsRef` from `readCollapsedCategoryIds(userId)`.
+   - Preserved category collapsed states during `hydrateFromIndexedDB` and background `TASKS_SYNCED_EVENT` sync triggers.
+   - Updated `toggleDailyCollapse` and `toggleWeeklyCollapse` to manage collapse state via Set keys in storage and memory.
+   - Added automatic cleanup of deleted category IDs in `handleConfirmDeleteCategory` to prevent localStorage leakage.
+   - Added `storage` event listener for multi-tab synchronization.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: 18/18 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: 6/6 tests passing.
+   - Full workspace test suite: ✅ 210 test files passed (2,058/2,058 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-63` transitioned from `In Progress` to `In Review` (id: 31).
+- **Status:** Initial persistence foundation; subsequent edge-cases resolved in Sessions 166–168.
+
+### Session 166 — 2026-10-28 (Resolve Hydration Mismatch, Cross-Board Collapse Isolation & Stale Goal Flicker — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed three UI defects uncovered during browser testing of category collapse persistence (GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194) / Jira Ticket `KAN-63`):
+   1. **React Hydration Error:** Fixed `Error: Hydration failed because the initial UI does not match what was rendered on the server` by ensuring initial SSR and client render match completely (`isHydrated` defaults to `false`, flips to `true` on mount in `useEffect`).
+   2. **Cross-Board Category Coupling:** Fixed issue where toggling a category in Weekly Goals also collapsed/expanded categories with identical names in Daily Goals. Scoped collapse storage keys by board type (`"daily"` vs `"weekly"`): `daily:${id}`, `weekly:${id}`, `daily:name:${name}`, `weekly:name:${name}`, while maintaining backward compatibility with legacy unscoped IDs.
+   3. **Stale Task Flash on Initial Mount:** Fixed split-second flicker where stale cached IndexedDB tasks were rendered before fresh server goals or cloud sync finished. When `hasServerTasks` is true and there are no un-synced offline mutations (`pendingMutations.length === 0`), `hydrateFromIndexedDB` seeds IndexedDB in the background and avoids overwriting fresh React state until background sync completes (`TASKS_SYNCED_EVENT`).
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Scoped collapse identifiers to `TaskCategoryType = "daily" | "weekly"`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for board-scoped collapse isolation (17 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `isHydrated` guard, board-scoped toggle handlers, deletion cleanup, and flicker prevention in `hydrateFromIndexedDB`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration tests for cross-board isolation and stale goal flicker prevention (8 tests passing).
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 68 tests passing across 6 test suites.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **Status:** Cross-board scoping and flicker fixes; refined in Sessions 167–168.
+
+### Session 167 — 2026-10-28 (Instant SSR Cookie Pre-Rendering & Single Source of Truth for Collapse State — GH-#194 / KAN-63)
+
+- **Context & Objective:** Perfected category collapse UX on reload and resolved intermittent cross-category expand/collapse bugs:
+   1. **Instant Zero-Flicker Reload via SSR Cookie Pre-Rendering:** Eliminated the initial layout shift / flash where reload opened all categories before snapping into collapsed state. Synchronized user-scoped collapse state into `holdmetoit_collapsed_categories` cookie alongside `localStorage`. Next.js SSR (`app/page.tsx`) reads the cookie on request and passes `initialCollapsedCategoryIds` through `HomeCockpitView` to `CockpitTasksSection`. Categories pre-render already collapsed from the first HTML frame with 100% hydration matching.
+   2. **Single Source of Truth & Pure Board Isolation:** Eliminated the dual-state desync (`isCategoryCollapsed || cat.isCollapsed`) that caused categories to randomly remain collapsed or unexpectedly expand. `collapsedCategoryIds` is now the sole source of truth in `CockpitTasksSection`, and toggling does not mutate the `dailyCategories`/`weeklyCategories` array state.
+   3. **Sanitized Storage & Legacy Cleanup:** Removed unscoped `cat.id` fallback in `isCategoryCollapsed` and filtered out legacy unscoped keys in `readCollapsedCategoryIds`. Daily categories strictly use `daily:` prefix and Weekly categories strictly use `weekly:` prefix.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added user-scoped cookie synchronization (`COLLAPSED_CATEGORIES_COOKIE`), pruned unscoped fallback, and filtered legacy keys.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added cookie read/write tests and strict prefix isolation assertions (18 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `initialCollapsedCategoryIds` prop, made `collapsedCategoryIds` sole source of truth, simplified toggle handlers, and removed `isHydrated` delay.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Threaded `initialCollapsedCategoryIds` down to `CockpitTasksSection`.
+   - `apps/web/app/page.tsx`: Read and parsed user-scoped cookie in server component and passed to `HomeCockpitView`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added tests for cookie pre-rendered collapse and repeated interleaved toggling (10 tests passing).
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,062/2,062 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **Status:** SSR pre-rendering & single source of truth; refined in Session 168.
+
+### Session 168 — 2026-10-28 (Deterministic Category Ordering Across SSR & IndexedDB Hydration — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed category order instability on page reload where categories rendered in one position and then jumped/moved positions ~1 second later when background sync completed.
+- **Root Cause Analysis:**
+   1. **Missing Tiebreaker in Client Sort vs Server Query:** Categories default to `sortOrder: 0`. In PostgreSQL (`task.repository.ts`), categories with identical `sortOrder` were ordered by `createdAt: "asc"`. In client-side IndexedDB hydration (`hydrateFromIndexedDB`), `.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))` had no tiebreaker, preserving IndexedDB's arbitrary primary-key (UUID) iteration order. On reload, the server rendered categories in `createdAt` order, and ~1 second later background sync (`TASKS_SYNCED_EVENT`) triggered `hydrateFromIndexedDB`, which swapped categories into UUID order.
+   2. **Incomplete Mutation on Category Drag & Drop:** When dragging categories to reorder them in the UI, only the single dragged category was enqueued with `action: "MOVE"`. The remaining categories never had their updated `sortOrder` written to PostgreSQL, leaving the database with outdated/default sort orders.
+   3. **Timestamp Overwrite in Local Storage:** Category reordering was writing `createdAt: nowIso` into IndexedDB, clobbering the original creation timestamps.
+- **Resolution & Architecture:**
+   1. **Deterministic Multi-Key Sorting:** Aligned PostgreSQL queries and IndexedDB sorting with identical deterministic comparator: `sortOrder: "asc"` $\rightarrow$ `createdAt: "asc"` $\rightarrow$ `id: "asc"`.
+   2. **Full-Column REORDER Mutations:** On category drag-and-drop, enqueued `action: "REORDER"` mutations for both daily and weekly columns with the full list of `categoryIds`, ensuring PostgreSQL persists `sortOrder: 0, 1, 2, ...` for all categories.
+   3. **Preserved Creation Timestamps:** Kept original `createdAt` on categories when persisting local reorders.
+   4. **Initial Category SortOrder Propagation:** Passed `sortOrder` on category creation in `processBatchSync` and `handleSaveTask`.
+   5. **Added Integration Test:** Verified in `cockpit-tasks-collapse-persistence.test.tsx` that category ordering remains 100% stable between initial SSR render and background sync without jumping positions.
+- **Files Modified & Verified:**
+   - `apps/web/features/tasks/domain/task.types.ts`: Added `createdAt` and `updatedAt` to `CategoryGroup`.
+   - `apps/web/features/tasks/data/task.repository.ts`: Added deterministic `id: "asc"` tiebreaker and populated `createdAt`/`updatedAt` on `CategoryGroup`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Supported `sortOrder` on category creation.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added deterministic sorting in `hydrateFromIndexedDB`, preserved `createdAt`, and enqueued `action: "REORDER"` mutations on category and task drop.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration test for deterministic category ordering across background sync.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,063/2,063 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **GitHub PR:** Submitted PR [#197](https://github.com/lrfsdevs/holdmetoit/pull/197) from `krish` to `dev`.
+- **Status:** PR submitted and verified.
+
+### Session 169 — 2026-10-28 (Address CodeRabbit Review Feedback on PR #197 — GH-#194 / KAN-63)
+
+- **Review Feedback Addressed on [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197):**
+   1. **`collapsedCategoryIds` Initializer (`cockpit-tasks-section.tsx` lines 308–324):** Updated state initializer check to `initialCollapsedCategoryIds !== undefined`, ensuring empty arrays (`[]`) from server cookie are respected without falling back prematurely to client-side localStorage.
+   2. **Cache Seeding Local Record Protection (`cockpit-tasks-section.tsx` lines 753–780):** In `hydrateFromIndexedDB` initial cache seeding, preserved existing local categories and tasks whose `syncState !== "synced"` by filtering out their IDs from seed writes, preventing uncommitted local edits from being overwritten by server seeds.
+   3. **Initial Category SortOrder Calculation (`cockpit-tasks-section.tsx` lines 2436–2450):** Derived `initialSortOrder` once from board categories as `highestOrder + 1` (defaulting empty board to baseline -1 $\rightarrow$ 0) and reused the value across both `putLocalCategory` and queued mutation rather than relying on category count.
+   4. **Untrusted Review Data Handling:** Verified and rejected review recommendation to unconditionally apply empty localStorage sets over `initialCollapsedCategoryIds` in post-mount effect; verified it caused premature expansion flash and regression in unit test `pre-renders in collapsed state without flash when initialCollapsedCategoryIds is passed from server cookie`.
+   5. **`HANDOFF.md` Maintenance:** Updated test gate to 2,063/2,063 tests, pruned superseded Session 165 `isCategoryCollapsed` fallback/`cat.isCollapsed` details, and consolidated repeated stale NEXT STEP entries.
+- **Quality Gates:**
+   - `npm run test:web -- cockpit-tasks`: ✅ 6 test files passed (72/72 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **GitHub PR:** Pushed updates to [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197) (`krish` $\rightarrow$ `dev`).
+- **NEXT STEP:** Peer review and merge PR #197 into `dev`.

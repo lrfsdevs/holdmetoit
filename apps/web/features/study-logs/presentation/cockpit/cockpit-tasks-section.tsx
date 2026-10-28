@@ -40,6 +40,13 @@ import {
    moveCategoryToDay,
    moveTaskBetweenCategories,
 } from "@/features/tasks/domain/task-reorder";
+import {
+   getCollapsedCategoriesStorageKey,
+   isCategoryCollapsed,
+   readCollapsedCategoryIds,
+   toggleCategoryCollapseKey,
+   writeCollapsedCategoryIds,
+} from "./cockpit-tasks-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,6 +120,7 @@ import {
    enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
+   getAllQueuedMutations,
    logTaskSync,
    putLocalCategories,
    putLocalCategory,
@@ -151,6 +159,9 @@ export interface CategoryGroup {
    id?: string;
    name: string;
    isCollapsed: boolean;
+   sortOrder?: number;
+   createdAt?: string | Date;
+   updatedAt?: string | Date;
    tasks: TaskItem[];
 }
 
@@ -167,6 +178,7 @@ export interface CockpitTasksSectionProps {
    initialSelectedDateKey?: string;
    onOpenHoursModal?: (dayNumber?: number) => void;
    isAdmin?: boolean;
+   initialCollapsedCategoryIds?: string[];
 }
 
 /** Renders the participant's categorized task board and task actions. */
@@ -183,6 +195,7 @@ export function CockpitTasksSection({
    initialSelectedDateKey,
    onOpenHoursModal,
    isAdmin = false,
+   initialCollapsedCategoryIds,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
    const linkableChallengeId =
@@ -292,6 +305,47 @@ export function CockpitTasksSection({
       position?: "above" | "below";
    } | null>(null);
 
+   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<
+      Set<string>
+   >(() => {
+      if (initialCollapsedCategoryIds !== undefined) {
+         return new Set(
+            initialCollapsedCategoryIds.filter(
+               (k) =>
+                  typeof k === "string" &&
+                  (k.startsWith("daily:") || k.startsWith("weekly:"))
+            )
+         );
+      }
+      return readCollapsedCategoryIds(userId);
+   });
+   const collapsedCategoryIdsRef = useRef<Set<string>>(collapsedCategoryIds);
+   collapsedCategoryIdsRef.current = collapsedCategoryIds;
+
+   useEffect(() => {
+      const stored = readCollapsedCategoryIds(userId);
+      if (stored.size > 0) {
+         setCollapsedCategoryIds(stored);
+         collapsedCategoryIdsRef.current = stored;
+         writeCollapsedCategoryIds(userId, stored);
+      }
+   }, [userId]);
+
+   useEffect(() => {
+      if (typeof window === "undefined") return;
+      const handleStorage = (e: StorageEvent) => {
+         if (e.key === getCollapsedCategoriesStorageKey(userId)) {
+            const stored = readCollapsedCategoryIds(userId);
+            setCollapsedCategoryIds(stored);
+            collapsedCategoryIdsRef.current = stored;
+         }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => {
+         window.removeEventListener("storage", handleStorage);
+      };
+   }, [userId]);
+
    const [dailyCategories, setDailyCategories] = useState<CategoryGroup[]>(
       () => {
          if (
@@ -303,6 +357,17 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
+                  sortOrder: c.sortOrder ?? 0,
+                  createdAt: c.createdAt
+                     ? typeof c.createdAt === "string"
+                        ? c.createdAt
+                        : c.createdAt.toISOString()
+                     : undefined,
+                  updatedAt: c.updatedAt
+                     ? typeof c.updatedAt === "string"
+                        ? c.updatedAt
+                        : c.updatedAt.toISOString()
+                     : undefined,
                   isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
@@ -336,6 +401,17 @@ export function CockpitTasksSection({
                .map((c) => ({
                   id: c.id,
                   name: c.name,
+                  sortOrder: c.sortOrder ?? 0,
+                  createdAt: c.createdAt
+                     ? typeof c.createdAt === "string"
+                        ? c.createdAt
+                        : c.createdAt.toISOString()
+                     : undefined,
+                  updatedAt: c.updatedAt
+                     ? typeof c.updatedAt === "string"
+                        ? c.updatedAt
+                        : c.updatedAt.toISOString()
+                     : undefined,
                   isCollapsed: false,
                   tasks: c.tasks
                      .filter((t) => !t.isDeleted)
@@ -602,7 +678,7 @@ export function CockpitTasksSection({
       const handleSyncEvent = () => {
          if (!isCancelled) {
             logTaskSync("Live task sync event received, re-hydrating view...");
-            hydrateFromIndexedDB();
+            hydrateFromIndexedDB({ isSyncEvent: true });
          }
       };
 
@@ -610,8 +686,106 @@ export function CockpitTasksSection({
          window.addEventListener(TASKS_SYNCED_EVENT, handleSyncEvent);
       }
 
-      async function hydrateFromIndexedDB() {
+      async function hydrateFromIndexedDB(options?: { isSyncEvent?: boolean }) {
          try {
+            const isSyncEvent = options?.isSyncEvent ?? false;
+            const pendingMutations = await getAllQueuedMutations();
+            const hasServerTasks = Boolean(
+               userTasks &&
+               (userTasks.dailyCategories?.length > 0 ||
+                  userTasks.weeklyCategories?.length > 0)
+            );
+
+            // On initial mount with no pending offline mutations and fresh server data,
+            // do not overwrite fresh React state with stale IndexedDB records to prevent
+            // a visual flash of old goals before sync finishes.
+            if (
+               !isSyncEvent &&
+               hasServerTasks &&
+               pendingMutations.length === 0
+            ) {
+               logTaskSync(
+                  "Skipping initial IndexedDB state overwrite; seeding cache from server userTasks..."
+               );
+               if (
+                  userTasks &&
+                  userTasks.categories &&
+                  userTasks.categories.length > 0
+               ) {
+                  const seedCats: LocalCategoryRecord[] = userTasks.categories
+                     .filter((c) => !c.isDeleted)
+                     .map((c) => ({
+                        id: c.id,
+                        userId: userId || null,
+                        name: c.name,
+                        taskType: c.taskType,
+                        sortOrder: c.sortOrder ?? 0,
+                        createdAt: new Date(c.createdAt).toISOString(),
+                        updatedAt: new Date(c.updatedAt).toISOString(),
+                        syncState: "synced",
+                     }));
+
+                  const seedTasks: LocalTaskRecord[] = [
+                     ...userTasks.dailyCategories
+                        .filter((c) => !c.isDeleted)
+                        .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
+                     ...userTasks.weeklyCategories
+                        .filter((c) => !c.isDeleted)
+                        .flatMap((c) => c.tasks.filter((t) => !t.isDeleted)),
+                  ].map((t) => ({
+                     id: t.id,
+                     userId: userId || null,
+                     categoryId: t.categoryId,
+                     challengeId: t.challengeId ?? null,
+                     title: t.title,
+                     taskType: t.taskType,
+                     sortOrder: t.sortOrder ?? 0,
+                     isComplete: t.isComplete,
+                     status:
+                        (t.status as TaskStatus) ||
+                        (t.isComplete ? "COMPLETED" : "TODO"),
+                     dueDate: t.dueDate ?? null,
+                     createdAt: new Date(t.createdAt).toISOString(),
+                     updatedAt: new Date(t.updatedAt).toISOString(),
+                     completedAt: t.completedAt
+                        ? new Date(t.completedAt).toISOString()
+                        : null,
+                     syncState: "synced",
+                  }));
+
+                  const existingCats = await getAllLocalCategories(
+                     userId ?? null
+                  );
+                  const existingTasks = await getAllLocalTasks(userId ?? null);
+
+                  const pendingCatIds = new Set(
+                     existingCats
+                        .filter((c) => c.syncState && c.syncState !== "synced")
+                        .map((c) => c.id)
+                  );
+                  const pendingTaskIds = new Set(
+                     existingTasks
+                        .filter((t) => t.syncState && t.syncState !== "synced")
+                        .map((t) => t.id)
+                  );
+
+                  const catsToSeed = seedCats.filter(
+                     (c) => !pendingCatIds.has(c.id)
+                  );
+                  const tasksToSeed = seedTasks.filter(
+                     (t) => !pendingTaskIds.has(t.id)
+                  );
+
+                  if (catsToSeed.length > 0) {
+                     await putLocalCategories(catsToSeed);
+                  }
+                  if (tasksToSeed.length > 0) {
+                     await putLocalTasks(tasksToSeed);
+                  }
+               }
+               return;
+            }
+
             const localTasks = await getAllLocalTasks(userId ?? null);
             const localCats = await getAllLocalCategories(userId ?? null);
 
@@ -625,12 +799,39 @@ export function CockpitTasksSection({
 
                const sortedCats = [...localCats]
                   .filter((c) => !c.isDeleted)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                  .sort((a, b) => {
+                     const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+                     if (orderDiff !== 0) return orderDiff;
+                     const aTime = a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : 0;
+                     const bTime = b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : 0;
+                     if (aTime !== bTime) return aTime - bTime;
+                     return (a.id || "").localeCompare(b.id || "");
+                  });
                const sortedTasks = [...localTasks]
                   .filter((t) => !t.isDeleted)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                  .sort((a, b) => {
+                     const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+                     if (orderDiff !== 0) return orderDiff;
+                     const aTime = a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : 0;
+                     const bTime = b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : 0;
+                     if (aTime !== bTime) return aTime - bTime;
+                     return (a.id || "").localeCompare(b.id || "");
+                  });
 
                const tasksToHeal: LocalTaskRecord[] = [];
+
+               const activeCollapsed =
+                  collapsedCategoryIdsRef.current.size > 0
+                     ? collapsedCategoryIdsRef.current
+                     : readCollapsedCategoryIds(userId);
 
                const dailyCats = sortedCats
                   .filter(
@@ -644,7 +845,14 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: false,
+                     sortOrder: c.sortOrder ?? 0,
+                     createdAt: c.createdAt,
+                     updatedAt: c.updatedAt,
+                     isCollapsed: isCategoryCollapsed(
+                        "daily",
+                        c,
+                        activeCollapsed
+                     ),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -687,7 +895,14 @@ export function CockpitTasksSection({
                   .map((c) => ({
                      id: c.id,
                      name: c.name,
-                     isCollapsed: false,
+                     sortOrder: c.sortOrder ?? 0,
+                     createdAt: c.createdAt,
+                     updatedAt: c.updatedAt,
+                     isCollapsed: isCategoryCollapsed(
+                        "weekly",
+                        c,
+                        activeCollapsed
+                     ),
                      tasks: sortedTasks
                         .filter(
                            (t) =>
@@ -782,7 +997,7 @@ export function CockpitTasksSection({
          }
       }
 
-      hydrateFromIndexedDB();
+      hydrateFromIndexedDB({ isSyncEvent: false });
 
       return () => {
          isCancelled = true;
@@ -794,19 +1009,31 @@ export function CockpitTasksSection({
    }, [userId, userTasks]);
 
    const toggleDailyCollapse = (index: number) => {
-      setDailyCategories((prev) =>
-         prev.map((cat, i) =>
-            i === index ? { ...cat, isCollapsed: !cat.isCollapsed } : cat
-         )
+      const targetCat = dailyCategories[index];
+      if (!targetCat) return;
+
+      const nextCollapsed = toggleCategoryCollapseKey(
+         "daily",
+         targetCat,
+         collapsedCategoryIds
       );
+      setCollapsedCategoryIds(nextCollapsed);
+      collapsedCategoryIdsRef.current = nextCollapsed;
+      writeCollapsedCategoryIds(userId, nextCollapsed);
    };
 
    const toggleWeeklyCollapse = (index: number) => {
-      setWeeklyCategories((prev) =>
-         prev.map((cat, i) =>
-            i === index ? { ...cat, isCollapsed: !cat.isCollapsed } : cat
-         )
+      const targetCat = weeklyCategories[index];
+      if (!targetCat) return;
+
+      const nextCollapsed = toggleCategoryCollapseKey(
+         "weekly",
+         targetCat,
+         collapsedCategoryIds
       );
+      setCollapsedCategoryIds(nextCollapsed);
+      collapsedCategoryIdsRef.current = nextCollapsed;
+      writeCollapsedCategoryIds(userId, nextCollapsed);
    };
 
    const setTaskStatus = (
@@ -1975,6 +2202,25 @@ export function CockpitTasksSection({
          deleteLocalCategory(catId).catch(() => {});
       }
 
+      if (catId || targetName) {
+         setCollapsedCategoryIds((prev) => {
+            const next = new Set(prev);
+            if (catId) {
+               next.delete(catId);
+               next.delete(`daily:${catId}`);
+               next.delete(`weekly:${catId}`);
+            }
+            if (targetName) {
+               next.delete(targetName);
+               next.delete(`daily:name:${targetName}`);
+               next.delete(`weekly:name:${targetName}`);
+            }
+            writeCollapsedCategoryIds(userId, next);
+            collapsedCategoryIdsRef.current = next;
+            return next;
+         });
+      }
+
       if (isLoggedIn && userId && catId) {
          enqueueMutation({
             id: crypto.randomUUID(),
@@ -2128,7 +2374,7 @@ export function CockpitTasksSection({
                      ? {
                           ...cat,
                           id: cat.id || targetCatId,
-                          isCollapsed: false,
+                          isCollapsed: cat.isCollapsed,
                           tasks: [...cat.tasks, newTask],
                        }
                      : cat
@@ -2171,7 +2417,7 @@ export function CockpitTasksSection({
                      ? {
                           ...cat,
                           id: cat.id || targetCatId,
-                          isCollapsed: false,
+                          isCollapsed: cat.isCollapsed,
                           tasks: [...cat.tasks, newTask],
                        }
                      : cat
@@ -2192,12 +2438,22 @@ export function CockpitTasksSection({
 
       const nowIso = new Date().toISOString();
 
+      let initialSortOrder = 0;
       if (isNew && targetCatId) {
+         const boardCategories =
+            addModalType === "daily" ? dailyCategories : weeklyCategories;
+         const highestOrder = boardCategories.reduce(
+            (max, c) => Math.max(max, c.sortOrder ?? 0),
+            -1
+         );
+         initialSortOrder = highestOrder + 1;
+
          putLocalCategory({
             id: targetCatId,
             userId: userId ?? null,
             name: targetCategoryName,
             taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+            sortOrder: initialSortOrder,
             createdAt: nowIso,
             updatedAt: nowIso,
             syncState: "pending",
@@ -2232,6 +2488,7 @@ export function CockpitTasksSection({
                   id: targetCatId,
                   name: targetCategoryName,
                   taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+                  sortOrder: initialSortOrder,
                },
                createdAt: Date.now(),
                retryCount: 0,
@@ -2721,6 +2978,22 @@ export function CockpitTasksSection({
                })
             );
             putLocalTasks(tasksToUpdate).catch(() => {});
+
+            if (isLoggedIn && userId) {
+               const taskIds = targetCatGroup.tasks
+                  .map((t) => t.id)
+                  .filter((id) => Boolean(id));
+               if (taskIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "TASK",
+                     action: "REORDER",
+                     payload: { taskIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+            }
          } else {
             const isMovedComplete = Boolean(
                res.movedTask.completed ?? res.movedTask.isComplete
@@ -2893,7 +3166,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "DAILY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -2905,7 +3182,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "WEEKLY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -2914,22 +3195,54 @@ export function CockpitTasksSection({
             putLocalCategories(allCatsToUpdate).catch(() => {});
 
             if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "CATEGORY",
-                  action: "MOVE",
-                  payload: {
-                     categoryId: res.movedCategory.id,
-                     taskType: res.targetTaskType,
-                     sortOrder: destIndex,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
+               const dailyCatIds = res.dailyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (dailyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: dailyCatIds },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               const weeklyCatIds = res.weeklyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (weeklyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: weeklyCatIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               if (draggedItem.sourceColumn !== targetColumn) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "MOVE",
+                     payload: {
+                        categoryId: res.movedCategory.id,
+                        taskType: res.targetTaskType,
+                        sortOrder: destIndex,
+                     },
+                     createdAt: Date.now() + 2,
+                     retryCount: 0,
                   })
-                  .catch(() => {});
+                     .then(() => {
+                        scheduleSync(userId);
+                     })
+                     .catch(() => {});
+               } else {
+                  scheduleSync(userId);
+               }
 
                if (
                   isMovingWeeklyToDaily &&
@@ -3137,7 +3450,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "DAILY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3149,7 +3466,11 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: "WEEKLY" as const,
                      sortOrder: idx,
-                     createdAt: nowIso,
+                     createdAt: c.createdAt
+                        ? typeof c.createdAt === "string"
+                           ? c.createdAt
+                           : c.createdAt.toISOString()
+                        : nowIso,
                      updatedAt: nowIso,
                      syncState: "pending" as const,
                   })),
@@ -3158,22 +3479,54 @@ export function CockpitTasksSection({
             putLocalCategories(allCatsToUpdate).catch(() => {});
 
             if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "CATEGORY",
-                  action: "MOVE",
-                  payload: {
-                     categoryId: res.movedCategory.id,
-                     taskType: res.targetTaskType,
-                     sortOrder: destIndex,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
+               const dailyCatIds = res.dailyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (dailyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: dailyCatIds },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               const weeklyCatIds = res.weeklyCategories
+                  .map((c) => c.id)
+                  .filter((id): id is string => Boolean(id));
+               if (weeklyCatIds.length > 0) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "REORDER",
+                     payload: { categoryIds: weeklyCatIds },
+                     createdAt: Date.now() + 1,
+                     retryCount: 0,
+                  }).catch(() => {});
+               }
+
+               if (draggedItem.sourceColumn !== targetColumn) {
+                  enqueueMutation({
+                     id: crypto.randomUUID(),
+                     entityType: "CATEGORY",
+                     action: "MOVE",
+                     payload: {
+                        categoryId: res.movedCategory.id,
+                        taskType: res.targetTaskType,
+                        sortOrder: destIndex,
+                     },
+                     createdAt: Date.now() + 2,
+                     retryCount: 0,
                   })
-                  .catch(() => {});
+                     .then(() => {
+                        scheduleSync(userId);
+                     })
+                     .catch(() => {});
+               } else {
+                  scheduleSync(userId);
+               }
             }
          }
       } else if (draggedItem.type === "task" && draggedItem.id) {
@@ -3734,6 +4087,12 @@ export function CockpitTasksSection({
                            if (dayTasks.length === 0 && cat.tasks.length > 0)
                               return null;
 
+                           const isCollapsed = isCategoryCollapsed(
+                              "daily",
+                              cat,
+                              collapsedCategoryIds
+                           );
+
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "daily" &&
@@ -3886,7 +4245,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuContent>
                                                 </DropdownMenu>
                                              )}
-                                             {cat.isCollapsed ? (
+                                             {isCollapsed ? (
                                                 <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
                                                 <ChevronUp className="h-4 w-4 text-text-tertiary" />
@@ -3943,7 +4302,7 @@ export function CockpitTasksSection({
                                     )}
                                  </ContextMenu>
 
-                                 {!cat.isCollapsed && (
+                                 {!isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {dayTasks.length === 0 ? (
                                           <p className="text-xs text-text-tertiary py-1">
@@ -4601,6 +4960,11 @@ export function CockpitTasksSection({
                         </div>
                      ) : (
                         weeklyCategories.map((cat, catIdx) => {
+                           const isCollapsed = isCategoryCollapsed(
+                              "weekly",
+                              cat,
+                              collapsedCategoryIds
+                           );
                            const isCatDragging =
                               draggedItem?.type === "category" &&
                               draggedItem.sourceColumn === "weekly" &&
@@ -4753,7 +5117,7 @@ export function CockpitTasksSection({
                                                    </DropdownMenuContent>
                                                 </DropdownMenu>
                                              )}
-                                             {cat.isCollapsed ? (
+                                             {isCollapsed ? (
                                                 <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                              ) : (
                                                 <ChevronUp className="h-4 w-4 text-text-tertiary" />
@@ -4810,7 +5174,7 @@ export function CockpitTasksSection({
                                     )}
                                  </ContextMenu>
 
-                                 {!cat.isCollapsed && (
+                                 {!isCollapsed && (
                                     <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
                                        {cat.tasks.length === 0 ? (
                                           <p className="text-xs text-text-tertiary py-1">
