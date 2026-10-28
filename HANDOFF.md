@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 171 on `feat/ypt-bot-health-head`)
+> **Last Updated:** 2026-10-28 (Session 173 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 211 files green (2068/2068 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 211 files green (2079/2079 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -176,6 +176,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 172 — 2026-10-28 (Cockpit Tasks Card Overlap Fixes, Scope Badges, & Review Hardening on `krish` · PR #200)
+
+- **Cockpit Tasks Header Layout & Overlap Fix:**
+   - Resolved header badge collision in Weekly Todos and Daily Todos columns where count pills (e.g. `1/18 Goals` vs `1/18 Completed`) stacked on top of each other on compact card widths.
+   - Updated header containers to `flex flex-wrap items-center justify-between gap-2` with `shrink-0` on children to ensure clean separation and wrap-safety.
+- **Weekly Task Card Space Optimization:**
+   - Replaced bulky textual tags (`Goal` / `Personal`) and text badges with compact icon-only badges (`🏆` and `👤`) with accessible tooltips and `aria-label`.
+   - Removed redundant "Completed" text button on finished weekly tasks; color-coded completed task checkboxes with emerald check styling (`border-emerald-500 bg-emerald-500/15 text-emerald-400`).
+- **PR #200 Review Hardening (`cockpit-tasks-section.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`):**
+   - **Hydration Safe Rollover Snooze:** Initialized `isRolloverSnoozed` state to `false` for SSR/hydration parity, reading and updating from `localStorage` within `useEffect`. Updated Vitest rollover tests to run in jsdom with React effects enabled.
+   - **WCAG 2.5.3 (Label in Name) A11y Alignment:** Removed conflicting `aria-label="Don't remind again today"` on `rollover-snooze-today-button` and matched `title="Don't remind today"` to the visible label.
+   - **Active Day Option Clamping:** Added synchronization effect ensuring `selectedDateKey` and `selectedDayNumber` safely clamp to a valid day in `dayOptions` whenever the options change.
+   - **Review Finding 4 Rejection:** Evaluated suggestion to filter `dayOptions` to only return challenge dates falling within the calendar week of `activeWeekAnchorDateKey`. Skipped with documented rationale: 7-day challenge views require the complete 7-day sequence (`Day 1..Day 7`) in the 7-column layout, and slicing by calendar week would break multi-week or mid-week challenge rendering and break existing regression tests.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 211 Vitest test files passing (2079/2079 tests green).
 
 ### Session 163 — 2026-10-26 (Incomplete Task Rollover & Challenge Goal Scoping on `krish` · GH #185 / Jira KAN-61)
 
@@ -1704,3 +1719,71 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    2. **Scroll Containment & Board Toggle Tests (`cockpit-tasks-quick-add-and-scroll.test.tsx`):** Added 20-item overflowing test asserting `scrollHeight > clientHeight` and scroll event dispatching within `.scrollbar-obsidian` card container; attached `data-testid="daily-tasks-board"` and `data-testid="weekly-tasks-board"` to verify `flex` vs. `hidden sm:flex` class toggling across tab switches.
    3. **Handoff Pruning (§9.3):** Pruned superseded Session 111 importer spike down to a concise historical note.
 - **NEXT STEP:** Peer review and merge PR #198 into `dev`.
+
+### Session 171 — 2026-10-28 (Calendar Navigation, Task Rollover Visibility During Challenges & Daily Reminder Snooze — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Resolve GitHub Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira Ticket `KAN-65` ("fix(tasks): calendar navigation and task rollover visibility during challenges & daily reminder snooze").
+- **Root Cause & UX Bottlenecks Addressed:**
+   1. **Calendar Gating During Active Challenges:** `CockpitWeekNavigator` was previously conditionally guarded with `{!hasChallengeContext && <CockpitWeekNavigator ... />}`. When enrolled in an active challenge, `hasChallengeContext` evaluated to `true`, omitting the week paging chevrons and compact date picker popover from the DOM completely.
+   2. **Past Day & Rollover Inaccessibility:** When enrolled in a challenge, Day 1 had no past challenge days displayed. Because calendar navigation was blocked, users could not navigate back to yesterday or earlier days to view their incomplete tasks or trigger past-day rollover banners/buttons. For upcoming challenges, `isToday` evaluated to `false` for all days, suppressing the Today banner due to nullish coalescing (`??`) falsy fallback behavior.
+   3. **Ephemeral Rollover Dismissal:** The Today rollover helper banner stored its dismissed state exclusively in ephemeral component state (`isRolloverDismissed`), causing it to prompt users again on every page reload or navigation throughout the day.
+- **Architectural Enhancements Implemented:**
+   1. **Restored Interactive Calendar Navigation Across All Challenge States (`cockpit-tasks-section.tsx`):**
+      - Unconditionally rendered `CockpitWeekNavigator` in Row 2 directly above the 7-day pill switcher, ensuring participants and spectators can always page through calendar weeks, view dates, and open the compact popover date picker.
+      - Removed the duplicate text-only "Today" button in the Daily header row, delegating cleanly to `CockpitWeekNavigator`'s integrated Today snap control.
+      - Updated `dayOptions` to check whether the navigated week matches the challenge dates (`isSameCalendarWeek(anchorKey, startKey)` or contains challenge days). When viewing the challenge week, it renders the 7 challenge days (`Day 1..Day 7`); when paged away to prior or future weeks, it dynamically renders that week's standard calendar day options (`Mon..Sun`).
+      - Resolved Week Navigator Date Range for Arbitrary Challenge Durations (`weekRangeLabel` & `activeWeekDateKeys`): decoupled week range label calculation from the strict `dayOptions.length >= 7` check. For challenges with durations shorter than 7 days (e.g. 6-day "October Duos Battle"), `weekRangeLabel` and `activeWeekDateKeys` now derive from `getCalendarWeekDayOptions(activeWeekAnchorDateKey, effectiveTodayDate)` as the primary source of truth, reliably formatting the current calendar week dates (`Oct 26 – Nov 1`) rather than rendering an empty label (`< 📅 >`).
+      - Preserved domain locking invariants (`checkIsDayLocked` delegates to `isChallengeDayDateLocked`): past days of concluded challenge weeks remain locked, active challenge past days remain locked, while current/future days remain unlocked.
+   2. **Reliable Today Rollover Visibility & Active Day Resolution (`cockpit-tasks-section.tsx`):**
+      - Fixed `isActiveDayToday` resolution: `selectedDateKey === effectiveTodayDate || Boolean(activeDayOption?.isToday)` ensures that viewing today's date always enables Today actions and rollover helper banners across active, upcoming, and personal planning modes.
+      - With calendar week paging restored, users can seamlessly navigate to previous weeks and days to trigger the past-day rollover banner (`rollover-past-day-banner`) and individual 1-click rollover actions (`rollover-task-button-${task.id}`).
+   3. **Daily Reminder Snooze & Client Storage Persistence (`cockpit-tasks-storage.ts` & `cockpit-tasks-section.tsx`):**
+      - Added "Don't remind today" action button (`data-testid="rollover-snooze-today-button"`) to the Today rollover helper banner alongside the quick dismiss (`X`).
+      - Created client storage utilities: `getRolloverSnoozeStorageKey`, `isRolloverSnoozedForDate`, `setRolloverSnoozedForDate`, and `cleanupExpiredRolloverSnooze` with prefix `holdmetoit_rollover_snooze_${userId}_${todayDateKey}`.
+      - Clicking "Don't remind today" persists the daily snooze to `localStorage` and immediately hides the banner for the rest of that date on that browser/device.
+      - Automatically resets on the next calendar day (`newDateKey > snoozedDateKey`), cleaning up stale localStorage keys.
+      - Enhanced Today banner container styling (`flex flex-col sm:flex-row sm:items-center`) to ensure 100% responsiveness on mobile viewports down to 360px without horizontal overflow.
+   4. **Comprehensive Test Coverage (`cockpit-tasks-storage.test.ts`, `cockpit-tasks-week-navigation.test.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`, `cockpit-tasks-section.test.tsx`):**
+      - Added 5 unit tests for snooze key formatting, persistence, scope isolation, and expired date cleanup in `cockpit-tasks-storage.test.ts`.
+      - Added interactive week navigation tests verifying `CockpitWeekNavigator` visibility, chevron week paging, and Today snap during active challenges in `cockpit-tasks-week-navigation.test.tsx`.
+      - Added tests verifying Today banner rendering during active challenges and upcoming challenges, suppression when snoozed in localStorage, and interactive snooze click dismissal in `cockpit-tasks-rollover-and-scoping.test.tsx`.
+      - Updated `cockpit-tasks-section.test.tsx` asserting week navigation rendered during active challenges.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added daily snooze keys, check, set, and expired cleanup utilities.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for daily snooze functions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Restored week navigator during challenges, updated `dayOptions` week resolution, added daily snooze button and mobile wrapping.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: Updated active challenge week navigation assertions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: Added active challenge week paging test.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added active/upcoming challenge rollover and snooze persistence tests.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` transitioned from `In Progress` to `In Review` (id: 31).
+- **GitHub Issue Status:** Resolves [#196](https://github.com/lrfsdevs/holdmetoit/issues/196).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+
+### Session 172 — 2026-10-28 (Weekly Challenge Card Header Overlap Fix & Compact Task Status / Goal Badges on `krish`)
+
+- **Context & Objectives:** Resolve user-reported issues with Weekly Challenge UI:
+   1. **Header Overlap:** In Weekly Todos card header, the Challenge Goals badge (`1/18 Goals`) and the Completed counter (`1/18 Completed`) overlapped on smaller widths due to missing `flex-wrap` and non-wrapping `min-w-0` flex children.
+   2. **Completed Task Tag Blocking Description:** Completed tasks in Weekly Todos displayed a bulky written `COMPLETED` tag button alongside the `[Trophy] Goal` badge, excessively truncating task descriptions into clamped lines with "Show more".
+- **Architectural Enhancements Implemented:**
+   1. **Header Layout Stabilization (`cockpit-tasks-section.tsx`):**
+      - Switched Weekly Todos and Daily Todos header containers from `flex items-center justify-between gap-2` to `flex flex-wrap items-center justify-between gap-2`.
+      - Replaced `min-w-0` on left child with `shrink-0`, preventing inner elements from overflowing horizontally and colliding into right-hand elements on narrow viewports.
+   2. **Color-Coded Completed Task Checkbox (Green Tick):**
+      - Updated completed task checkbox styling in both Weekly Todos and Daily Todos from `bg-white border-white text-text-inverse` to `border-emerald-500 bg-emerald-500/15 text-emerald-400`.
+      - When marked completed, the checkbox now displays a vibrant emerald green tick icon (`text-emerald-400`) within an emerald-tinted container, providing instant visual feedback without needing written status text.
+   3. **Removal of Redundant Written `COMPLETED` Tag:**
+      - Removed the written `Completed` button (`<button ...>Completed</button>`) from the task row in Weekly Todos. The completed state is fully conveyed by the green tick checkbox and strikethrough styling (`line-through text-text-tertiary`), freeing ~85px of horizontal space.
+   4. **Compact Challenge Goal & Personal Scope Badges:**
+      - Replaced the bulky `[Trophy] Goal` and `[User] Personal` badges (`gap-1 px-1.5 py-0.5 rounded ... <span>Goal</span>`) with compact square icon-only badges (`p-1 rounded`).
+      - Preserved accessibility and hover context with descriptive tooltips: `title="Challenge Goal (evaluated at challenge lock)" aria-label="Challenge Goal"` and `title="Personal Task (excluded from challenge lock)" aria-label="Personal Task"`.
+      - Frees ~35px of space per task row, allowing full task descriptions to remain visible without aggressive clamping.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added flex-wrap headers, green tick checkbox color-coding, removed written weekly `Completed` tag, and made goal/personal badges compact icon pills.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+- **NEXT STEP:** Peer review and submit PR to `dev`.

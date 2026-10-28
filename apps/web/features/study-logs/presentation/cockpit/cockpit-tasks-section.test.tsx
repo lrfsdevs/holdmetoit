@@ -1027,7 +1027,7 @@ describe("CockpitTasksSection", () => {
          expect(html).toContain("Oct 19 – 25");
       });
 
-      it("does not render calendar week navigation during an active challenge", () => {
+      it("renders calendar week navigation alongside challenge day tabs during an active challenge (#196, KAN-65)", () => {
          const html = renderToStaticMarkup(
             createElement(CockpitTasksSection, {
                isLoggedIn: true,
@@ -1039,8 +1039,8 @@ describe("CockpitTasksSection", () => {
             })
          );
 
-         expect(html).not.toContain('aria-label="Previous week"');
-         expect(html).not.toContain('aria-label="Next week"');
+         expect(html).toContain('aria-label="Previous week"');
+         expect(html).toContain('aria-label="Next week"');
          expect(html).toContain('aria-label="Challenge Day Tabs"');
       });
 
