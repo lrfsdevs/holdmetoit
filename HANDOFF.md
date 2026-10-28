@@ -1725,4 +1725,5 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-64` transitioned from `In Progress` to `In Review` (id: 31).
-- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+- **GitHub PR & Issue Status:** Submitted PR [#198](https://github.com/lrfsdevs/holdmetoit/pull/198) (`krish` $\rightarrow$ `dev`); closed GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195).
+- **NEXT STEP:** Peer review and merge PR #198 into `dev`.
