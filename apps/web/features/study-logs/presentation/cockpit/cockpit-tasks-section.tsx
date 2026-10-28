@@ -3876,8 +3876,8 @@ export function CockpitTasksSection({
             >
                <div className="space-y-3">
                   {/* Row 1: Section Title, Day Badge, and Completed Counter (Mirrors Weekly Todos card) */}
-                  <div className="flex items-center justify-between gap-2">
-                     <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                     <div className="flex items-center gap-2 shrink-0">
                         <h3 className="text-lg font-bold text-white shrink-0">
                            Daily Todos
                         </h3>
@@ -4599,7 +4599,7 @@ export function CockpitTasksSection({
                                                                            className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
                                                                               status ===
                                                                               "COMPLETED"
-                                                                                 ? "bg-white border-white text-text-inverse"
+                                                                                 ? "border-emerald-500 bg-emerald-500/15 text-emerald-400"
                                                                                  : status ===
                                                                                      "IN_PROGRESS"
                                                                                    ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
@@ -5094,8 +5094,8 @@ export function CockpitTasksSection({
                }`}
             >
                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                     <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                     <div className="flex items-center gap-2 shrink-0">
                         <h3 className="text-lg font-bold text-white shrink-0">
                            Weekly Todos
                         </h3>
@@ -5502,7 +5502,7 @@ export function CockpitTasksSection({
                                                                            className={`h-5 w-5 rounded flex items-center justify-center border transition-all shrink-0 mt-0.5 ${
                                                                               status ===
                                                                               "COMPLETED"
-                                                                                 ? "bg-white border-white text-text-inverse"
+                                                                                 ? "border-emerald-500 bg-emerald-500/15 text-emerald-400"
                                                                                  : status ===
                                                                                      "IN_PROGRESS"
                                                                                    ? "border-amber-400/80 bg-amber-500/15 text-amber-400"
@@ -5603,27 +5603,6 @@ export function CockpitTasksSection({
                                                                      </div>
 
                                                                      {status ===
-                                                                        "COMPLETED" && (
-                                                                        <button
-                                                                           type="button"
-                                                                           onClick={(
-                                                                              e
-                                                                           ) => {
-                                                                              e.stopPropagation();
-                                                                              setTaskStatus(
-                                                                                 catIdx,
-                                                                                 task.id,
-                                                                                 "weekly",
-                                                                                 "TODO"
-                                                                              );
-                                                                           }}
-                                                                           title="Status: Completed. Click to reset to To-Do"
-                                                                           className="shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-colors border mt-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                                                                        >
-                                                                           Completed
-                                                                        </button>
-                                                                     )}
-                                                                     {status ===
                                                                         "IN_PROGRESS" && (
                                                                         <button
                                                                            type="button"
@@ -5677,24 +5656,20 @@ export function CockpitTasksSection({
                                                                linkableChallengeId ? (
                                                                   <span
                                                                      data-testid="task-scope-challenge-badge"
-                                                                     className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-label font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-0.5"
+                                                                     className="shrink-0 inline-flex items-center justify-center p-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-0.5"
                                                                      title="Challenge Goal (evaluated at challenge lock)"
+                                                                     aria-label="Challenge Goal"
                                                                   >
-                                                                     <Trophy className="h-2.5 w-2.5" />
-                                                                     <span>
-                                                                        Goal
-                                                                     </span>
+                                                                     <Trophy className="h-3 w-3" />
                                                                   </span>
                                                                ) : !task.challengeId ? (
                                                                   <span
                                                                      data-testid="task-scope-personal-badge"
-                                                                     className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-label font-medium bg-surface-nested text-text-tertiary border border-border-subtle mt-0.5"
+                                                                     className="shrink-0 inline-flex items-center justify-center p-1 rounded bg-surface-nested text-text-tertiary border border-border-subtle mt-0.5"
                                                                      title="Personal Task (excluded from challenge lock)"
+                                                                     aria-label="Personal Task"
                                                                   >
-                                                                     <User className="h-2.5 w-2.5" />
-                                                                     <span>
-                                                                        Personal
-                                                                     </span>
+                                                                     <User className="h-3 w-3" />
                                                                   </span>
                                                                ) : null)}
                                                             {isLoggedIn && (

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 171 on `krish` · Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 172 on `krish` · Session 171 on `krish` · Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1736,3 +1736,28 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Jira Status:** `KAN-65` transitioned from `In Progress` to `In Review` (id: 31).
 - **GitHub Issue Status:** Resolves [#196](https://github.com/lrfsdevs/holdmetoit/issues/196).
 - **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+
+### Session 172 — 2026-10-28 (Weekly Challenge Card Header Overlap Fix & Compact Task Status / Goal Badges on `krish`)
+
+- **Context & Objectives:** Resolve user-reported issues with Weekly Challenge UI:
+   1. **Header Overlap:** In Weekly Todos card header, the Challenge Goals badge (`1/18 Goals`) and the Completed counter (`1/18 Completed`) overlapped on smaller widths due to missing `flex-wrap` and non-wrapping `min-w-0` flex children.
+   2. **Completed Task Tag Blocking Description:** Completed tasks in Weekly Todos displayed a bulky written `COMPLETED` tag button alongside the `[Trophy] Goal` badge, excessively truncating task descriptions into clamped lines with "Show more".
+- **Architectural Enhancements Implemented:**
+   1. **Header Layout Stabilization (`cockpit-tasks-section.tsx`):**
+      - Switched Weekly Todos and Daily Todos header containers from `flex items-center justify-between gap-2` to `flex flex-wrap items-center justify-between gap-2`.
+      - Replaced `min-w-0` on left child with `shrink-0`, preventing inner elements from overflowing horizontally and colliding into right-hand elements on narrow viewports.
+   2. **Color-Coded Completed Task Checkbox (Green Tick):**
+      - Updated completed task checkbox styling in both Weekly Todos and Daily Todos from `bg-white border-white text-text-inverse` to `border-emerald-500 bg-emerald-500/15 text-emerald-400`.
+      - When marked completed, the checkbox now displays a vibrant emerald green tick icon (`text-emerald-400`) within an emerald-tinted container, providing instant visual feedback without needing written status text.
+   3. **Removal of Redundant Written `COMPLETED` Tag:**
+      - Removed the written `Completed` button (`<button ...>Completed</button>`) from the task row in Weekly Todos. The completed state is fully conveyed by the green tick checkbox and strikethrough styling (`line-through text-text-tertiary`), freeing ~85px of horizontal space.
+   4. **Compact Challenge Goal & Personal Scope Badges:**
+      - Replaced the bulky `[Trophy] Goal` and `[User] Personal` badges (`gap-1 px-1.5 py-0.5 rounded ... <span>Goal</span>`) with compact square icon-only badges (`p-1 rounded`).
+      - Preserved accessibility and hover context with descriptive tooltips: `title="Challenge Goal (evaluated at challenge lock)" aria-label="Challenge Goal"` and `title="Personal Task (excluded from challenge lock)" aria-label="Personal Task"`.
+      - Frees ~35px of space per task row, allowing full task descriptions to remain visible without aggressive clamping.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added flex-wrap headers, green tick checkbox color-coding, removed written weekly `Completed` tag, and made goal/personal badges compact icon pills.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+- **NEXT STEP:** Peer review and submit PR to `dev`.
