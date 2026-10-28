@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 210 files green (2063/2063 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 211 files green (2068/2068 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -1693,3 +1693,36 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Jira Status:** `KAN-63` remains `In Review`.
 - **GitHub PR:** Pushed updates to [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197) (`krish` $\rightarrow$ `dev`).
 - **NEXT STEP:** Peer review and merge PR #197 into `dev`.
+
+### Session 170 — 2026-10-28 (Card Header Quick-Add, Scroll Containment & Mobile Switcher — GH-#195 / KAN-64 on `krish`)
+
+- **Context & Objectives:** Resolve GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195) / Jira Ticket `KAN-64` ("card header quick-add action and scroll containment for long todo lists"). Eliminate bottom-heavy add button friction, prevent unbound vertical card stretching for long task lists, and optimize mobile navigation between Daily and Weekly task boards.
+- **Root Cause & UX Bottlenecks Addressed:**
+   1. **Bottom-Heavy Add Button:** The primary `+ Add more todos` action button was located exclusively at the bottom of each column below all categories and tasks, forcing users to scroll past dozens of items to open the add modal.
+   2. **Card Height Asymmetry on Desktop:** Task category lists had no height bounding or internal overflow containment, causing cards to stretch excessively when many tasks accumulated.
+   3. **Mobile Vertical Stack Overload (< 640px):** On screens `< sm`, Daily and Weekly columns stacked vertically, requiring mobile users to scroll past the entire daily list just to view or interact with weekly goals.
+- **Architectural Enhancements Implemented:**
+   1. **Card Header Quick-Add Action (`cockpit-tasks-section.tsx`):**
+      - Added compact pill Quick-Add buttons (`+ Add`) directly into the card headers of both Daily Todos (`data-testid="quick-add-daily-button"`) and Weekly Todos (`data-testid="quick-add-weekly-button"`).
+      - Clicking either quick-add button immediately opens the respective Add Todo modal.
+      - Daily Quick-Add automatically suppresses when viewing a locked past challenge day (`isPastDayLocked`), enforcing Law L6 without UI confusion.
+      - Retained bottom buttons as secondary/footer actions to preserve existing muscle memory.
+   2. **Task List Scroll Containment & Obsidian Theme Scrollbar (`globals.css` & `cockpit-tasks-section.tsx`):**
+      - Encapsulated task categories in a bounded responsive scroll container (`max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian`).
+      - Created custom `.scrollbar-obsidian` utility in `apps/web/app/globals.css` using Obsidian semantic tokens (`var(--color-border-strong)` and `var(--color-border-focus)`), ensuring clean, unobtrusive scrolling.
+   3. **Mobile Segmented View Switcher (`cockpit-tasks-section.tsx`):**
+      - Introduced a segmented pill tab control (`[ Daily (N) | Weekly (N) ]`) visible exclusively on mobile `< sm` viewports (`flex sm:hidden`), defaulting to the active daily board.
+      - Tapping between tabs toggles column display without vertical scroll fatigue while maintaining desktop side-by-side grid layout (`sm:grid-cols-2`).
+      - Verified 100% responsive down to 360px viewport with zero horizontal overflow or button clipping.
+   4. **Comprehensive Test Suite (`cockpit-tasks-quick-add-and-scroll.test.tsx`):**
+      - Added unit and integration tests covering header quick-add modal triggers, locked past day button suppression, secondary footer button retention, scroll containment class configuration, and mobile switcher tab navigation.
+- **Files Modified & Verified:**
+   - `apps/web/app/globals.css`: Added `.scrollbar-obsidian` utility in `@layer utilities`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `openAddWeeklyModal`, header quick-add buttons, categories scroll container, and mobile segmented view switcher.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-quick-add-and-scroll.test.tsx`: Added 5 unit/integration tests for quick-add, scroll containment, and mobile switcher.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,068/2,068 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-64` transitioned from `In Progress` to `In Review` (id: 31).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
