@@ -183,10 +183,6 @@ curl http://localhost:3000/health
 # {"status":"ok","service":"ypt-bot","uptimeSeconds":42}
 ```
 
-Both `GET /health` and `HEAD /health` return `200` with the same headers
-(`Content-Type: application/json` and `Content-Length`). `HEAD` omits the body
-while reporting the body length that `GET` would return.
-
 Any other path or method returns `404 {"error":"Not found"}`.
 
 ---
