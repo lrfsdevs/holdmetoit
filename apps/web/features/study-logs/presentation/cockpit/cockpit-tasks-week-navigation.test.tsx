@@ -161,4 +161,42 @@ describe("CockpitTasksSection Interactive Week Navigation (GH #184 / KAN-60)", (
          vi.useRealTimers();
       }
    });
+
+   it("renders CockpitWeekNavigator and allows week paging during active challenges (#196, KAN-65)", () => {
+      render(
+         <CockpitTasksSection
+            isLoggedIn={true}
+            userTasks={emptyTasks}
+            challengeStartDate="2026-10-19"
+            totalChallengeDays={7}
+            challengeStatus="ACTIVE"
+            todayDate="2026-10-21"
+         />
+      );
+
+      // Navigator visible during active challenge
+      expect(screen.getByText("Oct 19 – 25")).toBeTruthy();
+      expect(
+         screen.getByRole("button", { name: "Previous week" })
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Next week" })).toBeTruthy();
+
+      // On Day 3 (Wednesday Oct 21), Today button not initially shown
+      expect(screen.queryByRole("button", { name: "Today" })).toBeNull();
+
+      // Navigate to previous week
+      const prevWeekBtn = screen.getByRole("button", { name: "Previous week" });
+      fireEvent.click(prevWeekBtn);
+
+      // Now showing Oct 12 – 18
+      expect(screen.getByText("Oct 12 – 18")).toBeTruthy();
+
+      // Today button appears in CockpitWeekNavigator
+      const todayBtn = screen.getByRole("button", { name: "Today" });
+      expect(todayBtn).toBeTruthy();
+
+      // Click Today button: snaps back to active challenge week
+      fireEvent.click(todayBtn);
+      expect(screen.getByText("Oct 19 – 25")).toBeTruthy();
+   });
 });

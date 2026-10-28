@@ -32,6 +32,7 @@ import {
    formatWeekRange,
    formatDayDate,
    isChallengeDayDateLocked,
+   isSameCalendarWeek,
    validateMoveTaskChallengeDay,
    type ChallengeDayOption,
 } from "@/features/study-logs/domain/challenge-day";
@@ -47,6 +48,9 @@ import {
    readCollapsedCategoryIds,
    toggleCategoryCollapseKey,
    writeCollapsedCategoryIds,
+   isRolloverSnoozedForDate,
+   setRolloverSnoozedForDate,
+   cleanupExpiredRolloverSnooze,
 } from "./cockpit-tasks-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -446,15 +450,36 @@ export function CockpitTasksSection({
    }, [hasChallengeContext, challengeStatus, todayDate]);
 
    const [activeWeekAnchorDateKey, setActiveWeekAnchorDateKey] =
-      useState<string>(() => initialSelectedDateKey || effectiveTodayDate);
+      useState<string>(() => {
+         if (initialSelectedDateKey) return initialSelectedDateKey;
+         if (hasChallengeContext && effectiveStartDate) {
+            const startKey = effectiveStartDate.slice(0, 10);
+            if (isSameCalendarWeek(effectiveTodayDate, startKey)) {
+               return effectiveTodayDate;
+            }
+            return startKey;
+         }
+         return effectiveTodayDate;
+      });
 
    const dayOptions: ChallengeDayOption[] = useMemo(() => {
       if (hasChallengeContext && effectiveStartDate) {
-         return getChallengeDayOptions(
+         const challengeOptions = getChallengeDayOptions(
             effectiveStartDate,
             effectiveTodayDate,
             totalChallengeDays ?? 7
          ).slice(0, 7);
+
+         const anchorKey = activeWeekAnchorDateKey.slice(0, 10);
+         const startKey = effectiveStartDate.slice(0, 10);
+
+         const isViewingChallengeWeek =
+            challengeOptions.some((d) => d.dateKey === anchorKey) ||
+            isSameCalendarWeek(anchorKey, startKey);
+
+         if (isViewingChallengeWeek) {
+            return challengeOptions;
+         }
       }
       return getCalendarWeekDayOptions(
          activeWeekAnchorDateKey,
@@ -503,15 +528,13 @@ export function CockpitTasksSection({
    }, [dayOptions, selectedDateKey, todayDayOption]);
 
    const isActiveDayToday =
-      activeDayOption?.isToday ?? selectedDateKey === effectiveTodayDate;
+      selectedDateKey === effectiveTodayDate ||
+      Boolean(activeDayOption?.isToday);
    const isActiveDayPast =
-      activeDayOption?.isPast ?? selectedDateKey < effectiveTodayDate;
+      selectedDateKey < effectiveTodayDate || Boolean(activeDayOption?.isPast);
 
    const checkIsDayLocked = useCallback(
       (dateKey: string): boolean => {
-         if (hasChallengeContext) {
-            return dateKey < effectiveTodayDate;
-         }
          return isChallengeDayDateLocked(dateKey, effectiveTodayDate, {
             challengeStartDate,
             totalChallengeDays,
@@ -519,7 +542,6 @@ export function CockpitTasksSection({
          });
       },
       [
-         hasChallengeContext,
          effectiveTodayDate,
          challengeStartDate,
          totalChallengeDays,
@@ -528,6 +550,23 @@ export function CockpitTasksSection({
    );
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
+
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() =>
+      isRolloverSnoozedForDate(userId, effectiveTodayDate)
+   );
+
+   useEffect(() => {
+      cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
+      if (isRolloverSnoozedForDate(userId, effectiveTodayDate)) {
+         setIsRolloverSnoozed(true);
+      }
+   }, [userId, effectiveTodayDate]);
+
+   const handleSnoozeRolloverToday = useCallback(() => {
+      setIsRolloverDismissed(true);
+      setIsRolloverSnoozed(true);
+      setRolloverSnoozedForDate(userId, effectiveTodayDate);
+   }, [userId, effectiveTodayDate]);
 
    const activeWeekDateKeys = useMemo(() => {
       return dayOptions.map((d) => d.dateKey);
@@ -3838,15 +3877,6 @@ export function CockpitTasksSection({
                               </span>
                            )}
                         </span>
-                        {hasChallengeContext && !isActiveDayToday && (
-                           <button
-                              type="button"
-                              onClick={handleJumpToToday}
-                              className="text-meta font-medium text-brand-2 hover:text-brand-1 underline transition-colors shrink-0"
-                           >
-                              Today
-                           </button>
-                        )}
                      </div>
                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
@@ -3871,21 +3901,19 @@ export function CockpitTasksSection({
                   </div>
 
                   {/* Row 2: Calendar Week Navigator (Fixed row directly above the 7-day pill switcher) */}
-                  {!hasChallengeContext && (
-                     <div className="flex items-center justify-start gap-2 pt-0.5">
-                        <CockpitWeekNavigator
-                           selectedDateKey={selectedDateKey}
-                           todayDateKey={effectiveTodayDate}
-                           weekRangeLabel={weekRangeLabel}
-                           onPreviousWeek={handlePreviousWeek}
-                           onNextWeek={handleNextWeek}
-                           onSelectDate={handleSelectDateFromPicker}
-                           activeWeekDateKeys={activeWeekDateKeys}
-                           showToday={!isActiveDayToday}
-                           onJumpToToday={handleJumpToToday}
-                        />
-                     </div>
-                  )}
+                  <div className="flex items-center justify-start gap-2 pt-0.5">
+                     <CockpitWeekNavigator
+                        selectedDateKey={selectedDateKey}
+                        todayDateKey={effectiveTodayDate}
+                        weekRangeLabel={weekRangeLabel}
+                        onPreviousWeek={handlePreviousWeek}
+                        onNextWeek={handleNextWeek}
+                        onSelectDate={handleSelectDateFromPicker}
+                        activeWeekDateKeys={activeWeekDateKeys}
+                        showToday={!isActiveDayToday}
+                        onJumpToToday={handleJumpToToday}
+                     />
+                  </div>
 
                   {/* 7-Day Pill Switcher (Fits all 7 days without horizontal scrolling) */}
                   <div
@@ -4037,10 +4065,11 @@ export function CockpitTasksSection({
                      {/* Rollover Helper Banners */}
                      {isActiveDayToday &&
                         rolloverSummary.totalPastIncompleteCount > 0 &&
-                        !isRolloverDismissed && (
+                        !isRolloverDismissed &&
+                        !isRolloverSnoozed && (
                            <div
                               data-testid="rollover-today-banner"
-                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200"
+                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200"
                            >
                               <div className="flex items-center gap-2.5 min-w-0">
                                  <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
@@ -4071,7 +4100,7 @@ export function CockpitTasksSection({
                                     </p>
                                  </div>
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 shrink-0">
                                  <button
                                     type="button"
                                     onClick={() =>
@@ -4082,6 +4111,16 @@ export function CockpitTasksSection({
                                  >
                                     <RotateCcw className="h-3.5 w-3.5" />
                                     <span>Roll over to Today</span>
+                                 </button>
+                                 <button
+                                    type="button"
+                                    onClick={handleSnoozeRolloverToday}
+                                    aria-label="Don't remind again today"
+                                    title="Don't remind again today"
+                                    data-testid="rollover-snooze-today-button"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-transparent hover:border-border-subtle"
+                                 >
+                                    <span>Don&apos;t remind today</span>
                                  </button>
                                  <button
                                     type="button"
