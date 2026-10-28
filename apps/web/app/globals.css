@@ -507,6 +507,24 @@
       scrollbar-width: none;
    }
 
+   .scrollbar-obsidian {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-border-strong) transparent;
+   }
+   .scrollbar-obsidian::-webkit-scrollbar {
+      width: 6px;
+   }
+   .scrollbar-obsidian::-webkit-scrollbar-track {
+      background: transparent;
+   }
+   .scrollbar-obsidian::-webkit-scrollbar-thumb {
+      background-color: var(--color-border-strong);
+      border-radius: 9999px;
+   }
+   .scrollbar-obsidian::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-border-focus);
+   }
+
    @keyframes wrapped-slam {
       0% {
          transform: rotate(-22deg) scale(2.8);
