@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 171 on `krish` · Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 211 files green (2068/2068 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 211 files green (2078/2078 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -1693,3 +1693,45 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    2. **Scroll Containment & Board Toggle Tests (`cockpit-tasks-quick-add-and-scroll.test.tsx`):** Added 20-item overflowing test asserting `scrollHeight > clientHeight` and scroll event dispatching within `.scrollbar-obsidian` card container; attached `data-testid="daily-tasks-board"` and `data-testid="weekly-tasks-board"` to verify `flex` vs. `hidden sm:flex` class toggling across tab switches.
    3. **Handoff Pruning (§9.3):** Pruned superseded Session 111 importer spike down to a concise historical note.
 - **NEXT STEP:** Peer review and merge PR #198 into `dev`.
+
+### Session 171 — 2026-10-28 (Calendar Navigation, Task Rollover Visibility During Challenges & Daily Reminder Snooze — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Resolve GitHub Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira Ticket `KAN-65` ("fix(tasks): calendar navigation and task rollover visibility during challenges & daily reminder snooze").
+- **Root Cause & UX Bottlenecks Addressed:**
+   1. **Calendar Gating During Active Challenges:** `CockpitWeekNavigator` was previously conditionally guarded with `{!hasChallengeContext && <CockpitWeekNavigator ... />}`. When enrolled in an active challenge, `hasChallengeContext` evaluated to `true`, omitting the week paging chevrons and compact date picker popover from the DOM completely.
+   2. **Past Day & Rollover Inaccessibility:** When enrolled in a challenge, Day 1 had no past challenge days displayed. Because calendar navigation was blocked, users could not navigate back to yesterday or earlier days to view their incomplete tasks or trigger past-day rollover banners/buttons. For upcoming challenges, `isToday` evaluated to `false` for all days, suppressing the Today banner due to nullish coalescing (`??`) falsy fallback behavior.
+   3. **Ephemeral Rollover Dismissal:** The Today rollover helper banner stored its dismissed state exclusively in ephemeral component state (`isRolloverDismissed`), causing it to prompt users again on every page reload or navigation throughout the day.
+- **Architectural Enhancements Implemented:**
+   1. **Restored Interactive Calendar Navigation Across All Challenge States (`cockpit-tasks-section.tsx`):**
+      - Unconditionally rendered `CockpitWeekNavigator` in Row 2 directly above the 7-day pill switcher, ensuring participants and spectators can always page through calendar weeks, view dates, and open the compact popover date picker.
+      - Removed the duplicate text-only "Today" button in the Daily header row, delegating cleanly to `CockpitWeekNavigator`'s integrated Today snap control.
+      - Updated `dayOptions` to check whether the navigated week matches the challenge dates (`isSameCalendarWeek(anchorKey, startKey)` or contains challenge days). When viewing the challenge week, it renders the 7 challenge days (`Day 1..Day 7`); when paged away to prior or future weeks, it dynamically renders that week's standard calendar day options (`Mon..Sun`).
+      - Preserved domain locking invariants (`checkIsDayLocked` delegates to `isChallengeDayDateLocked`): past days of concluded challenge weeks remain locked, active challenge past days remain locked, while current/future days remain unlocked.
+   2. **Reliable Today Rollover Visibility & Active Day Resolution (`cockpit-tasks-section.tsx`):**
+      - Fixed `isActiveDayToday` resolution: `selectedDateKey === effectiveTodayDate || Boolean(activeDayOption?.isToday)` ensures that viewing today's date always enables Today actions and rollover helper banners across active, upcoming, and personal planning modes.
+      - With calendar week paging restored, users can seamlessly navigate to previous weeks and days to trigger the past-day rollover banner (`rollover-past-day-banner`) and individual 1-click rollover actions (`rollover-task-button-${task.id}`).
+   3. **Daily Reminder Snooze & Client Storage Persistence (`cockpit-tasks-storage.ts` & `cockpit-tasks-section.tsx`):**
+      - Added "Don't remind today" action button (`data-testid="rollover-snooze-today-button"`) to the Today rollover helper banner alongside the quick dismiss (`X`).
+      - Created client storage utilities: `getRolloverSnoozeStorageKey`, `isRolloverSnoozedForDate`, `setRolloverSnoozedForDate`, and `cleanupExpiredRolloverSnooze` with prefix `holdmetoit_rollover_snooze_${userId}_${todayDateKey}`.
+      - Clicking "Don't remind today" persists the daily snooze to `localStorage` and immediately hides the banner for the rest of that date on that browser/device.
+      - Automatically resets on the next calendar day (`newDateKey > snoozedDateKey`), cleaning up stale localStorage keys.
+      - Enhanced Today banner container styling (`flex flex-col sm:flex-row sm:items-center`) to ensure 100% responsiveness on mobile viewports down to 360px without horizontal overflow.
+   4. **Comprehensive Test Coverage (`cockpit-tasks-storage.test.ts`, `cockpit-tasks-week-navigation.test.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`, `cockpit-tasks-section.test.tsx`):**
+      - Added 5 unit tests for snooze key formatting, persistence, scope isolation, and expired date cleanup in `cockpit-tasks-storage.test.ts`.
+      - Added interactive week navigation tests verifying `CockpitWeekNavigator` visibility, chevron week paging, and Today snap during active challenges in `cockpit-tasks-week-navigation.test.tsx`.
+      - Added tests verifying Today banner rendering during active challenges and upcoming challenges, suppression when snoozed in localStorage, and interactive snooze click dismissal in `cockpit-tasks-rollover-and-scoping.test.tsx`.
+      - Updated `cockpit-tasks-section.test.tsx` asserting week navigation rendered during active challenges.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added daily snooze keys, check, set, and expired cleanup utilities.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for daily snooze functions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Restored week navigator during challenges, updated `dayOptions` week resolution, added daily snooze button and mobile wrapping.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: Updated active challenge week navigation assertions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: Added active challenge week paging test.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added active/upcoming challenge rollover and snooze persistence tests.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,078/2,078 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` transitioned from `In Progress` to `In Review` (id: 31).
+- **GitHub Issue Status:** Resolves [#196](https://github.com/lrfsdevs/holdmetoit/issues/196).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
