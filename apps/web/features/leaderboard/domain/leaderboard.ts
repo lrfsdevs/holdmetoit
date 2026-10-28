@@ -167,14 +167,17 @@ export type LeaderboardViewMode = "individual" | "today" | "team";
 
 /**
  * Resolves and validates a leaderboard view mode parameter (Law L7).
- * Defaults to "individual" (Overall Rank).
+ * Explicit `?view=` values always win; DUOS battles default to the team view,
+ * while every other format defaults to "individual" (Overall Rank).
  */
 export function resolveLeaderboardViewMode(
-   value?: string | null
+   value?: string | null,
+   format?: "TEAM_VS_TEAM" | "DUOS" | "SOLOS" | null
 ): LeaderboardViewMode {
    if (value === "today") return "today";
    if (value === "team") return "team";
-   return "individual";
+   if (value === "individual") return "individual";
+   return format === "DUOS" ? "team" : "individual";
 }
 
 /**

@@ -15,7 +15,10 @@ import { EventAuditTab } from "@/features/audit/presentation/event-audit-tab";
 import { ChallengeSummaryTab } from "@/features/wrapped/presentation/challenge-summary-tab";
 import { ChallengeWrappedModal } from "@/features/wrapped/presentation/challenge-wrapped-modal";
 
-import type { LeaderboardViewMode } from "@/features/leaderboard/domain/leaderboard";
+import {
+   resolveLeaderboardViewMode,
+   type LeaderboardViewMode,
+} from "@/features/leaderboard/domain/leaderboard";
 
 interface ChallengeViewProps {
    challenge: ChallengeScoreboardViewModel;
@@ -31,6 +34,8 @@ interface ChallengeViewProps {
    isBettingEnabled?: boolean;
    /** Server-evaluated `challenge_withdrawal_v1`. Gates the overview withdraw button. */
    isWithdrawalEnabled?: boolean;
+   /** Server-evaluated `global_leaderboard_v1`. Gates trophy rank badges in standings. */
+   isGlobalLeaderboardEnabled?: boolean;
 }
 
 /** Renders the challenge shell and coordinates its active tab. */
@@ -38,16 +43,20 @@ export function ChallengeView({
    challenge,
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
-   initialLeaderboardViewMode = "individual",
+   initialLeaderboardViewMode,
    initialRosterSearch = "",
    initialRosterTeamFilter = "ALL",
    initialRosterPage = 1,
    isWrappedEnabled = true,
    isBettingEnabled = true,
    isWithdrawalEnabled = false,
+   isGlobalLeaderboardEnabled = false,
 }: ChallengeViewProps) {
    const isSummaryVisible =
       isWrappedEnabled && Boolean(challenge.resultsLockedAt);
+   const resolvedLeaderboardViewMode =
+      initialLeaderboardViewMode ??
+      resolveLeaderboardViewMode(null, challenge.format);
 
    const [activeTab, setActiveTab] = useState<ChallengeTab>(() =>
       resolveAllowedChallengeTab(initialTab, isAdmin, { isSummaryVisible })
@@ -172,7 +181,8 @@ export function ChallengeView({
                <ChallengeLeaderboardTab
                   challenge={challenge}
                   isAdmin={isAdmin}
-                  initialViewMode={initialLeaderboardViewMode}
+                  initialViewMode={resolvedLeaderboardViewMode}
+                  isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
                />
             </div>
          )}

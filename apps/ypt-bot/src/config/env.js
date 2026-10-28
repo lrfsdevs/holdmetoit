@@ -68,6 +68,11 @@ export const env = Object.freeze({
       ? process.env.ACTIVE_CHALLENGE_ID.trim()
       : null,
 
+   CRON_LOG_RETENTION_DAYS: Math.max(
+      1,
+      parseIntFallback(process.env.CRON_LOG_RETENTION_DAYS, 30)
+   ),
+
    DATABASE_BACKUP_ENABLED:
       String(process.env.DATABASE_BACKUP_ENABLED || "").toLowerCase() ===
       "true",

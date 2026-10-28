@@ -24,6 +24,7 @@ interface TaskMenuItemsProps {
    effectiveTodayDate: string;
    dayOptions: ChallengeDayOption[];
    selectedDateKey: string;
+   isChallengeActive?: boolean;
    onSetStatus: (status: TaskStatus) => void;
    onMoveToDay: (targetDateKey: string) => void;
    onEditTask: () => void;
@@ -38,6 +39,7 @@ export function TaskMenuItems({
    taskType,
    effectiveTodayDate,
    dayOptions,
+   isChallengeActive = true,
    onSetStatus,
    onMoveToDay,
    onEditTask,
@@ -85,7 +87,8 @@ export function TaskMenuItems({
                  return validateMoveTaskChallengeDay(
                     taskDateKey,
                     opt.dateKey,
-                    effectiveTodayDate
+                    effectiveTodayDate,
+                    { isChallengeActive }
                  ).ok;
               });
 
@@ -252,7 +255,7 @@ export function TaskMenuItems({
             <span>Edit Task</span>
          </Item>
 
-         {isTaskOnPastDay ? (
+         {Boolean(isChallengeActive && isTaskOnPastDay) ? (
             <Item
                disabled
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-tertiary cursor-not-allowed text-left opacity-50"
@@ -283,6 +286,7 @@ interface CategoryMenuItemsProps {
    selectedDateKey: string;
    effectiveTodayDate: string;
    dayOptions: ChallengeDayOption[];
+   isChallengeActive?: boolean;
    onMoveCategoryToDay: (targetDateKey: string) => void;
    onRenameCategory: () => void;
    onDeleteCategory: () => void;
@@ -299,6 +303,7 @@ export function CategoryMenuItems({
    selectedDateKey,
    effectiveTodayDate,
    dayOptions,
+   isChallengeActive = true,
    onMoveCategoryToDay,
    onRenameCategory,
    onDeleteCategory,
@@ -324,10 +329,11 @@ export function CategoryMenuItems({
                  return validateMoveTaskChallengeDay(
                     selectedDateKey,
                     opt.dateKey,
-                    effectiveTodayDate
+                    effectiveTodayDate,
+                    { isChallengeActive }
                  ).ok;
               }
-              return !opt.isPast;
+              return isChallengeActive ? !opt.isPast : true;
            });
 
    const todayOpt = eligibleDays.find((d) => d.dateKey === effectiveTodayDate);
@@ -349,6 +355,7 @@ export function CategoryMenuItems({
    const relevantDailyCat = catType === "daily" ? targetCat : dailyTargetCat;
 
    const hasPastTasks = Boolean(
+      isChallengeActive &&
       relevantDailyCat?.tasks.some((t) => {
          const dateKey = t.dueDate
             ? typeof t.dueDate === "string"

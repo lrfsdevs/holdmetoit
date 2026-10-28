@@ -4,9 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EnrollmentModal } from "./enrollment-modal";
+import { EditDuoTeamModal } from "./edit-duo-team-modal";
 import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 
 interface ChallengeHeroBannerProps {
@@ -142,6 +143,54 @@ function ChallengeHeroActions({ challenge }: ChallengeHeroBannerProps) {
    );
 }
 
+function DuoTeamIdentityControl({ challenge }: ChallengeHeroBannerProps) {
+   const { currentUser } = challenge;
+   const [isEditOpen, setIsEditOpen] = useState(false);
+
+   if (
+      challenge.format !== "DUOS" ||
+      !currentUser.isEnrolled ||
+      !currentUser.teamName
+   ) {
+      return null;
+   }
+
+   return (
+      <>
+         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-text-secondary">
+            <span className="inline-flex items-center gap-1.5">
+               Your duo:
+               <span aria-hidden="true">{currentUser.teamIcon || "🛡️"}</span>
+               <strong className="font-semibold text-white">
+                  {currentUser.teamName}
+               </strong>
+            </span>
+            {currentUser.canEditDuoTeam && (
+               <button
+                  type="button"
+                  onClick={() => setIsEditOpen(true)}
+                  data-testid="hero-edit-duo-button"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/50 px-2.5 py-1 text-meta font-semibold text-white backdrop-blur-md transition-colors hover:border-white/30 hover:bg-black/75"
+               >
+                  <Pencil className="h-3 w-3" />
+                  Edit duo
+               </button>
+            )}
+         </div>
+
+         {currentUser.canEditDuoTeam && (
+            <EditDuoTeamModal
+               challengeId={challenge.id}
+               currentName={currentUser.teamName}
+               currentEmoji={currentUser.teamIcon ?? ""}
+               isOpen={isEditOpen}
+               onOpenChange={setIsEditOpen}
+            />
+         )}
+      </>
+   );
+}
+
 /** Renders the challenge hero banner with image and fallback presentation. */
 export function ChallengeHeroBanner({ challenge }: ChallengeHeroBannerProps) {
    const { matchHeader, teams } = challenge;
@@ -187,6 +236,8 @@ export function ChallengeHeroBanner({ challenge }: ChallengeHeroBannerProps) {
                <p className="text-xs sm:text-sm text-text-tertiary mt-1">
                   {dateRangeFormatted}
                </p>
+
+               <DuoTeamIdentityControl challenge={challenge} />
             </div>
 
             <ChallengeHeroActions challenge={challenge} />

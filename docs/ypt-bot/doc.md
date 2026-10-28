@@ -14,6 +14,7 @@ This document provides a comprehensive guide to the **YPT Analytics Checker & Ch
    - [A. Live Study Log Ingestion](#a-live-study-log-ingestion)
    - [B. Unified Member Leaderboard & Aggregation](#b-unified-member-leaderboard--aggregation)
    - [C. Health Endpoint](#c-health-endpoint)
+   - [D. Job Run Logging](#d-job-run-logging)
 6. [Strict UTC Time Guarantee](#strict-utc-time-guarantee)
 7. [Admin Override Protection (Law L5)](#admin-override-protection-law-l5)
 8. [Testing & Verification](#testing--verification)
@@ -56,7 +57,8 @@ It solves three primary challenges:
    │   │   └── session.js        # Cached JWT session + refresh
    │   ├── db/
    │   │   ├── client.js         # PrismaClient singleton
-   │   │   └── challenge-repository.js # Challenge/participant queries
+   │   │   ├── challenge-repository.js # Challenge/participant queries
+   │   │   └── cron-log-repository.js # CronLog run logging
    │   ├── ingest/
    │   │   ├── run-ingest.js     # Ingestion orchestration
    │   │   ├── daily-study-log.js # DailyStudyLog upserts
@@ -90,6 +92,7 @@ All environment variables are validated and exported through a single module: [`
 | `YPT_GROUP_IDS`                  | Comma-separated list of YPT group IDs to scrape                            | `6814572,6487271`                                                      |
 | `ACTIVE_CHALLENGE_ID`            | Optional override challenge ID (if omitted, dynamically queries DB in UTC) | `cmuub6ijq0003sb4eytzy2262`                                            |
 | `PORT`                           | Health server HTTP port                                                    | `3000`                                                                 |
+| `CRON_LOG_RETENTION_DAYS`        | Days to keep `CronLog` job runs                                            | `30`                                                                   |
 | `DATABASE_BACKUP_ENABLED`        | Enable the in-process 00:00 UTC backup scheduler                           | `false`                                                                |
 | `DATABASE_BACKUP_CATCH_UP`       | Run on boot when the newest dump is ≥24h old                               | `true`                                                                 |
 | `DATABASE_BACKUP_RETENTION_DAYS` | Prune dumps older than this (minimum `1`)                                  | `30`                                                                   |
@@ -185,6 +188,19 @@ Both `GET /health` and `HEAD /health` return `200` with the same headers
 while reporting the body length that `GET` would return.
 
 Any other path or method returns `404 {"error":"Not found"}`.
+
+---
+
+### D. Job Run Logging
+
+Every `YPT_INGEST` cycle and every `DB_BACKUP` run writes a row to `CronLog`
+(status, trigger, timing, summary, error). No per-member change history is
+stored.
+
+- `CronLog` retention: `CRON_LOG_RETENTION_DAYS` (default 30).
+- Stale `RUNNING` rows are closed as `FAILED/INTERRUPTED` at boot.
+- The DevBoard **Cron Logs** tab reads the runs; see
+  [`docs/cron-logs/README.md`](../cron-logs/README.md).
 
 ---
 
@@ -301,6 +317,7 @@ A committed `render.yaml` is not present yet. When added, define the service wit
    - `YPT_PASSWORD`: Your YPT account password
    - `YPT_GROUP_IDS`: `6814572,7393477`
    - `POLL_INTERVAL_IDLE_SEC`: `30` (ingestion loop interval, in seconds)
+   - `CRON_LOG_RETENTION_DAYS`: `30`
    - `NODE_ENV`: `production`
    - `DATABASE_BACKUP_ENABLED`: `true`
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BACKUP_BUCKET`

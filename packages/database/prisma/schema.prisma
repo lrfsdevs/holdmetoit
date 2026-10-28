@@ -166,7 +166,9 @@ model Team {
   participants ChallengeParticipant[]
   wagers       Wager[]
 
-  @@unique([challengeId, name])
+  // Active team names are case-insensitively unique per challenge via the
+  // partial unique index on (challengeId, lower(name)) WHERE isDeleted = false
+  // created in migration 20261029000000_team_active_name_ci_unique.
   @@index([challengeId, isDeleted])
 }
 
@@ -1006,6 +1008,38 @@ model YptSyncRun {
   user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// ypt-bot job run logging (CronLog) and per-member change history
+// ---------------------------------------------------------------------------
+
+enum CronJobStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+model CronLog {
+  id           String        @id @default(cuid())
+  jobName      String        @db.VarChar(64)
+  runId        String        @db.VarChar(64) @unique
+  trigger      String        @db.VarChar(32)
+  status       CronJobStatus @default(RUNNING)
+  challengeId  String?       @db.VarChar(64)
+  startedAt    DateTime      @default(now())
+  finishedAt   DateTime?
+  durationMs   Int?
+  summary      Json?
+  errorCode    String?       @db.VarChar(64)
+  errorMessage String?       @db.Text
+  createdAt    DateTime      @default(now())
+
+  @@index([jobName, startedAt(sort: Desc)])
+  @@index([status, startedAt(sort: Desc)])
+  @@index([challengeId, startedAt(sort: Desc)])
+  @@index([startedAt])
 }
 
 // ---------------------------------------------------------------------------

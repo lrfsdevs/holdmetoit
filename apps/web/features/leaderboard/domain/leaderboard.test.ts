@@ -306,6 +306,27 @@ describe("resolveLeaderboardViewMode", () => {
       expect(resolveLeaderboardViewMode("")).toBe("individual");
       expect(resolveLeaderboardViewMode("unknown")).toBe("individual");
    });
+
+   it("defaults DUOS battles to the team view", () => {
+      expect(resolveLeaderboardViewMode(undefined, "DUOS")).toBe("team");
+      expect(resolveLeaderboardViewMode(null, "DUOS")).toBe("team");
+      expect(resolveLeaderboardViewMode("", "DUOS")).toBe("team");
+   });
+
+   it("keeps other formats on the individual default", () => {
+      expect(resolveLeaderboardViewMode(undefined, "TEAM_VS_TEAM")).toBe(
+         "individual"
+      );
+      expect(resolveLeaderboardViewMode(undefined, "SOLOS")).toBe("individual");
+   });
+
+   it("lets an explicit view override the DUOS default", () => {
+      expect(resolveLeaderboardViewMode("individual", "DUOS")).toBe(
+         "individual"
+      );
+      expect(resolveLeaderboardViewMode("today", "DUOS")).toBe("today");
+      expect(resolveLeaderboardViewMode("team", "TEAM_VS_TEAM")).toBe("team");
+   });
 });
 
 describe("supportsTeamView", () => {
