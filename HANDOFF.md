@@ -1703,4 +1703,5 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Tests:** Added `apps/ypt-bot/test/http/health-server.test.js` covering GET payload, HEAD headers/empty body, query-string stripping, unknown-path `404`, and `POST /health` `404`.
 - **Docs:** Updated `docs/ypt-bot/doc.md` §C and the file-tree comment, `docs/ypt-bot/README.md` health section, and the startup log to `(GET|HEAD /health)`.
 - **Verification:** `npm run test -w @holdmetoit/ypt-bot` → 97/97 pass.
-- **NEXT STEP:** Open a PR from `feat/ypt-bot-health-head` to `dev`, then peer review and merge.
+- **GitHub PR:** Submitted [PR #199](https://github.com/lrfsdevs/holdmetoit/pull/199) from `feat/ypt-bot-health-head` to `dev`.
+- **NEXT STEP:** Peer review and merge PR #199 into `dev`.
