@@ -234,3 +234,97 @@ export function toggleCategoryCollapseKey(
 
    return next;
 }
+
+/**
+ * Prefix for daily rollover snooze keys in localStorage.
+ * Format: holdmetoit_rollover_snooze_${userId}_${todayDateKey}
+ */
+export const ROLLOVER_SNOOZE_STORAGE_PREFIX = "holdmetoit_rollover_snooze_";
+
+/**
+ * Returns the localStorage key for snoozing the daily rollover banner.
+ * Keyed by userId + dateKey: holdmetoit_rollover_snooze_${userId}_${todayDateKey}
+ */
+export function getRolloverSnoozeStorageKey(
+   userId: string | null | undefined,
+   dateKey: string
+): string {
+   const normalizedUser =
+      userId && userId.trim().length > 0 ? userId.trim() : "guest";
+   return `${ROLLOVER_SNOOZE_STORAGE_PREFIX}${normalizedUser}_${dateKey}`;
+}
+
+/**
+ * Checks whether the Today rollover reminder banner has been snoozed for the given date.
+ */
+export function isRolloverSnoozedForDate(
+   userId: string | null | undefined,
+   dateKey: string
+): boolean {
+   if (typeof window === "undefined") {
+      return false;
+   }
+   try {
+      if (window.localStorage) {
+         const key = getRolloverSnoozeStorageKey(userId, dateKey);
+         return window.localStorage.getItem(key) === "true";
+      }
+   } catch {
+      // Gracefully ignore private browsing / quota errors
+   }
+   return false;
+}
+
+/**
+ * Snoozes the Today rollover reminder for the given dateKey in localStorage.
+ * Automatically cleans up any obsolete snooze entries for older dates.
+ */
+export function setRolloverSnoozedForDate(
+   userId: string | null | undefined,
+   dateKey: string
+): void {
+   if (typeof window === "undefined") {
+      return;
+   }
+   try {
+      if (window.localStorage) {
+         const key = getRolloverSnoozeStorageKey(userId, dateKey);
+         window.localStorage.setItem(key, "true");
+         cleanupExpiredRolloverSnooze(userId, dateKey);
+      }
+   } catch {
+      // Gracefully ignore
+   }
+}
+
+/**
+ * Cleans up expired rollover snooze entries from localStorage where the stored dateKey is earlier than currentDateKey.
+ */
+export function cleanupExpiredRolloverSnooze(
+   userId: string | null | undefined,
+   currentDateKey: string
+): void {
+   if (typeof window === "undefined") {
+      return;
+   }
+   try {
+      if (window.localStorage) {
+         const normalizedUser =
+            userId && userId.trim().length > 0 ? userId.trim() : "guest";
+         const prefix = `${ROLLOVER_SNOOZE_STORAGE_PREFIX}${normalizedUser}_`;
+         const toRemove: string[] = [];
+         for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && key.startsWith(prefix)) {
+               const snoozeDate = key.slice(prefix.length);
+               if (snoozeDate < currentDateKey) {
+                  toRemove.push(key);
+               }
+            }
+         }
+         toRemove.forEach((k) => window.localStorage.removeItem(k));
+      }
+   } catch {
+      // Gracefully ignore
+   }
+}

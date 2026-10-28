@@ -7,6 +7,10 @@ import {
    readCollapsedCategoryIds,
    toggleCategoryCollapseKey,
    writeCollapsedCategoryIds,
+   getRolloverSnoozeStorageKey,
+   isRolloverSnoozedForDate,
+   setRolloverSnoozedForDate,
+   cleanupExpiredRolloverSnooze,
 } from "./cockpit-tasks-storage";
 
 describe("cockpit-tasks-storage", () => {
@@ -293,6 +297,91 @@ describe("cockpit-tasks-storage", () => {
                collapsed
             )
          ).toBe(false);
+      });
+   });
+
+   describe("getRolloverSnoozeStorageKey", () => {
+      it("formats key with guest scope when userId is missing or blank", () => {
+         expect(getRolloverSnoozeStorageKey(null, "2026-10-28")).toBe(
+            "holdmetoit_rollover_snooze_guest_2026-10-28"
+         );
+         expect(getRolloverSnoozeStorageKey(undefined, "2026-10-28")).toBe(
+            "holdmetoit_rollover_snooze_guest_2026-10-28"
+         );
+         expect(getRolloverSnoozeStorageKey("", "2026-10-28")).toBe(
+            "holdmetoit_rollover_snooze_guest_2026-10-28"
+         );
+         expect(getRolloverSnoozeStorageKey("   ", "2026-10-28")).toBe(
+            "holdmetoit_rollover_snooze_guest_2026-10-28"
+         );
+      });
+
+      it("formats key scoped to normalized userId and dateKey", () => {
+         expect(getRolloverSnoozeStorageKey("user_123", "2026-10-28")).toBe(
+            "holdmetoit_rollover_snooze_user_123_2026-10-28"
+         );
+         expect(getRolloverSnoozeStorageKey("  user_456  ", "2026-10-29")).toBe(
+            "holdmetoit_rollover_snooze_user_456_2026-10-29"
+         );
+      });
+   });
+
+   describe("isRolloverSnoozedForDate & setRolloverSnoozedForDate", () => {
+      it("returns false when no snooze is recorded", () => {
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-28")).toBe(false);
+      });
+
+      it("records snooze in localStorage and returns true for that date", () => {
+         setRolloverSnoozedForDate("user_1", "2026-10-28");
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-28")).toBe(true);
+         // Different user is not snoozed
+         expect(isRolloverSnoozedForDate("user_2", "2026-10-28")).toBe(false);
+         // Different date is not snoozed
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-29")).toBe(false);
+      });
+   });
+
+   describe("cleanupExpiredRolloverSnooze", () => {
+      it("cleans up snooze keys older than currentDateKey while preserving current and future dates", () => {
+         window.localStorage.setItem(
+            "holdmetoit_rollover_snooze_user_1_2026-10-26",
+            "true"
+         );
+         window.localStorage.setItem(
+            "holdmetoit_rollover_snooze_user_1_2026-10-27",
+            "true"
+         );
+         window.localStorage.setItem(
+            "holdmetoit_rollover_snooze_user_1_2026-10-28",
+            "true"
+         );
+         window.localStorage.setItem(
+            "holdmetoit_rollover_snooze_user_1_2026-10-29",
+            "true"
+         );
+
+         cleanupExpiredRolloverSnooze("user_1", "2026-10-28");
+
+         expect(
+            window.localStorage.getItem(
+               "holdmetoit_rollover_snooze_user_1_2026-10-26"
+            )
+         ).toBeNull();
+         expect(
+            window.localStorage.getItem(
+               "holdmetoit_rollover_snooze_user_1_2026-10-27"
+            )
+         ).toBeNull();
+         expect(
+            window.localStorage.getItem(
+               "holdmetoit_rollover_snooze_user_1_2026-10-28"
+            )
+         ).toBe("true");
+         expect(
+            window.localStorage.getItem(
+               "holdmetoit_rollover_snooze_user_1_2026-10-29"
+            )
+         ).toBe("true");
       });
    });
 });
