@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 170 on `krish` · Session 169 on `krish` · Session 168 on `krish` · Session 167 on `krish` · Session 166 on `krish` · Session 165 on `krish` · Session 164 on `krish` · Session 163 on `krish` · Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-28 (Session 171 on `feat/ypt-bot-health-head`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -1656,6 +1656,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **GitHub PR:** Pushed updates to [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197) (`krish` $\rightarrow$ `dev`).
 - **NEXT STEP:** Peer review and merge PR #197 into `dev`.
 
+### Session 171 — 2026-10-28 (`HEAD /health` support on `feat/ypt-bot-health-head`)
+
+- **History cleanup:** Reverted stale `17d73e4` on `afnan-jr` (`dcfc5ff`), removing the out-of-date `HEAD /health` route without rewriting history. Verified `git diff b6331b7 HEAD` was empty after the revert, then pushed normally (no force-push, per §4.3).
+- **Scope:** The bot's liveness route only matched `GET`, so platform probes using `HEAD /health` received `404`.
+- **Change:** `apps/ypt-bot/src/http/health-server.js` now accepts `GET` and `HEAD` on `/health`; both return `200` with `Content-Type: application/json` and an explicit `Content-Length` computed from the serialized payload. `HEAD` omits the body.
+- **Unchanged:** `GET /health` payload (`status`, `service`, `uptimeSeconds`) and the `404 {"error":"Not found"}` fallback for every other path/method (including `POST /health`).
+- **Tests:** Added `apps/ypt-bot/test/http/health-server.test.js` covering GET payload, HEAD headers/empty body, query-string stripping, unknown-path `404`, and `POST /health` `404`.
+- **Docs:** Updated `docs/ypt-bot/doc.md` §C and the file-tree comment, `docs/ypt-bot/README.md` health section, and the startup log to `(GET|HEAD /health)`.
+- **Verification:** `npm run test -w @holdmetoit/ypt-bot` → 97/97 pass.
+- **GitHub PR:** Submitted [PR #199](https://github.com/lrfsdevs/holdmetoit/pull/199) from `feat/ypt-bot-health-head` to `dev`.
+- **NEXT STEP:** Peer review and merge PR #199 into `dev`.
 ### Session 170 — 2026-10-28 (Card Header Quick-Add, Scroll Containment & Mobile Switcher — GH-#195 / KAN-64 on `krish`)
 
 - **Context & Objectives:** Resolve GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195) / Jira Ticket `KAN-64` ("card header quick-add action and scroll containment for long todo lists"). Eliminate bottom-heavy add button friction, prevent unbound vertical card stretching for long task lists, and optimize mobile navigation between Daily and Weekly task boards.
