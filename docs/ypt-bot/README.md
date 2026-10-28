@@ -49,4 +49,4 @@ curl http://localhost:3000/health
 # {"status":"ok","service":"ypt-bot","uptimeSeconds":42}
 ```
 
-Any other path or method returns `404 {"error":"Not found"}`.
+`GET` and `HEAD` both return `200` with matching `Content-Type`/`Content-Length` headers; `HEAD` omits the body. Any other path or method returns `404 {"error":"Not found"}`.
