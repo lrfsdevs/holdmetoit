@@ -78,7 +78,7 @@ async function startServer() {
 
       server.listen(PORT, "0.0.0.0", () => {
          console.log(
-            `\n🚀 YPT bot listening on http://localhost:${PORT} (GET /health)\n`
+            `\n🚀 YPT bot listening on http://localhost:${PORT} (GET|HEAD /health)\n`
          );
          startDailyBackupScheduler();
       });
