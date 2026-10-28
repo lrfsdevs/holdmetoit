@@ -177,6 +177,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
+### Session 172 — 2026-10-28 (Cockpit Tasks Card Overlap Fixes, Scope Badges, & Review Hardening on `krish` · PR #200)
+
+- **Cockpit Tasks Header Layout & Overlap Fix:**
+   - Resolved header badge collision in Weekly Todos and Daily Todos columns where count pills (e.g. `1/18 Goals` vs `1/18 Completed`) stacked on top of each other on compact card widths.
+   - Updated header containers to `flex flex-wrap items-center justify-between gap-2` with `shrink-0` on children to ensure clean separation and wrap-safety.
+- **Weekly Task Card Space Optimization:**
+   - Replaced bulky textual tags (`Goal` / `Personal`) and text badges with compact icon-only badges (`🏆` and `👤`) with accessible tooltips and `aria-label`.
+   - Removed redundant "Completed" text button on finished weekly tasks; color-coded completed task checkboxes with emerald check styling (`border-emerald-500 bg-emerald-500/15 text-emerald-400`).
+- **PR #200 Review Hardening (`cockpit-tasks-section.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`):**
+   - **Hydration Safe Rollover Snooze:** Initialized `isRolloverSnoozed` state to `false` for SSR/hydration parity, reading and updating from `localStorage` within `useEffect`. Updated Vitest rollover tests to run in jsdom with React effects enabled.
+   - **WCAG 2.5.3 (Label in Name) A11y Alignment:** Removed conflicting `aria-label="Don't remind again today"` on `rollover-snooze-today-button` and matched `title="Don't remind today"` to the visible label.
+   - **Active Day Option Clamping:** Added synchronization effect ensuring `selectedDateKey` and `selectedDayNumber` safely clamp to a valid day in `dayOptions` whenever the options change.
+   - **Review Finding 4 Rejection:** Evaluated suggestion to filter `dayOptions` to only return challenge dates falling within the calendar week of `activeWeekAnchorDateKey`. Skipped with documented rationale: 7-day challenge views require the complete 7-day sequence (`Day 1..Day 7`) in the 7-column layout, and slicing by calendar week would break multi-week or mid-week challenge rendering and break existing regression tests.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 211 Vitest test files passing (2079/2079 tests green).
+
 ### Session 163 — 2026-10-26 (Incomplete Task Rollover & Challenge Goal Scoping on `krish` · GH #185 / Jira KAN-61)
 
 - **Incomplete Task Rollover Helper (FEAT-TASK-03):** Implemented ergonomic 1-click rollover for carrying over incomplete daily study commitments from past days to Today.

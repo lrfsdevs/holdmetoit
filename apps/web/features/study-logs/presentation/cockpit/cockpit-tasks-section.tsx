@@ -527,6 +527,19 @@ export function CockpitTasksSection({
       );
    }, [dayOptions, selectedDateKey, todayDayOption]);
 
+   useEffect(() => {
+      if (
+         dayOptions.length > 0 &&
+         !dayOptions.some((d) => d.dateKey === selectedDateKey)
+      ) {
+         const fallback = dayOptions.find((d) => d.isToday) || dayOptions[0];
+         if (fallback) {
+            setSelectedDateKey(fallback.dateKey);
+            setSelectedDayNumber(fallback.dayNumber);
+         }
+      }
+   }, [dayOptions, selectedDateKey]);
+
    const isActiveDayToday =
       selectedDateKey === effectiveTodayDate ||
       Boolean(activeDayOption?.isToday);
@@ -551,15 +564,13 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() =>
-      isRolloverSnoozedForDate(userId, effectiveTodayDate)
-   );
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(false);
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
-      if (isRolloverSnoozedForDate(userId, effectiveTodayDate)) {
-         setIsRolloverSnoozed(true);
-      }
+      setIsRolloverSnoozed(
+         isRolloverSnoozedForDate(userId, effectiveTodayDate)
+      );
    }, [userId, effectiveTodayDate]);
 
    const handleSnoozeRolloverToday = useCallback(() => {
@@ -4134,8 +4145,7 @@ export function CockpitTasksSection({
                                  <button
                                     type="button"
                                     onClick={handleSnoozeRolloverToday}
-                                    aria-label="Don't remind again today"
-                                    title="Don't remind again today"
+                                    title="Don't remind today"
                                     data-testid="rollover-snooze-today-button"
                                     className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-transparent hover:border-border-subtle"
                                  >

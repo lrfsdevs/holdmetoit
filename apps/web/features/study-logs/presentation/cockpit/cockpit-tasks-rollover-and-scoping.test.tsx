@@ -497,17 +497,17 @@ describe("CockpitTasksSection - Rollover and Goal Scoping (GH #185 / KAN-61)", (
 
          setRolloverSnoozedForDate("user_1", todayDate);
 
-         const html = renderToStaticMarkup(
-            createElement(CockpitTasksSection, {
-               isLoggedIn: true,
-               userTasks: mockTasks,
-               userId: "user_1",
-               todayDate,
-               initialSelectedDateKey: todayDate,
-            })
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={mockTasks}
+               userId="user_1"
+               todayDate={todayDate}
+               initialSelectedDateKey={todayDate}
+            />
          );
 
-         expect(html).not.toContain('data-testid="rollover-today-banner"');
+         expect(screen.queryByTestId("rollover-today-banner")).toBeNull();
       });
 
       it("hides the Today banner and persists snooze to localStorage when snooze button is clicked (#196, KAN-65)", () => {
