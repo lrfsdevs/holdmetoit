@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 173 on `krish`)
+> **Last Updated:** 2026-10-29 (Session 174 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -176,6 +176,25 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 174 — 2026-10-29 (Daily Snooze Banner Layout Stabilization & Earlier Tasks Status Editing on `krish` · GH #196 / KAN-65)
+
+- **Today Rollover Snooze Banner Layout Fix (`cockpit-tasks-section.tsx`):**
+   - Resolved severe flex layout collision where `sm:flex-row` and `shrink-0` on action buttons squeezed the text description into a vertical single-word column and caused buttons to overlap the description text on narrow card widths.
+   - Refactored banner into a clean 2-row container (`flex flex-col gap-2.5`):
+      - **Row 1:** Icon, headline, and subtitle have full-width text space with top-right dismiss button (`X`).
+      - **Row 2:** Action buttons (`Roll over to Today` and `Don't remind today`) sit neatly aligned below the description with natural wrap tolerance.
+- **Earlier / Past Days Daily Task Status Editing Enabled (`cockpit-tasks-section.tsx`):**
+   - Addressed user feedback where participants completed study tasks on earlier days but had not updated their status before midnight.
+   - Removed `checkIsDayLocked` guard from `setTaskStatus` for daily tasks and removed `isPastDayLocked` guard / `cursor-not-allowed opacity-75` styling from the daily task row click handler.
+   - Preserves lock invariants on adding new tasks to past challenge days while allowing full status editing (checkbox toggling, `Completed`, `In Progress`, `Crossed Out`, `TODO`) on existing tasks.
+- **Verification & Quality Gates:**
+   - Added unit test in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying interactive task completion toggling for past-day daily tasks.
+   - 0 TypeScript compiler errors (`npm run typecheck:web`).
+   - 0 ESLint errors (`npm run lint:web`).
+   - 89/89 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
+- **Jira Status:** `KAN-65` transitioned to `In Review` (id: 10006).
+- **PR Status:** PR creation withheld per user request.
 
 ### Session 172 — 2026-10-28 (Cockpit Tasks Card Overlap Fixes, Scope Badges, & Review Hardening on `krish` · PR #200)
 
@@ -1682,6 +1701,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Verification:** `npm run test -w @holdmetoit/ypt-bot` → 97/97 pass.
 - **GitHub PR:** Submitted [PR #199](https://github.com/lrfsdevs/holdmetoit/pull/199) from `feat/ypt-bot-health-head` to `dev`.
 - **NEXT STEP:** Peer review and merge PR #199 into `dev`.
+
 ### Session 170 — 2026-10-28 (Card Header Quick-Add, Scroll Containment & Mobile Switcher — GH-#195 / KAN-64 on `krish`)
 
 - **Context & Objectives:** Resolve GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195) / Jira Ticket `KAN-64` ("card header quick-add action and scroll containment for long todo lists"). Eliminate bottom-heavy add button friction, prevent unbound vertical card stretching for long task lists, and optimize mobile navigation between Daily and Weekly task boards.

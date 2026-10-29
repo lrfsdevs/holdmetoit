@@ -1143,8 +1143,6 @@ export function CockpitTasksSection({
             (t) => t.id === taskId
          );
          if (!targetTask) return;
-         const targetDateKey = getTaskDateKey(targetTask);
-         if (checkIsDayLocked(targetDateKey)) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
@@ -4099,38 +4097,48 @@ export function CockpitTasksSection({
                         !isRolloverSnoozed && (
                            <div
                               data-testid="rollover-today-banner"
-                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200"
+                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col gap-2.5 shadow-sm animate-in fade-in duration-200"
                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                 <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                                    <RotateCcw className="h-4 w-4 text-amber-400" />
+                              <div className="flex items-start justify-between gap-2.5">
+                                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                    <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                                       <RotateCcw className="h-4 w-4 text-amber-400" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                       <p className="text-xs font-semibold text-text-primary">
+                                          {rolloverSummary.yesterdayIncompleteCount >
+                                             0 &&
+                                          rolloverSummary.totalPastIncompleteCount ===
+                                             rolloverSummary.yesterdayIncompleteCount
+                                             ? `${rolloverSummary.yesterdayIncompleteCount} incomplete task${
+                                                  rolloverSummary.yesterdayIncompleteCount >
+                                                  1
+                                                     ? "s"
+                                                     : ""
+                                               } from yesterday`
+                                             : `${rolloverSummary.totalPastIncompleteCount} incomplete task${
+                                                  rolloverSummary.totalPastIncompleteCount >
+                                                  1
+                                                     ? "s"
+                                                     : ""
+                                               } from earlier days`}
+                                       </p>
+                                       <p className="text-meta text-text-tertiary mt-0.5">
+                                          Carry over unfinished tasks to today
+                                          with one click.
+                                       </p>
+                                    </div>
                                  </div>
-                                 <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-text-primary truncate">
-                                       {rolloverSummary.yesterdayIncompleteCount >
-                                          0 &&
-                                       rolloverSummary.totalPastIncompleteCount ===
-                                          rolloverSummary.yesterdayIncompleteCount
-                                          ? `${rolloverSummary.yesterdayIncompleteCount} incomplete task${
-                                               rolloverSummary.yesterdayIncompleteCount >
-                                               1
-                                                  ? "s"
-                                                  : ""
-                                            } from yesterday`
-                                          : `${rolloverSummary.totalPastIncompleteCount} incomplete task${
-                                               rolloverSummary.totalPastIncompleteCount >
-                                               1
-                                                  ? "s"
-                                                  : ""
-                                            } from earlier days`}
-                                    </p>
-                                    <p className="text-meta text-text-tertiary">
-                                       Carry over unfinished tasks to today with
-                                       one click.
-                                    </p>
-                                 </div>
+                                 <button
+                                    type="button"
+                                    onClick={() => setIsRolloverDismissed(true)}
+                                    aria-label="Dismiss rollover helper"
+                                    className="p-1 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors shrink-0 -mr-1 -mt-1"
+                                 >
+                                    <X className="h-4 w-4" />
+                                 </button>
                               </div>
-                              <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 shrink-0">
+                              <div className="flex items-center flex-wrap gap-2 pt-0.5">
                                  <button
                                     type="button"
                                     onClick={() =>
@@ -4147,17 +4155,9 @@ export function CockpitTasksSection({
                                     onClick={handleSnoozeRolloverToday}
                                     title="Don't remind today"
                                     data-testid="rollover-snooze-today-button"
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-transparent hover:border-border-subtle"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-border-subtle/60 hover:border-border-subtle"
                                  >
                                     <span>Don&apos;t remind today</span>
-                                 </button>
-                                 <button
-                                    type="button"
-                                    onClick={() => setIsRolloverDismissed(true)}
-                                    aria-label="Dismiss rollover helper"
-                                    className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors"
-                                 >
-                                    <X className="h-3.5 w-3.5" />
                                  </button>
                               </div>
                            </div>
@@ -4577,21 +4577,12 @@ export function CockpitTasksSection({
                                                                            "COMPLETED"
                                                                         }
                                                                         onClick={() => {
-                                                                           if (
-                                                                              isPastDayLocked
-                                                                           )
-                                                                              return;
                                                                            toggleDailyTask(
                                                                               catIdx,
                                                                               task.id
                                                                            );
                                                                         }}
-                                                                        className={cn(
-                                                                           "flex items-start gap-3 flex-1 min-w-0",
-                                                                           isPastDayLocked
-                                                                              ? "cursor-not-allowed opacity-75"
-                                                                              : "cursor-pointer"
-                                                                        )}
+                                                                        className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
                                                                         title={
                                                                            status ===
                                                                            "COMPLETED"
