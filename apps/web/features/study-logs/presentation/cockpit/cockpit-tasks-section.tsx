@@ -184,6 +184,7 @@ export interface CockpitTasksSectionProps {
    onOpenHoursModal?: (dayNumber?: number) => void;
    isAdmin?: boolean;
    initialCollapsedCategoryIds?: string[];
+   initialIsRolloverSnoozed?: boolean;
 }
 
 /** Renders the participant's categorized task board and task actions. */
@@ -201,6 +202,7 @@ export function CockpitTasksSection({
    onOpenHoursModal,
    isAdmin = false,
    initialCollapsedCategoryIds,
+   initialIsRolloverSnoozed,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
    const linkableChallengeId =
@@ -564,14 +566,28 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(false);
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
+      if (initialIsRolloverSnoozed !== undefined) {
+         return initialIsRolloverSnoozed;
+      }
+      return isRolloverSnoozedForDate(userId, effectiveTodayDate);
+   });
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
-      setIsRolloverSnoozed(
-         isRolloverSnoozedForDate(userId, effectiveTodayDate)
-      );
-   }, [userId, effectiveTodayDate]);
+      if (initialIsRolloverSnoozed) {
+         return;
+      }
+      const isSnoozed = isRolloverSnoozedForDate(userId, effectiveTodayDate);
+      if (isSnoozed !== isRolloverSnoozed) {
+         setIsRolloverSnoozed(isSnoozed);
+      }
+   }, [
+      userId,
+      effectiveTodayDate,
+      initialIsRolloverSnoozed,
+      isRolloverSnoozed,
+   ]);
 
    const handleSnoozeRolloverToday = useCallback(() => {
       setIsRolloverDismissed(true);

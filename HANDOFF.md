@@ -1807,3 +1807,44 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
 - **NEXT STEP:** Peer review and submit PR to `dev`.
+
+### Session 174 — 2026-10-29 (Stabilize Daily Snooze Banner Layout, Status Editing on Earlier Tasks & Cookie SSR Parity for Zero Rollover Flash — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Address user feedback on Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira `KAN-65`:
+   1. Fix broken layout on "Don't remind today" rollover banner where text was squeezed vertically and action buttons overlapped text on compact column layouts (screenshot `media_1793273236265_8dc2ac50.png`).
+   2. Allow updating the status of tasks on earlier days in Daily Todos (e.g. checkbox checking, status toggling) since users often complete tasks earlier but forget to check them off before midnight.
+   3. Eliminate split-second flash / pop on page refresh where the rollover banner briefly appeared even after clicking "Don't remind me today".
+   4. Move Jira item `KAN-65` to `In Review`.
+   5. Explicit user constraint: **Do not create a PR without user instruction.**
+- **Architectural Enhancements Implemented:**
+   1. **Rollover Today Banner Responsive 2-Row Restructure (`cockpit-tasks-section.tsx`):**
+      - Converted `rollover-today-banner` from single-row flex into an accessible 2-row layout (`flex flex-col gap-2.5`).
+      - Row 1: Left contains rotate icon, title, and descriptive subtitle with unconstrained width; right contains the dismiss (`X`) button.
+      - Row 2: Action buttons (`Roll over to Today` and `Don't remind today`) sit cleanly below the text with wrap safety (`flex items-center flex-wrap gap-2 pt-0.5`).
+   2. **Editable Status on Earlier Daily Tasks (`cockpit-tasks-section.tsx`):**
+      - Removed the `checkIsDayLocked(targetDateKey)` blocker inside `setTaskStatus` to permit marking tasks complete, in progress, or crossed out on earlier days.
+      - Removed `if (isPastDayLocked) return;` and `cursor-not-allowed opacity-75` from the task row click handler, allowing past tasks to remain clickable (`cursor-pointer`).
+      - Preserved strict challenge rules preventing _creation_ of new tasks on past challenge days.
+   3. **Cookie SSR Parity for Zero-Flash Rollover Snooze (`cockpit-tasks-storage.ts`, `app/page.tsx`, `home-cockpit-view.tsx`, `cockpit-tasks-section.tsx`):**
+      - Root Cause: `isRolloverSnoozed` was previously initialized to `useState(false)` on the server because `localStorage` cannot be read during SSR. SSR rendered the banner into the initial HTML, and only after client hydration did `useEffect` read `localStorage` and hide the banner, causing a visible split-second flash.
+      - Implemented dual-persistence architecture (identical to `COLLAPSED_CATEGORIES_COOKIE`):
+         - Snoozing writes to both `localStorage` and a lightweight cookie `holdmetoit_rollover_snooze` (`{ [userId]: dateKey }`).
+         - Next.js SSR in `app/page.tsx` reads `cookieStore`, evaluates if snoozed for today, and passes `initialIsRolloverSnoozed = true` down to `HomeCockpitView` and `CockpitTasksSection`.
+         - `CockpitTasksSection` initializes `isRolloverSnoozed` from `initialIsRolloverSnoozed`, rendering the banner hidden on the server with 0 hydration errors, 0 delay, and 0 visual pop.
+         - `cleanupExpiredRolloverSnooze` purges obsolete dates from both `localStorage` and cookie on day rollover.
+   4. **Comprehensive Test Coverage:**
+      - Added tests in `cockpit-tasks-storage.test.ts` verifying dual-persistence to cookie and localStorage, cookie fallback when localStorage is cleared, multi-user scope isolation, and cookie expiration cleanup.
+      - Added tests in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying past-day task status toggling and SSR `initialIsRolloverSnoozed={true}` pre-rendering without banner flash.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: 2-row banner layout, enabled past-day task status changes, and integrated `initialIsRolloverSnoozed`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Exported `ROLLOVER_SNOOZE_COOKIE`, dual cookie + localStorage persistence, and cookie cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added tests for cookie dual-persistence and cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added past-day task status toggling and SSR initial snooze tests.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Propagated `initialIsRolloverSnoozed` prop.
+   - `apps/web/app/page.tsx`: Read `ROLLOVER_SNOOZE_COOKIE` and supplied `initialIsRolloverSnoozed` to `HomeCockpitView`.
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 7 test files passed (93/93 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` is in **`In Review`** (`id: 10006`).
+- **NEXT STEP:** Await user instruction before creating a Pull Request.

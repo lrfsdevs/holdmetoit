@@ -14,7 +14,10 @@ import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
-import { COLLAPSED_CATEGORIES_COOKIE } from "@/features/study-logs/presentation/cockpit/cockpit-tasks-storage";
+import {
+   COLLAPSED_CATEGORIES_COOKIE,
+   ROLLOVER_SNOOZE_COOKIE,
+} from "@/features/study-logs/presentation/cockpit/cockpit-tasks-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +121,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
          : "/profile";
 
+   const rawSnoozeCookie = cookieStore.get(ROLLOVER_SNOOZE_COOKIE)?.value;
+   let initialIsRolloverSnoozed = false;
+   if (rawSnoozeCookie) {
+      try {
+         const parsed = JSON.parse(decodeURIComponent(rawSnoozeCookie));
+         const todayDateKey =
+            cockpit?.todayDate || new Date().toISOString().slice(0, 10);
+         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            initialIsRolloverSnoozed = parsed[scope] === todayDateKey;
+         }
+      } catch {
+         initialIsRolloverSnoozed = false;
+      }
+   }
+
    return (
       <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
          <main className="w-full">
@@ -134,6 +152,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                isAdmin={isAdmin}
                profileUrl={profileUrl}
                initialCollapsedCategoryIds={initialCollapsedCategoryIds}
+               initialIsRolloverSnoozed={initialIsRolloverSnoozed}
             />
          </main>
       </div>
