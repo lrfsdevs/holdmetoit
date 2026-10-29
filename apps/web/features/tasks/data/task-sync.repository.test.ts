@@ -27,6 +27,7 @@ vi.mock("@/core/db", () => ({
 vi.mock("./task.repository", () => ({
    DEFAULT_CATEGORY_NAME: "General",
    getUserCategorizedTasks: vi.fn(),
+   getUserCategorizedTasksFromDatabase: vi.fn(),
    resolveTaskChallengeId: vi.fn(),
    validateTaskChallengeId: vi.fn(),
 }));
@@ -37,6 +38,17 @@ describe("processBatchSync (task-sync.repository)", () => {
    beforeEach(() => {
       vi.clearAllMocks();
 
+      vi.mocked(taskRepo.getUserCategorizedTasksFromDatabase).mockResolvedValue(
+         {
+            categories: [],
+            dailyCategories: [],
+            weeklyCategories: [],
+            totalDailyTasks: 0,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 0,
+            completedWeeklyTasks: 0,
+         }
+      );
       vi.mocked(taskRepo.getUserCategorizedTasks).mockResolvedValue({
          categories: [],
          dailyCategories: [],

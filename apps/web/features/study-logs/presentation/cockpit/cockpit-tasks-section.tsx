@@ -792,6 +792,13 @@ export function CockpitTasksSection({
          try {
             const isSyncEvent = options?.isSyncEvent ?? false;
             const pendingMutations = await getAllQueuedMutations();
+            const pendingTaskIds = new Set(
+               pendingMutations.map((m) => {
+                  const p = m.payload as Record<string, unknown>;
+                  return String(p.taskId || p.id || "");
+               })
+            );
+            pendingTaskIds.delete("");
             const hasServerTasks = Boolean(
                userTasks &&
                (userTasks.dailyCategories?.length > 0 ||
@@ -1046,8 +1053,54 @@ export function CockpitTasksSection({
                   putLocalTasks(tasksToHeal).catch(() => {});
                }
 
-               setDailyCategories(dailyCats);
-               setWeeklyCategories(weeklyCats);
+               setDailyCategories((currentCategories) => {
+                  if (pendingTaskIds.size === 0) return dailyCats;
+                  return dailyCats.map((cat) => ({
+                     ...cat,
+                     tasks: cat.tasks.map((task) => {
+                        if (pendingTaskIds.has(task.id)) {
+                           const currentCat = currentCategories.find((c) =>
+                              c.tasks.some((t) => t.id === task.id)
+                           );
+                           const currentTask = currentCat?.tasks.find(
+                              (t) => t.id === task.id
+                           );
+                           if (currentTask) {
+                              return {
+                                 ...task,
+                                 completed: currentTask.completed,
+                                 status: currentTask.status,
+                              };
+                           }
+                        }
+                        return task;
+                     }),
+                  }));
+               });
+               setWeeklyCategories((currentCategories) => {
+                  if (pendingTaskIds.size === 0) return weeklyCats;
+                  return weeklyCats.map((cat) => ({
+                     ...cat,
+                     tasks: cat.tasks.map((task) => {
+                        if (pendingTaskIds.has(task.id)) {
+                           const currentCat = currentCategories.find((c) =>
+                              c.tasks.some((t) => t.id === task.id)
+                           );
+                           const currentTask = currentCat?.tasks.find(
+                              (t) => t.id === task.id
+                           );
+                           if (currentTask) {
+                              return {
+                                 ...task,
+                                 completed: currentTask.completed,
+                                 status: currentTask.status,
+                              };
+                           }
+                        }
+                        return task;
+                     }),
+                  }));
+               });
             } else if (userTasks && userTasks.categories.length > 0) {
                logTaskSync("Seeding IndexedDB from server userTasks...");
                const seedCats: LocalCategoryRecord[] = userTasks.categories
@@ -1153,16 +1206,27 @@ export function CockpitTasksSection({
       const nextCompleted = nextStatus === "COMPLETED";
 
       if (taskType === "daily") {
-         const targetTask = dailyCategories[catIndex]?.tasks.find(
+         let resolvedCatIdx = catIndex;
+         let targetTask = dailyCategories[catIndex]?.tasks.find(
             (t) => t.id === taskId
          );
+         if (!targetTask) {
+            resolvedCatIdx = dailyCategories.findIndex((c) =>
+               c.tasks.some((t) => t.id === taskId)
+            );
+            if (resolvedCatIdx !== -1) {
+               targetTask = dailyCategories[resolvedCatIdx]?.tasks.find(
+                  (t) => t.id === taskId
+               );
+            }
+         }
          if (!targetTask) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
-               i === catIndex
+               i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
                   ? {
                        ...cat,
                        tasks: cat.tasks.map((t) =>
@@ -1180,12 +1244,15 @@ export function CockpitTasksSection({
          );
 
          const nowIso = new Date().toISOString();
-         const cat = dailyCategories[catIndex];
+         const cat =
+            dailyCategories[resolvedCatIdx] ||
+            dailyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
             putLocalTask({
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
+               challengeId: targetTask.challengeId ?? null,
                title: targetTask.text,
                taskType: "DAILY",
                isComplete: nextCompleted,
@@ -1212,7 +1279,7 @@ export function CockpitTasksSection({
                retryCount: 0,
             })
                .then(() => {
-                  scheduleSync(userId);
+                  scheduleSync(userId, 400);
                })
                .catch(() => {});
 
@@ -1230,16 +1297,27 @@ export function CockpitTasksSection({
             isComplete: nextCompleted,
          });
       } else {
-         const targetTask = weeklyCategories[catIndex]?.tasks.find(
+         let resolvedCatIdx = catIndex;
+         let targetTask = weeklyCategories[catIndex]?.tasks.find(
             (t) => t.id === taskId
          );
+         if (!targetTask) {
+            resolvedCatIdx = weeklyCategories.findIndex((c) =>
+               c.tasks.some((t) => t.id === taskId)
+            );
+            if (resolvedCatIdx !== -1) {
+               targetTask = weeklyCategories[resolvedCatIdx]?.tasks.find(
+                  (t) => t.id === taskId
+               );
+            }
+         }
          if (!targetTask) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
-               i === catIndex
+               i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
                   ? {
                        ...cat,
                        tasks: cat.tasks.map((t) =>
@@ -1257,12 +1335,15 @@ export function CockpitTasksSection({
          );
 
          const nowIso = new Date().toISOString();
-         const cat = weeklyCategories[catIndex];
+         const cat =
+            weeklyCategories[resolvedCatIdx] ||
+            weeklyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
             putLocalTask({
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
+               challengeId: targetTask.challengeId ?? null,
                title: targetTask.text,
                taskType: "WEEKLY",
                isComplete: nextCompleted,
@@ -1289,7 +1370,7 @@ export function CockpitTasksSection({
                retryCount: 0,
             })
                .then(() => {
-                  scheduleSync(userId);
+                  scheduleSync(userId, 400);
                })
                .catch(() => {});
 
@@ -1310,9 +1391,14 @@ export function CockpitTasksSection({
    };
 
    const toggleDailyTask = (catIndex: number, taskId: string) => {
-      const targetTask = dailyCategories[catIndex]?.tasks.find(
+      let targetTask = dailyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
+      if (!targetTask) {
+         targetTask = dailyCategories
+            .flatMap((c) => c.tasks)
+            .find((t) => t.id === taskId);
+      }
       if (!targetTask) return;
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
@@ -1321,9 +1407,14 @@ export function CockpitTasksSection({
    };
 
    const toggleWeeklyTask = (catIndex: number, taskId: string) => {
-      const targetTask = weeklyCategories[catIndex]?.tasks.find(
+      let targetTask = weeklyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
+      if (!targetTask) {
+         targetTask = weeklyCategories
+            .flatMap((c) => c.tasks)
+            .find((t) => t.id === taskId);
+      }
       if (!targetTask) return;
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =

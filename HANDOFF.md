@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-29 (Session 174 on `krish`)
+> **Last Updated:** 2026-10-29 (Session 175 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -176,6 +176,30 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 175 — 2026-10-29 (Task Status Transition Stability, Anti-Flash Reversion & Fresh DB Sync on `krish`)
+
+- **Context & Bug Resolution:**
+   - Addressed user feedback where changing task statuses (e.g. from `TODO` to `IN_PROGRESS`, or `IN_PROGRESS` to `COMPLETED`) took a long time to reflect or flashed between the previous state (`IN_PROGRESS` / `TODO`) and the changed state.
+- **Root Cause Identified & Resolved:**
+   1. **Stale Cache in Batch Sync (`task-sync.repository.ts`):** `processBatchSync` was querying `latest` via `getUserCategorizedTasks(userId)` which is wrapped in Next.js `unstable_cache`. Because mutations had just been applied in the transaction, the cached function returned the pre-mutation stale snapshot in `serverChanges`.
+   2. **Local Overwrite of Optimistic State (`task-sync.service.ts`):** When client processed `serverChanges`, acknowledged mutations were removed from the queue, so the stale server changes overwrote local IndexedDB tasks. When `TASKS_SYNCED_EVENT` fired, the view rehydrated from IndexedDB and flashed back to the old status until the next 15-second background sync.
+   3. **Rehydration Optimistic Mutation Protection (`cockpit-tasks-section.tsx`):** `hydrateFromIndexedDB` now tracks all active pending mutations in IndexedDB and preserves the currently rendered optimistic status in React state so incoming sync events or hydration passes cannot clobber in-flight status changes.
+   4. **Closure Resilience in `setTaskStatus` & Snappy Debounce (`cockpit-tasks-section.tsx`):**
+      - Added fallback category discovery by `taskId` across all categories if `catIndex` is out-of-date in dropdown/context menu closures.
+      - Lowered discrete status change sync debounce delay from 1500ms to 400ms (`scheduleSync(userId, 400)`), making cloud persistence fast while preventing rapid duplicate calls.
+      - Applied resilient lookup to `toggleDailyTask` and `toggleWeeklyTask` and preserved `challengeId` on weekly tasks.
+- **Files Modified & Created:**
+   - `apps/web/features/tasks/data/task.repository.ts`: Exported `getUserCategorizedTasksFromDatabase(userId)` for direct Prisma queries bypassing `unstable_cache`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Replaced cached `getUserCategorizedTasks` with direct `getUserCategorizedTasksFromDatabase` in `processBatchSync`.
+   - `apps/web/features/tasks/data/task-sync.repository.test.ts`: Updated repository test mocks to reflect fresh database fetcher.
+   - `apps/web/features/tasks/data/local/task-sync.service.ts`: Protected local tasks with `syncState === "pending"` and newer timestamps from stale server overwrite.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added optimistic mutation protection in `hydrateFromIndexedDB`, resilient category lookup by `taskId`, and fast 400ms sync scheduling.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-status-stability.test.tsx`: Added test suite covering immediate status transition, anti-flash preservation across live sync events, and checkbox row toggling.
+- **Verification & Quality Gates:**
+   - Full workspace test suite: ✅ 212 test files passed (2,087/2,087 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
 
 ### Session 174 — 2026-10-29 (Daily Snooze Banner Layout Stabilization & Earlier Tasks Status Editing on `krish` · GH #196 / KAN-65)
 

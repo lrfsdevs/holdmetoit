@@ -98,7 +98,7 @@ export async function getUserCategorizedTasks(
    return read();
 }
 
-async function getUserCategorizedTasksFromDatabase(
+export async function getUserCategorizedTasksFromDatabase(
    userId: string
 ): Promise<UserCategorizedTasks> {
    const categories = await prisma.category.findMany({

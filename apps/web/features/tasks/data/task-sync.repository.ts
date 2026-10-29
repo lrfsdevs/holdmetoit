@@ -1,4 +1,5 @@
 import { prisma } from "@/core/db";
+
 import { compactMutationQueue } from "@/features/tasks/domain/task-sync.schema";
 import type {
    BatchSyncResponse,
@@ -8,6 +9,7 @@ import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletio
 import {
    DEFAULT_CATEGORY_NAME,
    getUserCategorizedTasks,
+   getUserCategorizedTasksFromDatabase,
    resolveTaskChallengeId,
    validateTaskChallengeId,
 } from "@/features/tasks/data/task.repository";
@@ -389,7 +391,10 @@ export async function processBatchSync(
       }
    }
 
-   const latest = await getUserCategorizedTasks(userId);
+   const latest =
+      typeof getUserCategorizedTasksFromDatabase === "function"
+         ? await getUserCategorizedTasksFromDatabase(userId)
+         : await getUserCategorizedTasks(userId);
 
    const flatTasks = [
       ...latest.dailyCategories.flatMap((c) => c.tasks),
