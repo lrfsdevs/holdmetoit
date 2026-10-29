@@ -1825,12 +1825,13 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Removed the `checkIsDayLocked(targetDateKey)` blocker inside `setTaskStatus` to permit marking tasks complete, in progress, or crossed out on earlier days.
       - Removed `if (isPastDayLocked) return;` and `cursor-not-allowed opacity-75` from the task row click handler, allowing past tasks to remain clickable (`cursor-pointer`).
       - Preserved strict challenge rules preventing _creation_ of new tasks on past challenge days.
-   3. **Cookie SSR Parity for Zero-Flash Rollover Snooze (`cockpit-tasks-storage.ts`, `app/page.tsx`, `home-cockpit-view.tsx`, `cockpit-tasks-section.tsx`):**
-      - Root Cause: `isRolloverSnoozed` was previously initialized to `useState(false)` on the server because `localStorage` cannot be read during SSR. SSR rendered the banner into the initial HTML, and only after client hydration did `useEffect` read `localStorage` and hide the banner, causing a visible split-second flash.
-      - Implemented dual-persistence architecture (identical to `COLLAPSED_CATEGORIES_COOKIE`):
-         - Snoozing writes to both `localStorage` and a lightweight cookie `holdmetoit_rollover_snooze` (`{ [userId]: dateKey }`).
-         - Next.js SSR in `app/page.tsx` reads `cookieStore`, evaluates if snoozed for today, and passes `initialIsRolloverSnoozed = true` down to `HomeCockpitView` and `CockpitTasksSection`.
-         - `CockpitTasksSection` initializes `isRolloverSnoozed` from `initialIsRolloverSnoozed`, rendering the banner hidden on the server with 0 hydration errors, 0 delay, and 0 visual pop.
+   3. **Cookie SSR Parity & Parser-Blocking Zero-Flash Rollover Snooze (`cockpit-tasks-storage.ts`, `app/page.tsx`, `home-cockpit-view.tsx`, `cockpit-tasks-section.tsx`):**
+      - Root Cause: `isRolloverSnoozed` was previously initialized to `useState(false)` on the server because `localStorage` cannot be read during SSR. Even with a cookie, if a user had an existing snooze stored in `localStorage` prior to cookie rollout, or if `userId` scope differed between guest/authenticated states, the server emitted the banner in raw HTML and only hid it after client `useEffect` ran ~1 second later.
+      - Implemented 3-Layer Zero-Flash Architecture:
+         - **Layer 1 (Flexible SSR Cookie Resolution):** Next.js SSR in `app/page.tsx` checks `ROLLOVER_SNOOZE_COOKIE` across all valid date representations (`todayDateKey`, UTC `toISOString()`, and `cockpit.todayDate`) and scopes (`scope` and `"guest"`), passing `initialIsRolloverSnoozed = true` to omit the banner from server HTML entirely.
+         - **Layer 2 (Parser-Blocking Synchronous Inline Script):** Embedded a synchronous `<script>` inside `#rollover-today-banner` with `suppressHydrationWarning`. If the browser has a snooze in `localStorage` or cookie, this parser-blocking script runs **before the browser paints the first frame**, applying `display: none !important;`. Guarantees 0 frames of visual flash even on first load without a cookie.
+         - **Layer 3 (Synchronous Hydration & Cookie Backfill):** `useState` initializes from `isRolloverSnoozedForDate(userId, effectiveTodayDate)` on client mount without delay, and `useEffect` immediately writes any detected `localStorage` snooze back to `document.cookie` (`setRolloverSnoozedForDate`), permanently caching it for future SSR requests.
+         - Wired the dismiss (`X`) button to `handleSnoozeRolloverToday` for consistent dismissal behavior.
          - `cleanupExpiredRolloverSnooze` purges obsolete dates from both `localStorage` and cookie on day rollover.
    4. **Comprehensive Test Coverage:**
       - Added tests in `cockpit-tasks-storage.test.ts` verifying dual-persistence to cookie and localStorage, cookie fallback when localStorage is cleared, multi-user scope isolation, and cookie expiration cleanup.

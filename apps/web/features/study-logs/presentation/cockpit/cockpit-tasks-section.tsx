@@ -51,6 +51,8 @@ import {
    isRolloverSnoozedForDate,
    setRolloverSnoozedForDate,
    cleanupExpiredRolloverSnooze,
+   ROLLOVER_SNOOZE_COOKIE,
+   ROLLOVER_SNOOZE_STORAGE_PREFIX,
 } from "./cockpit-tasks-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -567,27 +569,23 @@ export function CockpitTasksSection({
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
    const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
-      if (initialIsRolloverSnoozed !== undefined) {
-         return initialIsRolloverSnoozed;
+      if (initialIsRolloverSnoozed) {
+         return true;
       }
       return isRolloverSnoozedForDate(userId, effectiveTodayDate);
    });
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
-      if (initialIsRolloverSnoozed) {
-         return;
-      }
       const isSnoozed = isRolloverSnoozedForDate(userId, effectiveTodayDate);
-      if (isSnoozed !== isRolloverSnoozed) {
-         setIsRolloverSnoozed(isSnoozed);
+      if (isSnoozed) {
+         if (!isRolloverSnoozed) {
+            setIsRolloverSnoozed(true);
+         }
+         // Sync to cookie so all future reloads have the cookie on the server
+         setRolloverSnoozedForDate(userId, effectiveTodayDate);
       }
-   }, [
-      userId,
-      effectiveTodayDate,
-      initialIsRolloverSnoozed,
-      isRolloverSnoozed,
-   ]);
+   }, [userId, effectiveTodayDate, isRolloverSnoozed]);
 
    const handleSnoozeRolloverToday = useCallback(() => {
       setIsRolloverDismissed(true);
@@ -4112,9 +4110,16 @@ export function CockpitTasksSection({
                         !isRolloverDismissed &&
                         !isRolloverSnoozed && (
                            <div
+                              id="rollover-today-banner"
                               data-testid="rollover-today-banner"
+                              suppressHydrationWarning
                               className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col gap-2.5 shadow-sm animate-in fade-in duration-200"
                            >
+                              <script
+                                 dangerouslySetInnerHTML={{
+                                    __html: `(function(){try{var k='${ROLLOVER_SNOOZE_STORAGE_PREFIX}';var u='${userId || "guest"}';var d='${effectiveTodayDate}';if(localStorage.getItem(k+u+'_'+d)==='true'||localStorage.getItem(k+'guest_'+d)==='true'||localStorage.getItem(k+'all_'+d)==='true'||document.cookie.indexOf('${ROLLOVER_SNOOZE_COOKIE}')!==-1){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
+                                 }}
+                              />
                               <div className="flex items-start justify-between gap-2.5">
                                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
                                     <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -4147,7 +4152,7 @@ export function CockpitTasksSection({
                                  </div>
                                  <button
                                     type="button"
-                                    onClick={() => setIsRolloverDismissed(true)}
+                                    onClick={handleSnoozeRolloverToday}
                                     aria-label="Dismiss rollover helper"
                                     className="p-1 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors shrink-0 -mr-1 -mt-1"
                                  >

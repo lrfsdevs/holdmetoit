@@ -128,8 +128,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          const parsed = JSON.parse(decodeURIComponent(rawSnoozeCookie));
          const todayDateKey =
             cockpit?.todayDate || new Date().toISOString().slice(0, 10);
+         const utcDateKey = new Date().toISOString().slice(0, 10);
+         const validDates = new Set([todayDateKey, utcDateKey]);
+         if (cockpit?.todayDate) validDates.add(cockpit.todayDate);
+
          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            initialIsRolloverSnoozed = parsed[scope] === todayDateKey;
+            if (
+               (parsed[scope] && validDates.has(parsed[scope])) ||
+               (parsed["guest"] && validDates.has(parsed["guest"]))
+            ) {
+               initialIsRolloverSnoozed = true;
+            }
+         } else if (typeof parsed === "string" && validDates.has(parsed)) {
+            initialIsRolloverSnoozed = true;
          }
       } catch {
          initialIsRolloverSnoozed = false;
