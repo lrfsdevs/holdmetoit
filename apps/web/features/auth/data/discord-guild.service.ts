@@ -1,7 +1,10 @@
 /**
  * Service to verify Discord server roles and permissions for RBAC.
- * Uses Discord REST API v10 to inspect guild member roles via a Bot Token.
+ * Uses the shared discord.js REST client to inspect guild member roles.
  */
+
+import { fetchGuildMember } from "@holdmetoit/discord";
+import { parseDiscordSnowflakeList } from "@/features/auth/domain/auth-roles";
 
 export interface DiscordGuildMemberResponse {
    roles?: string[];
@@ -10,8 +13,6 @@ export interface DiscordGuildMemberResponse {
       username: string;
    };
 }
-
-import { parseDiscordSnowflakeList } from "@/features/auth/domain/auth-roles";
 
 export function getConfiguredAdminRoleIds(): string[] {
    const raw = process.env.DISCORD_ADMIN_ROLE_IDS ?? "";
@@ -42,32 +43,17 @@ export async function fetchMemberRoles(
    discordUserId: string
 ): Promise<string[]> {
    const guildId = process.env.DISCORD_GUILD_ID;
-   const botToken = process.env.DISCORD_BOT_TOKEN;
 
-   if (!guildId || !botToken || !discordUserId) {
+   if (!guildId || !discordUserId) {
       return [];
    }
 
-   try {
-      const res = await fetch(
-         `https://discord.com/api/v10/guilds/${guildId}/members/${discordUserId}`,
-         {
-            headers: {
-               Authorization: `Bot ${botToken}`,
-            },
-            cache: "no-store",
-         }
-      );
+   const member = await fetchGuildMember({
+      guildId,
+      userId: discordUserId,
+   });
 
-      if (!res.ok) {
-         return [];
-      }
-
-      const data = (await res.json()) as DiscordGuildMemberResponse;
-      return Array.isArray(data.roles) ? data.roles : [];
-   } catch {
-      return [];
-   }
+   return Array.isArray(member?.roles) ? member.roles : [];
 }
 
 /**

@@ -1,3 +1,7 @@
+import type { DiscordEmbed, DiscordEmbedField } from "@holdmetoit/discord";
+
+export type { DiscordEmbed, DiscordEmbedField };
+
 export interface ChallengeFeedbackReporter {
    userId: string;
    username?: string | null;
@@ -19,26 +23,6 @@ export interface BuildChallengeFeedbackEmbedInput {
    reporter: ChallengeFeedbackReporter;
    createdAt?: Date;
    appUrl?: string | null;
-}
-
-export interface DiscordEmbedField {
-   name: string;
-   value: string;
-   inline?: boolean;
-}
-
-export interface DiscordEmbed {
-   title: string;
-   description?: string;
-   color: number;
-   author: {
-      name: string;
-   };
-   fields: DiscordEmbedField[];
-   footer: {
-      text: string;
-   };
-   timestamp?: string;
 }
 
 /**

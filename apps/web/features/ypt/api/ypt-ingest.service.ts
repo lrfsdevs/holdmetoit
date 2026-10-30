@@ -2,6 +2,7 @@ import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import { revalidatePath } from "next/cache";
 import { processStudyReward } from "@/features/economy/api/study-reward.service";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import { upsertDailyStudyLog } from "@/features/study-logs/data/daily-study-log.repository";
 import {
    findActiveParticipantForUserOnDate,
@@ -131,22 +132,44 @@ export async function ingestYptActivity(
       }
 
       // 5. Upsert daily study log with source tracking
-      const updatedLog = await upsertDailyStudyLog({
-         participantId: participant.id,
-         challengeId: participant.challengeId,
-         logDate: payload.date,
-         durationSeconds: payload.durationSeconds,
-         isLeave: false,
-         source,
-         externalActivityId: payload.externalActivityId,
-         yptSubject: payload.yptSubject,
-         actor: {
-            id: user.id,
-            username: user.username || user.name || "user",
-            displayName: user.displayName || user.name || null,
-            image: user.image || null,
-         },
-      });
+      let updatedLog: Awaited<ReturnType<typeof upsertDailyStudyLog>>;
+      try {
+         updatedLog = await upsertDailyStudyLog({
+            participantId: participant.id,
+            challengeId: participant.challengeId,
+            logDate: payload.date,
+            durationSeconds: payload.durationSeconds,
+            isLeave: false,
+            source,
+            externalActivityId: payload.externalActivityId,
+            yptSubject: payload.yptSubject,
+            actor: {
+               id: user.id,
+               username: user.username || user.name || "user",
+               displayName: user.displayName || user.name || null,
+               image: user.image || null,
+            },
+         });
+      } catch (error) {
+         if (error instanceof ChallengeStateError) {
+            logger.warn(logEvents.yptSyncFailed, {
+               context: {
+                  action: "ingestYptActivity",
+                  reason: "challenge_locked",
+                  participantId: participant.id,
+               },
+            });
+            return {
+               ok: false,
+               code: "CHALLENGE_LOCKED",
+               message: "Challenge results are locked; activity skipped.",
+               durationSeconds: payload.durationSeconds,
+               coinsCredited: 0,
+               isDuplicate: false,
+            };
+         }
+         throw error;
+      }
 
       // 6. Credit study reward via Phase 1 economy
       let coinsCredited = 0;

@@ -21,8 +21,11 @@ vi.mock("@/core/db", () => {
       challenge: {
          findMany: vi.fn(),
          findUnique: vi.fn(),
+         findUniqueOrThrow: vi.fn(),
+         findFirst: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
          delete: vi.fn(),
       },
       team: {
@@ -53,6 +56,16 @@ vi.mock("@/core/db", () => {
          deleteMany: vi.fn(),
          createMany: vi.fn(),
       },
+      wallet: {
+         findUnique: vi.fn(),
+         findUniqueOrThrow: vi.fn(),
+         create: vi.fn(),
+         update: vi.fn(),
+      },
+      ledgerTransaction: {
+         create: vi.fn(),
+      },
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "c_1" }]),
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
    return { prisma: mockPrisma };
@@ -273,6 +286,101 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          };
       }
 
+      beforeEach(() => {
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue(
+            mockCompletedChallenge() as never
+         );
+      });
+
+      it("takes FOR UPDATE on the challenge before reading", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([]) as never
+         );
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.$queryRaw).toHaveBeenCalled();
+         const [strings] = vi.mocked(prisma.$queryRaw).mock.calls[0];
+         expect(String(strings)).toContain("FOR UPDATE");
+      });
+
+      it("rejects when the guarded transition matches zero rows", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockChallenge([]) as never
+         );
+         vi.mocked(prisma.challenge.updateMany).mockResolvedValueOnce({
+            count: 0,
+         } as never);
+
+         await expect(
+            lockChallengeResults("c_act", {
+               id: "admin_1",
+               username: "HostAdmin",
+            })
+         ).rejects.toThrow("already locked");
+
+         expect(prisma.punishmentRecord.createMany).not.toHaveBeenCalled();
+         expect(prisma.challengeParticipant.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("rejects a soft-deleted challenge without writing", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            ...mockLockChallenge([]),
+            isDeleted: true,
+         } as never);
+
+         await expect(
+            lockChallengeResults("c_act", {
+               id: "admin_1",
+               username: "HostAdmin",
+            })
+         ).rejects.toThrow("Challenge not found.");
+
+         expect(prisma.challenge.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("credits rewards with an atomic increment, ledger first", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue({
+            ...mockLockChallenge([mockParticipant()]),
+            rewardCoins: 100,
+            isRewardSettled: false,
+         } as never);
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            { userId: "u_1", status: "COMPLETED" },
+         ] as never);
+         vi.mocked(prisma.wallet.findUnique).mockResolvedValue({
+            id: "w_1",
+            totalBalance: 0,
+            lifetimeEarned: 0,
+         } as never);
+         vi.mocked(prisma.ledgerTransaction.create).mockResolvedValue({
+            id: "lt_1",
+         } as never);
+         vi.mocked(prisma.challenge.update).mockResolvedValue({} as never);
+
+         await lockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.wallet.update).toHaveBeenCalledWith({
+            where: { id: "w_1" },
+            data: {
+               totalBalance: { increment: 100 },
+               lifetimeEarned: { increment: 100 },
+            },
+         });
+
+         const ledgerOrder = vi.mocked(prisma.ledgerTransaction.create).mock
+            .invocationCallOrder[0];
+         const walletOrder = vi.mocked(prisma.wallet.update).mock
+            .invocationCallOrder[0];
+         expect(ledgerOrder).toBeLessThan(walletOrder);
+      });
+
       it("saves a winning-team participant with all weekly tasks complete and hours met", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockChallenge([
@@ -298,6 +406,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             where: {
                challengeId: "c_act",
                taskType: "WEEKLY",
+               isDeleted: false,
                userId: { in: ["u_1"] },
             },
             select: { userId: true, status: true },
@@ -308,6 +417,9 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                previousValue: expect.objectContaining({
                   endAt: expect.any(String),
                }),
+            }),
+            expect.objectContaining({
+               transactionClient: expect.anything(),
             })
          );
          expect(prisma.challengeParticipant.updateMany).toHaveBeenCalledWith({
@@ -350,6 +462,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             where: {
                challengeId: "c_act",
                taskType: "WEEKLY",
+               isDeleted: false,
                userId: { in: ["u_1"] },
             },
             select: { userId: true, status: true },
@@ -366,6 +479,9 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                   withdrawnParticipants: 1,
                   participantsEvaluated: 1,
                }),
+            }),
+            expect.objectContaining({
+               transactionClient: expect.anything(),
             })
          );
       });
@@ -570,7 +686,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          } as never);
          vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
 
-         vi.mocked(prisma.challenge.update).mockResolvedValue({
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue({
             id: "c_expired",
             title: "Sprint Battle",
             startAt: new Date(Date.now() - 7 * 86400000),
@@ -584,8 +700,12 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          });
 
          expect(result.status).toBe("COMPLETED");
-         expect(prisma.challenge.update).toHaveBeenCalledWith({
-            where: { id: "c_expired" },
+         expect(prisma.challenge.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: "c_expired",
+               isDeleted: false,
+               resultsLockedAt: null,
+            },
             data: {
                endAt: pastEnd,
                resultsLockedAt: expect.any(Date),
@@ -648,6 +768,48 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          };
       }
 
+      it("takes FOR UPDATE on the challenge before writing", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge() as never
+         );
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue(
+            mockLockedChallenge({ resultsLockedAt: null }) as never
+         );
+         vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
+            count: 0,
+         } as never);
+         vi.mocked(prisma.punishmentRecord.deleteMany).mockResolvedValue({
+            count: 0,
+         } as never);
+
+         await unlockChallengeResults("c_act", {
+            id: "admin_1",
+            username: "HostAdmin",
+         });
+
+         expect(prisma.$queryRaw).toHaveBeenCalled();
+         const [strings] = vi.mocked(prisma.$queryRaw).mock.calls[0];
+         expect(String(strings)).toContain("FOR UPDATE");
+      });
+
+      it("rejects when the guarded unlock matches zero rows", async () => {
+         vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
+            mockLockedChallenge() as never
+         );
+         vi.mocked(prisma.challenge.updateMany).mockResolvedValueOnce({
+            count: 0,
+         } as never);
+
+         await expect(
+            unlockChallengeResults("c_act", {
+               id: "admin_1",
+               username: "HostAdmin",
+            })
+         ).rejects.toThrow("Challenge results are not locked.");
+
+         expect(prisma.punishmentRecord.deleteMany).not.toHaveBeenCalled();
+      });
+
       it("reverts everything the lock produced and restores the original endAt", async () => {
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockedChallenge() as never
@@ -658,7 +820,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                previousValue: { endAt: "2026-10-12T00:00:00.000Z" },
             },
          ] as never);
-         vi.mocked(prisma.challenge.update).mockResolvedValue(
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue(
             mockLockedChallenge({
                resultsLockedAt: null,
                endAt: new Date("2026-10-12T00:00:00.000Z"),
@@ -676,8 +838,12 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             username: "HostAdmin",
          });
 
-         expect(prisma.challenge.update).toHaveBeenCalledWith({
-            where: { id: "c_act" },
+         expect(prisma.challenge.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: "c_act",
+               isDeleted: false,
+               resultsLockedAt: { not: null },
+            },
             data: {
                resultsLockedAt: null,
                endAt: new Date("2026-10-12T00:00:00.000Z"),
@@ -713,6 +879,9 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                   recordsDeleted: 2,
                   wrappedFlagsReset: true,
                }),
+            }),
+            expect.objectContaining({
+               transactionClient: expect.anything(),
             })
          );
       });
@@ -721,7 +890,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockedChallenge() as never
          );
-         vi.mocked(prisma.challenge.update).mockResolvedValue(
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue(
             mockLockedChallenge({ resultsLockedAt: null }) as never
          );
          vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
@@ -739,8 +908,12 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          );
 
          expect(auditRepo.getAuditTrail).not.toHaveBeenCalled();
-         expect(prisma.challenge.update).toHaveBeenCalledWith({
-            where: { id: "c_act" },
+         expect(prisma.challenge.updateMany).toHaveBeenCalledWith({
+            where: {
+               id: "c_act",
+               isDeleted: false,
+               resultsLockedAt: { not: null },
+            },
             data: { resultsLockedAt: null, endAt: explicitEndAt },
          });
       });
@@ -749,7 +922,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
          vi.mocked(prisma.challenge.findUnique).mockResolvedValue(
             mockLockedChallenge() as never
          );
-         vi.mocked(prisma.challenge.update).mockResolvedValue(
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue(
             mockLockedChallenge({ resultsLockedAt: null }) as never
          );
          vi.mocked(prisma.challengeParticipant.updateMany).mockResolvedValue({
@@ -1246,7 +1419,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             where: {
                id: "p_1",
                isWithdrawn: false,
-               challenge: { resultsLockedAt: null },
+               challenge: { resultsLockedAt: null, isDeleted: false },
             },
             data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
          });
@@ -1261,6 +1434,9 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
                challengeId: "c_1",
                auditReason: "Duplicate enrollment",
                newValue: expect.objectContaining({ isWithdrawn: true }),
+            }),
+            expect.objectContaining({
+               transactionClient: expect.anything(),
             })
          );
       });

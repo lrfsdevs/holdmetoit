@@ -1,4 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const discord = vi.hoisted(() => ({
+   sendChannelMessage: vi.fn(),
+}));
+
+vi.mock("@holdmetoit/discord", () => ({
+   MISSING_TOKEN_ERROR: "DISCORD_BOT_TOKEN is not configured in environment.",
+   sendChannelMessage: discord.sendChannelMessage,
+}));
+
 import {
    DEFAULT_CHALLENGE_FEEDBACK_CHANNEL_ID,
    resolveChallengeFeedbackChannelId,
@@ -18,9 +28,8 @@ describe("challenge-feedback.service", () => {
    const originalEnv = process.env;
 
    beforeEach(() => {
-      vi.resetModules();
       process.env = { ...originalEnv };
-      vi.restoreAllMocks();
+      discord.sendChannelMessage.mockReset();
    });
 
    afterEach(() => {
@@ -28,7 +37,7 @@ describe("challenge-feedback.service", () => {
    });
 
    describe("resolveChallengeFeedbackChannelId", () => {
-      it("defaults to 1558594247895289877 when env var is not set", () => {
+      it("defaults to the configured fallback channel", () => {
          delete process.env.DISCORD_CHALLENGE_FEEDBACK_CHANNEL_ID;
          expect(resolveChallengeFeedbackChannelId()).toBe(
             DEFAULT_CHALLENGE_FEEDBACK_CHANNEL_ID
@@ -45,49 +54,42 @@ describe("challenge-feedback.service", () => {
    describe("sendChallengeFeedbackToDiscord", () => {
       it("returns failure when DISCORD_BOT_TOKEN is not configured", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
+
          const result = await sendChallengeFeedbackToDiscord(DUMMY_EMBED);
+
          expect(result.success).toBe(false);
          expect(result.error).toContain("DISCORD_BOT_TOKEN");
+         expect(discord.sendChannelMessage).not.toHaveBeenCalled();
       });
 
-      it("posts to Discord API v10 and returns messageId on success", async () => {
+      it("delegates dispatch to the shared Discord client", async () => {
          process.env.DISCORD_BOT_TOKEN = "test_bot_token";
          process.env.DISCORD_CHALLENGE_FEEDBACK_CHANNEL_ID =
             "1558594247895289877";
-
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: async () => ({ id: "discord_msg_123" }),
-         } as Response);
+         discord.sendChannelMessage.mockResolvedValue({
+            success: true,
+            messageId: "discord_msg_123",
+            channelId: "1558594247895289877",
+         });
 
          const result = await sendChallengeFeedbackToDiscord(DUMMY_EMBED);
 
          expect(result.success).toBe(true);
          expect(result.messageId).toBe("discord_msg_123");
          expect(result.channelId).toBe("1558594247895289877");
-         expect(global.fetch).toHaveBeenCalledWith(
-            "https://discord.com/api/v10/channels/1558594247895289877/messages",
-            expect.objectContaining({
-               method: "POST",
-               headers: {
-                  Authorization: "Bot test_bot_token",
-                  "Content-Type": "application/json",
-               },
-               body: JSON.stringify({
-                  embeds: [DUMMY_EMBED],
-               }),
-            })
-         );
+         expect(discord.sendChannelMessage).toHaveBeenCalledWith({
+            channelId: "1558594247895289877",
+            embeds: [DUMMY_EMBED],
+         });
       });
 
-      it("handles Discord API HTTP errors gracefully", async () => {
+      it("passes through Discord API HTTP errors", async () => {
          process.env.DISCORD_BOT_TOKEN = "test_bot_token";
-
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 403,
-            text: async () => "Missing Permissions",
-         } as Response);
+         discord.sendChannelMessage.mockResolvedValue({
+            success: false,
+            channelId: "1558594247895289877",
+            error: "Discord API error (403): Missing Permissions",
+         });
 
          const result = await sendChallengeFeedbackToDiscord(DUMMY_EMBED);
 
@@ -96,12 +98,13 @@ describe("challenge-feedback.service", () => {
          expect(result.error).toContain("Missing Permissions");
       });
 
-      it("handles network fetch exceptions safely", async () => {
+      it("passes through network exceptions safely", async () => {
          process.env.DISCORD_BOT_TOKEN = "test_bot_token";
-
-         global.fetch = vi
-            .fn()
-            .mockRejectedValue(new Error("Connection timeout"));
+         discord.sendChannelMessage.mockResolvedValue({
+            success: false,
+            channelId: "1558594247895289877",
+            error: "Network exception dispatching to Discord: Connection timeout",
+         });
 
          const result = await sendChallengeFeedbackToDiscord(DUMMY_EMBED);
 

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-29 (Session 175 on `krish`)
+> **Last Updated:** 2026-10-30 (Session 176 on `afnan-jr` · Session 175 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -172,10 +172,27 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > Order: ✅ DevBoard `Tabs` · ✅ `Label` (67) → **next:** `Skeleton` (~20) →
 > `ScrollArea` (9) / `Avatar` (31, decide `next/image`) / `Separator` (3) / `Progress` (1)
 > → per-page 9-state coverage → a11y/360px/motion sweeps → DevBoard "Design" styleguide.
+>
+> **TASKER TRACK (Session 163):** register commands in the dev guild
+> (`npm run deploy:tasker-commands -- --guild <id>`), smoke-test `/task`, `/category`, `/help`,
+> `/yapperize`, then review the `TASKER_SOURCE_DATABASE_URL` dry run before applying the
+> legacy task backfill. Archive `~/Projects/tasker` only after parity is confirmed.
 
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 176 — 2026-10-30 (Results lock hardening on `afnan-jr`)
+
+- **Correctness:** `lockChallengeResults` / `unlockChallengeResults` now take `SELECT ... FOR UPDATE` on the `Challenge` row first, read every input inside the transaction, and use a guarded `updateMany` (`WHERE resultsLockedAt IS NULL` / `IS NOT NULL`). A second concurrent lock throws `ChallengeStateError` (`ALREADY_LOCKED`) instead of duplicating settlement.
+- **Input freeze:** participant withdrawal, `upsertDailyStudyLog`, and task weekly-goal linkage take `FOR SHARE` and reject after lock. Soft-deleted weekly goals are excluded from evaluation; deleted challenges cannot be locked or linked.
+- **Data:** `PunishmentRecord` gains `@@unique([challengeId, participantId])` via `20261030000000_punishment_unique_per_participant`. Pre-check and dedupe: `apps/web/scripts/dedupe-punishment-records.ts` (dry-run default).
+- **Economy:** challenge reward credits use atomic `increment`; the ledger row is inserted first; `CHALLENGE_LOCKED` / `CHALLENGE_UNLOCKED` audits are written inside the transaction.
+- **Sync:** a locked challenge never produces a poison mutation; the sync path drops the linkage change and applies the rest.
+- **Tests:** lock/unlock FOR UPDATE, zero-row guard, soft-deleted challenge, atomic reward increment, withdrawal, study-log lock, task link/unlink, and sync locked-challenge coverage. `npm run typecheck:web` clean; targeted suites green.
+- **Manual verification (not executed):** `apps/web/scripts/verify-lock-concurrency.ts` (local/staging only).
+- **Docs:** `docs/accountability/README.md`; `docs/challenges/README.md` §9.
+- **NEXT:** apply the migration after the duplicate pre-check; run the concurrency verifier on a disposable local challenge; then adopt `FOR SHARE` in the admin roster/target/status writers (listed in the accountability doc).
 
 ### Session 175 — 2026-10-29 (Task Status Transition Stability, Anti-Flash Reversion & Fresh DB Sync on `krish`)
 
@@ -266,6 +283,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - **Domain & Test Hardening (`task-rollover.ts`, `task.repository.test.ts`, `task-rollover.test.ts`):**
       - Supported `taskId` filtering in `findRolloverCandidates`.
       - Added test coverage for invalid challenge ID rejection, non-weekly challenge scope rejection, and repository rollover predicates. Full task/cockpit test suite passing (218/218 tests green).
+
+### Session 163 — 2026-10-26 (Tasker bot migration + shared Discord package on `afnan-jr`)
+
+- **New package `packages/discord` (`@holdmetoit/discord`)** — built with `tsc` to `dist/`, dual exports:
+   - `.` → discord.js v14 REST client (`sendChannelMessage`, `editChannelMessage`, `requestDiscord`, `fetchDiscordUser`, `fetchGuildMember`) with rate-limit/429 handling, plus shared `DiscordEmbed` / `DiscordSendResult` types and `MISSING_TOKEN_ERROR`.
+   - `./bot` → gateway runtime (`createBotClient`, `loadCommands`, `loadEvents`, `installInteractionHandler`, `installMessageHandler`, `deploySlashCommands`, `startHealthServer`, `installGracefulShutdown`).
+- **New app `apps/tasker` (`@holdmetoit/tasker`)** — migrated from the standalone Bun repo without git history. Node 22 + `tsx` (no emit), Vitest, `node:http` `/health`, zod-validated `src/config/env.ts` SPOC, repo-root-context Dockerfile for Render.
+   - Commands: `/ping`, `/help`, `/category create|list|delete|rename`, `/task add|list|done|remove|rename`, `/yapperize` (Gemini with 429/503 fallback chain). Prefix `'` support is config-gated (`DISCORD_ENABLE_PREFIX_COMMANDS`).
+   - **Shared tables:** uses `Category` / `Task` from `@holdmetoit/database`; `userId` is the internal `User.id`. Identity resolves `User.discordId` and replies with a sign-in link when absent — **no bot-side `User` creation** (avoids the `User.discordId` unique collision with Auth.js).
+   - Schema adaptations: required `Task.categoryId` → always resolve `Default`; category delete reassigns tasks to `Default` in a transaction and refuses to delete `Default`; soft-deleted category names are revived instead of re-inserted; task CRUD scoped by `userId` and filtered to `challengeId = null`.
+   - One-off `src/scripts/backfill-tasker-data.ts` (dry-run by default, `TASKER_SOURCE_DATABASE_URL`).
+- **Web migrated off raw Discord REST** — feedback embeds, challenge-feedback embeds, avatar sync (bot + OAuth `@me`/token refresh) and guild-role lookup now delegate to `@holdmetoit/discord`. Duplicate `DiscordEmbed`/`DiscordSendResult` declarations removed. `next.config.mjs` externalizes `@holdmetoit/discord` / `discord.js` for server builds.
+- **Tooling:** root scripts `build:discord`, `dev:tasker`, `start:tasker`, `test:tasker`, `typecheck:tasker`, `deploy:tasker-commands`; web scripts now build the Discord package first; CI builds `@holdmetoit/discord` and runs Tasker typecheck/tests.
+- **Verification:** tasker 69/69 tests, web 1945/1945 tests, both typechecks clean, discord package builds clean.
+- **Docs:** [`docs/tasker/README.md`](docs/tasker/README.md); AGENTS.md §6.2 carve-out for `apps/tasker` (not `@HoldMeToItBot`).
 
 ### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
 

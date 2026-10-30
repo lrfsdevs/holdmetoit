@@ -36,6 +36,9 @@ vi.mock("@/core/db", () => {
          findMany: vi.fn(),
          findFirst: vi.fn(),
       },
+      $queryRaw: vi
+         .fn()
+         .mockResolvedValue([{ resultsLockedAt: null, isDeleted: false }]),
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
    return { prisma: mockPrisma };
@@ -325,6 +328,9 @@ describe("task.repository", () => {
       });
 
       it("uses an explicit challengeId without resolving the current challenge", async () => {
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_explicit",
+         } as never);
          vi.mocked(prisma.task.create).mockResolvedValue({
             id: "task_explicit",
          } as never);
@@ -343,6 +349,27 @@ describe("task.repository", () => {
                data: expect.objectContaining({ challengeId: "c_explicit" }),
             })
          );
+      });
+
+      it("rejects a locked challenge when creating a task", async () => {
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            createTask({
+               userId: "user_1",
+               title: "Locked goal",
+               taskType: "WEEKLY",
+               categoryId: "cat_1",
+               challengeId: "c_locked",
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
+         expect(prisma.task.create).not.toHaveBeenCalled();
       });
 
       it("creates new category if newCategoryName is specified", async () => {
@@ -740,6 +767,51 @@ describe("task.repository", () => {
          });
 
          expect(result).toBeNull();
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects linking a task after the challenge is locked", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            taskType: "WEEKLY",
+            challengeId: null,
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "c_locked",
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects unlinking a task from a locked challenge", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            taskType: "WEEKLY",
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: null,
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
          expect(prisma.task.update).not.toHaveBeenCalled();
       });
 

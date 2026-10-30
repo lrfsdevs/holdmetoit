@@ -20,6 +20,7 @@
    "dependencies": {
       "@auth/prisma-adapter": "^2.9.1",
       "@holdmetoit/database": "*",
+      "@holdmetoit/discord": "*",
       "@prisma/client": "^6.8.2",
       "@radix-ui/react-alert-dialog": "^1.2.1",
       "@radix-ui/react-avatar": "^1.3.1",

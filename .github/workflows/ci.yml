@@ -34,6 +34,9 @@ jobs:
          - name: Build shared database package
            run: npm run build -w @holdmetoit/database
 
+         - name: Build shared Discord package
+           run: npm run build -w @holdmetoit/discord
+
          - name: Web typecheck
            run: npm run typecheck -w @holdmetoit/web
 
@@ -45,6 +48,12 @@ jobs:
 
          - name: Web build
            run: npm run build -w @holdmetoit/web
+
+         - name: Tasker typecheck
+           run: npm run typecheck -w @holdmetoit/tasker
+
+         - name: Tasker tests
+           run: npm run test -w @holdmetoit/tasker
 
          - name: YPT bot tests
            run: npm test -w @holdmetoit/ypt-bot

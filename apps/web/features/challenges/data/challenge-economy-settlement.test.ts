@@ -93,11 +93,21 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
       const mockTx = {
+         $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_bonus_1" }]),
          challenge: {
+            findUnique: vi.fn().mockResolvedValue(mockChallenge),
+            findUniqueOrThrow: vi.fn().mockResolvedValue({
+               ...mockChallenge,
+               resultsLockedAt: new Date(),
+            }),
             update: vi.fn().mockResolvedValue({
                ...mockChallenge,
                resultsLockedAt: new Date(),
             }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+         },
+         task: {
+            findMany: vi.fn().mockResolvedValue([]),
          },
          challengeParticipant: {
             updateMany: vi.fn(),
@@ -131,8 +141,8 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       expect(mockTx.wallet.update).toHaveBeenCalledWith({
          where: { id: "wal_winner" },
          data: {
-            totalBalance: 1500,
-            lifetimeEarned: 1500,
+            totalBalance: { increment: 500 },
+            lifetimeEarned: { increment: 500 },
          },
       });
 
@@ -217,11 +227,21 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
       const mockTx = {
+         $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_bonus_1" }]),
          challenge: {
+            findUnique: vi.fn().mockResolvedValue(mockChallenge),
+            findUniqueOrThrow: vi.fn().mockResolvedValue({
+               ...mockChallenge,
+               resultsLockedAt: new Date(),
+            }),
             update: vi.fn().mockResolvedValue({
                ...mockChallenge,
                resultsLockedAt: new Date(),
             }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+         },
+         task: {
+            findMany: vi.fn().mockResolvedValue([]),
          },
          challengeParticipant: { updateMany: vi.fn() },
          punishmentRecord: { deleteMany: vi.fn(), createMany: vi.fn() },
@@ -260,11 +280,14 @@ describe("Challenge Economy & Wager Settlement upon Lock", () => {
       );
 
       const mockTx = {
+         $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_locked" }]),
          challenge: {
-            update: vi.fn().mockResolvedValue({
+            findUnique: vi.fn().mockResolvedValue(lockedChallenge),
+            findUniqueOrThrow: vi.fn().mockResolvedValue({
                ...lockedChallenge,
                resultsLockedAt: null,
             }),
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
          },
          challengeParticipant: {
             updateMany: vi.fn().mockResolvedValue({ count: 2 }),

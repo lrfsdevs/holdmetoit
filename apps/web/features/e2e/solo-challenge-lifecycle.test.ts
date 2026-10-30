@@ -25,8 +25,10 @@ vi.mock("@/core/db", () => ({
    prisma: {
       challenge: {
          findUnique: vi.fn(),
+         findUniqueOrThrow: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       challengeParticipant: {
          findUnique: vi.fn(),
@@ -54,6 +56,10 @@ vi.mock("@/core/db", () => ({
          count: vi.fn(),
          update: vi.fn(),
       },
+      auditLog: {
+         create: vi.fn().mockResolvedValue({}),
+      },
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_solo_ffa" }]),
       $transaction: vi.fn((cb) => cb(prisma)),
    },
 }));
@@ -310,7 +316,7 @@ describe("Solo Challenge (Free-For-All) End-to-End Lifecycle Verification", () =
          { id: "t_c2", userId: "user_charlie", status: "IN_PROGRESS" }, // Incomplete goal!
       ] as never);
 
-      vi.mocked(prisma.challenge.update).mockResolvedValue({
+      vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue({
          id: "chal_solo_ffa",
          startAt: new Date(Date.now() - 7 * 86400000),
          endAt: new Date(Date.now() - 3600000),

@@ -70,16 +70,25 @@ The project maintains a lean, highly focused documentation and specification sui
 ```text
 apps/
 ├── web/                   # Next.js app (app/, core/, features/, components/, lib/, types/)
+├── tasker/                # Discord task/category bot (Node + tsx; src/, test/)
 └── ypt-bot/               # YPT study-log ingestion bot (Node ESM; src/, test/)
 packages/
-└── database/              # Shared Prisma schema, migrations, seed, and client singleton
-    ├── prisma/            # schema.prisma + migrations/
-    └── src/index.ts       # @holdmetoit/database (built to dist/)
-docs/                      # Shared feature documentation (pokemon, economy, feature-flags, ypt-bot)
+├── database/              # Shared Prisma schema, migrations, seed, and client singleton
+│   ├── prisma/            # schema.prisma + migrations/
+│   └── src/index.ts       # @holdmetoit/database (built to dist/)
+└── discord/               # Shared discord.js REST client + bot runtime
+    └── src/               # @holdmetoit/discord (built to dist/; ./bot subpath)
+docs/                      # Shared feature documentation (pokemon, economy, feature-flags, ypt-bot, tasker)
 AGENTS.md · DESIGN.md · FEATURES.md · ROADMAP.md · HANDOFF.md · CHANGELOG.md
 ```
 
 `apps/web` keeps the Feature-First slices (`features/<slice>/` → `domain/ · data/ · api/ · presentation/`). Both apps consume the single `@holdmetoit/database` client against the same PostgreSQL database.
+
+### Discord integration packages
+
+- `@holdmetoit/discord` — discord.js v14 REST helpers used by the web app (feedback embeds, avatar sync, guild-role lookup). Rate limiting, retries and 429 handling come from discord.js.
+- `@holdmetoit/discord/bot` — gateway runtime for long-lived bots: client factory, command/event loaders, interaction + prefix dispatch, slash-command deployment, `/health`, and graceful shutdown.
+- `apps/tasker` — the migrated Tasker bot; see [`docs/tasker/README.md`](docs/tasker/README.md).
 
 ---
 
@@ -109,7 +118,7 @@ git clone https://github.com/Afnanpathan2004/holdmetoit.git
 cd holdmetoit
 npm install            # workspaces + prisma generate + builds @holdmetoit/database
 cp apps/web/.env.example apps/web/.env
-# The bot reads apps/ypt-bot/.env (DATABASE_URL + YPT credentials)
+# The bots read the repo-root .env (apps/tasker/.env.example documents its variables)
 ```
 
 | Variable                                                                      | Purpose                                                                    |
@@ -158,5 +167,7 @@ npm run db:seed:pokemon
 npm run typecheck:web   # tsc --noEmit (apps/web)
 npm run test:web        # vitest run (apps/web)
 npm run build:web       # next build (apps/web)
+npm run typecheck:tasker # tsc --noEmit (apps/tasker)
+npm run test:tasker     # vitest run (apps/tasker)
 npm run test:ypt-bot    # node --test (apps/ypt-bot)
 ```

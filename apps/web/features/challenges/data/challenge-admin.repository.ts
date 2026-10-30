@@ -196,58 +196,43 @@ export async function lockChallengeResults(
    actor: { id: string; username: string },
    options?: { settleTrophies?: boolean; settleRewards?: boolean }
 ) {
-   const challenge = await prisma.challenge.findUnique({
-      where: { id: challengeId },
-      include: {
-         teams: { select: { id: true } },
-         participants: {
-            include: {
-               dailyStudyLogs: true,
-               punishmentRecords: true,
+   return prisma.$transaction(async (tx) => {
+      // 1. Serialise lock / unlock / withdrawal / input writers on this challenge.
+      await tx.$queryRaw`SELECT "id" FROM "Challenge" WHERE "id" = ${challengeId} FOR UPDATE`;
+
+      // 2. Every decision input is read inside the transaction.
+      const challenge = await tx.challenge.findUnique({
+         where: { id: challengeId },
+         include: {
+            teams: { where: { isDeleted: false }, select: { id: true } },
+            participants: {
+               include: {
+                  dailyStudyLogs: true,
+                  punishmentRecords: true,
+               },
             },
          },
-      },
-   });
+      });
 
-   if (!challenge) {
-      throw new Error("Challenge not found.");
-   }
+      if (!challenge || challenge.isDeleted) {
+         throw new Error("Challenge not found.");
+      }
 
-   const currentStatus = calculateChallengeStatus(challenge);
-   assertCanLockChallenge(currentStatus, challenge.resultsLockedAt);
+      const currentStatus = calculateChallengeStatus(challenge);
+      assertCanLockChallenge(currentStatus, challenge.resultsLockedAt);
 
-   const evaluatedParticipants = challenge.participants.filter(
-      (participant) => !participant.isWithdrawn
-   );
+      const evaluatedParticipants = challenge.participants.filter(
+         (participant) => !participant.isWithdrawn
+      );
 
-   const participantUserIds = evaluatedParticipants.map(
-      (participant) => participant.userId
-   );
+      const participantUserIds = evaluatedParticipants.map(
+         (participant) => participant.userId
+      );
 
-   const weeklyTasks =
-      participantUserIds.length > 0
-         ? await prisma.task.findMany({
-              where: {
-                 challengeId,
-                 taskType: "WEEKLY",
-                 userId: { in: participantUserIds },
-              },
-              select: { userId: true, status: true },
-           })
-         : [];
-
-   const weeklyTasksByUser = new Map<string, { status: string }[]>();
-   for (const task of weeklyTasks) {
-      const userTasks = weeklyTasksByUser.get(task.userId) ?? [];
-      userTasks.push({ status: task.status });
-      weeklyTasksByUser.set(task.userId, userTasks);
-   }
-
-   return prisma.$transaction(async (tx) => {
-      // 1. Transition challenge status to COMPLETED by adjusting endAt (if ACTIVE) and setting resultsLockedAt
+      // 3. Guarded transition: exactly one caller can claim the lock.
       const now = new Date();
-      const completedChallenge = await tx.challenge.update({
-         where: { id: challengeId },
+      const { count } = await tx.challenge.updateMany({
+         where: { id: challengeId, isDeleted: false, resultsLockedAt: null },
          data: {
             endAt:
                now.getTime() < challenge.endAt.getTime()
@@ -256,6 +241,35 @@ export async function lockChallengeResults(
             resultsLockedAt: now,
          },
       });
+
+      if (count !== 1) {
+         throw new ChallengeStateError("Challenge results are already locked.");
+      }
+
+      const completedChallenge = await tx.challenge.findUniqueOrThrow({
+         where: { id: challengeId },
+      });
+
+      // 4. Weekly goals: active rows only. Soft-deleted goals are not requirements.
+      const weeklyTasks =
+         participantUserIds.length > 0
+            ? await tx.task.findMany({
+                 where: {
+                    challengeId,
+                    taskType: "WEEKLY",
+                    isDeleted: false,
+                    userId: { in: participantUserIds },
+                 },
+                 select: { userId: true, status: true },
+              })
+            : [];
+
+      const weeklyTasksByUser = new Map<string, { status: string }[]>();
+      for (const task of weeklyTasks) {
+         const userTasks = weeklyTasksByUser.get(task.userId) ?? [];
+         userTasks.push({ status: task.status });
+         weeklyTasksByUser.set(task.userId, userTasks);
+      }
 
       // 2. Three-condition lock evaluation (FEAT-PUN-01): saved = hours met AND all
       //    challenge-linked weekly tasks completed AND in a winning team.
@@ -348,13 +362,6 @@ export async function lockChallengeResults(
 
          for (const participant of savedParticipants) {
             const wallet = await getOrCreateWallet(participant.userId, tx);
-            await tx.wallet.update({
-               where: { id: wallet.id },
-               data: {
-                  totalBalance: wallet.totalBalance + challenge.rewardCoins,
-                  lifetimeEarned: wallet.lifetimeEarned + challenge.rewardCoins,
-               },
-            });
 
             await tx.ledgerTransaction.create({
                data: {
@@ -374,6 +381,14 @@ export async function lockChallengeResults(
                      rewardCoins: challenge.rewardCoins,
                      participantId: participant.id,
                   },
+               },
+            });
+
+            await tx.wallet.update({
+               where: { id: wallet.id },
+               data: {
+                  totalBalance: { increment: challenge.rewardCoins },
+                  lifetimeEarned: { increment: challenge.rewardCoins },
                },
             });
          }
@@ -405,32 +420,35 @@ export async function lockChallengeResults(
          );
       }
 
-      await recordAuditEvent({
-         actorId: actor.id,
-         actorUsername: actor.username,
-         actionType: "CHALLENGE_LOCKED",
-         targetEntityId: challengeId,
-         targetEntityType: "CHALLENGE",
-         targetEntityName: challenge.title,
-         challengeId,
-         previousValue: {
-            status: currentStatus,
-            resultsLockedAt: challenge.resultsLockedAt,
-            endAt: challenge.endAt.toISOString(),
+      await recordAuditEvent(
+         {
+            actorId: actor.id,
+            actorUsername: actor.username,
+            actionType: "CHALLENGE_LOCKED",
+            targetEntityId: challengeId,
+            targetEntityType: "CHALLENGE",
+            targetEntityName: challenge.title,
+            challengeId,
+            previousValue: {
+               status: currentStatus,
+               resultsLockedAt: challenge.resultsLockedAt,
+               endAt: challenge.endAt.toISOString(),
+            },
+            newValue: {
+               status: "COMPLETED",
+               resultsLockedAt: completedChallenge.resultsLockedAt,
+               participantsEvaluated: evaluatedParticipants.length,
+               withdrawnParticipants:
+                  challenge.participants.length - evaluatedParticipants.length,
+               winningTeamIds,
+               punishedParticipants: punishedParticipantIds.length,
+               savedParticipants: savedParticipantIds.length,
+            },
+            auditReason:
+               "Host finalized results and locked challenge (FEAT-CHAL-05)",
          },
-         newValue: {
-            status: "COMPLETED",
-            resultsLockedAt: completedChallenge.resultsLockedAt,
-            participantsEvaluated: evaluatedParticipants.length,
-            withdrawnParticipants:
-               challenge.participants.length - evaluatedParticipants.length,
-            winningTeamIds,
-            punishedParticipants: punishedParticipantIds.length,
-            savedParticipants: savedParticipantIds.length,
-         },
-         auditReason:
-            "Host finalized results and locked challenge (FEAT-CHAL-05)",
-      });
+         { transactionClient: tx }
+      );
 
       return {
          ...completedChallenge,
@@ -451,51 +469,64 @@ export async function unlockChallengeResults(
    actor: { id: string; username: string },
    options?: { endAt?: Date; keepWrappedFlags?: boolean }
 ) {
-   const challenge = await prisma.challenge.findUnique({
-      where: { id: challengeId },
-   });
-
-   if (!challenge) {
-      throw new Error("Challenge not found.");
-   }
-
-   if (challenge.resultsLockedAt == null) {
-      throw new ChallengeStateError("Challenge results are not locked.");
-   }
-
-   const lockedAt = challenge.resultsLockedAt;
-   const currentEndAt = challenge.endAt;
-   let restoredEndAt: Date | null = null;
-
-   if (options?.endAt) {
-      restoredEndAt = options.endAt;
-   } else {
-      const auditTrail = await getAuditTrail(challengeId);
-      const lockEvent = auditTrail.find(
-         (event) => event.actionType === "CHALLENGE_LOCKED"
-      );
-      const previousEndAt = (
-         lockEvent?.previousValue as
-            { endAt?: string | Date } | null | undefined
-      )?.endAt;
-
-      if (previousEndAt) {
-         const parsed = new Date(previousEndAt);
-         if (!Number.isNaN(parsed.getTime())) {
-            restoredEndAt = parsed;
-         }
-      }
-   }
-
+   // Historical lookup only; no decision depends on it.
+   const auditTrail = options?.endAt ? [] : await getAuditTrail(challengeId);
    const wrappedFlagsReset = !options?.keepWrappedFlags;
 
    return prisma.$transaction(async (tx) => {
-      const unlockedChallenge = await tx.challenge.update({
+      await tx.$queryRaw`SELECT "id" FROM "Challenge" WHERE "id" = ${challengeId} FOR UPDATE`;
+
+      const challenge = await tx.challenge.findUnique({
          where: { id: challengeId },
+      });
+
+      if (!challenge || challenge.isDeleted) {
+         throw new Error("Challenge not found.");
+      }
+
+      if (challenge.resultsLockedAt == null) {
+         throw new ChallengeStateError("Challenge results are not locked.");
+      }
+
+      const lockedAt = challenge.resultsLockedAt;
+      const currentEndAt = challenge.endAt;
+
+      let restoredEndAt: Date | null = options?.endAt ?? null;
+      if (!restoredEndAt) {
+         const lockEvent = auditTrail.find(
+            (event) => event.actionType === "CHALLENGE_LOCKED"
+         );
+         const previousEndAt = (
+            lockEvent?.previousValue as
+               { endAt?: string | Date } | null | undefined
+         )?.endAt;
+
+         if (previousEndAt) {
+            const parsed = new Date(previousEndAt);
+            if (!Number.isNaN(parsed.getTime())) {
+               restoredEndAt = parsed;
+            }
+         }
+      }
+
+      const { count } = await tx.challenge.updateMany({
+         where: {
+            id: challengeId,
+            isDeleted: false,
+            resultsLockedAt: { not: null },
+         },
          data: {
             resultsLockedAt: null,
             ...(restoredEndAt ? { endAt: restoredEndAt } : {}),
          },
+      });
+
+      if (count !== 1) {
+         throw new ChallengeStateError("Challenge results are not locked.");
+      }
+
+      const unlockedChallenge = await tx.challenge.findUniqueOrThrow({
+         where: { id: challengeId },
       });
 
       const participantsReset = await tx.challengeParticipant.updateMany({
@@ -528,27 +559,30 @@ export async function unlockChallengeResults(
          "Challenge results unlocked by admin"
       );
 
-      await recordAuditEvent({
-         actorId: actor.id,
-         actorUsername: actor.username,
-         actionType: "CHALLENGE_UNLOCKED",
-         targetEntityId: challengeId,
-         targetEntityType: "CHALLENGE",
-         targetEntityName: challenge.title,
-         challengeId,
-         previousValue: {
-            resultsLockedAt: lockedAt.toISOString(),
-            endAt: currentEndAt.toISOString(),
+      await recordAuditEvent(
+         {
+            actorId: actor.id,
+            actorUsername: actor.username,
+            actionType: "CHALLENGE_UNLOCKED",
+            targetEntityId: challengeId,
+            targetEntityType: "CHALLENGE",
+            targetEntityName: challenge.title,
+            challengeId,
+            previousValue: {
+               resultsLockedAt: lockedAt.toISOString(),
+               endAt: currentEndAt.toISOString(),
+            },
+            newValue: {
+               resultsLockedAt: null,
+               endAt: (restoredEndAt ?? currentEndAt).toISOString(),
+               participantsReset: participantsReset.count,
+               recordsDeleted: recordsDeleted.count,
+               wrappedFlagsReset,
+            },
+            auditReason: "Results unlock rollback",
          },
-         newValue: {
-            resultsLockedAt: null,
-            endAt: (restoredEndAt ?? currentEndAt).toISOString(),
-            participantsReset: participantsReset.count,
-            recordsDeleted: recordsDeleted.count,
-            wrappedFlagsReset,
-         },
-         auditReason: "Results unlock rollback",
-      });
+         { transactionClient: tx }
+      );
 
       return {
          ...unlockedChallenge,

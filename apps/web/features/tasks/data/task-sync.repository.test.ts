@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { processBatchSync } from "./task-sync.repository";
 import { prisma } from "@/core/db";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import * as taskRepo from "./task.repository";
 
 vi.mock("@/core/db", () => ({
@@ -30,6 +31,7 @@ vi.mock("./task.repository", () => ({
    getUserCategorizedTasksFromDatabase: vi.fn(),
    resolveTaskChallengeId: vi.fn(),
    validateTaskChallengeId: vi.fn(),
+   assertChallengeWritable: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("processBatchSync (task-sync.repository)", () => {
@@ -303,11 +305,50 @@ describe("processBatchSync (task-sync.repository)", () => {
       expect(res.success).toBe(true);
       expect(taskRepo.validateTaskChallengeId).toHaveBeenCalledWith(
          userId,
-         "c_client"
+         "c_client",
+         expect.anything()
       );
       expect(prisma.task.upsert).toHaveBeenCalledWith(
          expect.objectContaining({
             create: expect.objectContaining({ challengeId: "c_client" }),
+         })
+      );
+   });
+
+   it("creates an unlinked task when the challenge is locked", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValue({
+         id: "cat-1",
+         userId,
+      } as never);
+      vi.mocked(taskRepo.validateTaskChallengeId).mockResolvedValue("c_locked");
+      vi.mocked(taskRepo.assertChallengeWritable).mockRejectedValueOnce(
+         new ChallengeStateError("locked")
+      );
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-locked-1",
+            entityType: "TASK",
+            action: "CREATE",
+            payload: {
+               id: "task-locked-1",
+               categoryId: "cat-1",
+               challengeId: "c_locked",
+               title: "Locked goal",
+               taskType: "WEEKLY",
+               isComplete: false,
+               status: "TODO",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.success).toBe(true);
+      expect(res.processedMutationIds).toContain("mut-locked-1");
+      expect(prisma.task.upsert).toHaveBeenCalledWith(
+         expect.objectContaining({
+            create: expect.objectContaining({ challengeId: null }),
          })
       );
    });
