@@ -55,6 +55,26 @@ describe("PunishmentWall (FEAT-PUN-02 / FEAT-PUN-03)", () => {
       expect(html).toContain("https://example.com/forfeit.png");
    });
 
+   it("renders no-punishment placeholder and omits download button when forfeit avatar is not configured", () => {
+      const html = renderToStaticMarkup(
+         createElement(PunishmentWall, {
+            challenge: {
+               ...baseChallenge,
+               punishmentPfpUrl: null,
+            },
+         })
+      );
+
+      expect(html).toContain("Accountability &amp; Goals Wall");
+      expect(html).toContain("No Forfeit Avatar Configured");
+      expect(html).toContain("No Forfeit Avatar");
+      expect(html).toContain('aria-label="No forfeit avatar configured"');
+      expect(html).toContain("No Forfeit");
+      expect(html).toContain('data-testid="no-punishment-placeholder"');
+      expect(html).not.toContain("Download Forfeit PFP");
+      expect(html).not.toContain("<img");
+   });
+
    it("renders clean zero-state when all active participants are on pace with zero deficits", () => {
       const challenge: ChallengeScoreboardViewModel = {
          ...baseChallenge,
@@ -197,5 +217,48 @@ describe("PunishmentWall (FEAT-PUN-02 / FEAT-PUN-03)", () => {
       expect(html).toContain("Punished");
       expect(html).toContain("Diana Excused");
       expect(html).toContain("Excused");
+   });
+
+   it("retains Punished status on completed members when punishmentPfpUrl is null", () => {
+      const challenge: ChallengeScoreboardViewModel = {
+         ...baseChallenge,
+         status: "COMPLETED",
+         punishmentPfpUrl: null,
+         standings: [
+            {
+               rank: 1,
+               participantId: "p1",
+               userId: "u1",
+               displayName: "Charlie Punished",
+               username: "charlie",
+               image: null,
+               teamId: "t1",
+               teamName: "Solo Scholar",
+               teamColor: "#3b82f6",
+               teamIcon: "⚡",
+               totalLoggedSeconds: 18000,
+               totalLoggedClock: "05:00:00",
+               todayLoggedSeconds: 0,
+               todayLoggedClock: "00:00:00",
+               targetSeconds: 36000,
+               targetClock: "10:00:00",
+               completionPercentage: 50,
+               weeklyTasksCompletedCount: 2,
+               weeklyTasksTotalCount: 3,
+               paceStatus: "punished",
+               paceLabel: "Punished",
+               deficitSeconds: 18000,
+               status: "PUNISHED",
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(PunishmentWall, { challenge })
+      );
+      expect(html).toContain("Accountability &amp; Goals Wall");
+      expect(html).toContain("No Forfeit Avatar Configured");
+      expect(html).toContain("Charlie Punished");
+      expect(html).toContain("Punished");
    });
 });

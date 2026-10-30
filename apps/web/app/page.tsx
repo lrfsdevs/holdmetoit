@@ -14,6 +14,10 @@ import { getChallengeScoreboard } from "@/features/leaderboard/data/leaderboard-
 import { getUserCategorizedTasks } from "@/features/tasks/data/task.repository";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
+import {
+   COLLAPSED_CATEGORIES_COOKIE,
+   ROLLOVER_SNOOZE_COOKIE,
+} from "@/features/study-logs/presentation/cockpit/cockpit-tasks-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,32 @@ export default async function HomePage({ searchParams }: HomePageProps) {
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
+   const userId = session?.user?.id;
+   const scope = userId && userId.trim().length > 0 ? userId.trim() : "guest";
+   const rawCollapsedCookie = cookieStore.get(
+      COLLAPSED_CATEGORIES_COOKIE
+   )?.value;
+   let initialCollapsedCategoryIds: string[] = [];
+   if (rawCollapsedCookie) {
+      try {
+         const parsed = JSON.parse(decodeURIComponent(rawCollapsedCookie));
+         let list: unknown = [];
+         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            list = parsed[scope] || parsed["all"] || [];
+         } else if (Array.isArray(parsed)) {
+            list = parsed;
+         }
+         if (Array.isArray(list)) {
+            initialCollapsedCategoryIds = list.filter(
+               (k) =>
+                  typeof k === "string" &&
+                  (k.startsWith("daily:") || k.startsWith("weekly:"))
+            );
+         }
+      } catch {
+         initialCollapsedCategoryIds = [];
+      }
+   }
 
    const { isAdmin, effectiveRole } = getEffectiveAdminState({
       userRole: session?.user?.role,
@@ -38,7 +68,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       searchParamAs: searchParams?.as,
    });
 
-   const userId = session?.user?.id;
    const [
       cockpit,
       fetchedUserTasks,
@@ -92,6 +121,32 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
          : "/profile";
 
+   const rawSnoozeCookie = cookieStore.get(ROLLOVER_SNOOZE_COOKIE)?.value;
+   let initialIsRolloverSnoozed = false;
+   if (rawSnoozeCookie) {
+      try {
+         const parsed = JSON.parse(decodeURIComponent(rawSnoozeCookie));
+         const todayDateKey =
+            cockpit?.todayDate || new Date().toISOString().slice(0, 10);
+         const utcDateKey = new Date().toISOString().slice(0, 10);
+         const validDates = new Set([todayDateKey, utcDateKey]);
+         if (cockpit?.todayDate) validDates.add(cockpit.todayDate);
+
+         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            if (
+               (parsed[scope] && validDates.has(parsed[scope])) ||
+               (parsed["guest"] && validDates.has(parsed["guest"]))
+            ) {
+               initialIsRolloverSnoozed = true;
+            }
+         } else if (typeof parsed === "string" && validDates.has(parsed)) {
+            initialIsRolloverSnoozed = true;
+         }
+      } catch {
+         initialIsRolloverSnoozed = false;
+      }
+   }
+
    return (
       <div className="min-h-[calc(100vh-4rem)] bg-surface-page text-text-primary">
          <main className="w-full">
@@ -107,6 +162,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                userTasks={userTasks}
                isAdmin={isAdmin}
                profileUrl={profileUrl}
+               initialCollapsedCategoryIds={initialCollapsedCategoryIds}
+               initialIsRolloverSnoozed={initialIsRolloverSnoozed}
             />
          </main>
       </div>

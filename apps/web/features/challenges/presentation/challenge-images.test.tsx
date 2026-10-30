@@ -509,17 +509,25 @@ describe("independent challenge form fields", () => {
       expect(manageHtml).not.toContain("/display-banner.png");
    });
 
-   it("requires both wizard images and submits them separately", async () => {
+   it("requires event banner while punishment PFP is optional in wizard", async () => {
       let tree = liveRender(ChallengeCreatorWizard);
       tree.props.onSubmit({ preventDefault: vi.fn() });
       expect(mocks.create).not.toHaveBeenCalled();
       tree = liveRender(ChallengeCreatorWizard);
       expect(image(tree, "event-banner").props.error).toBeTruthy();
-      expect(image(tree, "punishment-pfp").props.error).toBeTruthy();
+      expect(image(tree, "punishment-pfp").props.error).toBeNull();
       image(tree, "event-banner").props.onChange(banner);
       tree = liveRender(ChallengeCreatorWizard);
       tree.props.onSubmit({ preventDefault: vi.fn() });
-      expect(mocks.create).not.toHaveBeenCalled();
+      await vi.waitFor(() =>
+         expect(mocks.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+               eventBannerUrl: banner,
+               punishmentPfpUrl: null,
+            })
+         )
+      );
+      mocks.create.mockClear();
       image(tree, "punishment-pfp").props.onChange(pfp);
       tree = liveRender(ChallengeCreatorWizard);
       tree.props.onSubmit({ preventDefault: vi.fn() });
@@ -531,6 +539,19 @@ describe("independent challenge form fields", () => {
             })
          )
       );
+   });
+
+   it("allows removing punishment PFP via Remove button", () => {
+      const onChange = vi.fn();
+      const html = renderToStaticMarkup(
+         createElement(ChallengeImageInput, {
+            purpose: "punishment-pfp",
+            value: pfp,
+            onChange,
+         })
+      );
+      expect(html).toContain("Remove");
+      expect(html).toContain('aria-label="Remove Assigned Punishment PFP"');
    });
 
    it.each(["event-banner", "punishment-pfp"] as const)(

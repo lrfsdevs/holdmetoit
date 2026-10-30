@@ -40,6 +40,8 @@ export interface CategoryGroup {
    isCollapsed: boolean;
    isDeleted?: boolean;
    deletionTime?: Date | string | null;
+   createdAt?: Date | string;
+   updatedAt?: Date | string;
    tasks: TaskItem[];
 }
 
