@@ -1,8 +1,11 @@
 import { prisma } from "@/core/db";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
-import type { TaskType } from "@prisma/client";
-import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { Prisma, type TaskType } from "@prisma/client";
+import {
+   calculateChallengeStatus,
+   ChallengeStateError,
+} from "@/features/challenges/domain/challenge-lifecycle";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
 import type {
    CategoryGroup,
@@ -26,13 +29,18 @@ export const DEFAULT_CATEGORY_NAME = "General";
  * returns null for a standalone task.
  */
 export async function resolveTaskChallengeId(
-   userId: string
+   userId: string,
+   client: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<string | null> {
    const now = new Date();
-   const participations = await prisma.challengeParticipant.findMany({
+   const participations = await client.challengeParticipant.findMany({
       where: {
          userId,
-         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+         challenge: {
+            isDeleted: false,
+            resultsLockedAt: null,
+            endAt: { gt: now },
+         },
       },
       select: {
          challenge: { select: { id: true, startAt: true, endAt: true } },
@@ -64,14 +72,19 @@ export async function resolveTaskChallengeId(
  */
 export async function validateTaskChallengeId(
    userId: string,
-   requestedChallengeId: string
+   requestedChallengeId: string,
+   client: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<string | null> {
    const now = new Date();
-   const participation = await prisma.challengeParticipant.findFirst({
+   const participation = await client.challengeParticipant.findFirst({
       where: {
          userId,
          challengeId: requestedChallengeId,
-         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+         challenge: {
+            isDeleted: false,
+            resultsLockedAt: null,
+            endAt: { gt: now },
+         },
       },
       select: { challengeId: true },
    });
@@ -80,7 +93,29 @@ export async function validateTaskChallengeId(
       return participation.challengeId;
    }
 
-   return resolveTaskChallengeId(userId);
+   return resolveTaskChallengeId(userId, client);
+}
+
+/**
+ * Rejects task goal changes once the challenge results are locked.
+ * Takes FOR SHARE so a concurrent lock (FOR UPDATE) serialises with this write.
+ */
+export async function assertChallengeWritable(
+   client: Prisma.TransactionClient | typeof prisma,
+   challengeId: string | null | undefined
+): Promise<void> {
+   if (!challengeId) return;
+
+   const rows = await client.$queryRaw<
+      { resultsLockedAt: Date | null; isDeleted: boolean }[]
+   >`SELECT "resultsLockedAt", "isDeleted" FROM "Challenge" WHERE "id" = ${challengeId} FOR SHARE`;
+
+   const row = rows[0];
+   if (!row || row.isDeleted || row.resultsLockedAt != null) {
+      throw new ChallengeStateError(
+         "Challenge results are locked; task goals can no longer be changed."
+      );
+   }
 }
 
 export async function getUserCategorizedTasks(
@@ -238,99 +273,115 @@ export async function createTask(params: {
    dueDate?: string | Date | null;
    challengeId?: string | null;
 }) {
-   let resolvedCategoryId = params.categoryId;
+   return prisma.$transaction(async (tx) => {
+      let resolvedCategoryId = params.categoryId;
 
-   if (params.newCategoryName && params.newCategoryName.trim()) {
-      const trimmedName = params.newCategoryName.trim();
-      let existing = await prisma.category.findFirst({
-         where: {
-            userId: params.userId,
-            taskType: params.taskType,
-            name: { equals: trimmedName, mode: "insensitive" },
-         },
-      });
-
-      if (!existing && params.taskType === "DAILY") {
-         existing = await prisma.category.findFirst({
+      if (params.newCategoryName && params.newCategoryName.trim()) {
+         const trimmedName = params.newCategoryName.trim();
+         let existing = await tx.category.findFirst({
             where: {
                userId: params.userId,
-               taskType: "WEEKLY",
+               taskType: params.taskType,
                name: { equals: trimmedName, mode: "insensitive" },
             },
          });
+
+         if (!existing && params.taskType === "DAILY") {
+            existing = await tx.category.findFirst({
+               where: {
+                  userId: params.userId,
+                  taskType: "WEEKLY",
+                  name: { equals: trimmedName, mode: "insensitive" },
+               },
+            });
+         }
+
+         if (existing) {
+            resolvedCategoryId = existing.id;
+         } else {
+            const created = await tx.category.create({
+               data: {
+                  userId: params.userId,
+                  name: trimmedName,
+                  taskType: params.taskType,
+               },
+            });
+            resolvedCategoryId = created.id;
+         }
       }
 
-      if (existing) {
-         resolvedCategoryId = existing.id;
-      } else {
-         const created = await prisma.category.create({
-            data: {
-               userId: params.userId,
-               name: trimmedName,
-               taskType: params.taskType,
-            },
-         });
-         resolvedCategoryId = created.id;
-      }
-   }
-
-   if (!resolvedCategoryId) {
-      let fallback = await prisma.category.findFirst({
-         where: {
-            userId: params.userId,
-            taskType: params.taskType,
-         },
-         orderBy: { createdAt: "asc" },
-      });
-
-      if (!fallback && params.taskType === "DAILY") {
-         fallback = await prisma.category.findFirst({
+      if (!resolvedCategoryId) {
+         let fallback = await tx.category.findFirst({
             where: {
                userId: params.userId,
-               taskType: "WEEKLY",
+               taskType: params.taskType,
             },
             orderBy: { createdAt: "asc" },
          });
+
+         if (!fallback && params.taskType === "DAILY") {
+            fallback = await tx.category.findFirst({
+               where: {
+                  userId: params.userId,
+                  taskType: "WEEKLY",
+               },
+               orderBy: { createdAt: "asc" },
+            });
+         }
+
+         if (fallback) {
+            resolvedCategoryId = fallback.id;
+         } else {
+            const created = await tx.category.create({
+               data: {
+                  userId: params.userId,
+                  name: DEFAULT_CATEGORY_NAME,
+                  taskType: params.taskType,
+               },
+            });
+            resolvedCategoryId = created.id;
+         }
       }
 
-      if (fallback) {
-         resolvedCategoryId = fallback.id;
-      } else {
-         const created = await prisma.category.create({
-            data: {
-               userId: params.userId,
-               name: DEFAULT_CATEGORY_NAME,
-               taskType: params.taskType,
-            },
-         });
-         resolvedCategoryId = created.id;
+      const status: TaskStatus =
+         params.status ?? (params.isComplete ? "COMPLETED" : "TODO");
+      const isComplete = status === "COMPLETED";
+      const dueDate = params.dueDate ? new Date(params.dueDate) : null;
+      const challengeId =
+         params.challengeId !== undefined
+            ? params.challengeId
+            : await resolveTaskChallengeId(params.userId, tx);
+
+      if (challengeId !== null && challengeId !== undefined) {
+         await assertChallengeWritable(tx, challengeId);
+         const validated = await validateTaskChallengeId(
+            params.userId,
+            challengeId,
+            tx
+         );
+         if (!validated || validated !== challengeId) {
+            throw new ChallengeStateError(
+               "You are not an active participant in this challenge."
+            );
+         }
       }
-   }
 
-   const status: TaskStatus =
-      params.status ?? (params.isComplete ? "COMPLETED" : "TODO");
-   const isComplete = status === "COMPLETED";
-   const dueDate = params.dueDate ? new Date(params.dueDate) : null;
-   const challengeId =
-      params.challengeId !== undefined
-         ? params.challengeId
-         : await resolveTaskChallengeId(params.userId);
-
-   return prisma.task.create({
-      data: {
-         userId: params.userId,
-         categoryId: resolvedCategoryId,
-         challengeId,
-         title: params.title.trim(),
-         taskType: params.taskType,
-         isComplete,
-         status,
-         dueDate,
-         completedAt: isComplete ? new Date() : null,
-      },
-      include: {
-         category: true,
-      },
+      return tx.task.create({
+         data: {
+            userId: params.userId,
+            categoryId: resolvedCategoryId,
+            challengeId,
+            title: params.title.trim(),
+            taskType: params.taskType,
+            isComplete,
+            status,
+            dueDate,
+            completedAt: isComplete ? new Date() : null,
+         },
+         include: {
+            category: true,
+         },
+      });
    });
 }
 
@@ -436,72 +487,87 @@ export async function updateTask(params: {
    dueDate?: string | Date | null;
    challengeId?: string | null;
 }) {
-   const existing = await prisma.task.findFirst({
-      where: {
-         id: params.taskId,
-         userId: params.userId,
-         isDeleted: false,
-      },
-   });
+   return prisma.$transaction(async (tx) => {
+      const existing = await tx.task.findFirst({
+         where: {
+            id: params.taskId,
+            userId: params.userId,
+            isDeleted: false,
+         },
+         select: {
+            id: true,
+            taskType: true,
+            challengeId: true,
+         },
+      });
 
-   if (!existing) {
-      return null;
-   }
-
-   const dataToUpdate: {
-      title?: string;
-      isComplete?: boolean;
-      status?: TaskStatus;
-      dueDate?: Date | null;
-      completedAt?: Date | null;
-      challengeId?: string | null;
-   } = {};
-
-   if (params.title !== undefined) {
-      dataToUpdate.title = params.title.trim();
-   }
-   if (params.status !== undefined) {
-      dataToUpdate.status = params.status;
-      dataToUpdate.isComplete = params.status === "COMPLETED";
-      dataToUpdate.completedAt =
-         params.status === "COMPLETED" ? new Date() : null;
-   } else if (params.isComplete !== undefined) {
-      dataToUpdate.isComplete = params.isComplete;
-      dataToUpdate.status = params.isComplete ? "COMPLETED" : "TODO";
-      dataToUpdate.completedAt = params.isComplete ? new Date() : null;
-   }
-   if (params.dueDate !== undefined) {
-      dataToUpdate.dueDate = params.dueDate ? new Date(params.dueDate) : null;
-   }
-   if (params.challengeId !== undefined) {
-      if (params.challengeId !== null) {
-         if (existing.taskType !== "WEEKLY") {
-            throw new Error("Only weekly tasks can be scoped to a challenge");
-         }
-         const validatedChallengeId = await validateTaskChallengeId(
-            params.userId,
-            params.challengeId
-         );
-         if (
-            !validatedChallengeId ||
-            validatedChallengeId !== params.challengeId
-         ) {
-            throw new Error(
-               "Invalid challenge ID: user is not an active participant in this challenge"
-            );
-         }
-         dataToUpdate.challengeId = validatedChallengeId;
-      } else {
-         dataToUpdate.challengeId = null;
+      if (!existing) {
+         return null;
       }
-   }
 
-   return prisma.task.update({
-      where: { id: params.taskId },
-      data: dataToUpdate,
-      include: {
-         category: true,
-      },
+      const dataToUpdate: {
+         title?: string;
+         isComplete?: boolean;
+         status?: TaskStatus;
+         dueDate?: Date | null;
+         completedAt?: Date | null;
+         challengeId?: string | null;
+      } = {};
+
+      if (params.title !== undefined) {
+         dataToUpdate.title = params.title.trim();
+      }
+      if (params.status !== undefined) {
+         dataToUpdate.status = params.status;
+         dataToUpdate.isComplete = params.status === "COMPLETED";
+         dataToUpdate.completedAt =
+            params.status === "COMPLETED" ? new Date() : null;
+      } else if (params.isComplete !== undefined) {
+         dataToUpdate.isComplete = params.isComplete;
+         dataToUpdate.status = params.isComplete ? "COMPLETED" : "TODO";
+         dataToUpdate.completedAt = params.isComplete ? new Date() : null;
+      }
+      if (params.dueDate !== undefined) {
+         dataToUpdate.dueDate = params.dueDate
+            ? new Date(params.dueDate)
+            : null;
+      }
+      if (params.challengeId !== undefined) {
+         if (params.challengeId !== null) {
+            if (existing.taskType !== "WEEKLY") {
+               throw new Error(
+                  "Only weekly tasks can be scoped to a challenge"
+               );
+            }
+            const validatedChallengeId = await validateTaskChallengeId(
+               params.userId,
+               params.challengeId,
+               tx
+            );
+            if (
+               !validatedChallengeId ||
+               validatedChallengeId !== params.challengeId
+            ) {
+               throw new ChallengeStateError(
+                  "Invalid challenge ID: user is not an active participant in this challenge"
+               );
+            }
+            await assertChallengeWritable(tx, validatedChallengeId);
+            dataToUpdate.challengeId = validatedChallengeId;
+         } else {
+            // Unlinking is also a goal change: the current challenge must be unlocked.
+            await assertChallengeWritable(tx, existing.challengeId);
+            dataToUpdate.challengeId = null;
+         }
+      }
+
+      return tx.task.update({
+         where: { id: params.taskId },
+         data: dataToUpdate,
+         include: {
+            category: true,
+         },
+      });
    });
 }
 

@@ -17,6 +17,7 @@ vi.mock("@/core/db", () => {
       $transaction: vi.fn(async (cb: (tx: unknown) => unknown) =>
          cb(mockPrisma)
       ),
+      $queryRaw: vi.fn().mockResolvedValue([{ resultsLockedAt: null }]),
       challengeParticipant: {
          findUnique: vi.fn(),
          update: vi.fn(),
@@ -35,12 +36,32 @@ describe("dailyStudyLog repository", () => {
       // Default participant mock with planned leaves
       vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue({
          id: "part_1",
+         challengeId: "chal_1",
          plannedLeaveDays: 2,
          usedLeaveDays: 0,
       } as never);
    });
 
    describe("upsertDailyStudyLog", () => {
+      it("rejects a log write when results are locked without upserting", async () => {
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date() },
+         ] as never);
+         vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.dailyStudyLog.upsert).mockResolvedValue({} as never);
+
+         await expect(
+            upsertDailyStudyLog({
+               participantId: "part_1",
+               challengeId: "chal_1",
+               logDate: "2026-09-06",
+               durationSeconds: 3600,
+            })
+         ).rejects.toThrow("Challenge results are locked");
+
+         expect(prisma.dailyStudyLog.upsert).not.toHaveBeenCalled();
+      });
+
       it("normalizes date string to UTC date-only and performs upsert", async () => {
          const mockResult = {
             id: "log_1",
@@ -257,24 +278,29 @@ describe("dailyStudyLog repository", () => {
             },
          });
 
-         expect(recordAuditEvent).toHaveBeenCalledWith({
-            actorId: "usr_1",
-            actorUsername: "learner",
-            actorDisplayName: "Active Learner",
-            actorImage: "https://cdn.discordapp.com/avatar.png",
-            actionType: "STUDY_LOG_ADDED",
-            targetEntityId: "log_new",
-            targetEntityType: "DAILY_STUDY_LOG",
-            targetEntityName: "Active Learner",
-            challengeId: "chal_1",
-            previousValue: null,
-            newValue: {
-               durationSeconds: 7_200,
-               durationClock: "02:00:00",
-               logDate: "2026-09-06",
+         expect(recordAuditEvent).toHaveBeenCalledWith(
+            {
+               actorId: "usr_1",
+               actorUsername: "learner",
+               actorDisplayName: "Active Learner",
+               actorImage: "https://cdn.discordapp.com/avatar.png",
+               actionType: "STUDY_LOG_ADDED",
+               targetEntityId: "log_new",
+               targetEntityType: "DAILY_STUDY_LOG",
+               targetEntityName: "Active Learner",
+               challengeId: "chal_1",
+               previousValue: null,
+               newValue: {
+                  durationSeconds: 7_200,
+                  durationClock: "02:00:00",
+                  logDate: "2026-09-06",
+               },
+               auditReason: "Logged 02:00:00 of study time",
             },
-            auditReason: "Logged 02:00:00 of study time",
-         });
+            {
+               transactionClient: expect.anything(),
+            }
+         );
       });
 
       it("records a STUDY_LOG_ADDED audit event with previous duration on study log update", async () => {
@@ -313,28 +339,33 @@ describe("dailyStudyLog repository", () => {
             },
          });
 
-         expect(recordAuditEvent).toHaveBeenCalledWith({
-            actorId: "usr_1",
-            actorUsername: "learner",
-            actorDisplayName: "Active Learner",
-            actorImage: null,
-            actionType: "STUDY_LOG_ADDED",
-            targetEntityId: "log_existing",
-            targetEntityType: "DAILY_STUDY_LOG",
-            targetEntityName: "Active Learner",
-            challengeId: "chal_1",
-            previousValue: {
-               durationSeconds: 3_600,
-               durationClock: "01:00:00",
-               logDate: "2026-09-06",
+         expect(recordAuditEvent).toHaveBeenCalledWith(
+            {
+               actorId: "usr_1",
+               actorUsername: "learner",
+               actorDisplayName: "Active Learner",
+               actorImage: null,
+               actionType: "STUDY_LOG_ADDED",
+               targetEntityId: "log_existing",
+               targetEntityType: "DAILY_STUDY_LOG",
+               targetEntityName: "Active Learner",
+               challengeId: "chal_1",
+               previousValue: {
+                  durationSeconds: 3_600,
+                  durationClock: "01:00:00",
+                  logDate: "2026-09-06",
+               },
+               newValue: {
+                  durationSeconds: 7_200,
+                  durationClock: "02:00:00",
+                  logDate: "2026-09-06",
+               },
+               auditReason: "Updated study time from 01:00:00 to 02:00:00",
             },
-            newValue: {
-               durationSeconds: 7_200,
-               durationClock: "02:00:00",
-               logDate: "2026-09-06",
-            },
-            auditReason: "Updated study time from 01:00:00 to 02:00:00",
-         });
+            {
+               transactionClient: expect.anything(),
+            }
+         );
       });
    });
 

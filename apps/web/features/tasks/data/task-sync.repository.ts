@@ -8,15 +8,61 @@ import type {
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
 import {
    DEFAULT_CATEGORY_NAME,
+   assertChallengeWritable,
    getUserCategorizedTasks,
    getUserCategorizedTasksFromDatabase,
    resolveTaskChallengeId,
    validateTaskChallengeId,
 } from "@/features/tasks/data/task.repository";
-import type { TaskStatus, TaskType } from "@prisma/client";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
+import { Prisma, type TaskStatus, type TaskType } from "@prisma/client";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("tasks.sync");
+
+async function resolveWritableChallengeLink(
+   tx: Prisma.TransactionClient,
+   userId: string,
+   requestedChallengeId: string | null | undefined,
+   options: { resolveCurrent?: boolean; onRejected?: "unlink" | "omit" } = {}
+): Promise<string | null | undefined> {
+   const onRejected = options.onRejected ?? "omit";
+   const reject = () => (onRejected === "unlink" ? null : undefined);
+
+   try {
+      if (requestedChallengeId === undefined) {
+         if (!options.resolveCurrent) return undefined;
+         const resolved = await resolveTaskChallengeId(userId, tx);
+         if (!resolved) return null;
+         await assertChallengeWritable(tx, resolved);
+         return resolved;
+      }
+
+      if (requestedChallengeId === null) return null;
+
+      const validated = await validateTaskChallengeId(
+         userId,
+         requestedChallengeId,
+         tx
+      );
+      if (!validated || validated !== requestedChallengeId) return reject();
+
+      await assertChallengeWritable(tx, validated);
+      return validated;
+   } catch (error) {
+      if (error instanceof ChallengeStateError) {
+         logger.warn(logEvents.tasksSyncFailed, {
+            context: {
+               userId,
+               challengeId: requestedChallengeId ?? "auto",
+               reason: "challenge_locked",
+            },
+         });
+         return reject();
+      }
+      throw error;
+   }
+}
 
 /**
  * Processes a queued batch of offline task and category mutations for a user.
@@ -230,22 +276,20 @@ export async function processBatchSync(
 
                      // Challenge linkage: honour a client-sent value (validated),
                      // treat explicit null as standalone, otherwise resolve the
-                     // user's current challenge at sync time.
+                     // user's current challenge at sync time. A locked challenge
+                     // is dropped so the mutation never becomes a poison pill.
                      const rawChallengeId = payload.challengeId;
-                     let challengeId: string | null;
-                     if (
-                        typeof rawChallengeId === "string" &&
-                        rawChallengeId.length > 0
-                     ) {
-                        challengeId = await validateTaskChallengeId(
+                     const linkedChallengeId =
+                        await resolveWritableChallengeLink(
+                           tx,
                            userId,
-                           rawChallengeId
+                           typeof rawChallengeId === "string" ||
+                              rawChallengeId === null
+                              ? rawChallengeId
+                              : undefined,
+                           { resolveCurrent: true, onRejected: "unlink" }
                         );
-                     } else if (rawChallengeId === null) {
-                        challengeId = null;
-                     } else {
-                        challengeId = await resolveTaskChallengeId(userId);
-                     }
+                     const challengeId = linkedChallengeId ?? null;
 
                      await tx.task.upsert({
                         where: { id: taskId },
@@ -298,17 +342,16 @@ export async function processBatchSync(
                      }
                      if (payload.challengeId !== undefined) {
                         const rawChalId = payload.challengeId;
-                        if (
-                           typeof rawChalId === "string" &&
-                           rawChalId.trim().length > 0
-                        ) {
-                           dataToUpdate.challengeId =
-                              await validateTaskChallengeId(
-                                 userId,
-                                 rawChalId.trim()
-                              );
-                        } else {
-                           dataToUpdate.challengeId = null;
+                        const linked = await resolveWritableChallengeLink(
+                           tx,
+                           userId,
+                           typeof rawChalId === "string"
+                              ? rawChalId.trim() || null
+                              : null,
+                           { onRejected: "omit" }
+                        );
+                        if (linked !== undefined) {
+                           dataToUpdate.challengeId = linked;
                         }
                      }
                      if (payload.status) {

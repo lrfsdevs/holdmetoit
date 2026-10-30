@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-29 (Session 175 on `krish` · Session 163 on `afnan-jr`)
+> **Last Updated:** 2026-10-30 (Session 176 on `afnan-jr` · Session 175 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,18 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 176 — 2026-10-30 (Results lock hardening on `afnan-jr`)
+
+- **Correctness:** `lockChallengeResults` / `unlockChallengeResults` now take `SELECT ... FOR UPDATE` on the `Challenge` row first, read every input inside the transaction, and use a guarded `updateMany` (`WHERE resultsLockedAt IS NULL` / `IS NOT NULL`). A second concurrent lock throws `ChallengeStateError` (`ALREADY_LOCKED`) instead of duplicating settlement.
+- **Input freeze:** participant withdrawal, `upsertDailyStudyLog`, and task weekly-goal linkage take `FOR SHARE` and reject after lock. Soft-deleted weekly goals are excluded from evaluation; deleted challenges cannot be locked or linked.
+- **Data:** `PunishmentRecord` gains `@@unique([challengeId, participantId])` via `20261030000000_punishment_unique_per_participant`. Pre-check and dedupe: `apps/web/scripts/dedupe-punishment-records.ts` (dry-run default).
+- **Economy:** challenge reward credits use atomic `increment`; the ledger row is inserted first; `CHALLENGE_LOCKED` / `CHALLENGE_UNLOCKED` audits are written inside the transaction.
+- **Sync:** a locked challenge never produces a poison mutation; the sync path drops the linkage change and applies the rest.
+- **Tests:** lock/unlock FOR UPDATE, zero-row guard, soft-deleted challenge, atomic reward increment, withdrawal, study-log lock, task link/unlink, and sync locked-challenge coverage. `npm run typecheck:web` clean; targeted suites green.
+- **Manual verification (not executed):** `apps/web/scripts/verify-lock-concurrency.ts` (local/staging only).
+- **Docs:** `docs/accountability/README.md`; `docs/challenges/README.md` §9.
+- **NEXT:** apply the migration after the duplicate pre-check; run the concurrency verifier on a disposable local challenge; then adopt `FOR SHARE` in the admin roster/target/status writers (listed in the accountability doc).
 
 ### Session 175 — 2026-10-29 (Task Status Transition Stability, Anti-Flash Reversion & Fresh DB Sync on `krish`)
 

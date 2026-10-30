@@ -6,6 +6,7 @@ import {
    AuthError,
    requireSessionUser,
 } from "@/features/auth/api/require-session";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import {
    createCategorySchema,
    createTaskSchema,
@@ -89,6 +90,13 @@ export async function createTaskAction(
             error,
          });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
+      }
+      if (error instanceof ChallengeStateError) {
+         return {
+            ok: false,
+            code: "CHALLENGE_LOCKED",
+            message: error.message,
+         };
       }
       logger.error(logEvents.taskCreated, { error });
       return {
@@ -319,6 +327,13 @@ export async function updateTaskAction(
             error,
          });
          return { ok: false, code: "UNAUTHORIZED", message: error.message };
+      }
+      if (error instanceof ChallengeStateError) {
+         return {
+            ok: false,
+            code: "CHALLENGE_LOCKED",
+            message: error.message,
+         };
       }
       logger.error(logEvents.taskUpdated, { error });
       return {
