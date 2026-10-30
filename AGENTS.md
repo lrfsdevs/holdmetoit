@@ -160,6 +160,7 @@ The following technologies were evaluated and are **strictly banned** from the c
 - ❌ **No Heavy Client-Side State Managers (Redux, MobX):** Unnecessary boilerplate. Leverage React Server Components, server actions, and local UI state.
 - ❌ **No GraphQL:** REST endpoints and Next.js Server Actions provide direct, type-safe RPC without GraphQL schema overhead.
 - ❌ **No 24/7 Discord Bot Daemons in Phase 0 (P0):** A permanent bot service increases hosting costs and operational failure modes. P0 uses a 1-click clipboard markdown copy generator and webhooks. The full `@HoldMeToItBot` daemon is reserved for Phase 1 (P1).
+   - **Carve-out (2026-10-26):** `apps/tasker` is a community utility bot (task/category management + channel summaries), not `@HoldMeToItBot`. It is exempt from this rule. Any challenge-facing bot commands (`/stats`, `/standings`, `/deficit`, broadcasts) still belong to the P1 roadmap gate and must not be added to Tasker.
 - ❌ **No In-Browser Stopwatch / Pomodoro Timers:** Study community members use Yeolpumta (YPT) or physical timers on phones. In-browser web timers distract and invite anti-cheat complications.
 - ❌ **No Grace Passes / Freeze Days:** Formally rejected. Deficits must be recovered dynamically via the Catch-Up model.
 

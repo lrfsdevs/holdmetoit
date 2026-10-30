@@ -98,7 +98,7 @@ export async function getUserCategorizedTasks(
    return read();
 }
 
-async function getUserCategorizedTasksFromDatabase(
+export async function getUserCategorizedTasksFromDatabase(
    userId: string
 ): Promise<UserCategorizedTasks> {
    const categories = await prisma.category.findMany({
@@ -106,10 +106,14 @@ async function getUserCategorizedTasksFromDatabase(
       include: {
          tasks: {
             where: { isDeleted: false },
-            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            orderBy: [
+               { sortOrder: "asc" },
+               { createdAt: "asc" },
+               { id: "asc" },
+            ],
          },
       },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
    });
 
    const categoryItems: CategoryItem[] = categories.map((c) => ({
@@ -160,6 +164,8 @@ async function getUserCategorizedTasksFromDatabase(
             name: c.name,
             taskType: "DAILY" as const,
             sortOrder: c.sortOrder,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
             isCollapsed: false,
             isDeleted: c.isDeleted,
             deletionTime: c.deletionTime,
@@ -197,6 +203,8 @@ async function getUserCategorizedTasksFromDatabase(
             name: c.name,
             taskType: "WEEKLY" as const,
             sortOrder: c.sortOrder,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
             isCollapsed: false,
             isDeleted: c.isDeleted,
             deletionTime: c.deletionTime,
@@ -426,6 +434,7 @@ export async function updateTask(params: {
    isComplete?: boolean;
    status?: TaskStatus;
    dueDate?: string | Date | null;
+   challengeId?: string | null;
 }) {
    const existing = await prisma.task.findFirst({
       where: {
@@ -445,6 +454,7 @@ export async function updateTask(params: {
       status?: TaskStatus;
       dueDate?: Date | null;
       completedAt?: Date | null;
+      challengeId?: string | null;
    } = {};
 
    if (params.title !== undefined) {
@@ -463,12 +473,57 @@ export async function updateTask(params: {
    if (params.dueDate !== undefined) {
       dataToUpdate.dueDate = params.dueDate ? new Date(params.dueDate) : null;
    }
+   if (params.challengeId !== undefined) {
+      if (params.challengeId !== null) {
+         if (existing.taskType !== "WEEKLY") {
+            throw new Error("Only weekly tasks can be scoped to a challenge");
+         }
+         const validatedChallengeId = await validateTaskChallengeId(
+            params.userId,
+            params.challengeId
+         );
+         if (
+            !validatedChallengeId ||
+            validatedChallengeId !== params.challengeId
+         ) {
+            throw new Error(
+               "Invalid challenge ID: user is not an active participant in this challenge"
+            );
+         }
+         dataToUpdate.challengeId = validatedChallengeId;
+      } else {
+         dataToUpdate.challengeId = null;
+      }
+   }
 
    return prisma.task.update({
       where: { id: params.taskId },
       data: dataToUpdate,
       include: {
          category: true,
+      },
+   });
+}
+
+export async function rolloverIncompleteTasks(params: {
+   userId: string;
+   taskIds: string[];
+   targetDateKey: string;
+}) {
+   const targetDate = new Date(params.targetDateKey);
+   return prisma.task.updateMany({
+      where: {
+         id: { in: params.taskIds },
+         userId: params.userId,
+         taskType: "DAILY",
+         isComplete: false,
+         status: {
+            notIn: ["COMPLETED", "CROSSED_OUT"],
+         },
+         isDeleted: false,
+      },
+      data: {
+         dueDate: targetDate,
       },
    });
 }

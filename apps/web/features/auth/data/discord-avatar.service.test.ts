@@ -1,10 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
-import {
-   fetchDiscordUserAvatar,
-   fetchDiscordUserAvatarViaOAuth,
-   syncUserAvatar,
-} from "./discord-avatar.service";
+
+const discord = vi.hoisted(() => {
+   class DiscordAPIError extends Error {
+      status: number;
+
+      constructor(message: string, status: number) {
+         super(message);
+         this.name = "DiscordAPIError";
+         this.status = status;
+      }
+   }
+
+   return { DiscordAPIError, requestDiscord: vi.fn() };
+});
+
+vi.mock("@holdmetoit/discord", () => ({
+   DiscordAPIError: discord.DiscordAPIError,
+   requestDiscord: discord.requestDiscord,
+}));
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -31,13 +45,23 @@ vi.mock("@/core/observability/logger", () => ({
    },
 }));
 
+import {
+   fetchDiscordUserAvatar,
+   fetchDiscordUserAvatarViaOAuth,
+   syncUserAvatar,
+} from "./discord-avatar.service";
+
 describe("discord-avatar.service", () => {
    const originalEnv = process.env;
 
    beforeEach(() => {
       vi.clearAllMocks();
+      discord.requestDiscord.mockReset();
+      discord.requestDiscord.mockResolvedValue(null);
       process.env = { ...originalEnv };
       vi.mocked(prisma.account.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.account.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.user.update).mockResolvedValue({} as never);
    });
 
    afterEach(() => {
@@ -47,42 +71,39 @@ describe("discord-avatar.service", () => {
    describe("fetchDiscordUserAvatar", () => {
       it("returns null when DISCORD_BOT_TOKEN is not configured", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
-         const result = await fetchDiscordUserAvatar("80351110224678912");
-         expect(result).toBeNull();
+
+         expect(await fetchDiscordUserAvatar("80351110224678912")).toBeNull();
+         expect(discord.requestDiscord).not.toHaveBeenCalled();
       });
 
-      it("fetches and formats avatar when Discord API returns valid user", async () => {
+      it("formats the avatar returned by the Discord client", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-               id: "80351110224678912",
-               username: "testuser",
-               avatar: "new_avatar_hash_123",
-               discriminator: "0",
-            }),
+         discord.requestDiscord.mockResolvedValue({
+            id: "80351110224678912",
+            username: "testuser",
+            avatar: "new_avatar_hash_123",
+            discriminator: "0",
          });
 
          const result = await fetchDiscordUserAvatar("80351110224678912");
+
          expect(result).toEqual({
             avatarUrl:
                "https://cdn.discordapp.com/avatars/80351110224678912/new_avatar_hash_123.png",
             avatarHash: "new_avatar_hash_123",
          });
+         expect(discord.requestDiscord).toHaveBeenCalledWith(
+            "/users/80351110224678912"
+         );
       });
 
-      it("returns default avatar when user has no custom avatar on Discord", async () => {
+      it("returns the default embed avatar when the user has none", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-               id: "80351110224678912",
-               username: "testuser",
-               avatar: null,
-               discriminator: "0",
-            }),
+         discord.requestDiscord.mockResolvedValue({
+            id: "80351110224678912",
+            username: "testuser",
+            avatar: null,
+            discriminator: "0",
          });
 
          const result = await fetchDiscordUserAvatar("80351110224678912");
@@ -90,30 +111,36 @@ describe("discord-avatar.service", () => {
          expect(result?.avatarHash).toBeNull();
       });
 
-      it("handles 404 from Discord by returning default embed avatar", async () => {
+      it("returns the default embed avatar on a 404", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 404,
-         });
+         discord.requestDiscord.mockRejectedValue(
+            new discord.DiscordAPIError("Unknown User", 404)
+         );
 
          const result = await fetchDiscordUserAvatar("80351110224678912");
          expect(result?.avatarUrl).toContain("embed/avatars");
          expect(result?.avatarHash).toBeNull();
+      });
+
+      it("returns null on any other Discord error", async () => {
+         process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
+         discord.requestDiscord.mockRejectedValue(
+            new discord.DiscordAPIError("Internal Server Error", 500)
+         );
+
+         expect(await fetchDiscordUserAvatar("80351110224678912")).toBeNull();
       });
    });
 
    describe("fetchDiscordUserAvatarViaOAuth", () => {
-      it("returns error and requiresReauth when no account exists", async () => {
-         vi.mocked(prisma.account.findFirst).mockResolvedValue(null);
-         const res = await fetchDiscordUserAvatarViaOAuth("user_none");
-         expect(res.success).toBe(false);
-         if (!res.success) {
-            expect(res.requiresReauth).toBe(true);
-         }
+      it("returns requiresReauth when no account exists", async () => {
+         const result = await fetchDiscordUserAvatarViaOAuth("user_none");
+
+         expect(result.success).toBe(false);
+         if (!result.success) expect(result.requiresReauth).toBe(true);
       });
 
-      it("fetches profile using valid access token without re-login", async () => {
+      it("fetches the profile with a valid access token", async () => {
          vi.mocked(prisma.account.findFirst).mockResolvedValue({
             id: "acc_1",
             access_token: "valid_token",
@@ -121,35 +148,89 @@ describe("discord-avatar.service", () => {
             expires_at: Math.floor(Date.now() / 1000) + 3600,
          } as never);
 
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-               id: "617551062102048779",
-               username: "nrgslayer",
-               avatar: "fresh_hash_oauth",
-               discriminator: "0",
-            }),
+         discord.requestDiscord.mockResolvedValue({
+            id: "617551062102048779",
+            username: "nrgslayer",
+            avatar: "fresh_hash_oauth",
+            discriminator: "0",
          });
 
-         const res = await fetchDiscordUserAvatarViaOAuth("user_1");
-         expect(res.success).toBe(true);
-         if (res.success) {
-            expect(res.avatarUrl).toBe(
+         const result = await fetchDiscordUserAvatarViaOAuth("user_1");
+
+         expect(result.success).toBe(true);
+         if (result.success) {
+            expect(result.avatarUrl).toBe(
                "https://cdn.discordapp.com/avatars/617551062102048779/fresh_hash_oauth.png"
             );
          }
+         expect(discord.requestDiscord).toHaveBeenCalledWith("/users/@me", {
+            auth: "bearer",
+            token: "valid_token",
+         });
+      });
+
+      it("refreshes an expired token and retries the profile lookup", async () => {
+         process.env.AUTH_DISCORD_ID = "client_id";
+         process.env.AUTH_DISCORD_SECRET = "client_secret";
+
+         vi.mocked(prisma.account.findFirst).mockResolvedValue({
+            id: "acc_1",
+            access_token: "expired_token",
+            refresh_token: "refresh_123",
+            expires_at: Math.floor(Date.now() / 1000) - 60,
+         } as never);
+
+         discord.requestDiscord
+            .mockResolvedValueOnce({
+               access_token: "new_token",
+               refresh_token: "new_refresh",
+               expires_in: 3600,
+            })
+            .mockResolvedValueOnce({
+               id: "617551062102048779",
+               username: "nrgslayer",
+               avatar: "refreshed_hash",
+               discriminator: "0",
+            });
+
+         const result = await fetchDiscordUserAvatarViaOAuth("user_1");
+
+         expect(result.success).toBe(true);
+         expect(discord.requestDiscord).toHaveBeenNthCalledWith(
+            1,
+            "/oauth2/token",
+            expect.objectContaining({
+               method: "POST",
+               auth: "none",
+               passThroughBody: true,
+            })
+         );
+         expect(discord.requestDiscord).toHaveBeenNthCalledWith(
+            2,
+            "/users/@me",
+            { auth: "bearer", token: "new_token" }
+         );
+         expect(prisma.account.update).toHaveBeenCalledWith({
+            where: { id: "acc_1" },
+            data: {
+               access_token: "new_token",
+               refresh_token: "new_refresh",
+               expires_at: expect.any(Number),
+            },
+         });
       });
    });
 
    describe("syncUserAvatar", () => {
-      it("returns false if neither userId nor discordId is provided", async () => {
+      it("returns false when neither userId nor discordId is provided", async () => {
          const result = await syncUserAvatar({});
+
          expect(result.success).toBe(false);
          expect(result.newImageUrl).toBeNull();
       });
 
-      it("skips OAuth token lookup when allowOAuth is false", async () => {
+      it("skips OAuth lookup when allowOAuth is false", async () => {
+         delete process.env.DISCORD_BOT_TOKEN;
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
             id: "user_target",
             discordId: "80351110224678912",
@@ -171,7 +252,7 @@ describe("discord-avatar.service", () => {
          expect(result.error).toContain("without OAuth authorization");
       });
 
-      it("updates user avatar in DB when fresh avatar is fetched from Discord via Bot", async () => {
+      it("updates the stored avatar when the bot lookup returns a new hash", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
             id: "user_1",
@@ -179,18 +260,15 @@ describe("discord-avatar.service", () => {
             image: "https://cdn.discordapp.com/avatars/80351110224678912/old_dead_hash.png",
          } as never);
 
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-               id: "80351110224678912",
-               username: "testuser",
-               avatar: "fresh_hash_456",
-               discriminator: "0",
-            }),
+         discord.requestDiscord.mockResolvedValue({
+            id: "80351110224678912",
+            username: "testuser",
+            avatar: "fresh_hash_456",
+            discriminator: "0",
          });
 
          const result = await syncUserAvatar({ userId: "user_1" });
+
          expect(result.success).toBe(true);
          expect(result.updated).toBe(true);
          expect(result.newImageUrl).toBe(
@@ -204,7 +282,7 @@ describe("discord-avatar.service", () => {
          });
       });
 
-      it("returns success without database write when avatar is already identical", async () => {
+      it("does not write when the avatar is already current", async () => {
          process.env.DISCORD_BOT_TOKEN = "fake_bot_token";
          const currentAvatar =
             "https://cdn.discordapp.com/avatars/80351110224678912/current_hash.png";
@@ -214,25 +292,22 @@ describe("discord-avatar.service", () => {
             image: currentAvatar,
          } as never);
 
-         global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({
-               id: "80351110224678912",
-               username: "testuser",
-               avatar: "current_hash",
-               discriminator: "0",
-            }),
+         discord.requestDiscord.mockResolvedValue({
+            id: "80351110224678912",
+            username: "testuser",
+            avatar: "current_hash",
+            discriminator: "0",
          });
 
          const result = await syncUserAvatar({ userId: "user_1" });
+
          expect(result.success).toBe(true);
          expect(result.updated).toBe(false);
          expect(result.message).toContain("up to date");
          expect(prisma.user.update).not.toHaveBeenCalled();
       });
 
-      it("heals dead avatar hash to default embed avatar if bot query and oauth are unavailable", async () => {
+      it("heals a dead avatar hash to the default embed avatar", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
          vi.mocked(prisma.user.findFirst).mockResolvedValue({
             id: "user_2",
@@ -248,12 +323,13 @@ describe("discord-avatar.service", () => {
          const result = await syncUserAvatar({
             discordId: "80351110224678912",
          });
+
          expect(result.success).toBe(true);
          expect(result.newImageUrl).toContain("embed/avatars");
          expect(prisma.user.update).toHaveBeenCalled();
       });
 
-      it("preserves healthy avatar and requests re-auth when tokens are expired and allowOAuth is true", async () => {
+      it("preserves a healthy avatar and requests reauth when OAuth is unavailable", async () => {
          delete process.env.DISCORD_BOT_TOKEN;
          const healthyAvatar =
             "https://cdn.discordapp.com/avatars/80351110224678912/healthy_hash.png";
@@ -263,7 +339,6 @@ describe("discord-avatar.service", () => {
             image: healthyAvatar,
          } as never);
 
-         // HEAD request returns 200 OK (not 404)
          global.fetch = vi.fn().mockResolvedValue({
             ok: true,
             status: 200,
@@ -273,6 +348,7 @@ describe("discord-avatar.service", () => {
             userId: "user_3",
             allowOAuth: true,
          });
+
          expect(result.success).toBe(false);
          expect(result.requiresReauth).toBe(true);
          expect(result.newImageUrl).toBe(healthyAvatar);

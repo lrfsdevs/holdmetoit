@@ -50,6 +50,9 @@ const nextConfig = {
       outputFileTracingIncludes: {
          "/changelog": ["../../CHANGELOG.md"],
       },
+      // discord.js ships undici/ws-backed runtime code; keep it out of the
+      // server bundle and resolve it from node_modules instead.
+      serverComponentsExternalPackages: ["@holdmetoit/discord", "discord.js"],
    },
    /**
     * Returns permanent mappings from legacy URLs to the current application routes.

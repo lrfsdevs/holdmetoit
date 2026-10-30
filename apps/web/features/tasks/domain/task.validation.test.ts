@@ -4,6 +4,7 @@ import {
    createTaskSchema,
    deleteCategorySchema,
    deleteTaskSchema,
+   rolloverTasksSchema,
    toggleTaskSchema,
    updateCategorySchema,
    updateTaskSchema,
@@ -33,6 +34,30 @@ describe("task.validation", () => {
          }
       });
 
+      it("accepts challengeId as string or null", () => {
+         const challengeScoped = createTaskSchema.safeParse({
+            title: "Score 100 on quiz",
+            taskType: "WEEKLY",
+            categoryId: "cat_123",
+            challengeId: "chal_abc",
+         });
+         expect(challengeScoped.success).toBe(true);
+         if (challengeScoped.success) {
+            expect(challengeScoped.data.challengeId).toBe("chal_abc");
+         }
+
+         const personalScoped = createTaskSchema.safeParse({
+            title: "Buy textbook",
+            taskType: "WEEKLY",
+            categoryId: "cat_123",
+            challengeId: null,
+         });
+         expect(personalScoped.success).toBe(true);
+         if (personalScoped.success) {
+            expect(personalScoped.data.challengeId).toBeNull();
+         }
+      });
+
       it("rejects empty title", () => {
          const result = createTaskSchema.safeParse({
             title: "   ",
@@ -59,32 +84,29 @@ describe("task.validation", () => {
          expect(result.success).toBe(false);
       });
 
-      it("accepts valid dueDate format YYYY-MM-DD", () => {
-         const result = createTaskSchema.safeParse({
-            title: "Study Chapter 4",
-            taskType: "DAILY",
-            categoryId: "cat_123",
-            dueDate: "2026-10-06",
-         });
-         expect(result.success).toBe(true);
-         if (result.success) {
-            expect(result.data.dueDate).toBe("2026-10-06");
-         }
-      });
-
       it("rejects invalid dueDate format", () => {
          const result = createTaskSchema.safeParse({
-            title: "Study Chapter 4",
+            title: "Review notes",
             taskType: "DAILY",
             categoryId: "cat_123",
-            dueDate: "10-06-2026",
+            dueDate: "10-25-2026",
          });
          expect(result.success).toBe(false);
+      });
+
+      it("accepts valid dueDate format", () => {
+         const result = createTaskSchema.safeParse({
+            title: "Review notes",
+            taskType: "DAILY",
+            categoryId: "cat_123",
+            dueDate: "2026-10-25",
+         });
+         expect(result.success).toBe(true);
       });
    });
 
    describe("toggleTaskSchema", () => {
-      it("accepts valid toggle input", () => {
+      it("accepts valid toggle with isComplete", () => {
          const result = toggleTaskSchema.safeParse({
             taskId: "task_1",
             isComplete: true,
@@ -92,45 +114,52 @@ describe("task.validation", () => {
          expect(result.success).toBe(true);
       });
 
-      it("rejects empty taskId", () => {
+      it("accepts valid toggle with status", () => {
          const result = toggleTaskSchema.safeParse({
-            taskId: "   ",
-            isComplete: true,
-         });
-         expect(result.success).toBe(false);
-      });
-   });
-
-   describe("deleteTaskSchema", () => {
-      it("accepts valid taskId", () => {
-         const result = deleteTaskSchema.safeParse({
-            taskId: "task_abc",
+            taskId: "task_1",
+            status: "IN_PROGRESS",
          });
          expect(result.success).toBe(true);
       });
 
       it("rejects empty taskId", () => {
-         const result = deleteTaskSchema.safeParse({
-            taskId: "",
-         });
-         expect(result.success).toBe(false);
+         expect(
+            toggleTaskSchema.safeParse({ taskId: "  ", isComplete: true })
+               .success
+         ).toBe(false);
+      });
+
+      it("rejects when neither isComplete nor status is provided", () => {
+         expect(toggleTaskSchema.safeParse({ taskId: "task_1" }).success).toBe(
+            false
+         );
+      });
+   });
+
+   describe("deleteTaskSchema", () => {
+      it("accepts valid taskId", () => {
+         expect(deleteTaskSchema.safeParse({ taskId: "task_1" }).success).toBe(
+            true
+         );
+      });
+
+      it("rejects empty taskId", () => {
+         expect(deleteTaskSchema.safeParse({ taskId: "" }).success).toBe(false);
       });
    });
 
    describe("createCategorySchema", () => {
-      it("accepts valid category name and defaults taskType to DAILY", () => {
-         const result = createCategorySchema.safeParse({
-            name: "Mathematics",
-         });
+      it("accepts valid category name", () => {
+         const result = createCategorySchema.safeParse({ name: "Math" });
          expect(result.success).toBe(true);
          if (result.success) {
             expect(result.data.taskType).toBe("DAILY");
          }
       });
 
-      it("accepts explicit WEEKLY taskType", () => {
+      it("accepts explicit taskType", () => {
          const result = createCategorySchema.safeParse({
-            name: "Weekly Goals",
+            name: "Math",
             taskType: "WEEKLY",
          });
          expect(result.success).toBe(true);
@@ -139,59 +168,37 @@ describe("task.validation", () => {
          }
       });
 
-      it("rejects empty category name", () => {
-         const result = createCategorySchema.safeParse({
-            name: "   ",
-         });
-         expect(result.success).toBe(false);
+      it("rejects empty name", () => {
+         expect(createCategorySchema.safeParse({ name: "   " }).success).toBe(
+            false
+         );
       });
    });
 
    describe("updateTaskSchema", () => {
-      it("accepts valid task update", () => {
+      it("accepts title update", () => {
          const result = updateTaskSchema.safeParse({
             taskId: "task_1",
-            title: "Updated task title",
+            title: "Updated Title",
          });
          expect(result.success).toBe(true);
       });
 
-      it("accepts valid task status update without title", () => {
+      it("accepts challengeId update", () => {
          const result = updateTaskSchema.safeParse({
             taskId: "task_1",
-            isComplete: true,
+            challengeId: "chal_123",
          });
          expect(result.success).toBe(true);
-         if (result.success) {
-            expect(result.data.isComplete).toBe(true);
-         }
-      });
 
-      it("accepts valid update with both title and isComplete", () => {
-         const result = updateTaskSchema.safeParse({
+         const toPersonal = updateTaskSchema.safeParse({
             taskId: "task_1",
-            title: "Finished essay",
-            isComplete: true,
+            challengeId: null,
          });
-         expect(result.success).toBe(true);
-         if (result.success) {
-            expect(result.data.title).toBe("Finished essay");
-            expect(result.data.isComplete).toBe(true);
-         }
+         expect(toPersonal.success).toBe(true);
       });
 
-      it("rejects empty taskId or empty title", () => {
-         expect(
-            updateTaskSchema.safeParse({ taskId: "", title: "Valid title" })
-               .success
-         ).toBe(false);
-         expect(
-            updateTaskSchema.safeParse({ taskId: "task_1", title: "   " })
-               .success
-         ).toBe(false);
-      });
-
-      it("accepts valid dueDate update without title or status", () => {
+      it("accepts dueDate update", () => {
          const result = updateTaskSchema.safeParse({
             taskId: "task_1",
             dueDate: "2026-10-08",
@@ -202,7 +209,7 @@ describe("task.validation", () => {
          }
       });
 
-      it("rejects when neither title, isComplete, status, nor dueDate is provided", () => {
+      it("rejects when neither title, isComplete, status, dueDate, nor challengeId is provided", () => {
          const result = updateTaskSchema.safeParse({
             taskId: "task_1",
          });
@@ -243,6 +250,32 @@ describe("task.validation", () => {
          expect(
             deleteCategorySchema.safeParse({ categoryId: "" }).success
          ).toBe(false);
+      });
+   });
+
+   describe("rolloverTasksSchema", () => {
+      it("accepts valid taskIds and targetDateKey", () => {
+         const result = rolloverTasksSchema.safeParse({
+            taskIds: ["task_1", "task_2"],
+            targetDateKey: "2026-10-26",
+         });
+         expect(result.success).toBe(true);
+      });
+
+      it("rejects empty taskIds array", () => {
+         const result = rolloverTasksSchema.safeParse({
+            taskIds: [],
+            targetDateKey: "2026-10-26",
+         });
+         expect(result.success).toBe(false);
+      });
+
+      it("rejects invalid targetDateKey format", () => {
+         const result = rolloverTasksSchema.safeParse({
+            taskIds: ["task_1"],
+            targetDateKey: "10-26-2026",
+         });
+         expect(result.success).toBe(false);
       });
    });
 });

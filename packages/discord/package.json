@@ -1,0 +1,32 @@
+{
+   "name": "@holdmetoit/discord",
+   "version": "0.0.0",
+   "private": true,
+   "type": "module",
+   "main": "./dist/index.js",
+   "types": "./dist/index.d.ts",
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "import": "./dist/index.js",
+         "default": "./dist/index.js"
+      },
+      "./bot": {
+         "types": "./dist/bot/index.d.ts",
+         "import": "./dist/bot/index.js",
+         "default": "./dist/bot/index.js"
+      }
+   },
+   "scripts": {
+      "build": "tsc -p tsconfig.json",
+      "typecheck": "tsc -p tsconfig.json --noEmit",
+      "prepare": "npm run build"
+   },
+   "dependencies": {
+      "discord.js": "^14.26.3"
+   },
+   "devDependencies": {
+      "@types/node": "^22.10.0",
+      "typescript": "^5.8.3"
+   }
+}

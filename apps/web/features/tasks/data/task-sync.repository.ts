@@ -1,4 +1,5 @@
 import { prisma } from "@/core/db";
+
 import { compactMutationQueue } from "@/features/tasks/domain/task-sync.schema";
 import type {
    BatchSyncResponse,
@@ -8,6 +9,7 @@ import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletio
 import {
    DEFAULT_CATEGORY_NAME,
    getUserCategorizedTasks,
+   getUserCategorizedTasksFromDatabase,
    resolveTaskChallengeId,
    validateTaskChallengeId,
 } from "@/features/tasks/data/task.repository";
@@ -69,12 +71,17 @@ export async function processBatchSync(
                            });
                         }
                      } else {
+                        const initialSortOrder =
+                           typeof payload.sortOrder === "number"
+                              ? payload.sortOrder
+                              : 0;
                         await tx.category.create({
                            data: {
                               id: catId,
                               userId,
                               name: explicitName,
                               taskType,
+                              sortOrder: initialSortOrder,
                            },
                         });
                      }
@@ -289,6 +296,21 @@ export async function processBatchSync(
                            ? new Date(String(payload.dueDate))
                            : null;
                      }
+                     if (payload.challengeId !== undefined) {
+                        const rawChalId = payload.challengeId;
+                        if (
+                           typeof rawChalId === "string" &&
+                           rawChalId.trim().length > 0
+                        ) {
+                           dataToUpdate.challengeId =
+                              await validateTaskChallengeId(
+                                 userId,
+                                 rawChalId.trim()
+                              );
+                        } else {
+                           dataToUpdate.challengeId = null;
+                        }
+                     }
                      if (payload.status) {
                         const status = payload.status as TaskStatus;
                         dataToUpdate.status = status;
@@ -369,7 +391,10 @@ export async function processBatchSync(
       }
    }
 
-   const latest = await getUserCategorizedTasks(userId);
+   const latest =
+      typeof getUserCategorizedTasksFromDatabase === "function"
+         ? await getUserCategorizedTasksFromDatabase(userId)
+         : await getUserCategorizedTasks(userId);
 
    const flatTasks = [
       ...latest.dailyCategories.flatMap((c) => c.tasks),

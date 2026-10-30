@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-26 (Session 162 on `afnan-jr` · Session 161 on `afnan-jr` · Session 160 on `afnan-jr` · Session 159 on `afnan-jr` · Session 155 on `dev`)
+> **Last Updated:** 2026-10-29 (Session 175 on `krish` · Session 163 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -15,7 +15,7 @@
 | :----------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run typecheck`                                          | ✅ 0 errors                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `npm run lint`                                               | ✅ 0 errors (design-token guard: no hex / no primitive access / no legacy aliases)                                                                                                                                                                                                                                                                                                                               |
-| `npm test`                                                   | ✅ 187 files green (1777/1777 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
+| `npm test`                                                   | ✅ 211 files green (2079/2079 tests passing)                                                                                                                                                                                                                                                                                                                                                                     |
 | `npm run build`                                              | ✅ 18 routes + Edge Middleware compiled (production build clean including `/leaderboard`, `/admin`, `/wallet`, `/pokemon`, `/pokedex`, `/devboard`, `/changelog`)                                                                                                                                                                                                                                                |
 | Phase 0 feature parity (vs `FEATURES.md`)                    | ✅ **100%** — Solo auto-punishment math, uncapped solo capacity, ⚡ Solo Scholar branding, Host Pardon modal (`FEAT-PUN-04`), Punishment Wall (`FEAT-PUN-02`), Solo lifecycle E2E suite; canonical route redirects + edge guard landed from `dev`                                                                                                                                                                |
 | Phase 0 Milestone Gate 1 (`ROADMAP.md` §3.4)                 | ❌ Not passed: no live pilot challenge has run; Vercel deployment not recorded in the repo                                                                                                                                                                                                                                                                                                                       |
@@ -37,7 +37,7 @@
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
-| `/admin/challenges/new`                       | Challenge creator wizard (2 required image uploads)                                                                                                        | `ADMIN` / `DEV`                        |
+| `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                  | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
 | `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                              | Authenticated / Participant            |
@@ -172,10 +172,120 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > Order: ✅ DevBoard `Tabs` · ✅ `Label` (67) → **next:** `Skeleton` (~20) →
 > `ScrollArea` (9) / `Avatar` (31, decide `next/image`) / `Separator` (3) / `Progress` (1)
 > → per-page 9-state coverage → a11y/360px/motion sweeps → DevBoard "Design" styleguide.
+>
+> **TASKER TRACK (Session 163):** register commands in the dev guild
+> (`npm run deploy:tasker-commands -- --guild <id>`), smoke-test `/task`, `/category`, `/help`,
+> `/yapperize`, then review the `TASKER_SOURCE_DATABASE_URL` dry run before applying the
+> legacy task backfill. Archive `~/Projects/tasker` only after parity is confirmed.
 
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 175 — 2026-10-29 (Task Status Transition Stability, Anti-Flash Reversion & Fresh DB Sync on `krish`)
+
+- **Context & Bug Resolution:**
+   - Addressed user feedback where changing task statuses (e.g. from `TODO` to `IN_PROGRESS`, or `IN_PROGRESS` to `COMPLETED`) took a long time to reflect or flashed between the previous state (`IN_PROGRESS` / `TODO`) and the changed state.
+- **Root Cause Identified & Resolved:**
+   1. **Stale Cache in Batch Sync (`task-sync.repository.ts`):** `processBatchSync` was querying `latest` via `getUserCategorizedTasks(userId)` which is wrapped in Next.js `unstable_cache`. Because mutations had just been applied in the transaction, the cached function returned the pre-mutation stale snapshot in `serverChanges`.
+   2. **Local Overwrite of Optimistic State (`task-sync.service.ts`):** When client processed `serverChanges`, acknowledged mutations were removed from the queue, so the stale server changes overwrote local IndexedDB tasks. When `TASKS_SYNCED_EVENT` fired, the view rehydrated from IndexedDB and flashed back to the old status until the next 15-second background sync.
+   3. **Rehydration Optimistic Mutation Protection (`cockpit-tasks-section.tsx`):** `hydrateFromIndexedDB` now tracks all active pending mutations in IndexedDB and preserves the currently rendered optimistic status in React state so incoming sync events or hydration passes cannot clobber in-flight status changes.
+   4. **Closure Resilience in `setTaskStatus` & Snappy Debounce (`cockpit-tasks-section.tsx`):**
+      - Added fallback category discovery by `taskId` across all categories if `catIndex` is out-of-date in dropdown/context menu closures.
+      - Lowered discrete status change sync debounce delay from 1500ms to 400ms (`scheduleSync(userId, 400)`), making cloud persistence fast while preventing rapid duplicate calls.
+      - Applied resilient lookup to `toggleDailyTask` and `toggleWeeklyTask` and preserved `challengeId` on weekly tasks.
+- **Files Modified & Created:**
+   - `apps/web/features/tasks/data/task.repository.ts`: Exported `getUserCategorizedTasksFromDatabase(userId)` for direct Prisma queries bypassing `unstable_cache`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Replaced cached `getUserCategorizedTasks` with direct `getUserCategorizedTasksFromDatabase` in `processBatchSync`.
+   - `apps/web/features/tasks/data/task-sync.repository.test.ts`: Updated repository test mocks to reflect fresh database fetcher.
+   - `apps/web/features/tasks/data/local/task-sync.service.ts`: Protected local tasks with `syncState === "pending"` and newer timestamps from stale server overwrite.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added optimistic mutation protection in `hydrateFromIndexedDB`, resilient category lookup by `taskId`, and fast 400ms sync scheduling.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-status-stability.test.tsx`: Added test suite covering immediate status transition, anti-flash preservation across live sync events, and checkbox row toggling.
+- **Verification & Quality Gates:**
+   - Full workspace test suite: ✅ 212 test files passed (2,087/2,087 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+
+### Session 174 — 2026-10-29 (Daily Snooze Banner Layout Stabilization & Earlier Tasks Status Editing on `krish` · GH #196 / KAN-65)
+
+- **Today Rollover Snooze Banner Layout Fix (`cockpit-tasks-section.tsx`):**
+   - Resolved severe flex layout collision where `sm:flex-row` and `shrink-0` on action buttons squeezed the text description into a vertical single-word column and caused buttons to overlap the description text on narrow card widths.
+   - Refactored banner into a clean 2-row container (`flex flex-col gap-2.5`):
+      - **Row 1:** Icon, headline, and subtitle have full-width text space with top-right dismiss button (`X`).
+      - **Row 2:** Action buttons (`Roll over to Today` and `Don't remind today`) sit neatly aligned below the description with natural wrap tolerance.
+- **Earlier / Past Days Daily Task Status Editing Enabled (`cockpit-tasks-section.tsx`):**
+   - Addressed user feedback where participants completed study tasks on earlier days but had not updated their status before midnight.
+   - Removed `checkIsDayLocked` guard from `setTaskStatus` for daily tasks and removed `isPastDayLocked` guard / `cursor-not-allowed opacity-75` styling from the daily task row click handler.
+   - Preserves lock invariants on adding new tasks to past challenge days while allowing full status editing (checkbox toggling, `Completed`, `In Progress`, `Crossed Out`, `TODO`) on existing tasks.
+- **Verification & Quality Gates:**
+   - Added unit test in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying interactive task completion toggling for past-day daily tasks.
+   - 0 TypeScript compiler errors (`npm run typecheck:web`).
+   - 0 ESLint errors (`npm run lint:web`).
+   - 89/89 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
+- **Jira Status:** `KAN-65` transitioned to `In Review` (id: 10006).
+- **PR Status:** PR creation withheld per user request.
+
+### Session 172 — 2026-10-28 (Cockpit Tasks Card Overlap Fixes, Scope Badges, & Review Hardening on `krish` · PR #200)
+
+- **Cockpit Tasks Header Layout & Overlap Fix:**
+   - Resolved header badge collision in Weekly Todos and Daily Todos columns where count pills (e.g. `1/18 Goals` vs `1/18 Completed`) stacked on top of each other on compact card widths.
+   - Updated header containers to `flex flex-wrap items-center justify-between gap-2` with `shrink-0` on children to ensure clean separation and wrap-safety.
+- **Weekly Task Card Space Optimization:**
+   - Replaced bulky textual tags (`Goal` / `Personal`) and text badges with compact icon-only badges (`🏆` and `👤`) with accessible tooltips and `aria-label`.
+   - Removed redundant "Completed" text button on finished weekly tasks; color-coded completed task checkboxes with emerald check styling (`border-emerald-500 bg-emerald-500/15 text-emerald-400`).
+- **PR #200 Review Hardening (`cockpit-tasks-section.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`):**
+   - **Hydration Safe Rollover Snooze:** Initialized `isRolloverSnoozed` state to `false` for SSR/hydration parity, reading and updating from `localStorage` within `useEffect`. Updated Vitest rollover tests to run in jsdom with React effects enabled.
+   - **WCAG 2.5.3 (Label in Name) A11y Alignment:** Removed conflicting `aria-label="Don't remind again today"` on `rollover-snooze-today-button` and matched `title="Don't remind today"` to the visible label.
+   - **Active Day Option Clamping:** Added synchronization effect ensuring `selectedDateKey` and `selectedDayNumber` safely clamp to a valid day in `dayOptions` whenever the options change.
+   - **Review Finding 4 Rejection:** Evaluated suggestion to filter `dayOptions` to only return challenge dates falling within the calendar week of `activeWeekAnchorDateKey`. Skipped with documented rationale: 7-day challenge views require the complete 7-day sequence (`Day 1..Day 7`) in the 7-column layout, and slicing by calendar week would break multi-week or mid-week challenge rendering and break existing regression tests.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 211 Vitest test files passing (2079/2079 tests green).
+
+### Session 163 — 2026-10-26 (Incomplete Task Rollover & Challenge Goal Scoping on `krish` · GH #185 / Jira KAN-61)
+
+- **Incomplete Task Rollover Helper (FEAT-TASK-03):** Implemented ergonomic 1-click rollover for carrying over incomplete daily study commitments from past days to Today.
+   - **Domain Isolation (`features/tasks/domain/task-rollover.ts`):** Pure calculation math and candidate filtering (`isTaskIncomplete`, `extractDateKey`, `getTaskDateKey`, `findRolloverCandidates`, `applyRolloverToCategories`, `getRolloverSummary`). 18 unit tests green in Vitest (`task-rollover.test.ts`).
+   - **Validation & Schema (`features/tasks/domain/task.validation.ts`):** Added `rolloverTasksSchema` validating array of UUIDs and target `YYYY-MM-DD` date key.
+   - **Data Layer (`features/tasks/data/task.repository.ts`):** Added `rolloverIncompleteTasks` updating target due dates in PostgreSQL with ownership verification.
+   - **API Actions (`features/tasks/api/task.actions.ts`):** Added `rolloverTasksAction` with session validation and structured logging.
+   - **Presentation Layer (`features/study-logs/presentation/cockpit/`):**
+      - Rendered Today Rollover Banner (`data-testid="rollover-today-banner"`) when past days contain incomplete tasks with 1-click "Roll over to Today" button (`data-testid="rollover-all-button"`) and dismiss button.
+      - Rendered Past Day Rollover Banner (`data-testid="rollover-past-day-banner"`) when viewing a past day with incomplete tasks.
+      - Added 1-click rollover icon button directly on past-day daily task cards.
+- **Challenge Goal Scoping (FEAT-DECL-02 / Law L6 Alignment):** Implemented explicit goal scoping for weekly tasks during active challenges to eliminate conflation between personal study goals and mandatory challenge commitments.
+   - **Domain Isolation (`features/tasks/domain/task-scope.ts`):** Pure scoping predicates (`getTaskScope`, `isChallengeScopedTask`, `isPersonalScopedTask`, `resolveTaskScopeChallengeId`, `canScopeTaskToChallenge`, `countScopedTasks`). 10 unit tests green (`task-scope.test.ts`).
+   - **Schema & Persistence:** Extended `createTask`, `updateTask`, `task-sync.repository.ts`, and client/server actions to support explicit `challengeId` assignment/nulling.
+   - **Law L6 Three-Condition Invariant:** Challenge results lock queries filter strictly by `taskType = "WEEKLY"` and `challengeId = challengeId`. Personal weekly tasks retain `challengeId = null`, guaranteeing that personal study goals are never evaluated at challenge lock or used for scoreboard tie-breaking.
+   - **Presentation Layer (`cockpit-tasks-section.tsx`, `cockpit-task-menu.tsx`):**
+      - Weekly Todos Header Challenge Goals pill (`data-testid="weekly-challenge-goals-badge"`): displays completed vs total challenge goals (e.g. `1/2 Goals`) during active challenges.
+      - Task Card Scope Badges: renders `Goal` badge (`data-testid="task-scope-challenge-badge"`) or `Personal` badge (`data-testid="task-scope-personal-badge"`).
+      - Add & Edit Modal Goal Scope Selector: toggle between Challenge Goal (mandatory under Law L6) and Personal Task.
+      - Context & Dropdown Menu: added 1-click "Set as Challenge Goal" and "Convert to Personal Goal" actions, plus "Roll over to Today" on past days.
+- **Quality Gates:** 0 TypeScript compiler errors (`npm run typecheck:web`), 0 ESLint errors (`npm run lint:web`), 100% test coverage across tasks and cockpit presentation suites (149/149 task tests green, 52/52 cockpit presentation tests green).
+- **PR #191 Review Feedback Addressed (Commit `8d91a0b`):**
+   - **`task.repository.ts`:**
+      - Restricted `rolloverIncompleteTasks` where clause to `taskType: "DAILY"`, `isComplete: false`, and `status: { notIn: ["COMPLETED", "CROSSED_OUT"] }`.
+      - Hardened `updateTask` to reject challenge scoping for non-weekly tasks (`Only weekly tasks can be scoped to a challenge`) and validated non-null `challengeId` via `validateTaskChallengeId` verifying participant authorization, unlocked results, and unexpired challenge window.
+   - **`cockpit-tasks-section.tsx` & `cockpit-task-menu.tsx`:**
+      - Updated `weeklyScopedCounts`, task goal badges, and menu checks to strictly compare `task.challengeId === linkableChallengeId`, added `linkableChallengeId` to memo dependencies, and scoped counts strictly to the active challenge.
+      - Updated individual past-day task button to call `handleRolloverIncompleteTasks({ sourceDateKey: selectedDateKey, taskId: task.id })` rather than `moveTaskToDay`, safely bypassing past-day challenge lock guards.
+   - **Domain & Test Hardening (`task-rollover.ts`, `task.repository.test.ts`, `task-rollover.test.ts`):**
+      - Supported `taskId` filtering in `findRolloverCandidates`.
+      - Added test coverage for invalid challenge ID rejection, non-weekly challenge scope rejection, and repository rollover predicates. Full task/cockpit test suite passing (218/218 tests green).
+
+### Session 163 — 2026-10-26 (Tasker bot migration + shared Discord package on `afnan-jr`)
+
+- **New package `packages/discord` (`@holdmetoit/discord`)** — built with `tsc` to `dist/`, dual exports:
+   - `.` → discord.js v14 REST client (`sendChannelMessage`, `editChannelMessage`, `requestDiscord`, `fetchDiscordUser`, `fetchGuildMember`) with rate-limit/429 handling, plus shared `DiscordEmbed` / `DiscordSendResult` types and `MISSING_TOKEN_ERROR`.
+   - `./bot` → gateway runtime (`createBotClient`, `loadCommands`, `loadEvents`, `installInteractionHandler`, `installMessageHandler`, `deploySlashCommands`, `startHealthServer`, `installGracefulShutdown`).
+- **New app `apps/tasker` (`@holdmetoit/tasker`)** — migrated from the standalone Bun repo without git history. Node 22 + `tsx` (no emit), Vitest, `node:http` `/health`, zod-validated `src/config/env.ts` SPOC, repo-root-context Dockerfile for Render.
+   - Commands: `/ping`, `/help`, `/category create|list|delete|rename`, `/task add|list|done|remove|rename`, `/yapperize` (Gemini with 429/503 fallback chain). Prefix `'` support is config-gated (`DISCORD_ENABLE_PREFIX_COMMANDS`).
+   - **Shared tables:** uses `Category` / `Task` from `@holdmetoit/database`; `userId` is the internal `User.id`. Identity resolves `User.discordId` and replies with a sign-in link when absent — **no bot-side `User` creation** (avoids the `User.discordId` unique collision with Auth.js).
+   - Schema adaptations: required `Task.categoryId` → always resolve `Default`; category delete reassigns tasks to `Default` in a transaction and refuses to delete `Default`; soft-deleted category names are revived instead of re-inserted; task CRUD scoped by `userId` and filtered to `challengeId = null`.
+   - One-off `src/scripts/backfill-tasker-data.ts` (dry-run by default, `TASKER_SOURCE_DATABASE_URL`).
+- **Web migrated off raw Discord REST** — feedback embeds, challenge-feedback embeds, avatar sync (bot + OAuth `@me`/token refresh) and guild-role lookup now delegate to `@holdmetoit/discord`. Duplicate `DiscordEmbed`/`DiscordSendResult` declarations removed. `next.config.mjs` externalizes `@holdmetoit/discord` / `discord.js` for server builds.
+- **Tooling:** root scripts `build:discord`, `dev:tasker`, `start:tasker`, `test:tasker`, `typecheck:tasker`, `deploy:tasker-commands`; web scripts now build the Discord package first; CI builds `@holdmetoit/discord` and runs Tasker typecheck/tests.
+- **Verification:** tasker 69/69 tests, web 1945/1945 tests, both typechecks clean, discord package builds clean.
+- **Docs:** [`docs/tasker/README.md`](docs/tasker/README.md); AGENTS.md §6.2 carve-out for `apps/tasker` (not `@HoldMeToItBot`).
 
 ### Session 162 — 2026-10-26 (Duo emoji editing + combined identity audits on `afnan-jr`)
 
@@ -705,47 +815,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - No Gacha pull buttons, no pity counters, no trading, no combat/battle stats, no secondary currency, no production migrations or deployments.
 - **NEXT STEP (superseded by Session 119):** The catalogue importer was removed; the catalogue now lives in the DB. See Session 119.
 
-### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119 (importer removed; schema normalized)
+### Session 111 — 2026-10-15 (Phase 2A — Pokémon Metadata Bundle Importer on `afnan`) — ⛔ SUPERSEDED by Session 119
 
-- **Scope:** Inspected, verified, and integrated the complete Pokémon metadata bundle (`pokemon_metadata.json`, `pokemon_metadata.csv`, `pokemon_metadata.sqlite`) covering Generations 1 through 9 (1,351 entries), distinguished canonical species from alternate forms, separated source lore classification from HoldMeToIt game economy rarity, implemented an idempotent CLI importer with `--dry-run`, and connected Generation and Classification filters into the Pokédex UI.
-- **Triple-Format Dataset Inspection (Step 1 & Step 2):**
-   - Confirmed 100% record parity across all three files: exactly 1,351 rows, 37 columns, zero field or row discrepancies.
-   - Selected `pokemon_metadata.json` as canonical repeatable import format (natively parsed types/abilities, avoids native SQLite C-bindings).
-   - Provenance: PokéAPI / Veekun open-source relational database dump and Pokémon Showdown battle sprites mirrored by PokéAPI on GitHub.
-   - IP & Licensing: Trademarks and copyright belong to Nintendo, Creatures Inc., and GAME FREAK Inc. Non-commercial fair-use educational study gamification without redistribution. Resilient fallback SVG Pokéball silhouettes prevent external host dependency breakage.
-- **Species vs. Form Distinction (Step 3):**
-   - 1,025 canonical species (`is_default_form: true`, National Dex #1 to #1025).
-   - 326 alternate forms (`is_default_form: false`, IDs 10001..10326) consolidated into `species.metadata.forms`.
-   - Strictly prevents duplicate Pokédex entries and unique constraint collisions on `pokedexNumber`.
-- **Lore vs. Game Economy Rarity Separation (Step 4):**
-   - Stored source classifications (`is_legendary`, `is_mythical`, `is_baby`) as distinct boolean flags in `PokemonSpecies`.
-   - HoldMeToIt Game Rarity (`PokemonRarity`) calculated via approved domain heuristic (`calculateHoldMeToItRarity` in `features/pokemon/domain/pokemon-rarity.ts`):
-      - Mythical -> `MYTHICAL` (23 species, 2.2%)
-      - Legendary -> `LEGENDARY` (71 species, 6.9%)
-      - BST >= 540 -> `EPIC` (59 species, 5.8%)
-      - 450 <= BST < 540 -> `RARE` (372 species, 36.3%)
-      - 320 <= BST < 450 -> `UNCOMMON` (262 species, 25.6%)
-      - BST < 320 -> `NORMAL` (238 species, 23.2%)
-   - Non-negotiable: Combat stats and rarity do NOT alter study coin generation rates, challenge deficits, or betting odds.
-- **Repeatable CLI Importer (`scripts/import-pokemon-bundle.ts` & `features/pokemon/data/pokemon-bundle-importer.ts`) (Step 5):**
-   - Command: `npm run db:import:pokemon`
-   - Flags: `--dry-run`, `--limit=<N>`, `--file=<path>`.
-   - Idempotent upserts on `slug` preserving existing user collections (`UserPokemon`), wallets, wagers, and study logs.
-   - Zod validation on all records against `UpsertPokemonSpeciesSchema`.
-- **Pokédex Presentation Integration (Step 7):**
-   - Added Generation Filter (Gen 1 to Gen 9) in `pokemon-filter-bar.tsx`.
-   - Added Source Classification Quick Filter (All, Legendary, Mythical, Standard) in `pokemon-filter-bar.tsx`.
-   - Added Mythical / Legendary visual badges in `PokemonCard.tsx` and `PokemonDetailModal.tsx`.
-   - Added physical dimensions (Height, Weight) and alternate form variant chips in `PokemonDetailModal.tsx`.
-   - Verified collection progress denominator dynamically tracks available canonical species count (1,025).
-- **Quality Gates Verified:**
-   - `npm run typecheck` passed (0 errors).
-   - `npm run test` passed (127 test files, 1269/1269 tests green, 12 new importer tests).
-   - `npm run build` passed (production build clean across all routes).
-   - Dry run validated 100% of the 1,025 species with 0 rejected records.
-- **Strict Data Protection (Step 9):**
-   - Zero database resets, zero destructive migrations, zero touches on participant wallets, ledger transactions, or challenge records.
-- **NEXT STEP (superseded by Session 119):** Live DB upsert completed; the importer and `npm run db:import:pokemon` were removed in Session 119.
+- **Historical Summary:** Initial exploratory importer spike covering Generations 1–9 (1,351 entries). Completely superseded by Session 119 where metadata was normalized into PostgreSQL tables (`PokemonSpecies`, `PokemonForm`, `PokemonAbility`) and the standalone importer script was deleted.
 
 ### Session 112 — 2026-10-16 (Frontend Design System Audit & Token Refactoring of Economy & Pokédex on `afnan`)
 
@@ -1507,3 +1579,317 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors.
    - `npm run test:web`: ✅ 194 test files passed (1843/1843 tests green).
 - **NEXT STEP:** Submit PR from `krish` to `dev`, transition Jira `KAN-34` from `In Progress` to `In Review`, and proceed to Slice 2 (GH #184 / KAN-60).
+
+### Session 155 — 2026-10-25 (Calendar Week Paging & Compact Date Picker Navigation on `krish` — GH-#184 / KAN-60)
+
+- **Context & Objective:** Implemented Slice 2 of the Daily Tasks overhaul (GH #184 / KAN-60). Enables participants outside challenges to page across arbitrary calendar weeks (past and future), jump directly to any date via a compact monthly popover picker, and snap back to the current day.
+- **Domain Refinements (`challenge-day.ts`):**
+   - Decoupled anchor week from the current day in `getCalendarWeekDayOptions(anchorDate?, today?)`. `anchorDate` generates the Monday–Sunday week while `today` strictly governs `isToday`, `isYesterday`, `isPast`, and `isFuture`.
+   - Added `getAdjacentWeekAnchor(currentAnchor, offsetWeeks)` to safely calculate prior/next week anchor strings across month and year boundaries.
+   - Added `formatWeekRange(startDateKey, endDateKey)` to format clean range strings (e.g. `Oct 19 – 25`, `Oct 26 – Nov 1`, `Dec 28, 2026 – Jan 3, 2027`).
+   - Added `isSameCalendarWeek(dateKeyA, dateKeyB)` for ISO Monday–Sunday week boundary equality.
+   - Added `getCalendarMonthGrid(yearOrDate, monthIndex?)` returning Monday-aligned 7-column month grid structures (`CalendarMonthGrid`, `CalendarMonthCell`).
+   - Added new unit tests in `challenge-day.test.ts` (earlier checkpoint: 60/60; final: 64/64 domain tests passing).
+- **Presentation Layer Components (`cockpit-date-picker-popover.tsx` & `cockpit-tasks-section.tsx`):**
+   - Created `CockpitDatePickerPopover` and `CockpitWeekNavigator` featuring previous/next week chevrons (`‹` and `›`), calendar icon, week range button trigger, compact month calendar picker, weekday headers (`Mo`–`Su`), today indicator ring, and quick jump to today.
+   - Integrated `CockpitWeekNavigator` into `CockpitTasksSection` Daily Todos header when `!hasChallengeContext`.
+   - Wired `activeWeekAnchorDateKey` state with `handlePreviousWeek`, `handleNextWeek`, and `handleSelectDateFromPicker`.
+   - Fixed Today button jump & layout stabilization: structured Daily Todos header into a stable 2-row layout (Row 1: Section Title, Day Badge, and Completed Counter mirroring Weekly Todos; Row 2: Fixed Week Navigator directly above the 7-day pill switcher). Eliminates all vertical jumping and orphan wrapping.
+   - Resolved Completed Challenge Week Locking: added `isChallengeDayDateLocked` in `challenge-day.ts` and forwarded `challengeStartDate` & `totalChallengeDays` from `home-cockpit-view.tsx` even when `challengeStatus === "COMPLETED"`. Ensures all days of a completed challenge from prior weeks remain strictly locked when the new calendar week starts, while new week days remain unlocked.
+   - Preserved active challenge lockdown: calendar week navigation is hidden during active challenges where days are strictly bound to challenge duration.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/domain/challenge-day.test.ts`: 64/64 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-date-picker-popover.test.tsx`: 8/8 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: 30/30 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: 4/4 tests passing.
+   - Full workspace test suite: ✅ 196 test files passed (1,879/1,879 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-60` transitioned from `In Progress` to `In Review` (id: 10006).
+- **GitHub PR & Issue Status:** Submitted PR [#188](https://github.com/lrfsdevs/holdmetoit/pull/188) from `krish` to `dev`; closed GitHub Issue [#184](https://github.com/lrfsdevs/holdmetoit/issues/184).
+- **NEXT STEP:** Peer review and merge PR #188 into `dev`, then proceed to next roadmap milestone or release cycle.
+
+### Session 164 — 2026-10-27 (Optional Punishment PFP & Safe Forfeit Avatar Omission on `krish`)
+
+- **Context & Objective:** Supported running challenges without forfeits by making the punishment PFP optional across the creation wizard, manage tab, and admin actions, adding a dedicated "No Punishment" placeholder badge and card to the Accountability Wall, and safely omitting the forfeit download button when no avatar is configured.
+- **Backend & Actions (`challenge-admin.actions.ts`):**
+   - Modified `createChallengeSchema` so `punishmentPfpUrl` is optional (`z.string().trim().nullable().optional()`), trimming non-empty strings and falling back to `null`.
+   - Updated `createChallengeAction` to only validate storage folder allowlists when `punishmentPfpUrl` is non-null.
+   - Updated `updateChallengeAction` so administrators can remove/clear an existing challenge's punishment PFP by submitting `null` or empty string without triggering `INVALID_PUNISHMENT_PFP`, while continuing to clean up replaced unreferenced storage images.
+- **Presentation Layer (`challenge-creator-wizard.tsx`, `challenge-image-input.tsx`, `punishment-wall.tsx`):**
+   - In `ChallengeCreatorWizard`: Removed required asterisk from "Assigned Punishment PFP" and marked as `(Optional)`; removed client-side block on empty PFP; enabled image clearing via `allowClear`.
+   - In `ChallengeImageInput`: Added "Remove" action when `allowClear` or `purpose === "punishment-pfp"` is active, properly revoking local object previews and discarding unsaved uploads.
+   - In `PunishmentWall`: Safely omitted "Download Forfeit PFP" button when `!hasPunishment` and wrapped URL with `toDownloadUrl` to prevent download failures. Rendered an emerald-accented `ShieldCheck` + `Sparkles` "No Forfeit" placeholder avatar graphic alongside reassuring copy indicating an honor-only sprint without forfeit pressure.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/challenges/api/challenge-admin.actions.test.ts`: 85/85 tests passing.
+   - `apps/web/features/challenges/presentation/challenge-images.test.tsx`: 29/29 tests passing.
+   - `apps/web/features/accountability/presentation/punishment-wall.test.tsx`: 5/5 tests passing.
+   - `apps/web/features/challenges/presentation/challenge-overview-tab.test.tsx`: 13/13 tests passing.
+   - Full workspace test suite: ✅ 208 test files passed (2,033/2,033 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+- **GitHub PR:** Submitted PR [#193](https://github.com/lrfsdevs/holdmetoit/pull/193) from `krish` to `dev`.
+- **NEXT STEP:** Peer review and merge PR #193 into `dev`.
+
+### Session 165 — 2026-10-28 (Persist Category Collapsed State Across Navigation, Refresh & Sync on `krish` — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed issue where Cockpit Todo list categories lost their collapsed state on page refresh, client navigation across routes, and background IndexedDB sync events (`TASKS_SYNCED_EVENT`), blowing open all tasks and causing visual clutter.
+- **Persistent Storage Utility (`cockpit-tasks-storage.ts`):**
+   - Added user-scoped localStorage key generation (`holdmetoit:collapsed_categories:${userId || "guest"}`).
+   - Implemented `readCollapsedCategoryIds(userId)` and `writeCollapsedCategoryIds(userId, ids)` with SSR safeguards and storage exception protection (quota/private browsing).
+   - Implemented `isCategoryCollapsed` and `toggleCategoryCollapseKey` returning pure Set updates (refined to board-isolated keys in Session 166 and cookie sync in Session 167).
+   - 100% unit test coverage in `cockpit-tasks-storage.test.ts` (18/18 tests passing).
+- **Presentation Layer Integration (`cockpit-tasks-section.tsx`):**
+   - Initialized `collapsedCategoryIds` state and `collapsedCategoryIdsRef` from `readCollapsedCategoryIds(userId)`.
+   - Preserved category collapsed states during `hydrateFromIndexedDB` and background `TASKS_SYNCED_EVENT` sync triggers.
+   - Updated `toggleDailyCollapse` and `toggleWeeklyCollapse` to manage collapse state via Set keys in storage and memory.
+   - Added automatic cleanup of deleted category IDs in `handleConfirmDeleteCategory` to prevent localStorage leakage.
+   - Added `storage` event listener for multi-tab synchronization.
+- **Quality Gates & Test Coverage:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: 18/18 tests passing.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: 6/6 tests passing.
+   - Full workspace test suite: ✅ 210 test files passed (2,058/2,058 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-63` transitioned from `In Progress` to `In Review` (id: 31).
+- **Status:** Initial persistence foundation; subsequent edge-cases resolved in Sessions 166–168.
+
+### Session 166 — 2026-10-28 (Resolve Hydration Mismatch, Cross-Board Collapse Isolation & Stale Goal Flicker — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed three UI defects uncovered during browser testing of category collapse persistence (GitHub Issue [#194](https://github.com/lrfsdevs/holdmetoit/issues/194) / Jira Ticket `KAN-63`):
+   1. **React Hydration Error:** Fixed `Error: Hydration failed because the initial UI does not match what was rendered on the server` by ensuring initial SSR and client render match completely (`isHydrated` defaults to `false`, flips to `true` on mount in `useEffect`).
+   2. **Cross-Board Category Coupling:** Fixed issue where toggling a category in Weekly Goals also collapsed/expanded categories with identical names in Daily Goals. Scoped collapse storage keys by board type (`"daily"` vs `"weekly"`): `daily:${id}`, `weekly:${id}`, `daily:name:${name}`, `weekly:name:${name}`, while maintaining backward compatibility with legacy unscoped IDs.
+   3. **Stale Task Flash on Initial Mount:** Fixed split-second flicker where stale cached IndexedDB tasks were rendered before fresh server goals or cloud sync finished. When `hasServerTasks` is true and there are no un-synced offline mutations (`pendingMutations.length === 0`), `hydrateFromIndexedDB` seeds IndexedDB in the background and avoids overwriting fresh React state until background sync completes (`TASKS_SYNCED_EVENT`).
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Scoped collapse identifiers to `TaskCategoryType = "daily" | "weekly"`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for board-scoped collapse isolation (17 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `isHydrated` guard, board-scoped toggle handlers, deletion cleanup, and flicker prevention in `hydrateFromIndexedDB`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration tests for cross-board isolation and stale goal flicker prevention (8 tests passing).
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 68 tests passing across 6 test suites.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **Status:** Cross-board scoping and flicker fixes; refined in Sessions 167–168.
+
+### Session 167 — 2026-10-28 (Instant SSR Cookie Pre-Rendering & Single Source of Truth for Collapse State — GH-#194 / KAN-63)
+
+- **Context & Objective:** Perfected category collapse UX on reload and resolved intermittent cross-category expand/collapse bugs:
+   1. **Instant Zero-Flicker Reload via SSR Cookie Pre-Rendering:** Eliminated the initial layout shift / flash where reload opened all categories before snapping into collapsed state. Synchronized user-scoped collapse state into `holdmetoit_collapsed_categories` cookie alongside `localStorage`. Next.js SSR (`app/page.tsx`) reads the cookie on request and passes `initialCollapsedCategoryIds` through `HomeCockpitView` to `CockpitTasksSection`. Categories pre-render already collapsed from the first HTML frame with 100% hydration matching.
+   2. **Single Source of Truth & Pure Board Isolation:** Eliminated the dual-state desync (`isCategoryCollapsed || cat.isCollapsed`) that caused categories to randomly remain collapsed or unexpectedly expand. `collapsedCategoryIds` is now the sole source of truth in `CockpitTasksSection`, and toggling does not mutate the `dailyCategories`/`weeklyCategories` array state.
+   3. **Sanitized Storage & Legacy Cleanup:** Removed unscoped `cat.id` fallback in `isCategoryCollapsed` and filtered out legacy unscoped keys in `readCollapsedCategoryIds`. Daily categories strictly use `daily:` prefix and Weekly categories strictly use `weekly:` prefix.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added user-scoped cookie synchronization (`COLLAPSED_CATEGORIES_COOKIE`), pruned unscoped fallback, and filtered legacy keys.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added cookie read/write tests and strict prefix isolation assertions (18 tests passing).
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `initialCollapsedCategoryIds` prop, made `collapsedCategoryIds` sole source of truth, simplified toggle handlers, and removed `isHydrated` delay.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Threaded `initialCollapsedCategoryIds` down to `CockpitTasksSection`.
+   - `apps/web/app/page.tsx`: Read and parsed user-scoped cookie in server component and passed to `HomeCockpitView`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added tests for cookie pre-rendered collapse and repeated interleaved toggling (10 tests passing).
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,062/2,062 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **Status:** SSR pre-rendering & single source of truth; refined in Session 168.
+
+### Session 168 — 2026-10-28 (Deterministic Category Ordering Across SSR & IndexedDB Hydration — GH-#194 / KAN-63)
+
+- **Context & Objective:** Fixed category order instability on page reload where categories rendered in one position and then jumped/moved positions ~1 second later when background sync completed.
+- **Root Cause Analysis:**
+   1. **Missing Tiebreaker in Client Sort vs Server Query:** Categories default to `sortOrder: 0`. In PostgreSQL (`task.repository.ts`), categories with identical `sortOrder` were ordered by `createdAt: "asc"`. In client-side IndexedDB hydration (`hydrateFromIndexedDB`), `.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))` had no tiebreaker, preserving IndexedDB's arbitrary primary-key (UUID) iteration order. On reload, the server rendered categories in `createdAt` order, and ~1 second later background sync (`TASKS_SYNCED_EVENT`) triggered `hydrateFromIndexedDB`, which swapped categories into UUID order.
+   2. **Incomplete Mutation on Category Drag & Drop:** When dragging categories to reorder them in the UI, only the single dragged category was enqueued with `action: "MOVE"`. The remaining categories never had their updated `sortOrder` written to PostgreSQL, leaving the database with outdated/default sort orders.
+   3. **Timestamp Overwrite in Local Storage:** Category reordering was writing `createdAt: nowIso` into IndexedDB, clobbering the original creation timestamps.
+- **Resolution & Architecture:**
+   1. **Deterministic Multi-Key Sorting:** Aligned PostgreSQL queries and IndexedDB sorting with identical deterministic comparator: `sortOrder: "asc"` $\rightarrow$ `createdAt: "asc"` $\rightarrow$ `id: "asc"`.
+   2. **Full-Column REORDER Mutations:** On category drag-and-drop, enqueued `action: "REORDER"` mutations for both daily and weekly columns with the full list of `categoryIds`, ensuring PostgreSQL persists `sortOrder: 0, 1, 2, ...` for all categories.
+   3. **Preserved Creation Timestamps:** Kept original `createdAt` on categories when persisting local reorders.
+   4. **Initial Category SortOrder Propagation:** Passed `sortOrder` on category creation in `processBatchSync` and `handleSaveTask`.
+   5. **Added Integration Test:** Verified in `cockpit-tasks-collapse-persistence.test.tsx` that category ordering remains 100% stable between initial SSR render and background sync without jumping positions.
+- **Files Modified & Verified:**
+   - `apps/web/features/tasks/domain/task.types.ts`: Added `createdAt` and `updatedAt` to `CategoryGroup`.
+   - `apps/web/features/tasks/data/task.repository.ts`: Added deterministic `id: "asc"` tiebreaker and populated `createdAt`/`updatedAt` on `CategoryGroup`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Supported `sortOrder` on category creation.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added deterministic sorting in `hydrateFromIndexedDB`, preserved `createdAt`, and enqueued `action: "REORDER"` mutations on category and task drop.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-collapse-persistence.test.tsx`: Added integration test for deterministic category ordering across background sync.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 210 test files passed (2,063/2,063 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **GitHub PR:** Submitted PR [#197](https://github.com/lrfsdevs/holdmetoit/pull/197) from `krish` to `dev`.
+- **Status:** PR submitted and verified.
+
+### Session 169 — 2026-10-28 (Address CodeRabbit Review Feedback on PR #197 — GH-#194 / KAN-63)
+
+- **Review Feedback Addressed on [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197):**
+   1. **`collapsedCategoryIds` Initializer (`cockpit-tasks-section.tsx` lines 308–324):** Updated state initializer check to `initialCollapsedCategoryIds !== undefined`, ensuring empty arrays (`[]`) from server cookie are respected without falling back prematurely to client-side localStorage.
+   2. **Cache Seeding Local Record Protection (`cockpit-tasks-section.tsx` lines 753–780):** In `hydrateFromIndexedDB` initial cache seeding, preserved existing local categories and tasks whose `syncState !== "synced"` by filtering out their IDs from seed writes, preventing uncommitted local edits from being overwritten by server seeds.
+   3. **Initial Category SortOrder Calculation (`cockpit-tasks-section.tsx` lines 2436–2450):** Derived `initialSortOrder` once from board categories as `highestOrder + 1` (defaulting empty board to baseline -1 $\rightarrow$ 0) and reused the value across both `putLocalCategory` and queued mutation rather than relying on category count.
+   4. **Untrusted Review Data Handling:** Verified and rejected review recommendation to unconditionally apply empty localStorage sets over `initialCollapsedCategoryIds` in post-mount effect; verified it caused premature expansion flash and regression in unit test `pre-renders in collapsed state without flash when initialCollapsedCategoryIds is passed from server cookie`.
+   5. **`HANDOFF.md` Maintenance:** Updated test gate to 2,063/2,063 tests, pruned superseded Session 165 `isCategoryCollapsed` fallback/`cat.isCollapsed` details, and consolidated repeated stale NEXT STEP entries.
+- **Quality Gates:**
+   - `npm run test:web -- cockpit-tasks`: ✅ 6 test files passed (72/72 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-63` remains `In Review`.
+- **GitHub PR:** Pushed updates to [PR #197](https://github.com/lrfsdevs/holdmetoit/pull/197) (`krish` $\rightarrow$ `dev`).
+- **NEXT STEP:** Peer review and merge PR #197 into `dev`.
+
+### Session 171 — 2026-10-28 (`HEAD /health` support on `feat/ypt-bot-health-head`)
+
+- **History cleanup:** Reverted stale `17d73e4` on `afnan-jr` (`dcfc5ff`), removing the out-of-date `HEAD /health` route without rewriting history. Verified `git diff b6331b7 HEAD` was empty after the revert, then pushed normally (no force-push, per §4.3).
+- **Scope:** The bot's liveness route only matched `GET`, so platform probes using `HEAD /health` received `404`.
+- **Change:** `apps/ypt-bot/src/http/health-server.js` now accepts `GET` and `HEAD` on `/health`; both return `200` with `Content-Type: application/json` and an explicit `Content-Length` computed from the serialized payload. `HEAD` omits the body.
+- **Unchanged:** `GET /health` payload (`status`, `service`, `uptimeSeconds`) and the `404 {"error":"Not found"}` fallback for every other path/method (including `POST /health`).
+- **Tests:** Added `apps/ypt-bot/test/http/health-server.test.js` covering GET payload, HEAD headers/empty body, query-string stripping, unknown-path `404`, and `POST /health` `404`.
+- **Docs:** Updated `docs/ypt-bot/doc.md` §C and the file-tree comment, `docs/ypt-bot/README.md` health section, and the startup log to `(GET|HEAD /health)`.
+- **Verification:** `npm run test -w @holdmetoit/ypt-bot` → 97/97 pass.
+- **GitHub PR:** Submitted [PR #199](https://github.com/lrfsdevs/holdmetoit/pull/199) from `feat/ypt-bot-health-head` to `dev`.
+- **NEXT STEP:** Peer review and merge PR #199 into `dev`.
+
+### Session 170 — 2026-10-28 (Card Header Quick-Add, Scroll Containment & Mobile Switcher — GH-#195 / KAN-64 on `krish`)
+
+- **Context & Objectives:** Resolve GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195) / Jira Ticket `KAN-64` ("card header quick-add action and scroll containment for long todo lists"). Eliminate bottom-heavy add button friction, prevent unbound vertical card stretching for long task lists, and optimize mobile navigation between Daily and Weekly task boards.
+- **Root Cause & UX Bottlenecks Addressed:**
+   1. **Bottom-Heavy Add Button:** The primary `+ Add more todos` action button was located exclusively at the bottom of each column below all categories and tasks, forcing users to scroll past dozens of items to open the add modal.
+   2. **Card Height Asymmetry on Desktop:** Task category lists had no height bounding or internal overflow containment, causing cards to stretch excessively when many tasks accumulated.
+   3. **Mobile Vertical Stack Overload (< 640px):** On screens `< sm`, Daily and Weekly columns stacked vertically, requiring mobile users to scroll past the entire daily list just to view or interact with weekly goals.
+- **Architectural Enhancements Implemented:**
+   1. **Card Header Quick-Add Action (`cockpit-tasks-section.tsx`):**
+      - Added compact pill Quick-Add buttons (`+ Add`) directly into the card headers of both Daily Todos (`data-testid="quick-add-daily-button"`) and Weekly Todos (`data-testid="quick-add-weekly-button"`).
+      - Clicking either quick-add button immediately opens the respective Add Todo modal.
+      - Daily Quick-Add automatically suppresses when viewing a locked past challenge day (`isPastDayLocked`), enforcing Law L6 without UI confusion.
+      - Retained bottom buttons as secondary/footer actions to preserve existing muscle memory.
+   2. **Task List Scroll Containment & Obsidian Theme Scrollbar (`globals.css` & `cockpit-tasks-section.tsx`):**
+      - Encapsulated task categories in a bounded responsive scroll container (`max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian`).
+      - Created custom `.scrollbar-obsidian` utility in `apps/web/app/globals.css` using Obsidian semantic tokens (`var(--color-border-strong)` and `var(--color-border-focus)`), ensuring clean, unobtrusive scrolling.
+   3. **Mobile Segmented View Switcher (`cockpit-tasks-section.tsx`):**
+      - Introduced a segmented pill tab control (`[ Daily (N) | Weekly (N) ]`) visible exclusively on mobile `< sm` viewports (`flex sm:hidden`), defaulting to the active daily board.
+      - Tapping between tabs toggles column display without vertical scroll fatigue while maintaining desktop side-by-side grid layout (`sm:grid-cols-2`).
+      - Verified 100% responsive down to 360px viewport with zero horizontal overflow or button clipping.
+   4. **Comprehensive Test Suite (`cockpit-tasks-quick-add-and-scroll.test.tsx`):**
+      - Added unit and integration tests covering header quick-add modal triggers, locked past day button suppression, secondary footer button retention, scroll containment class configuration, and mobile switcher tab navigation.
+- **Files Modified & Verified:**
+   - `apps/web/app/globals.css`: Added `.scrollbar-obsidian` utility in `@layer utilities`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added `openAddWeeklyModal`, header quick-add buttons, categories scroll container, and mobile segmented view switcher.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-quick-add-and-scroll.test.tsx`: Added 5 unit/integration tests for quick-add, scroll containment, and mobile switcher.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,068/2,068 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-64` transitioned from `In Progress` to `In Review` (id: 31).
+- **GitHub PR & Issue Status:** Submitted PR [#198](https://github.com/lrfsdevs/holdmetoit/pull/198) (`krish` $\rightarrow$ `dev`); closed GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195).
+- **CodeRabbit Review Addressed (2026-10-28):**
+   1. **Touch Target Sizing (`cockpit-tasks-section.tsx`):** Applied `min-h-control-sm` (44px) to Daily and Weekly mobile segmented switcher buttons, and updated card header quick-add buttons to `h-11 min-h-control-sm min-w-control-sm px-3.5` (satisfying WCAG 2.5.5 and DESIGN.md §5.2 44x44px minimum touch targets without arbitrary CSS size lint violations).
+   2. **Scroll Containment & Board Toggle Tests (`cockpit-tasks-quick-add-and-scroll.test.tsx`):** Added 20-item overflowing test asserting `scrollHeight > clientHeight` and scroll event dispatching within `.scrollbar-obsidian` card container; attached `data-testid="daily-tasks-board"` and `data-testid="weekly-tasks-board"` to verify `flex` vs. `hidden sm:flex` class toggling across tab switches.
+   3. **Handoff Pruning (§9.3):** Pruned superseded Session 111 importer spike down to a concise historical note.
+- **NEXT STEP:** Peer review and merge PR #198 into `dev`.
+
+### Session 171 — 2026-10-28 (Calendar Navigation, Task Rollover Visibility During Challenges & Daily Reminder Snooze — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Resolve GitHub Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira Ticket `KAN-65` ("fix(tasks): calendar navigation and task rollover visibility during challenges & daily reminder snooze").
+- **Root Cause & UX Bottlenecks Addressed:**
+   1. **Calendar Gating During Active Challenges:** `CockpitWeekNavigator` was previously conditionally guarded with `{!hasChallengeContext && <CockpitWeekNavigator ... />}`. When enrolled in an active challenge, `hasChallengeContext` evaluated to `true`, omitting the week paging chevrons and compact date picker popover from the DOM completely.
+   2. **Past Day & Rollover Inaccessibility:** When enrolled in a challenge, Day 1 had no past challenge days displayed. Because calendar navigation was blocked, users could not navigate back to yesterday or earlier days to view their incomplete tasks or trigger past-day rollover banners/buttons. For upcoming challenges, `isToday` evaluated to `false` for all days, suppressing the Today banner due to nullish coalescing (`??`) falsy fallback behavior.
+   3. **Ephemeral Rollover Dismissal:** The Today rollover helper banner stored its dismissed state exclusively in ephemeral component state (`isRolloverDismissed`), causing it to prompt users again on every page reload or navigation throughout the day.
+- **Architectural Enhancements Implemented:**
+   1. **Restored Interactive Calendar Navigation Across All Challenge States (`cockpit-tasks-section.tsx`):**
+      - Unconditionally rendered `CockpitWeekNavigator` in Row 2 directly above the 7-day pill switcher, ensuring participants and spectators can always page through calendar weeks, view dates, and open the compact popover date picker.
+      - Removed the duplicate text-only "Today" button in the Daily header row, delegating cleanly to `CockpitWeekNavigator`'s integrated Today snap control.
+      - Updated `dayOptions` to check whether the navigated week matches the challenge dates (`isSameCalendarWeek(anchorKey, startKey)` or contains challenge days). When viewing the challenge week, it renders the 7 challenge days (`Day 1..Day 7`); when paged away to prior or future weeks, it dynamically renders that week's standard calendar day options (`Mon..Sun`).
+      - Resolved Week Navigator Date Range for Arbitrary Challenge Durations (`weekRangeLabel` & `activeWeekDateKeys`): decoupled week range label calculation from the strict `dayOptions.length >= 7` check. For challenges with durations shorter than 7 days (e.g. 6-day "October Duos Battle"), `weekRangeLabel` and `activeWeekDateKeys` now derive from `getCalendarWeekDayOptions(activeWeekAnchorDateKey, effectiveTodayDate)` as the primary source of truth, reliably formatting the current calendar week dates (`Oct 26 – Nov 1`) rather than rendering an empty label (`< 📅 >`).
+      - Preserved domain locking invariants (`checkIsDayLocked` delegates to `isChallengeDayDateLocked`): past days of concluded challenge weeks remain locked, active challenge past days remain locked, while current/future days remain unlocked.
+   2. **Reliable Today Rollover Visibility & Active Day Resolution (`cockpit-tasks-section.tsx`):**
+      - Fixed `isActiveDayToday` resolution: `selectedDateKey === effectiveTodayDate || Boolean(activeDayOption?.isToday)` ensures that viewing today's date always enables Today actions and rollover helper banners across active, upcoming, and personal planning modes.
+      - With calendar week paging restored, users can seamlessly navigate to previous weeks and days to trigger the past-day rollover banner (`rollover-past-day-banner`) and individual 1-click rollover actions (`rollover-task-button-${task.id}`).
+   3. **Daily Reminder Snooze & Client Storage Persistence (`cockpit-tasks-storage.ts` & `cockpit-tasks-section.tsx`):**
+      - Added "Don't remind today" action button (`data-testid="rollover-snooze-today-button"`) to the Today rollover helper banner alongside the quick dismiss (`X`).
+      - Created client storage utilities: `getRolloverSnoozeStorageKey`, `isRolloverSnoozedForDate`, `setRolloverSnoozedForDate`, and `cleanupExpiredRolloverSnooze` with prefix `holdmetoit_rollover_snooze_${userId}_${todayDateKey}`.
+      - Clicking "Don't remind today" persists the daily snooze to `localStorage` and immediately hides the banner for the rest of that date on that browser/device.
+      - Automatically resets on the next calendar day (`newDateKey > snoozedDateKey`), cleaning up stale localStorage keys.
+      - Enhanced Today banner container styling (`flex flex-col sm:flex-row sm:items-center`) to ensure 100% responsiveness on mobile viewports down to 360px without horizontal overflow.
+   4. **Comprehensive Test Coverage (`cockpit-tasks-storage.test.ts`, `cockpit-tasks-week-navigation.test.tsx`, `cockpit-tasks-rollover-and-scoping.test.tsx`, `cockpit-tasks-section.test.tsx`):**
+      - Added 5 unit tests for snooze key formatting, persistence, scope isolation, and expired date cleanup in `cockpit-tasks-storage.test.ts`.
+      - Added interactive week navigation tests verifying `CockpitWeekNavigator` visibility, chevron week paging, and Today snap during active challenges in `cockpit-tasks-week-navigation.test.tsx`.
+      - Added tests verifying Today banner rendering during active challenges and upcoming challenges, suppression when snoozed in localStorage, and interactive snooze click dismissal in `cockpit-tasks-rollover-and-scoping.test.tsx`.
+      - Updated `cockpit-tasks-section.test.tsx` asserting week navigation rendered during active challenges.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Added daily snooze keys, check, set, and expired cleanup utilities.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added unit tests for daily snooze functions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Restored week navigator during challenges, updated `dayOptions` week resolution, added daily snooze button and mobile wrapping.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.test.tsx`: Updated active challenge week navigation assertions.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-week-navigation.test.tsx`: Added active challenge week paging test.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added active/upcoming challenge rollover and snooze persistence tests.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` transitioned from `In Progress` to `In Review` (id: 31).
+- **GitHub Issue Status:** Resolves [#196](https://github.com/lrfsdevs/holdmetoit/issues/196).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+
+### Session 172 — 2026-10-28 (Weekly Challenge Card Header Overlap Fix & Compact Task Status / Goal Badges on `krish`)
+
+- **Context & Objectives:** Resolve user-reported issues with Weekly Challenge UI:
+   1. **Header Overlap:** In Weekly Todos card header, the Challenge Goals badge (`1/18 Goals`) and the Completed counter (`1/18 Completed`) overlapped on smaller widths due to missing `flex-wrap` and non-wrapping `min-w-0` flex children.
+   2. **Completed Task Tag Blocking Description:** Completed tasks in Weekly Todos displayed a bulky written `COMPLETED` tag button alongside the `[Trophy] Goal` badge, excessively truncating task descriptions into clamped lines with "Show more".
+- **Architectural Enhancements Implemented:**
+   1. **Header Layout Stabilization (`cockpit-tasks-section.tsx`):**
+      - Switched Weekly Todos and Daily Todos header containers from `flex items-center justify-between gap-2` to `flex flex-wrap items-center justify-between gap-2`.
+      - Replaced `min-w-0` on left child with `shrink-0`, preventing inner elements from overflowing horizontally and colliding into right-hand elements on narrow viewports.
+   2. **Color-Coded Completed Task Checkbox (Green Tick):**
+      - Updated completed task checkbox styling in both Weekly Todos and Daily Todos from `bg-white border-white text-text-inverse` to `border-emerald-500 bg-emerald-500/15 text-emerald-400`.
+      - When marked completed, the checkbox now displays a vibrant emerald green tick icon (`text-emerald-400`) within an emerald-tinted container, providing instant visual feedback without needing written status text.
+   3. **Removal of Redundant Written `COMPLETED` Tag:**
+      - Removed the written `Completed` button (`<button ...>Completed</button>`) from the task row in Weekly Todos. The completed state is fully conveyed by the green tick checkbox and strikethrough styling (`line-through text-text-tertiary`), freeing ~85px of horizontal space.
+   4. **Compact Challenge Goal & Personal Scope Badges:**
+      - Replaced the bulky `[Trophy] Goal` and `[User] Personal` badges (`gap-1 px-1.5 py-0.5 rounded ... <span>Goal</span>`) with compact square icon-only badges (`p-1 rounded`).
+      - Preserved accessibility and hover context with descriptive tooltips: `title="Challenge Goal (evaluated at challenge lock)" aria-label="Challenge Goal"` and `title="Personal Task (excluded from challenge lock)" aria-label="Personal Task"`.
+      - Frees ~35px of space per task row, allowing full task descriptions to remain visible without aggressive clamping.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added flex-wrap headers, green tick checkbox color-coding, removed written weekly `Completed` tag, and made goal/personal badges compact icon pills.
+- **Quality Gates:**
+   - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+- **NEXT STEP:** Peer review and submit PR to `dev`.
+
+### Session 174 — 2026-10-29 (Stabilize Daily Snooze Banner Layout, Status Editing on Earlier Tasks & Cookie SSR Parity for Zero Rollover Flash — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Address user feedback on Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira `KAN-65`:
+   1. Fix broken layout on "Don't remind today" rollover banner where text was squeezed vertically and action buttons overlapped text on compact column layouts (screenshot `media_1793273236265_8dc2ac50.png`).
+   2. Allow updating the status of tasks on earlier days in Daily Todos (e.g. checkbox checking, status toggling) since users often complete tasks earlier but forget to check them off before midnight.
+   3. Eliminate split-second flash / pop on page refresh where the rollover banner briefly appeared even after clicking "Don't remind me today".
+   4. Move Jira item `KAN-65` to `In Review`.
+   5. Explicit user constraint: **Do not create a PR without user instruction.**
+- **Architectural Enhancements Implemented:**
+   1. **Rollover Today Banner Responsive 2-Row Restructure (`cockpit-tasks-section.tsx`):**
+      - Converted `rollover-today-banner` from single-row flex into an accessible 2-row layout (`flex flex-col gap-2.5`).
+      - Row 1: Left contains rotate icon, title, and descriptive subtitle with unconstrained width; right contains the dismiss (`X`) button.
+      - Row 2: Action buttons (`Roll over to Today` and `Don't remind today`) sit cleanly below the text with wrap safety (`flex items-center flex-wrap gap-2 pt-0.5`).
+   2. **Editable Status on Earlier Daily Tasks (`cockpit-tasks-section.tsx`):**
+      - Removed the `checkIsDayLocked(targetDateKey)` blocker inside `setTaskStatus` to permit marking tasks complete, in progress, or crossed out on earlier days.
+      - Removed `if (isPastDayLocked) return;` and `cursor-not-allowed opacity-75` from the task row click handler, allowing past tasks to remain clickable (`cursor-pointer`).
+      - Preserved strict challenge rules preventing _creation_ of new tasks on past challenge days.
+   3. **Cookie SSR Parity & Parser-Blocking Zero-Flash Rollover Snooze (`cockpit-tasks-storage.ts`, `app/page.tsx`, `home-cockpit-view.tsx`, `cockpit-tasks-section.tsx`):**
+      - Root Cause: `isRolloverSnoozed` was previously initialized to `useState(false)` on the server because `localStorage` cannot be read during SSR. Even with a cookie, if a user had an existing snooze stored in `localStorage` prior to cookie rollout, or if `userId` scope differed between guest/authenticated states, the server emitted the banner in raw HTML and only hid it after client `useEffect` ran ~1 second later.
+      - Implemented 3-Layer Zero-Flash Architecture:
+         - **Layer 1 (Flexible SSR Cookie Resolution):** Next.js SSR in `app/page.tsx` checks `ROLLOVER_SNOOZE_COOKIE` across all valid date representations (`todayDateKey`, UTC `toISOString()`, and `cockpit.todayDate`) and scopes (`scope` and `"guest"`), passing `initialIsRolloverSnoozed = true` to omit the banner from server HTML entirely.
+         - **Layer 2 (Parser-Blocking Synchronous Inline Script):** Embedded a synchronous `<script>` inside `#rollover-today-banner` with `suppressHydrationWarning`. If the browser has a snooze in `localStorage` or cookie, this parser-blocking script runs **before the browser paints the first frame**, applying `display: none !important;`. Guarantees 0 frames of visual flash even on first load without a cookie.
+         - **Layer 3 (Synchronous Hydration & Cookie Backfill):** `useState` initializes from `isRolloverSnoozedForDate(userId, effectiveTodayDate)` on client mount without delay, and `useEffect` immediately writes any detected `localStorage` snooze back to `document.cookie` (`setRolloverSnoozedForDate`), permanently caching it for future SSR requests.
+         - Wired the dismiss (`X`) button to `handleSnoozeRolloverToday` for consistent dismissal behavior.
+         - `cleanupExpiredRolloverSnooze` purges obsolete dates from both `localStorage` and cookie on day rollover.
+   4. **Comprehensive Test Coverage:**
+      - Added tests in `cockpit-tasks-storage.test.ts` verifying dual-persistence to cookie and localStorage, cookie fallback when localStorage is cleared, multi-user scope isolation, and cookie expiration cleanup.
+      - Added tests in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying past-day task status toggling and SSR `initialIsRolloverSnoozed={true}` pre-rendering without banner flash.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: 2-row banner layout, enabled past-day task status changes, and integrated `initialIsRolloverSnoozed`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Exported `ROLLOVER_SNOOZE_COOKIE`, dual cookie + localStorage persistence, and cookie cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added tests for cookie dual-persistence and cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added past-day task status toggling and SSR initial snooze tests.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Propagated `initialIsRolloverSnoozed` prop.
+   - `apps/web/app/page.tsx`: Read `ROLLOVER_SNOOZE_COOKIE` and supplied `initialIsRolloverSnoozed` to `HomeCockpitView`.
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 7 test files passed (93/93 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` is in **`In Review`** (`id: 10006`).
+- **NEXT STEP:** Await user instruction before creating a Pull Request.

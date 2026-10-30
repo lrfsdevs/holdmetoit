@@ -86,48 +86,49 @@ describe("challenge-feedback-embed", () => {
             "💬 Challenge Feedback · October Study Sprint"
          );
          expect(embed.color).toBe(0x22c55e);
-         expect(embed.fields).toHaveLength(10); // 8 base fields + 2 multiline responses
-         expect(embed.fields[0]).toEqual({
+         const fields = embed.fields ?? [];
+         expect(fields).toHaveLength(10); // 8 base fields + 2 multiline responses
+         expect(fields[0]).toEqual({
             name: "👤 Submitter",
             value: "<@999888777>",
             inline: true,
          });
-         expect(embed.fields[1]).toEqual({
+         expect(fields[1]).toEqual({
             name: "⚖️ Fairness Rating",
             value: "⭐⭐⭐⭐⭐ (5/5)",
             inline: true,
          });
-         expect(embed.fields[2]).toEqual({
+         expect(fields[2]).toEqual({
             name: "📈 Improved Consistency?",
             value: "Yes, significantly",
             inline: true,
          });
-         expect(embed.fields[3]).toEqual({
+         expect(fields[3]).toEqual({
             name: "⏱️ Preferred Tracking",
             value: "Strictly YPT",
             inline: true,
          });
-         expect(embed.fields[4]).toEqual({
+         expect(fields[4]).toEqual({
             name: "🎒 Count Work/School?",
             value: "No, dont include them",
             inline: true,
          });
-         expect(embed.fields[5]).toEqual({
+         expect(fields[5]).toEqual({
             name: "🏆 Solo Challenge Style",
             value: "Competitive (Keep a leaderboard)",
             inline: true,
          });
-         expect(embed.fields[6]).toEqual({
+         expect(fields[6]).toEqual({
             name: "🎭 Keep Punishment PFPs?",
             value: "Yes, keep the punishment",
             inline: true,
          });
-         expect(embed.fields[8]).toEqual({
+         expect(fields[8]).toEqual({
             name: "💬 Team Battle Suggestions & Complaints",
             value: "Loved the competition!",
             inline: false,
          });
-         expect(embed.fields[9]).toEqual({
+         expect(fields[9]).toEqual({
             name: "💡 Solo Challenge Ideas & Thoughts",
             value: "Add streaks!",
             inline: false,
@@ -151,15 +152,14 @@ describe("challenge-feedback-embed", () => {
             },
          });
 
-         expect(embed.fields).toHaveLength(8); // Only the 8 base fields, no multiline sections
+         const fields = embed.fields ?? [];
+         expect(fields).toHaveLength(8); // Only the 8 base fields, no multiline sections
          expect(
-            embed.fields.some((f) =>
-               f.name.includes("Suggestions & Complaints")
-            )
+            fields.some((f) => f.name.includes("Suggestions & Complaints"))
          ).toBe(false);
-         expect(
-            embed.fields.some((f) => f.name.includes("Ideas & Thoughts"))
-         ).toBe(false);
+         expect(fields.some((f) => f.name.includes("Ideas & Thoughts"))).toBe(
+            false
+         );
       });
    });
 });
