@@ -1,5 +1,9 @@
 import type { User } from "@prisma/client";
-import { MessageFlags, type ChatInputCommandInteraction } from "discord.js";
+import {
+   MessageFlags,
+   type ChatInputCommandInteraction,
+   type InteractionReplyOptions,
+} from "discord.js";
 import { env } from "../config/env.js";
 import { prisma } from "../db.js";
 
@@ -29,7 +33,6 @@ export async function requireWebUserByDiscordId(
 
    await reply({
       content: buildSignInPrompt(),
-      flags: MessageFlags.Ephemeral,
    });
    return null;
 }
@@ -38,9 +41,13 @@ export async function requireWebUser(
    interaction: ChatInputCommandInteraction
 ): Promise<User | null> {
    return requireWebUserByDiscordId(interaction.user.id, (payload) => {
+      const ephemeralPayload: InteractionReplyOptions = {
+         ...payload,
+         flags: MessageFlags.Ephemeral,
+      };
       if (interaction.replied || interaction.deferred) {
-         return interaction.followUp(payload);
+         return interaction.followUp(ephemeralPayload);
       }
-      return interaction.reply(payload);
+      return interaction.reply(ephemeralPayload);
    });
 }
