@@ -1,4 +1,5 @@
-import type { Category, TaskType } from "@prisma/client";
+import { Prisma, type Category, type TaskType } from "@prisma/client";
+import { buildCategoryTombstoneName } from "@holdmetoit/database";
 import { prisma } from "../db.js";
 
 export type { Category };
@@ -24,25 +25,57 @@ export async function createCategory(
    userId: string,
    name: string
 ): Promise<Category> {
-   const existing = await prisma.category.findFirst({
+   const normalized = name.trim();
+
+   const live = await prisma.category.findFirst({
       where: {
          userId,
-         name: { equals: name, mode: "insensitive" },
          taskType: DEFAULT_TASK_TYPE,
+         isDeleted: false,
+         name: { equals: normalized, mode: "insensitive" },
       },
    });
 
-   if (existing) {
-      if (!existing.isDeleted) throw new DuplicateCategoryError(name);
-      return prisma.category.update({
-         where: { id: existing.id },
-         data: { name, isDeleted: false, deletionTime: null },
-      });
-   }
+   if (live) throw new DuplicateCategoryError(normalized);
 
-   return prisma.category.create({
-      data: { userId, name, taskType: DEFAULT_TASK_TYPE },
+   const tombstoned = await prisma.category.findFirst({
+      where: {
+         userId,
+         taskType: DEFAULT_TASK_TYPE,
+         isDeleted: true,
+         name: { equals: normalized, mode: "insensitive" },
+      },
+      orderBy: { updatedAt: "desc" },
    });
+
+   try {
+      if (tombstoned) {
+         return await prisma.category.update({
+            where: { id: tombstoned.id },
+            data: { name: normalized, isDeleted: false, deletionTime: null },
+         });
+      }
+
+      return await prisma.category.create({
+         data: { userId, name: normalized, taskType: DEFAULT_TASK_TYPE },
+      });
+   } catch (error) {
+      if (
+         error instanceof Prisma.PrismaClientKnownRequestError &&
+         error.code === "P2002"
+      ) {
+         const winner = await prisma.category.findFirst({
+            where: {
+               userId,
+               taskType: DEFAULT_TASK_TYPE,
+               isDeleted: false,
+               name: { equals: normalized, mode: "insensitive" },
+            },
+         });
+         if (winner) throw new DuplicateCategoryError(normalized);
+      }
+      throw error;
+   }
 }
 
 export async function getCategories(userId: string): Promise<Category[]> {
@@ -95,25 +128,34 @@ export async function categoryExists(
  * The shared schema requires `Task.categoryId`, so tasks can never be orphaned.
  */
 export async function deleteCategory(categoryId: string): Promise<boolean> {
-   const category = await prisma.category.findUnique({
-      where: { id: categoryId },
+   const category = await prisma.category.findFirst({
+      where: { id: categoryId, isDeleted: false },
    });
-   if (!category || category.isDeleted) return false;
+   if (!category) return false;
 
    if (category.name.toLowerCase() === DEFAULT_CATEGORY_NAME.toLowerCase()) {
       throw new DefaultCategoryDeletionError();
    }
 
    const fallback = await getOrCreateDefaultCategory(category.userId);
+   const now = new Date();
 
    await prisma.$transaction([
       prisma.task.updateMany({
-         where: { categoryId, userId: category.userId },
+         where: {
+            categoryId,
+            userId: category.userId,
+            isDeleted: false,
+         },
          data: { categoryId: fallback.id },
       }),
       prisma.category.update({
          where: { id: categoryId },
-         data: { isDeleted: true, deletionTime: new Date() },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
+            name: buildCategoryTombstoneName(category.name, category.id),
+         },
       }),
    ]);
 
@@ -132,15 +174,26 @@ export async function updateCategoryName(
       where: {
          userId,
          taskType: category.taskType,
+         isDeleted: false,
          name: { equals: newName, mode: "insensitive" },
          NOT: { id: category.id },
       },
    });
    if (conflict) throw new DuplicateCategoryError(newName);
 
-   await prisma.category.update({
-      where: { id: category.id },
-      data: { name: newName },
-   });
+   try {
+      await prisma.category.update({
+         where: { id: category.id },
+         data: { name: newName },
+      });
+   } catch (error) {
+      if (
+         error instanceof Prisma.PrismaClientKnownRequestError &&
+         error.code === "P2002"
+      ) {
+         throw new DuplicateCategoryError(newName);
+      }
+      throw error;
+   }
    return true;
 }

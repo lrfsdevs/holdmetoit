@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-30 (Session 176 on `afnan-jr` · Session 175 on `krish`)
+> **Last Updated:** 2026-10-30 (Session 177 on `afnan-jr` · Session 176 on `afnan-jr` · Session 175 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 177 — 2026-10-30 (Task sync quick wins on `afnan-jr`)
+
+- **Field-scoped edits:** added `buildTaskEditPatch`; the edit modal now sends only changed fields (title, status+isComplete, dueDate, challengeId). An unchanged edit is a no-op, so a stale edit cannot revert another device's toggle.
+- **Ack semantics:** `processBatchSync` now returns `mutationResults` (`applied | conflict | error`). Zero-row updates, missing categories, name collisions, and foreign rows are `conflict` with the current row (or `null`); only unexpected failures remain `error`. The client removes applied+conflict, applies the current row, deletes it when `null`, and remaps category ids via `remapLocalCategoryId`.
+- **Bot predicates:** `updateTaskStatus`, `updateTaskContent`, `deleteTask` use `updateMany` with `userId` + `isDeleted`; `deleteCategory` writes the shared tombstone; `createCategory` is live → revive → create with P2002 handling. The tombstone helper now lives in `@holdmetoit/database`.
+- **Category index:** removed the exact-case `@@unique`; added `20261031000000_category_active_name_ci_unique` (partial `LOWER(name)` where active). Pre-check + `scripts/dedupe-categories.ts` (dry-run default).
+- **Tests:** edit-patch diff, mutation-result/conflict cases, client reconcile/remap, bot model predicates, category P2002. `typecheck:web` and `typecheck:tasker` clean; targeted suites green.
+- **Docs:** `docs/tasks/README.md`; `docs/tasker/README.md` §2.2-2.4.
+- **Uncommitted:** the working tree holds the four slices; no commits were made.
+- **NEXT:** run the category duplicate pre-check on the local copy; apply the migration; manual two-profile edit/toggle test; bot delete/recreate category test; then split into the four commits.
 
 ### Session 176 — 2026-10-30 (Results lock hardening on `afnan-jr`)
 
