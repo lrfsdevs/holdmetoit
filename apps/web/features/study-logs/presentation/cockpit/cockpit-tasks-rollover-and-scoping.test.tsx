@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 import {
+   ROLLOVER_SNOOZE_COOKIE,
    isRolloverSnoozedForDate,
    setRolloverSnoozedForDate,
 } from "./cockpit-tasks-storage";
@@ -24,6 +25,9 @@ afterEach(cleanup);
 beforeEach(() => {
    if (typeof window !== "undefined" && window.localStorage) {
       window.localStorage.clear();
+   }
+   if (typeof document !== "undefined") {
+      document.cookie = `${ROLLOVER_SNOOZE_COOKIE}=; path=/; max-age=0`;
    }
 });
 
@@ -510,6 +514,61 @@ describe("CockpitTasksSection - Rollover and Goal Scoping (GH #185 / KAN-61)", (
          expect(screen.queryByTestId("rollover-today-banner")).toBeNull();
       });
 
+      it("does not render the Today banner when initialIsRolloverSnoozed is true (SSR hydration parity, zero flash) (#196, KAN-65)", () => {
+         const mockTasks: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_1",
+                  userId: "user_1",
+                  name: "Daily Work",
+                  taskType: "DAILY",
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+               },
+            ],
+            dailyCategories: [
+               {
+                  id: "cat_1",
+                  name: "Daily Work",
+                  taskType: "DAILY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "task_yesterday",
+                        userId: "user_1",
+                        categoryId: "cat_1",
+                        title: "Incomplete Chem problem set",
+                        taskType: "DAILY",
+                        isComplete: false,
+                        dueDate: yesterdayDate,
+                        createdAt: new Date(`${yesterdayDate}T10:00:00Z`),
+                        updatedAt: new Date(`${yesterdayDate}T10:00:00Z`),
+                        completedAt: null,
+                     },
+                  ],
+               },
+            ],
+            weeklyCategories: [],
+            totalDailyTasks: 1,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 0,
+            completedWeeklyTasks: 0,
+         };
+
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={mockTasks}
+               userId="user_1"
+               todayDate={todayDate}
+               initialSelectedDateKey={todayDate}
+               initialIsRolloverSnoozed={true}
+            />
+         );
+
+         expect(screen.queryByTestId("rollover-today-banner")).toBeNull();
+      });
+
       it("hides the Today banner and persists snooze to localStorage when snooze button is clicked (#196, KAN-65)", () => {
          const mockTasks: UserCategorizedTasks = {
             categories: [
@@ -567,6 +626,73 @@ describe("CockpitTasksSection - Rollover and Goal Scoping (GH #185 / KAN-61)", (
 
          expect(screen.queryByTestId("rollover-today-banner")).toBeNull();
          expect(isRolloverSnoozedForDate("user_1", todayDate)).toBe(true);
+      });
+
+      it("allows changing the status of earlier tasks in daily to-do when viewing a past day", () => {
+         const mockTasks: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_1",
+                  userId: "user_1",
+                  name: "Daily Work",
+                  taskType: "DAILY",
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+               },
+            ],
+            dailyCategories: [
+               {
+                  id: "cat_1",
+                  name: "Daily Work",
+                  taskType: "DAILY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "task_past_day",
+                        userId: "user_1",
+                        categoryId: "cat_1",
+                        title: "Incomplete Chem problem set",
+                        taskType: "DAILY",
+                        isComplete: false,
+                        status: "TODO",
+                        dueDate: yesterdayDate,
+                        createdAt: new Date(`${yesterdayDate}T10:00:00Z`),
+                        updatedAt: new Date(`${yesterdayDate}T10:00:00Z`),
+                        completedAt: null,
+                     },
+                  ],
+               },
+            ],
+            weeklyCategories: [],
+            totalDailyTasks: 1,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 0,
+            completedWeeklyTasks: 0,
+         };
+
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={mockTasks}
+               userId="user_1"
+               todayDate={todayDate}
+               initialSelectedDateKey={yesterdayDate}
+               challengeStartDate="2026-10-20"
+               totalChallengeDays={7}
+               challengeStatus="ACTIVE"
+            />
+         );
+
+         // Task checkbox is rendered with cursor-pointer and not disabled
+         const taskCheckbox = screen.getByRole("checkbox", {
+            name: /Incomplete Chem problem set/i,
+         });
+         expect(taskCheckbox.className).toContain("cursor-pointer");
+         expect(taskCheckbox.className).not.toContain("cursor-not-allowed");
+
+         // Clicking the task checkbox toggles it to completed
+         fireEvent.click(taskCheckbox);
+         expect(taskCheckbox.getAttribute("aria-checked")).toBe("true");
       });
    });
 

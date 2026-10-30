@@ -51,6 +51,8 @@ import {
    isRolloverSnoozedForDate,
    setRolloverSnoozedForDate,
    cleanupExpiredRolloverSnooze,
+   ROLLOVER_SNOOZE_COOKIE,
+   ROLLOVER_SNOOZE_STORAGE_PREFIX,
 } from "./cockpit-tasks-storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,6 +186,7 @@ export interface CockpitTasksSectionProps {
    onOpenHoursModal?: (dayNumber?: number) => void;
    isAdmin?: boolean;
    initialCollapsedCategoryIds?: string[];
+   initialIsRolloverSnoozed?: boolean;
 }
 
 /** Renders the participant's categorized task board and task actions. */
@@ -201,6 +204,7 @@ export function CockpitTasksSection({
    onOpenHoursModal,
    isAdmin = false,
    initialCollapsedCategoryIds,
+   initialIsRolloverSnoozed,
 }: CockpitTasksSectionProps) {
    const [, startTransition] = useTransition();
    const linkableChallengeId =
@@ -564,14 +568,24 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(false);
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
+      if (initialIsRolloverSnoozed) {
+         return true;
+      }
+      return isRolloverSnoozedForDate(userId, effectiveTodayDate);
+   });
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
-      setIsRolloverSnoozed(
-         isRolloverSnoozedForDate(userId, effectiveTodayDate)
-      );
-   }, [userId, effectiveTodayDate]);
+      const isSnoozed = isRolloverSnoozedForDate(userId, effectiveTodayDate);
+      if (isSnoozed) {
+         if (!isRolloverSnoozed) {
+            setIsRolloverSnoozed(true);
+         }
+         // Sync to cookie so all future reloads have the cookie on the server
+         setRolloverSnoozedForDate(userId, effectiveTodayDate);
+      }
+   }, [userId, effectiveTodayDate, isRolloverSnoozed]);
 
    const handleSnoozeRolloverToday = useCallback(() => {
       setIsRolloverDismissed(true);
@@ -778,6 +792,13 @@ export function CockpitTasksSection({
          try {
             const isSyncEvent = options?.isSyncEvent ?? false;
             const pendingMutations = await getAllQueuedMutations();
+            const pendingTaskIds = new Set(
+               pendingMutations.map((m) => {
+                  const p = m.payload as Record<string, unknown>;
+                  return String(p.taskId || p.id || "");
+               })
+            );
+            pendingTaskIds.delete("");
             const hasServerTasks = Boolean(
                userTasks &&
                (userTasks.dailyCategories?.length > 0 ||
@@ -1032,8 +1053,54 @@ export function CockpitTasksSection({
                   putLocalTasks(tasksToHeal).catch(() => {});
                }
 
-               setDailyCategories(dailyCats);
-               setWeeklyCategories(weeklyCats);
+               setDailyCategories((currentCategories) => {
+                  if (pendingTaskIds.size === 0) return dailyCats;
+                  return dailyCats.map((cat) => ({
+                     ...cat,
+                     tasks: cat.tasks.map((task) => {
+                        if (pendingTaskIds.has(task.id)) {
+                           const currentCat = currentCategories.find((c) =>
+                              c.tasks.some((t) => t.id === task.id)
+                           );
+                           const currentTask = currentCat?.tasks.find(
+                              (t) => t.id === task.id
+                           );
+                           if (currentTask) {
+                              return {
+                                 ...task,
+                                 completed: currentTask.completed,
+                                 status: currentTask.status,
+                              };
+                           }
+                        }
+                        return task;
+                     }),
+                  }));
+               });
+               setWeeklyCategories((currentCategories) => {
+                  if (pendingTaskIds.size === 0) return weeklyCats;
+                  return weeklyCats.map((cat) => ({
+                     ...cat,
+                     tasks: cat.tasks.map((task) => {
+                        if (pendingTaskIds.has(task.id)) {
+                           const currentCat = currentCategories.find((c) =>
+                              c.tasks.some((t) => t.id === task.id)
+                           );
+                           const currentTask = currentCat?.tasks.find(
+                              (t) => t.id === task.id
+                           );
+                           if (currentTask) {
+                              return {
+                                 ...task,
+                                 completed: currentTask.completed,
+                                 status: currentTask.status,
+                              };
+                           }
+                        }
+                        return task;
+                     }),
+                  }));
+               });
             } else if (userTasks && userTasks.categories.length > 0) {
                logTaskSync("Seeding IndexedDB from server userTasks...");
                const seedCats: LocalCategoryRecord[] = userTasks.categories
@@ -1139,18 +1206,27 @@ export function CockpitTasksSection({
       const nextCompleted = nextStatus === "COMPLETED";
 
       if (taskType === "daily") {
-         const targetTask = dailyCategories[catIndex]?.tasks.find(
+         let resolvedCatIdx = catIndex;
+         let targetTask = dailyCategories[catIndex]?.tasks.find(
             (t) => t.id === taskId
          );
+         if (!targetTask) {
+            resolvedCatIdx = dailyCategories.findIndex((c) =>
+               c.tasks.some((t) => t.id === taskId)
+            );
+            if (resolvedCatIdx !== -1) {
+               targetTask = dailyCategories[resolvedCatIdx]?.tasks.find(
+                  (t) => t.id === taskId
+               );
+            }
+         }
          if (!targetTask) return;
-         const targetDateKey = getTaskDateKey(targetTask);
-         if (checkIsDayLocked(targetDateKey)) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
-               i === catIndex
+               i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
                   ? {
                        ...cat,
                        tasks: cat.tasks.map((t) =>
@@ -1168,12 +1244,15 @@ export function CockpitTasksSection({
          );
 
          const nowIso = new Date().toISOString();
-         const cat = dailyCategories[catIndex];
+         const cat =
+            dailyCategories[resolvedCatIdx] ||
+            dailyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
             putLocalTask({
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
+               challengeId: targetTask.challengeId ?? null,
                title: targetTask.text,
                taskType: "DAILY",
                isComplete: nextCompleted,
@@ -1200,7 +1279,7 @@ export function CockpitTasksSection({
                retryCount: 0,
             })
                .then(() => {
-                  scheduleSync(userId);
+                  scheduleSync(userId, 400);
                })
                .catch(() => {});
 
@@ -1218,16 +1297,27 @@ export function CockpitTasksSection({
             isComplete: nextCompleted,
          });
       } else {
-         const targetTask = weeklyCategories[catIndex]?.tasks.find(
+         let resolvedCatIdx = catIndex;
+         let targetTask = weeklyCategories[catIndex]?.tasks.find(
             (t) => t.id === taskId
          );
+         if (!targetTask) {
+            resolvedCatIdx = weeklyCategories.findIndex((c) =>
+               c.tasks.some((t) => t.id === taskId)
+            );
+            if (resolvedCatIdx !== -1) {
+               targetTask = weeklyCategories[resolvedCatIdx]?.tasks.find(
+                  (t) => t.id === taskId
+               );
+            }
+         }
          if (!targetTask) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
-               i === catIndex
+               i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
                   ? {
                        ...cat,
                        tasks: cat.tasks.map((t) =>
@@ -1245,12 +1335,15 @@ export function CockpitTasksSection({
          );
 
          const nowIso = new Date().toISOString();
-         const cat = weeklyCategories[catIndex];
+         const cat =
+            weeklyCategories[resolvedCatIdx] ||
+            weeklyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
             putLocalTask({
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
+               challengeId: targetTask.challengeId ?? null,
                title: targetTask.text,
                taskType: "WEEKLY",
                isComplete: nextCompleted,
@@ -1277,7 +1370,7 @@ export function CockpitTasksSection({
                retryCount: 0,
             })
                .then(() => {
-                  scheduleSync(userId);
+                  scheduleSync(userId, 400);
                })
                .catch(() => {});
 
@@ -1298,9 +1391,14 @@ export function CockpitTasksSection({
    };
 
    const toggleDailyTask = (catIndex: number, taskId: string) => {
-      const targetTask = dailyCategories[catIndex]?.tasks.find(
+      let targetTask = dailyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
+      if (!targetTask) {
+         targetTask = dailyCategories
+            .flatMap((c) => c.tasks)
+            .find((t) => t.id === taskId);
+      }
       if (!targetTask) return;
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
@@ -1309,9 +1407,14 @@ export function CockpitTasksSection({
    };
 
    const toggleWeeklyTask = (catIndex: number, taskId: string) => {
-      const targetTask = weeklyCategories[catIndex]?.tasks.find(
+      let targetTask = weeklyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
+      if (!targetTask) {
+         targetTask = weeklyCategories
+            .flatMap((c) => c.tasks)
+            .find((t) => t.id === taskId);
+      }
       if (!targetTask) return;
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
@@ -4098,39 +4201,56 @@ export function CockpitTasksSection({
                         !isRolloverDismissed &&
                         !isRolloverSnoozed && (
                            <div
+                              id="rollover-today-banner"
                               data-testid="rollover-today-banner"
-                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200"
+                              suppressHydrationWarning
+                              className="p-3.5 rounded-2xl bg-surface-nested border border-amber-500/30 flex flex-col gap-2.5 shadow-sm animate-in fade-in duration-200"
                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                 <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                                    <RotateCcw className="h-4 w-4 text-amber-400" />
+                              <script
+                                 dangerouslySetInnerHTML={{
+                                    __html: `(function(){try{var k='${ROLLOVER_SNOOZE_STORAGE_PREFIX}';var u='${userId || "guest"}';var d='${effectiveTodayDate}';if(localStorage.getItem(k+u+'_'+d)==='true'||localStorage.getItem(k+'guest_'+d)==='true'||localStorage.getItem(k+'all_'+d)==='true'||document.cookie.indexOf('${ROLLOVER_SNOOZE_COOKIE}')!==-1){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
+                                 }}
+                              />
+                              <div className="flex items-start justify-between gap-2.5">
+                                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                    <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                                       <RotateCcw className="h-4 w-4 text-amber-400" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                       <p className="text-xs font-semibold text-text-primary">
+                                          {rolloverSummary.yesterdayIncompleteCount >
+                                             0 &&
+                                          rolloverSummary.totalPastIncompleteCount ===
+                                             rolloverSummary.yesterdayIncompleteCount
+                                             ? `${rolloverSummary.yesterdayIncompleteCount} incomplete task${
+                                                  rolloverSummary.yesterdayIncompleteCount >
+                                                  1
+                                                     ? "s"
+                                                     : ""
+                                               } from yesterday`
+                                             : `${rolloverSummary.totalPastIncompleteCount} incomplete task${
+                                                  rolloverSummary.totalPastIncompleteCount >
+                                                  1
+                                                     ? "s"
+                                                     : ""
+                                               } from earlier days`}
+                                       </p>
+                                       <p className="text-meta text-text-tertiary mt-0.5">
+                                          Carry over unfinished tasks to today
+                                          with one click.
+                                       </p>
+                                    </div>
                                  </div>
-                                 <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-text-primary truncate">
-                                       {rolloverSummary.yesterdayIncompleteCount >
-                                          0 &&
-                                       rolloverSummary.totalPastIncompleteCount ===
-                                          rolloverSummary.yesterdayIncompleteCount
-                                          ? `${rolloverSummary.yesterdayIncompleteCount} incomplete task${
-                                               rolloverSummary.yesterdayIncompleteCount >
-                                               1
-                                                  ? "s"
-                                                  : ""
-                                            } from yesterday`
-                                          : `${rolloverSummary.totalPastIncompleteCount} incomplete task${
-                                               rolloverSummary.totalPastIncompleteCount >
-                                               1
-                                                  ? "s"
-                                                  : ""
-                                            } from earlier days`}
-                                    </p>
-                                    <p className="text-meta text-text-tertiary">
-                                       Carry over unfinished tasks to today with
-                                       one click.
-                                    </p>
-                                 </div>
+                                 <button
+                                    type="button"
+                                    onClick={handleSnoozeRolloverToday}
+                                    aria-label="Dismiss rollover helper"
+                                    className="p-1 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors shrink-0 -mr-1 -mt-1"
+                                 >
+                                    <X className="h-4 w-4" />
+                                 </button>
                               </div>
-                              <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 shrink-0">
+                              <div className="flex items-center flex-wrap gap-2 pt-0.5">
                                  <button
                                     type="button"
                                     onClick={() =>
@@ -4147,17 +4267,9 @@ export function CockpitTasksSection({
                                     onClick={handleSnoozeRolloverToday}
                                     title="Don't remind today"
                                     data-testid="rollover-snooze-today-button"
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-transparent hover:border-border-subtle"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-xl text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors border border-border-subtle/60 hover:border-border-subtle"
                                  >
                                     <span>Don&apos;t remind today</span>
-                                 </button>
-                                 <button
-                                    type="button"
-                                    onClick={() => setIsRolloverDismissed(true)}
-                                    aria-label="Dismiss rollover helper"
-                                    className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors"
-                                 >
-                                    <X className="h-3.5 w-3.5" />
                                  </button>
                               </div>
                            </div>
@@ -4577,21 +4689,12 @@ export function CockpitTasksSection({
                                                                            "COMPLETED"
                                                                         }
                                                                         onClick={() => {
-                                                                           if (
-                                                                              isPastDayLocked
-                                                                           )
-                                                                              return;
                                                                            toggleDailyTask(
                                                                               catIdx,
                                                                               task.id
                                                                            );
                                                                         }}
-                                                                        className={cn(
-                                                                           "flex items-start gap-3 flex-1 min-w-0",
-                                                                           isPastDayLocked
-                                                                              ? "cursor-not-allowed opacity-75"
-                                                                              : "cursor-pointer"
-                                                                        )}
+                                                                        className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
                                                                         title={
                                                                            status ===
                                                                            "COMPLETED"

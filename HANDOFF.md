@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-28 (Session 173 on `krish`)
+> **Last Updated:** 2026-10-29 (Session 175 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -176,6 +176,49 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 175 — 2026-10-29 (Task Status Transition Stability, Anti-Flash Reversion & Fresh DB Sync on `krish`)
+
+- **Context & Bug Resolution:**
+   - Addressed user feedback where changing task statuses (e.g. from `TODO` to `IN_PROGRESS`, or `IN_PROGRESS` to `COMPLETED`) took a long time to reflect or flashed between the previous state (`IN_PROGRESS` / `TODO`) and the changed state.
+- **Root Cause Identified & Resolved:**
+   1. **Stale Cache in Batch Sync (`task-sync.repository.ts`):** `processBatchSync` was querying `latest` via `getUserCategorizedTasks(userId)` which is wrapped in Next.js `unstable_cache`. Because mutations had just been applied in the transaction, the cached function returned the pre-mutation stale snapshot in `serverChanges`.
+   2. **Local Overwrite of Optimistic State (`task-sync.service.ts`):** When client processed `serverChanges`, acknowledged mutations were removed from the queue, so the stale server changes overwrote local IndexedDB tasks. When `TASKS_SYNCED_EVENT` fired, the view rehydrated from IndexedDB and flashed back to the old status until the next 15-second background sync.
+   3. **Rehydration Optimistic Mutation Protection (`cockpit-tasks-section.tsx`):** `hydrateFromIndexedDB` now tracks all active pending mutations in IndexedDB and preserves the currently rendered optimistic status in React state so incoming sync events or hydration passes cannot clobber in-flight status changes.
+   4. **Closure Resilience in `setTaskStatus` & Snappy Debounce (`cockpit-tasks-section.tsx`):**
+      - Added fallback category discovery by `taskId` across all categories if `catIndex` is out-of-date in dropdown/context menu closures.
+      - Lowered discrete status change sync debounce delay from 1500ms to 400ms (`scheduleSync(userId, 400)`), making cloud persistence fast while preventing rapid duplicate calls.
+      - Applied resilient lookup to `toggleDailyTask` and `toggleWeeklyTask` and preserved `challengeId` on weekly tasks.
+- **Files Modified & Created:**
+   - `apps/web/features/tasks/data/task.repository.ts`: Exported `getUserCategorizedTasksFromDatabase(userId)` for direct Prisma queries bypassing `unstable_cache`.
+   - `apps/web/features/tasks/data/task-sync.repository.ts`: Replaced cached `getUserCategorizedTasks` with direct `getUserCategorizedTasksFromDatabase` in `processBatchSync`.
+   - `apps/web/features/tasks/data/task-sync.repository.test.ts`: Updated repository test mocks to reflect fresh database fetcher.
+   - `apps/web/features/tasks/data/local/task-sync.service.ts`: Protected local tasks with `syncState === "pending"` and newer timestamps from stale server overwrite.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: Added optimistic mutation protection in `hydrateFromIndexedDB`, resilient category lookup by `taskId`, and fast 400ms sync scheduling.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-status-stability.test.tsx`: Added test suite covering immediate status transition, anti-flash preservation across live sync events, and checkbox row toggling.
+- **Verification & Quality Gates:**
+   - Full workspace test suite: ✅ 212 test files passed (2,087/2,087 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 errors.
+
+### Session 174 — 2026-10-29 (Daily Snooze Banner Layout Stabilization & Earlier Tasks Status Editing on `krish` · GH #196 / KAN-65)
+
+- **Today Rollover Snooze Banner Layout Fix (`cockpit-tasks-section.tsx`):**
+   - Resolved severe flex layout collision where `sm:flex-row` and `shrink-0` on action buttons squeezed the text description into a vertical single-word column and caused buttons to overlap the description text on narrow card widths.
+   - Refactored banner into a clean 2-row container (`flex flex-col gap-2.5`):
+      - **Row 1:** Icon, headline, and subtitle have full-width text space with top-right dismiss button (`X`).
+      - **Row 2:** Action buttons (`Roll over to Today` and `Don't remind today`) sit neatly aligned below the description with natural wrap tolerance.
+- **Earlier / Past Days Daily Task Status Editing Enabled (`cockpit-tasks-section.tsx`):**
+   - Addressed user feedback where participants completed study tasks on earlier days but had not updated their status before midnight.
+   - Removed `checkIsDayLocked` guard from `setTaskStatus` for daily tasks and removed `isPastDayLocked` guard / `cursor-not-allowed opacity-75` styling from the daily task row click handler.
+   - Preserves lock invariants on adding new tasks to past challenge days while allowing full status editing (checkbox toggling, `Completed`, `In Progress`, `Crossed Out`, `TODO`) on existing tasks.
+- **Verification & Quality Gates:**
+   - Added unit test in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying interactive task completion toggling for past-day daily tasks.
+   - 0 TypeScript compiler errors (`npm run typecheck:web`).
+   - 0 ESLint errors (`npm run lint:web`).
+   - 89/89 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
+- **Jira Status:** `KAN-65` transitioned to `In Review` (id: 10006).
+- **PR Status:** PR creation withheld per user request.
 
 ### Session 172 — 2026-10-28 (Cockpit Tasks Card Overlap Fixes, Scope Badges, & Review Hardening on `krish` · PR #200)
 
@@ -1682,6 +1725,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Verification:** `npm run test -w @holdmetoit/ypt-bot` → 97/97 pass.
 - **GitHub PR:** Submitted [PR #199](https://github.com/lrfsdevs/holdmetoit/pull/199) from `feat/ypt-bot-health-head` to `dev`.
 - **NEXT STEP:** Peer review and merge PR #199 into `dev`.
+
 ### Session 170 — 2026-10-28 (Card Header Quick-Add, Scroll Containment & Mobile Switcher — GH-#195 / KAN-64 on `krish`)
 
 - **Context & Objectives:** Resolve GitHub Issue [#195](https://github.com/lrfsdevs/holdmetoit/issues/195) / Jira Ticket `KAN-64` ("card header quick-add action and scroll containment for long todo lists"). Eliminate bottom-heavy add button friction, prevent unbound vertical card stretching for long task lists, and optimize mobile navigation between Daily and Weekly task boards.
@@ -1787,3 +1831,45 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Full workspace test suite: ✅ 211 test files passed (2,079/2,079 tests green).
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
 - **NEXT STEP:** Peer review and submit PR to `dev`.
+
+### Session 174 — 2026-10-29 (Stabilize Daily Snooze Banner Layout, Status Editing on Earlier Tasks & Cookie SSR Parity for Zero Rollover Flash — GH-#196 / KAN-65 on `krish`)
+
+- **Context & Objectives:** Address user feedback on Issue [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) / Jira `KAN-65`:
+   1. Fix broken layout on "Don't remind today" rollover banner where text was squeezed vertically and action buttons overlapped text on compact column layouts (screenshot `media_1793273236265_8dc2ac50.png`).
+   2. Allow updating the status of tasks on earlier days in Daily Todos (e.g. checkbox checking, status toggling) since users often complete tasks earlier but forget to check them off before midnight.
+   3. Eliminate split-second flash / pop on page refresh where the rollover banner briefly appeared even after clicking "Don't remind me today".
+   4. Move Jira item `KAN-65` to `In Review`.
+   5. Explicit user constraint: **Do not create a PR without user instruction.**
+- **Architectural Enhancements Implemented:**
+   1. **Rollover Today Banner Responsive 2-Row Restructure (`cockpit-tasks-section.tsx`):**
+      - Converted `rollover-today-banner` from single-row flex into an accessible 2-row layout (`flex flex-col gap-2.5`).
+      - Row 1: Left contains rotate icon, title, and descriptive subtitle with unconstrained width; right contains the dismiss (`X`) button.
+      - Row 2: Action buttons (`Roll over to Today` and `Don't remind today`) sit cleanly below the text with wrap safety (`flex items-center flex-wrap gap-2 pt-0.5`).
+   2. **Editable Status on Earlier Daily Tasks (`cockpit-tasks-section.tsx`):**
+      - Removed the `checkIsDayLocked(targetDateKey)` blocker inside `setTaskStatus` to permit marking tasks complete, in progress, or crossed out on earlier days.
+      - Removed `if (isPastDayLocked) return;` and `cursor-not-allowed opacity-75` from the task row click handler, allowing past tasks to remain clickable (`cursor-pointer`).
+      - Preserved strict challenge rules preventing _creation_ of new tasks on past challenge days.
+   3. **Cookie SSR Parity & Parser-Blocking Zero-Flash Rollover Snooze (`cockpit-tasks-storage.ts`, `app/page.tsx`, `home-cockpit-view.tsx`, `cockpit-tasks-section.tsx`):**
+      - Root Cause: `isRolloverSnoozed` was previously initialized to `useState(false)` on the server because `localStorage` cannot be read during SSR. Even with a cookie, if a user had an existing snooze stored in `localStorage` prior to cookie rollout, or if `userId` scope differed between guest/authenticated states, the server emitted the banner in raw HTML and only hid it after client `useEffect` ran ~1 second later.
+      - Implemented 3-Layer Zero-Flash Architecture:
+         - **Layer 1 (Flexible SSR Cookie Resolution):** Next.js SSR in `app/page.tsx` checks `ROLLOVER_SNOOZE_COOKIE` across all valid date representations (`todayDateKey`, UTC `toISOString()`, and `cockpit.todayDate`) and scopes (`scope` and `"guest"`), passing `initialIsRolloverSnoozed = true` to omit the banner from server HTML entirely.
+         - **Layer 2 (Parser-Blocking Synchronous Inline Script):** Embedded a synchronous `<script>` inside `#rollover-today-banner` with `suppressHydrationWarning`. If the browser has a snooze in `localStorage` or cookie, this parser-blocking script runs **before the browser paints the first frame**, applying `display: none !important;`. Guarantees 0 frames of visual flash even on first load without a cookie.
+         - **Layer 3 (Synchronous Hydration & Cookie Backfill):** `useState` initializes from `isRolloverSnoozedForDate(userId, effectiveTodayDate)` on client mount without delay, and `useEffect` immediately writes any detected `localStorage` snooze back to `document.cookie` (`setRolloverSnoozedForDate`), permanently caching it for future SSR requests.
+         - Wired the dismiss (`X`) button to `handleSnoozeRolloverToday` for consistent dismissal behavior.
+         - `cleanupExpiredRolloverSnooze` purges obsolete dates from both `localStorage` and cookie on day rollover.
+   4. **Comprehensive Test Coverage:**
+      - Added tests in `cockpit-tasks-storage.test.ts` verifying dual-persistence to cookie and localStorage, cookie fallback when localStorage is cleared, multi-user scope isolation, and cookie expiration cleanup.
+      - Added tests in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying past-day task status toggling and SSR `initialIsRolloverSnoozed={true}` pre-rendering without banner flash.
+- **Files Modified & Verified:**
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: 2-row banner layout, enabled past-day task status changes, and integrated `initialIsRolloverSnoozed`.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.ts`: Exported `ROLLOVER_SNOOZE_COOKIE`, dual cookie + localStorage persistence, and cookie cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-storage.test.ts`: Added tests for cookie dual-persistence and cleanup.
+   - `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-rollover-and-scoping.test.tsx`: Added past-day task status toggling and SSR initial snooze tests.
+   - `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`: Propagated `initialIsRolloverSnoozed` prop.
+   - `apps/web/app/page.tsx`: Read `ROLLOVER_SNOOZE_COOKIE` and supplied `initialIsRolloverSnoozed` to `HomeCockpitView`.
+- **Quality Gates:**
+   - `npm run test -w @holdmetoit/web -- cockpit-tasks`: ✅ 7 test files passed (93/93 tests green).
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - `npm run lint:web`: ✅ 0 lint errors.
+- **Jira Status:** `KAN-65` is in **`In Review`** (`id: 10006`).
+- **NEXT STEP:** Await user instruction before creating a Pull Request.

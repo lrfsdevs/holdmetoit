@@ -236,10 +236,40 @@ export function toggleCategoryCollapseKey(
 }
 
 /**
+ * Cookie name for snoozing the daily rollover banner.
+ * Used for SSR hydration parity to eliminate flash on page refresh.
+ */
+export const ROLLOVER_SNOOZE_COOKIE = "holdmetoit_rollover_snooze";
+
+/**
  * Prefix for daily rollover snooze keys in localStorage.
  * Format: holdmetoit_rollover_snooze_${userId}_${todayDateKey}
  */
 export const ROLLOVER_SNOOZE_STORAGE_PREFIX = "holdmetoit_rollover_snooze_";
+
+/**
+ * Reads snooze mapping from document.cookie safely.
+ * Returns a map of normalizedUserId -> snoozedDateKey.
+ */
+export function readSnoozeCookiePayload(): Record<string, string> {
+   if (typeof document === "undefined" || !document.cookie) {
+      return {};
+   }
+   try {
+      const match = document.cookie.match(
+         new RegExp(`(?:^|; )${ROLLOVER_SNOOZE_COOKIE}=([^;]*)`)
+      );
+      if (match && match[1]) {
+         const parsed: unknown = JSON.parse(decodeURIComponent(match[1]));
+         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return parsed as Record<string, string>;
+         }
+      }
+   } catch {
+      // Ignore
+   }
+   return {};
+}
 
 /**
  * Returns the localStorage key for snoozing the daily rollover banner.
@@ -256,38 +286,55 @@ export function getRolloverSnoozeStorageKey(
 
 /**
  * Checks whether the Today rollover reminder banner has been snoozed for the given date.
+ * Checks both localStorage and cookie so client renders match SSR instantly.
  */
 export function isRolloverSnoozedForDate(
    userId: string | null | undefined,
    dateKey: string
 ): boolean {
-   if (typeof window === "undefined") {
+   if (typeof window === "undefined" && typeof document === "undefined") {
       return false;
    }
+   const normalizedUser =
+      userId && userId.trim().length > 0 ? userId.trim() : "guest";
+
    try {
-      if (window.localStorage) {
+      if (typeof window !== "undefined" && window.localStorage) {
          const key = getRolloverSnoozeStorageKey(userId, dateKey);
-         return window.localStorage.getItem(key) === "true";
+         if (window.localStorage.getItem(key) === "true") {
+            return true;
+         }
       }
    } catch {
       // Gracefully ignore private browsing / quota errors
    }
+
+   try {
+      const payload = readSnoozeCookiePayload();
+      if (payload[normalizedUser] === dateKey) {
+         return true;
+      }
+   } catch {
+      // Gracefully ignore
+   }
+
    return false;
 }
 
 /**
- * Snoozes the Today rollover reminder for the given dateKey in localStorage.
+ * Snoozes the Today rollover reminder for the given dateKey in localStorage AND cookie.
+ * Writing to cookie ensures server pre-rendering has identical state on page reload.
  * Automatically cleans up any obsolete snooze entries for older dates.
  */
 export function setRolloverSnoozedForDate(
    userId: string | null | undefined,
    dateKey: string
 ): void {
-   if (typeof window === "undefined") {
-      return;
-   }
+   const normalizedUser =
+      userId && userId.trim().length > 0 ? userId.trim() : "guest";
+
    try {
-      if (window.localStorage) {
+      if (typeof window !== "undefined" && window.localStorage) {
          const key = getRolloverSnoozeStorageKey(userId, dateKey);
          window.localStorage.setItem(key, "true");
          cleanupExpiredRolloverSnooze(userId, dateKey);
@@ -295,22 +342,38 @@ export function setRolloverSnoozedForDate(
    } catch {
       // Gracefully ignore
    }
+
+   try {
+      if (typeof document !== "undefined") {
+         const currentPayload = readSnoozeCookiePayload();
+         currentPayload[normalizedUser] = dateKey;
+         // Clean up older dates from cookie
+         for (const u of Object.keys(currentPayload)) {
+            if (currentPayload[u] < dateKey) {
+               delete currentPayload[u];
+            }
+         }
+         const cookieValue = encodeURIComponent(JSON.stringify(currentPayload));
+         document.cookie = `${ROLLOVER_SNOOZE_COOKIE}=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
+      }
+   } catch {
+      // Gracefully ignore
+   }
 }
 
 /**
- * Cleans up expired rollover snooze entries from localStorage where the stored dateKey is earlier than currentDateKey.
+ * Cleans up expired rollover snooze entries from localStorage and cookie
+ * where the stored dateKey is earlier than currentDateKey.
  */
 export function cleanupExpiredRolloverSnooze(
    userId: string | null | undefined,
    currentDateKey: string
 ): void {
-   if (typeof window === "undefined") {
-      return;
-   }
+   const normalizedUser =
+      userId && userId.trim().length > 0 ? userId.trim() : "guest";
+
    try {
-      if (window.localStorage) {
-         const normalizedUser =
-            userId && userId.trim().length > 0 ? userId.trim() : "guest";
+      if (typeof window !== "undefined" && window.localStorage) {
          const prefix = `${ROLLOVER_SNOOZE_STORAGE_PREFIX}${normalizedUser}_`;
          const toRemove: string[] = [];
          for (let i = 0; i < window.localStorage.length; i++) {
@@ -323,6 +386,25 @@ export function cleanupExpiredRolloverSnooze(
             }
          }
          toRemove.forEach((k) => window.localStorage.removeItem(k));
+      }
+   } catch {
+      // Gracefully ignore
+   }
+
+   try {
+      if (typeof document !== "undefined") {
+         const payload = readSnoozeCookiePayload();
+         let changed = false;
+         for (const u of Object.keys(payload)) {
+            if (payload[u] < currentDateKey) {
+               delete payload[u];
+               changed = true;
+            }
+         }
+         if (changed) {
+            const cookieValue = encodeURIComponent(JSON.stringify(payload));
+            document.cookie = `${ROLLOVER_SNOOZE_COOKIE}=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
+         }
       }
    } catch {
       // Gracefully ignore

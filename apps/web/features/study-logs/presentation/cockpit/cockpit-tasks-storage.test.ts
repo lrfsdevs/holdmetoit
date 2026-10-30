@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
    COLLAPSED_CATEGORIES_COOKIE,
+   ROLLOVER_SNOOZE_COOKIE,
    getCollapsedCategoriesStorageKey,
    isCategoryCollapsed,
    readCollapsedCategoryIds,
@@ -17,6 +18,7 @@ describe("cockpit-tasks-storage", () => {
    beforeEach(() => {
       window.localStorage.clear();
       document.cookie = `${COLLAPSED_CATEGORIES_COOKIE}=; path=/; max-age=0`;
+      document.cookie = `${ROLLOVER_SNOOZE_COOKIE}=; path=/; max-age=0`;
       vi.restoreAllMocks();
    });
 
@@ -339,6 +341,30 @@ describe("cockpit-tasks-storage", () => {
          // Different date is not snoozed
          expect(isRolloverSnoozedForDate("user_1", "2026-10-29")).toBe(false);
       });
+
+      it("records snooze to both localStorage and document.cookie for SSR parity (#196, KAN-65)", () => {
+         setRolloverSnoozedForDate("user_1", "2026-10-28");
+
+         // Verify document.cookie contains the snooze payload
+         expect(document.cookie).toContain(ROLLOVER_SNOOZE_COOKIE);
+         expect(document.cookie).toContain(
+            encodeURIComponent(JSON.stringify({ user_1: "2026-10-28" }))
+         );
+
+         // Even if localStorage is cleared or unavailable, cookie provides fallback
+         window.localStorage.clear();
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-28")).toBe(true);
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-29")).toBe(false);
+      });
+
+      it("supports multiple user scopes in cookie payload without collision (#196, KAN-65)", () => {
+         setRolloverSnoozedForDate("user_1", "2026-10-28");
+         setRolloverSnoozedForDate("user_2", "2026-10-28");
+
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-28")).toBe(true);
+         expect(isRolloverSnoozedForDate("user_2", "2026-10-28")).toBe(true);
+         expect(isRolloverSnoozedForDate("guest", "2026-10-28")).toBe(false);
+      });
    });
 
    describe("cleanupExpiredRolloverSnooze", () => {
@@ -382,6 +408,19 @@ describe("cockpit-tasks-storage", () => {
                "holdmetoit_rollover_snooze_user_1_2026-10-29"
             )
          ).toBe("true");
+      });
+
+      it("cleans up expired cookie entries older than currentDateKey (#196, KAN-65)", () => {
+         const initialPayload = {
+            user_1: "2026-10-26",
+            user_2: "2026-10-28",
+         };
+         document.cookie = `${ROLLOVER_SNOOZE_COOKIE}=${encodeURIComponent(JSON.stringify(initialPayload))}; path=/`;
+
+         cleanupExpiredRolloverSnooze("user_1", "2026-10-28");
+
+         expect(isRolloverSnoozedForDate("user_1", "2026-10-26")).toBe(false);
+         expect(isRolloverSnoozedForDate("user_2", "2026-10-28")).toBe(true);
       });
    });
 });
