@@ -306,6 +306,7 @@ model PunishmentRecord {
   participant ChallengeParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   pardonedBy  User?                @relation("PardonAdmin", fields: [pardonedById], references: [id], onDelete: SetNull)
 
+  @@unique([challengeId, participantId])
   @@index([challengeId])
   @@index([participantId])
 }

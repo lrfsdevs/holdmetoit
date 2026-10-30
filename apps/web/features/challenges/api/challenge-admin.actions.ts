@@ -24,7 +24,10 @@ import {
 import { getStorageUrlConfig } from "@/core/storage/supabase-storage";
 import { findChallengeImageUrls } from "@/features/challenges/data/punishment-pfp.repository";
 import { cleanupUnreferencedChallengeImages } from "@/features/challenges/data/challenge-image-cleanup";
-import { validateChallengeCreation } from "@/features/challenges/domain/challenge-lifecycle";
+import {
+   ChallengeStateError,
+   validateChallengeCreation,
+} from "@/features/challenges/domain/challenge-lifecycle";
 import { validateWeeklyTargetSeconds } from "@/features/challenges/domain/target-hours.validation";
 import { composeDurationSeconds } from "@/features/study-logs/domain/daily-log.validation";
 import {
@@ -264,6 +267,15 @@ export async function lockChallengeResultsAction(
          context: { challengeId },
          error,
       });
+
+      if (error instanceof ChallengeStateError) {
+         return {
+            ok: false,
+            code: "ALREADY_LOCKED",
+            message: error.message,
+         };
+      }
+
       return {
          ok: false,
          code: "LOCK_FAILED",
@@ -305,6 +317,15 @@ export async function unlockChallengeResultsAction(
          context: { challengeId },
          error,
       });
+
+      if (error instanceof ChallengeStateError) {
+         return {
+            ok: false,
+            code: "NOT_LOCKED",
+            message: error.message,
+         };
+      }
+
       return {
          ok: false,
          code: "UNLOCK_FAILED",
