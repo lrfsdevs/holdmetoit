@@ -28,7 +28,7 @@ export const SummaryZodSchema = z.object({
 export type SummaryResult = z.infer<typeof SummaryZodSchema>;
 
 /**
- * JSON Schema handed to Gemini's `responseSchema`. Written explicitly so the
+ * JSON Schema handed to Gemini's `responseJsonSchema`. Written explicitly so the
  * bot does not depend on a specific zod major version (the monorepo uses zod 4
  * in the web app and zod 3 here).
  */
@@ -248,7 +248,7 @@ export async function generateSummary(
                systemInstruction:
                   "You are a senior discord message summarizer. Analyze the provided Discord chat transcripts and produce a structured, high-signal summary of the discussion. Focus on key decisions, important discussions, topics covered, and the natural flow of conversation. Be objective, accurate, and concise.",
                responseMimeType: "application/json",
-               responseSchema: schema,
+               responseJsonSchema: schema,
             },
          });
 
