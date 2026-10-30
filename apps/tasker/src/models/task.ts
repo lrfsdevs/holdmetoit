@@ -105,6 +105,6 @@ export async function getTaskById(
    userId: string
 ): Promise<Task | null> {
    return prisma.task.findFirst({
-      where: { id: taskId, userId, isDeleted: false },
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
    });
 }
