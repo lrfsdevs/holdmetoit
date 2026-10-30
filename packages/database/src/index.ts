@@ -53,3 +53,4 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export type { PrismaClient };
+export { buildCategoryTombstoneName } from "./category-tombstone.js";

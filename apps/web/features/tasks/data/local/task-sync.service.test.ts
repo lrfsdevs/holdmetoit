@@ -17,7 +17,10 @@ vi.mock("./task-idb", () => ({
    logTaskSync: vi.fn(),
    migrateGuestDataToUser: vi.fn(),
    putLocalCategories: vi.fn(),
+   putLocalCategory: vi.fn(),
+   putLocalTask: vi.fn(),
    putLocalTasks: vi.fn(),
+   remapLocalCategoryId: vi.fn(),
    removeQueuedMutations: vi.fn(),
 }));
 
@@ -40,7 +43,10 @@ describe("task-sync.service", () => {
       });
       vi.mocked(taskIdb.removeQueuedMutations).mockResolvedValue();
       vi.mocked(taskIdb.putLocalCategories).mockResolvedValue();
+      vi.mocked(taskIdb.putLocalCategory).mockResolvedValue();
+      vi.mocked(taskIdb.putLocalTask).mockResolvedValue();
       vi.mocked(taskIdb.putLocalTasks).mockResolvedValue();
+      vi.mocked(taskIdb.remapLocalCategoryId).mockResolvedValue();
       vi.mocked(taskIdb.getAllLocalCategories).mockResolvedValue([]);
       vi.mocked(taskIdb.getAllLocalTasks).mockResolvedValue([]);
       vi.mocked(taskIdb.deleteLocalCategory).mockResolvedValue();
@@ -178,6 +184,172 @@ describe("task-sync.service", () => {
                syncState: "synced",
             }),
          ])
+      );
+   });
+
+   it("keeps only error mutations and removes applied and conflict ids", async () => {
+      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+         {
+            id: "mut_ok",
+            entityType: "TASK" as const,
+            action: "TOGGLE" as const,
+            payload: { taskId: "t_ok", isComplete: true },
+            createdAt: 1,
+            retryCount: 0,
+         },
+         {
+            id: "mut_conflict",
+            entityType: "TASK" as const,
+            action: "UPDATE" as const,
+            payload: { taskId: "t_conflict", title: "Stale" },
+            createdAt: 2,
+            retryCount: 0,
+         },
+         {
+            id: "mut_err",
+            entityType: "TASK" as const,
+            action: "UPDATE" as const,
+            payload: { taskId: "t_err", title: "Retry" },
+            createdAt: 3,
+            retryCount: 0,
+         },
+      ] as never);
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_ok", "mut_conflict"],
+            mutationResults: [
+               { id: "mut_ok", status: "applied" },
+               {
+                  id: "mut_conflict",
+                  status: "conflict",
+                  reason: "zero_rows",
+                  currentTask: null,
+               },
+               { id: "mut_err", status: "error", reason: "invalid_payload" },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.removeQueuedMutations).toHaveBeenCalledWith([
+         "mut_ok",
+         "mut_conflict",
+      ]);
+      expect(taskIdb.deleteLocalTask).toHaveBeenCalledWith("t_conflict");
+      expect(taskIdb.deleteLocalTask).not.toHaveBeenCalledWith("t_err");
+   });
+
+   it("applies the current server task on a conflict", async () => {
+      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+         {
+            id: "mut_conflict",
+            entityType: "TASK" as const,
+            action: "TOGGLE" as const,
+            payload: { taskId: "t_1", isComplete: true },
+            createdAt: 1,
+            retryCount: 0,
+         },
+      ] as never);
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_conflict"],
+            mutationResults: [
+               {
+                  id: "mut_conflict",
+                  status: "conflict",
+                  reason: "zero_rows",
+                  currentTask: {
+                     id: "t_1",
+                     userId,
+                     categoryId: "cat_1",
+                     challengeId: null,
+                     title: "Server title",
+                     taskType: "DAILY",
+                     sortOrder: 0,
+                     isComplete: false,
+                     status: "TODO",
+                     dueDate: "2026-10-30",
+                     isDeleted: false,
+                     deletionTime: null,
+                     createdAt: new Date().toISOString(),
+                     updatedAt: new Date().toISOString(),
+                     completedAt: null,
+                  },
+               },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.putLocalTask).toHaveBeenCalledWith(
+         expect.objectContaining({
+            id: "t_1",
+            title: "Server title",
+            syncState: "synced",
+         })
+      );
+   });
+
+   it("remaps a local category id when the server returns a create conflict", async () => {
+      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+         {
+            id: "mut_cat",
+            entityType: "CATEGORY" as const,
+            action: "CREATE" as const,
+            payload: { id: "cat_local", name: "Work", taskType: "DAILY" },
+            createdAt: 1,
+            retryCount: 0,
+         },
+      ] as never);
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_cat"],
+            mutationResults: [
+               {
+                  id: "mut_cat",
+                  status: "conflict",
+                  reason: "category_name_taken",
+                  currentCategory: {
+                     id: "cat_server",
+                     userId,
+                     name: "Work",
+                     taskType: "DAILY",
+                     sortOrder: 0,
+                     isDeleted: false,
+                     deletionTime: null,
+                     createdAt: new Date().toISOString(),
+                     updatedAt: new Date().toISOString(),
+                  },
+               },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.remapLocalCategoryId).toHaveBeenCalledWith(
+         "cat_local",
+         "cat_server"
+      );
+      expect(taskIdb.putLocalCategory).toHaveBeenCalledWith(
+         expect.objectContaining({ id: "cat_server", name: "Work" })
       );
    });
 

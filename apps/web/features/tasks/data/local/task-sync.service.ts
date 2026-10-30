@@ -7,10 +7,22 @@ import {
    logTaskSync,
    migrateGuestDataToUser,
    putLocalCategories,
+   putLocalCategory,
+   putLocalTask,
    putLocalTasks,
+   remapLocalCategoryId,
    removeQueuedMutations,
 } from "./task-idb";
-import type { BatchSyncResponse } from "@/features/tasks/domain/task-sync.types";
+import type {
+   BatchSyncResponse,
+   LocalCategoryRecord,
+   LocalTaskRecord,
+   MutationResult,
+} from "@/features/tasks/domain/task-sync.types";
+import type {
+   CategoryItem,
+   TaskItem,
+} from "@/features/tasks/domain/task.types";
 
 /** Options controlling sync execution behavior. */
 export interface SyncOptions {
@@ -26,6 +38,47 @@ let syncTimeout: NodeJS.Timeout | null = null;
 let retryAttempts = 0;
 const INITIAL_RETRY_DELAY_MS = 2000;
 const MAX_RETRY_DELAY_MS = 30000;
+
+function mapTaskItemToLocal(task: TaskItem, userId: string): LocalTaskRecord {
+   return {
+      id: task.id,
+      userId,
+      categoryId: task.categoryId,
+      challengeId: task.challengeId ?? null,
+      title: task.title,
+      taskType: task.taskType,
+      sortOrder: task.sortOrder ?? 0,
+      isComplete: task.isComplete,
+      status: task.status || (task.isComplete ? "COMPLETED" : "TODO"),
+      dueDate: task.dueDate
+         ? typeof task.dueDate === "string"
+            ? task.dueDate.slice(0, 10)
+            : new Date(task.dueDate).toISOString().slice(0, 10)
+         : null,
+      createdAt: new Date(task.createdAt).toISOString(),
+      updatedAt: new Date(task.updatedAt).toISOString(),
+      completedAt: task.completedAt
+         ? new Date(task.completedAt).toISOString()
+         : null,
+      syncState: "synced",
+   };
+}
+
+function mapCategoryItemToLocal(
+   category: CategoryItem,
+   userId: string
+): LocalCategoryRecord {
+   return {
+      id: category.id,
+      userId,
+      name: category.name,
+      taskType: category.taskType,
+      sortOrder: category.sortOrder ?? 0,
+      createdAt: new Date(category.createdAt).toISOString(),
+      updatedAt: new Date(category.updatedAt).toISOString(),
+      syncState: "synced",
+   };
+}
 
 /**
  * Schedules an exponential-backoff retry attempt for synchronization failures.
@@ -124,13 +177,69 @@ export async function syncNow(
             return data;
          }
 
-         if (data.processedMutationIds.length > 0) {
-            await removeQueuedMutations(data.processedMutationIds);
+         const results: MutationResult[] =
+            data.mutationResults ??
+            data.processedMutationIds.map((id) => ({
+               id,
+               status: "applied" as const,
+            }));
+
+         const acknowledged = results.filter((r) => r.status !== "error");
+         const acknowledgedSet = new Set(acknowledged.map((r) => r.id));
+
+         if (acknowledged.length > 0) {
+            await removeQueuedMutations(acknowledged.map((r) => r.id));
+         }
+
+         const mutationById = new Map(mutations.map((m) => [m.id, m]));
+         const entityIdFor = (mutationId: string): string => {
+            const payload = mutationById.get(mutationId)?.payload as
+               Record<string, unknown> | undefined;
+            return String(
+               payload?.id || payload?.taskId || payload?.categoryId || ""
+            );
+         };
+
+         // Conflicts are accepted by the server; apply the authoritative row now.
+         for (const result of results) {
+            if (result.status !== "conflict") continue;
+            const entityId = entityIdFor(result.id);
+
+            if (result.currentTask === null) {
+               if (entityId) await deleteLocalTask(entityId);
+            } else if (result.currentTask) {
+               await putLocalTask(
+                  mapTaskItemToLocal(result.currentTask, userId)
+               );
+            }
+
+            if (result.currentCategory === null) {
+               if (entityId) await deleteLocalCategory(entityId);
+            } else if (result.currentCategory) {
+               const requestedCategoryId =
+                  (
+                     mutationById.get(result.id)?.payload as
+                        { id?: string } | undefined
+                  )?.id ?? entityId;
+
+               if (
+                  requestedCategoryId &&
+                  requestedCategoryId !== result.currentCategory.id
+               ) {
+                  await remapLocalCategoryId(
+                     requestedCategoryId,
+                     result.currentCategory.id
+                  );
+               }
+
+               await putLocalCategory(
+                  mapCategoryItemToLocal(result.currentCategory, userId)
+               );
+            }
          }
 
          // Reconcile server changes locally without clobbering pending local edits
          if (data.serverChanges) {
-            const acknowledgedSet = new Set(data.processedMutationIds);
             const remainingMutations = mutations.filter(
                (m) => !acknowledgedSet.has(m.id)
             );
@@ -143,16 +252,7 @@ export async function syncNow(
 
             const localCategories = data.serverChanges.categories
                .filter((c) => !pendingEntityIds.has(c.id))
-               .map((c) => ({
-                  id: c.id,
-                  userId,
-                  name: c.name,
-                  taskType: c.taskType,
-                  sortOrder: c.sortOrder ?? 0,
-                  createdAt: new Date(c.createdAt).toISOString(),
-                  updatedAt: new Date(c.updatedAt).toISOString(),
-                  syncState: "synced" as const,
-               }));
+               .map((c) => mapCategoryItemToLocal(c, userId));
 
             const existingTasks = await getAllLocalTasks(userId);
             const existingTaskMap = new Map(
@@ -176,28 +276,7 @@ export async function syncNow(
                   }
                   return true;
                })
-               .map((t) => ({
-                  id: t.id,
-                  userId,
-                  categoryId: t.categoryId,
-                  challengeId: t.challengeId ?? null,
-                  title: t.title,
-                  taskType: t.taskType,
-                  sortOrder: t.sortOrder ?? 0,
-                  isComplete: t.isComplete,
-                  status: t.status || (t.isComplete ? "COMPLETED" : "TODO"),
-                  dueDate: t.dueDate
-                     ? typeof t.dueDate === "string"
-                        ? t.dueDate.slice(0, 10)
-                        : new Date(t.dueDate).toISOString().slice(0, 10)
-                     : null,
-                  createdAt: new Date(t.createdAt).toISOString(),
-                  updatedAt: new Date(t.updatedAt).toISOString(),
-                  completedAt: t.completedAt
-                     ? new Date(t.completedAt).toISOString()
-                     : null,
-                  syncState: "synced" as const,
-               }));
+               .map((t) => mapTaskItemToLocal(t, userId));
 
             await putLocalCategories(localCategories);
             await putLocalTasks(localTasks);
@@ -242,7 +321,7 @@ export async function syncNow(
          }
 
          logTaskSync(
-            `Batch sync completed in ${durationMs}ms: ${data.processedMutationIds.length} mutations processed.`
+            `Batch sync completed in ${durationMs}ms: ${acknowledged.length} mutations processed.`
          );
          return data;
       } else {
