@@ -4,11 +4,7 @@ import { useState } from "react";
 import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
 import { ParticipantProfileHeader } from "./participant-profile-header";
 import { ParticipantFallbackBanner } from "./participant-fallback-banner";
-import { ParticipantSummaryCards } from "./participant-summary-cards";
-import { ParticipantProgressChart } from "./participant-progress-chart";
-import { ParticipantDailyHistory } from "./participant-daily-history";
-import { ParticipantTeamStats } from "./participant-team-stats";
-import { ParticipantAccountability } from "./participant-accountability";
+import { ChallengeSnapshot } from "./challenge-snapshot";
 import { AdminTargetOverrideModal } from "@/features/challenges/presentation/admin-target-override-modal";
 
 interface ParticipantStatsViewProps {
@@ -20,15 +16,7 @@ export function ParticipantStatsView({
    stats,
    viewParam,
 }: ParticipantStatsViewProps) {
-   const {
-      profile,
-      summary,
-      dailyHistory,
-      teamStats,
-      accountability,
-      viewer,
-      isFallback = false,
-   } = stats;
+   const { profile, summary, viewer, isFallback = false } = stats;
    const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
    return (
@@ -47,38 +35,17 @@ export function ParticipantStatsView({
             <ParticipantFallbackBanner profile={profile} viewer={viewer} />
          )}
 
-         {/* 3. Key Metrics Summary Cards */}
-         <ParticipantSummaryCards
-            summary={summary}
-            isAdmin={viewer.isAdmin}
+         {/* 3. Reusable Challenge Performance Snapshot */}
+         <ChallengeSnapshot
+            stats={stats}
+            showChallengeHeader={true}
+            showCockpitLink={false}
             onEditTarget={
                isFallback ? undefined : () => setIsTargetModalOpen(true)
             }
-            isFallback={isFallback}
          />
 
-         {/* 4. Progress Visualization Chart (Enrolled Only) */}
-         {!isFallback && (
-            <ParticipantProgressChart dailyHistory={dailyHistory} />
-         )}
-
-         {/* 5. Team Standing & Share (if team-based challenge & Enrolled Only) */}
-         {!isFallback && teamStats && (
-            <ParticipantTeamStats teamStats={teamStats} />
-         )}
-
-         {/* 6. Accountability & Deficit Status (Enrolled Only) */}
-         {!isFallback && (
-            <ParticipantAccountability accountability={accountability} />
-         )}
-
-         {/* 7. Complete Chronological Daily Study History */}
-         <ParticipantDailyHistory
-            dailyHistory={dailyHistory}
-            isFallback={isFallback}
-         />
-
-         {/* 8. Admin Target Override Modal (FEAT-DECL-04 - Enrolled Only) */}
+         {/* 4. Admin Target Override Modal (FEAT-DECL-04 - Enrolled Only) */}
          {!isFallback && viewer.isAdmin && isTargetModalOpen && (
             <AdminTargetOverrideModal
                isOpen={isTargetModalOpen}
