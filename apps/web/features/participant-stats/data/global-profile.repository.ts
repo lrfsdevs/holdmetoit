@@ -35,6 +35,7 @@ export async function getGlobalUserProfile(
          role: true,
          createdAt: true,
          trophyBalance: true,
+         yptId: true,
       },
    });
 
@@ -200,6 +201,7 @@ export async function getGlobalUserProfile(
          role: user.role,
          joinedAt: user.createdAt.toISOString(),
          trophyBalance: trophyTotal,
+         yptId: user.yptId,
       },
       careerStats: {
          lifetimeStudyHours,

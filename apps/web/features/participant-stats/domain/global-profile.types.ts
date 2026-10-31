@@ -38,6 +38,7 @@ export interface GlobalUserProfileIdentity {
    role: string;
    joinedAt: string;
    trophyBalance: number;
+   yptId?: string | null;
 }
 
 export interface GlobalUserProfile {

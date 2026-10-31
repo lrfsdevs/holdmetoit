@@ -170,9 +170,8 @@ export function ChallengeLeaderboardTab({
       }
    };
 
-   const getParticipantProfileUrl = (participantId: string) => {
-      const query = viewMode !== defaultViewMode ? `?view=${viewMode}` : "";
-      return `/challenge/${challenge.id}/participant/${participantId}${query}`;
+   const getParticipantProfileUrl = (userId: string) => {
+      return `/profile/${userId}?challengeId=${challenge.id}`;
    };
 
    const [currentPage, setCurrentPage] = useState(1);
@@ -488,7 +487,9 @@ export function ChallengeLeaderboardTab({
                   <p className="text-xs text-text-tertiary">Runner-up</p>
                   {top2 ? (
                      <Link
-                        href={getParticipantProfileUrl(top2.participantId)}
+                        href={getParticipantProfileUrl(
+                           top2.userId || top2.participantId
+                        )}
                         className="text-sm font-bold text-white hover:underline truncate block"
                      >
                         {top2.displayName}
@@ -531,7 +532,9 @@ export function ChallengeLeaderboardTab({
                   </p>
                   {top1 ? (
                      <Link
-                        href={getParticipantProfileUrl(top1.participantId)}
+                        href={getParticipantProfileUrl(
+                           top1.userId || top1.participantId
+                        )}
                         className="text-sm font-bold text-white hover:underline truncate block"
                      >
                         {top1.displayName}
@@ -559,7 +562,9 @@ export function ChallengeLeaderboardTab({
                   <p className="text-xs text-text-tertiary">Rank 3</p>
                   {top3 ? (
                      <Link
-                        href={getParticipantProfileUrl(top3.participantId)}
+                        href={getParticipantProfileUrl(
+                           top3.userId || top3.participantId
+                        )}
                         className="text-sm font-bold text-white hover:text-feedback-success hover:underline truncate block"
                      >
                         {top3.displayName}
@@ -934,7 +939,8 @@ export function ChallengeLeaderboardTab({
                                                 {/* Avatar */}
                                                 <Link
                                                    href={getParticipantProfileUrl(
-                                                      entry.participantId
+                                                      entry.userId ||
+                                                         entry.participantId
                                                    )}
                                                    className="h-8 w-8 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                                 >
@@ -952,7 +958,8 @@ export function ChallengeLeaderboardTab({
                                                    <div className="flex items-center gap-1.5 flex-wrap">
                                                       <Link
                                                          href={getParticipantProfileUrl(
-                                                            entry.participantId
+                                                            entry.userId ||
+                                                               entry.participantId
                                                          )}
                                                          className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
                                                       >
@@ -1093,7 +1100,7 @@ export function ChallengeLeaderboardTab({
                                  {/* Avatar */}
                                  <Link
                                     href={getParticipantProfileUrl(
-                                       entry.participantId
+                                       entry.userId || entry.participantId
                                     )}
                                     className="h-9 w-9 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
                                  >
@@ -1111,7 +1118,7 @@ export function ChallengeLeaderboardTab({
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                        <Link
                                           href={getParticipantProfileUrl(
-                                             entry.participantId
+                                             entry.userId || entry.participantId
                                           )}
                                           className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] xs:max-w-[140px] block"
                                        >
@@ -1256,7 +1263,8 @@ export function ChallengeLeaderboardTab({
                                        <div className="flex items-center gap-2.5">
                                           <Link
                                              href={getParticipantProfileUrl(
-                                                entry.participantId
+                                                entry.userId ||
+                                                   entry.participantId
                                              )}
                                              className="h-7 w-7 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center text-xs shrink-0 hover:border-feedback-success transition-colors"
                                           >
@@ -1272,7 +1280,8 @@ export function ChallengeLeaderboardTab({
                                              <div className="flex items-center gap-1.5 flex-wrap">
                                                 <Link
                                                    href={getParticipantProfileUrl(
-                                                      entry.participantId
+                                                      entry.userId ||
+                                                         entry.participantId
                                                    )}
                                                    className="font-semibold text-sm text-white hover:text-feedback-success hover:underline truncate block"
                                                 >
