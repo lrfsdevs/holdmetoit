@@ -38,7 +38,8 @@
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                  | `ADMIN` / `DEV`                        |
-| `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
+| `/profile`                                    | Global user profile & career stats view for current session user                                                                                           | Authenticated                          |
+| `/profile/[userId]`                           | Public global profile, career stats, and historical challenge archive snapshot                                                                             | Public spectator / Authenticated       |
 | `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
 | `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                              | Authenticated / Participant            |
 | `/pokemon`                                    | Pokédex catalogue, personal study-backed companion collection, species detail modal, progress metrics                                                      | Public spectator / Participant         |
@@ -233,7 +234,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Added unit test in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying interactive task completion toggling for past-day daily tasks.
    - 0 TypeScript compiler errors (`npm run typecheck:web`).
    - 0 ESLint errors (`npm run lint:web`).
-   - 89/89 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
+   - 93/93 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
 - **Jira Status:** `KAN-65` transitioned to `In Review` (id: 10006).
 - **PR Status:** PR creation withheld per user request.
 
@@ -1905,3 +1906,46 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-65` is in **`In Review`** (`id: 10006`).
 - **NEXT STEP:** Await user instruction before creating a Pull Request.
+
+### Session 177 — 2026-10-31 (feat(profile): Global User Profile & Career Stats View with Historical Challenge Archive Snapshot — GH-#164 / Jira KAN-49 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#164](https://github.com/lrfsdevs/holdmetoit/issues/164) / Jira Ticket `KAN-49` ("feat(profile): historical challenge stats archive and reusable mini-dashboard snapshot"). Deliver a comprehensive Global User Profile & Career Stats view (`/profile/[userId]` and `/profile`) following strict feature-sliced architecture under `apps/web/features/participant-stats/` across 4 vertical slices with atomic commits.
+- **Architectural Enhancements Implemented:**
+   1. **Step 1: Reusable `<ChallengeSnapshot />` Component & Participant Stats View Refactoring (`24648d2`):**
+      - Created `apps/web/features/participant-stats/presentation/challenge-snapshot.tsx`.
+      - Extracted the complete challenge performance body from `participant-stats-view.tsx` into a reusable snapshot component containing:
+         - Performance Summary Cards (declared target vs hours met, deficit/surplus, daily average, leave days usage).
+         - Progress Chart (daily and cumulative trajectory).
+         - Team Stats (if DUO/TEAM mode, detailing team outcome and contributions).
+         - Accountability card (punishments, pardons, trophy balance delta for that challenge).
+         - Daily History (day-by-day study logs and completed tasks).
+         - Snapshot Header Bar displaying challenge title, mode badge, UTC date range, participant status badge (`ACTIVE`, `COMPLETED`, `WITHDRAWN`), and a conditional "View Full Challenge Cockpit" link to `/challenge/[challengeId]/participant/[participantId]`.
+      - Refactored `participant-stats-view.tsx` to delegate directly to `<ChallengeSnapshot showCockpitLink={false} />`, completely eliminating duplicate performance rendering code.
+      - Added 9 unit tests in `challenge-snapshot.test.tsx`.
+   2. **Step 2: Global Career Stats & Challenge History Data Layer (`ddcd4be`):**
+      - In `global-profile.types.ts`, defined TypeScript domain contracts: `GlobalCareerStats` (lifetime study hours, total active study days, current & longest streak, total challenges entered, challenges completed, total tasks completed, trophy total & rank, Pokédex count) and `ParticipatedChallengeItem` (`challengeId`, `participantId`, `title`, `mode`, `status`, `startDate`, `endDate`, `targetHours`, `loggedHours`, `trophyDelta`).
+      - In `global-profile.ts`, created pure domain calculation math: `calculateStudyStreaks` (active study days, longest streak, current streak with yesterday-preservation logic) and `formatLifetimeStudyStats` with 11 unit tests in `global-profile.test.ts`.
+      - In `global-profile.repository.ts`, implemented `getGlobalUserProfile(userId)` (fetches user identity, aggregates lifetime study logs, completed tasks, Pokédex count, trophy delta mapping, and chronologically ordered challenge history) and `getChallengeSnapshotForUser(userId, challengeId)` with 4 unit tests in `global-profile.repository.test.ts`.
+   3. **Step 3: Privacy Boundary Domain Logic & Server Action (`b445018`):**
+      - In `profile-privacy.ts`, created pure domain function `canViewFullProfileHistory({ viewerId, viewerRole, targetUserId, isAcceptedFriend })`: grants full access if viewer is self, holds an elevated role (`ADMIN`, `DEV`, `HOST`), or is an accepted friend with 7 unit tests in `profile-privacy.test.ts`.
+      - In `profile-privacy.repository.ts`, created stub repository `checkAreAcceptedFriends(userId1, userId2)` cleanly structured for connection to Friend Request system #145.
+      - In `global-profile.actions.ts`, created type-safe Next.js Server Action `getChallengeSnapshotAction(targetUserId, challengeId)` enforcing session authentication, privacy check, and returning the snapshot payload or typed errors with 7 unit tests in `global-profile.actions.test.ts`.
+   4. **Step 4: Global Profile Routes, GlobalProfileView, and Leaderboard Integration (`b56cf45`):**
+      - Built `apps/web/features/participant-stats/presentation/global-profile-view.tsx`:
+         - Profile Header: Avatar (`UserAvatar`), Discord username, Trophy Rank badge, join date, and quick avatar sync (`RefreshAvatarButton`) if `isOwnProfile`.
+         - Global Career Overview Cards: 6 lifetime statistics cards (Lifetime Hours, Active Days, Current Streak, Longest Streak, Tasks Done, Pokédex Count) always rendered even with 0 challenge enrollments.
+         - Tabs (`Overview` | `Challenge History` | `Settings` [own profile only]):
+            - `Overview`: Quick summary with career stats and active/recent challenge snapshot.
+            - `Challenge History`: Privacy-protected archive. Renders `<EmptyState />` if unauthorized; chronological `<Select />` dropdown (newest first, URL synced to `?challengeId=`) with transition-backed loading and `<CockpitSkeleton />` when switching challenges; or `<EmptyState />` if user has 0 challenges.
+            - `Settings`: Own-profile-only tab rendering `YptSettingsCard`.
+      - Built dynamic route `apps/web/app/profile/[userId]/page.tsx` with SEO/social metadata, session resolution, privacy checking, and initial snapshot fetching.
+      - Created Law L9 route boundaries: `loading.tsx` (`<CockpitSkeleton />`), `error.tsx` (recovery screen with retry button), and `not-found.tsx` (user not found card).
+      - Updated `apps/web/app/profile/page.tsx` to render current session user's global profile.
+      - Updated `challenge-leaderboard-tab.tsx` so top-3 podium and table member links point to `/profile/${userId}?challengeId=${challenge.id}`.
+      - Added 5 unit tests in `global-profile-view.test.tsx`, 5 in `app/profile/[userId]/page.test.tsx`, 3 in `app/profile/page.test.tsx`, and updated 19 in `challenge-leaderboard-tab.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 20 test files passed (211/211 tests green across participant-stats, profile, and leaderboard).
+- **Jira Status:** `KAN-49` transitioned from `In Progress` to `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#164](https://github.com/lrfsdevs/holdmetoit/issues/164).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
