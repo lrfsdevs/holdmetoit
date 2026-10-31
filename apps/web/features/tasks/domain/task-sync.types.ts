@@ -29,6 +29,7 @@ export interface LocalTaskRecord {
    isDeleted?: boolean;
    deletionTime?: string | null;
    syncState: SyncState;
+   revision?: number;
 }
 
 export interface LocalCategoryRecord {
@@ -42,6 +43,7 @@ export interface LocalCategoryRecord {
    isDeleted?: boolean;
    deletionTime?: string | null;
    syncState: SyncState;
+   revision?: number;
 }
 
 export interface QueuedMutation<TPayload = Record<string, unknown>> {
@@ -51,6 +53,8 @@ export interface QueuedMutation<TPayload = Record<string, unknown>> {
    payload: TPayload;
    createdAt: number;
    retryCount: number;
+   /** Revision the client's copy was based on. Absent for legacy queues. */
+   baseRevision?: number;
 }
 
 /** Batch synchronization request payload sent from offline client. */

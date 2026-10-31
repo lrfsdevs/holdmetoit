@@ -137,7 +137,10 @@ async function main() {
       for (const item of plan) {
          await tx.task.updateMany({
             where: { categoryId: item.duplicateId },
-            data: { categoryId: item.keeperId },
+            data: {
+               categoryId: item.keeperId,
+               revision: { increment: 1 },
+            },
          });
 
          await tx.category.update({
@@ -149,6 +152,7 @@ async function main() {
                   item.duplicateName,
                   item.duplicateId
                ),
+               revision: { increment: 1 },
             },
          });
       }

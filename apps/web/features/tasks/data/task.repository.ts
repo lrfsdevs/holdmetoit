@@ -141,6 +141,7 @@ export function toCategoryItem(category: Category): CategoryItem {
       deletionTime: category.deletionTime,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt,
+      revision: category.revision,
    };
 }
 
@@ -167,6 +168,7 @@ export function toTaskItem(task: Task, taskType: TaskType): TaskItem {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       completedAt: task.completedAt,
+      revision: task.revision,
    };
 }
 
@@ -428,6 +430,7 @@ export async function toggleTask(params: {
          isComplete: nextIsComplete,
          status: nextStatus,
          completedAt: nextIsComplete ? new Date() : null,
+         revision: { increment: 1 },
       },
       include: {
          category: true,
@@ -453,6 +456,7 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       data: {
          isDeleted: true,
          deletionTime: new Date(),
+         revision: { increment: 1 },
       },
    });
 }
@@ -535,6 +539,7 @@ export async function updateTask(params: {
          dueDate?: Date | null;
          completedAt?: Date | null;
          challengeId?: string | null;
+         revision?: { increment: number };
       } = {};
 
       if (params.title !== undefined) {
@@ -586,7 +591,7 @@ export async function updateTask(params: {
 
       return tx.task.update({
          where: { id: params.taskId },
-         data: dataToUpdate,
+         data: { ...dataToUpdate, revision: { increment: 1 } },
          include: {
             category: true,
          },
@@ -616,6 +621,7 @@ export async function rolloverIncompleteTasks(
       },
       data: {
          dueDate: targetDate,
+         revision: { increment: 1 },
       },
    });
 }
@@ -644,7 +650,10 @@ export async function updateCategory(params: {
       if (existing.name !== trimmedName) {
          return prisma.category.update({
             where: { id: params.categoryId },
-            data: { name: trimmedName },
+            data: {
+               name: trimmedName,
+               revision: { increment: 1 },
+            },
          });
       }
       return existing;
@@ -670,6 +679,7 @@ export async function updateCategory(params: {
          where: { id: params.categoryId },
          data: {
             name: trimmedName,
+            revision: { increment: 1 },
          },
       });
    } catch (error) {
@@ -708,6 +718,7 @@ export async function deleteCategory(params: {
          data: {
             isDeleted: true,
             deletionTime: now,
+            revision: { increment: 1 },
          },
       });
 
@@ -717,6 +728,7 @@ export async function deleteCategory(params: {
             isDeleted: true,
             deletionTime: now,
             name: buildCategoryTombstoneName(existing.name, existing.id),
+            revision: { increment: 1 },
          },
       });
    });

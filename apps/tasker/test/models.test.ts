@@ -62,9 +62,35 @@ describe("tasker task write predicates", () => {
          data: expect.objectContaining({
             status: "COMPLETED",
             isComplete: true,
+            revision: { increment: 1 },
          }),
       });
       expect(result).toMatchObject({ id: "task_1" });
+   });
+
+   it("bumps the revision on content and delete writes", async () => {
+      vi.mocked(prisma.task.updateMany).mockResolvedValue({ count: 1 });
+      vi.mocked(prisma.task.findFirst).mockResolvedValue({
+         id: "task_1",
+      } as never);
+
+      await updateTaskContent("task_1", "user_1", "New title");
+      expect(prisma.task.updateMany).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({
+               revision: { increment: 1 },
+            }),
+         })
+      );
+
+      await deleteTask("task_1", "user_1");
+      expect(prisma.task.updateMany).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({
+               revision: { increment: 1 },
+            }),
+         })
+      );
    });
 
    it("returns null when the status update matches no live row", async () => {
@@ -128,7 +154,12 @@ describe("tasker category lifecycle", () => {
 
       expect(prisma.category.update).toHaveBeenCalledWith({
          where: { id: "cat_1" },
-         data: { name: "Work", isDeleted: false, deletionTime: null },
+         data: {
+            name: "Work",
+            isDeleted: false,
+            deletionTime: null,
+            revision: { increment: 1 },
+         },
       });
       expect(result).toEqual(nowCategory);
    });
@@ -178,14 +209,35 @@ describe("tasker category lifecycle", () => {
             userId: "user_1",
             isDeleted: false,
          },
-         data: { categoryId: "cat_default" },
+         data: expect.objectContaining({
+            categoryId: "cat_default",
+            revision: { increment: 1 },
+         }),
       });
       expect(prisma.category.update).toHaveBeenCalledWith({
          where: { id: "cat_1" },
          data: expect.objectContaining({
             isDeleted: true,
             name: expect.stringContaining("·deleted·"),
+            revision: { increment: 1 },
          }),
+      });
+   });
+
+   it("bumps the revision on a successful rename", async () => {
+      vi.mocked(prisma.category.findFirst)
+         .mockResolvedValueOnce(nowCategory as never)
+         .mockResolvedValueOnce(null);
+      vi.mocked(prisma.category.update).mockResolvedValue({
+         ...nowCategory,
+         name: "Study",
+      } as never);
+
+      await updateCategoryName("user_1", "Work", "Study");
+
+      expect(prisma.category.update).toHaveBeenCalledWith({
+         where: { id: "cat_1" },
+         data: { name: "Study", revision: { increment: 1 } },
       });
    });
 

@@ -35,8 +35,18 @@ export async function updateTaskStatus(
    const { count } = await prisma.task.updateMany({
       where: { id: taskId, userId, challengeId: null, isDeleted: false },
       data: isCompleted
-         ? { status: "COMPLETED", isComplete: true, completedAt: new Date() }
-         : { status: "TODO", isComplete: false, completedAt: null },
+         ? {
+              status: "COMPLETED",
+              isComplete: true,
+              completedAt: new Date(),
+              revision: { increment: 1 },
+           }
+         : {
+              status: "TODO",
+              isComplete: false,
+              completedAt: null,
+              revision: { increment: 1 },
+           },
    });
 
    if (count === 0) return null;
@@ -78,7 +88,11 @@ export async function deleteTask(
 ): Promise<boolean> {
    const { count } = await prisma.task.updateMany({
       where: { id: taskId, userId, challengeId: null, isDeleted: false },
-      data: { isDeleted: true, deletionTime: new Date() },
+      data: {
+         isDeleted: true,
+         deletionTime: new Date(),
+         revision: { increment: 1 },
+      },
    });
    return count > 0;
 }
@@ -94,6 +108,7 @@ export async function updateTaskContent(
       data: {
          title: content,
          ...(categoryId !== undefined ? { categoryId } : {}),
+         revision: { increment: 1 },
       },
    });
 

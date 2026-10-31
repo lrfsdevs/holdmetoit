@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-30 (Session 179 on `afnan-jr` · Session 178 on `afnan-jr` · Session 177 on `afnan-jr`)
+> **Last Updated:** 2026-10-31 (Session 180 on `afnan-jr` · Session 179 on `afnan-jr` · Session 178 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 180 — 2026-10-31 (Server revision on `afnan-jr`)
+
+- **Schema:** `Task` and `Category` gained `revision Int @default(0)`. Migration `20261031010000_task_category_revision` (additive, no backfill) + migrations README.
+- **Protocol:** queued mutations carry an optional top-level `baseRevision`; `syncNow` computes it centrally from the local records (sequential per entity, creates start at 0, legacy records omit it). The server updates with `WHERE revision = baseRevision` and `revision: { increment: 1 }`.
+- **Conflicts:** `zero_rows` with a current row is rebased onto the current revision and re-enqueued (max 2 attempts); `currentTask: null` deletes the local row; `challenge_locked` adopts the server row. The wall-clock `updatedAt` reconciliation guard was removed; pending entities are identified by their queued mutation.
+- **Local state:** `putLocalTask` / `putLocalCategory` merge-preserve `revision`; the cockpit's enqueue sites are unchanged.
+- **Server writers:** every non-create write increments `revision` — sync repository, direct task repository helpers, challenge soft-delete, dedupe script, Tasker bot, backfill script. The weekly challenge lock guard is restored at the sync path (`challenge_locked`).
+- **Tests:** web `212 files / 2,111 tests`; tasker `4 files / 81 tests`; `typecheck:web` / `typecheck:tasker` 0; `lint:web` 0 (one pre-existing warning); `build:web` clean.
+- **Uncommitted:** independent of the one-write-path and Zod layers.
+- **NEXT:** queue hygiene (Step 5) — per-mutation `userId`, Web Locks tab serialisation, atomic IDB record+enqueue, retry cap/dead-letter banner, idle pull.
 
 ### Session 179 — 2026-10-30 (Zod 4.6.6 security upgrade on `afnan-jr`)
 

@@ -122,10 +122,18 @@ export async function putLocalTask(task: LocalTaskRecord): Promise<void> {
    return new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.TASKS, "readwrite");
       const store = tx.objectStore(STORES.TASKS);
-      const request = store.put(task);
+      const getRequest = store.get(task.id);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      getRequest.onsuccess = () => {
+         const existing = getRequest.result as LocalTaskRecord | undefined;
+         store.put({
+            ...task,
+            revision: task.revision ?? existing?.revision,
+         });
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
    });
 }
 
@@ -194,10 +202,18 @@ export async function putLocalCategory(
    return new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.CATEGORIES, "readwrite");
       const store = tx.objectStore(STORES.CATEGORIES);
-      const request = store.put(category);
+      const getRequest = store.get(category.id);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      getRequest.onsuccess = () => {
+         const existing = getRequest.result as LocalCategoryRecord | undefined;
+         store.put({
+            ...category,
+            revision: category.revision ?? existing?.revision,
+         });
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
    });
 }
 

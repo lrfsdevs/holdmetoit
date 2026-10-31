@@ -1360,6 +1360,7 @@ describe("challenge admin repository (FEAT-CHAL-01, FEAT-CHAL-02, FEAT-CHAL-05)"
             data: {
                isDeleted: true,
                deletionTime: expect.any(Date),
+               revision: { increment: 1 },
             },
          });
          expect(prisma.challenge.update).toHaveBeenCalledWith({

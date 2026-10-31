@@ -153,6 +153,8 @@ async function applyCategoryMutation(
          : undefined;
    const taskType: TaskType =
       payload.taskType === "WEEKLY" ? "WEEKLY" : "DAILY";
+   const baseRevision =
+      typeof m.baseRevision === "number" ? m.baseRevision : undefined;
 
    if (m.action === "CREATE") {
       if (!catId || !explicitName) return APPLIED;
@@ -168,33 +170,8 @@ async function applyCategoryMutation(
          }
 
          if (!byId.isDeleted) {
-            if (byId.name !== explicitName) {
-               try {
-                  await tx.category.update({
-                     where: { id: byId.id },
-                     data: { name: explicitName },
-                  });
-               } catch (error) {
-                  if (isP2002(error)) {
-                     const winner = await tx.category.findFirst({
-                        where: {
-                           userId,
-                           taskType,
-                           isDeleted: false,
-                           name: { equals: explicitName, mode: "insensitive" },
-                        },
-                     });
-                     return {
-                        status: "conflict",
-                        reason: "category_name_taken",
-                        currentCategory: winner
-                           ? toCategoryItem(winner)
-                           : undefined,
-                     };
-                  }
-                  throw error;
-               }
-            }
+            // A delayed CREATE retry must not overwrite a newer rename; the
+            // snapshot reconciles the client.
             return APPLIED;
          }
       }
@@ -232,7 +209,12 @@ async function applyCategoryMutation(
       if (tombstoned) {
          const revived = await tx.category.update({
             where: { id: tombstoned.id },
-            data: { name: explicitName, isDeleted: false, deletionTime: null },
+            data: {
+               name: explicitName,
+               isDeleted: false,
+               deletionTime: null,
+               revision: { increment: 1 },
+            },
          });
 
          if (revived.id !== catId) {
@@ -320,8 +302,15 @@ async function applyCategoryMutation(
          if (Object.keys(dataToUpdate).length > 0) {
             try {
                const { count } = await tx.category.updateMany({
-                  where: { id: catId, userId, isDeleted: false },
-                  data: dataToUpdate,
+                  where: {
+                     id: catId,
+                     userId,
+                     isDeleted: false,
+                     ...(baseRevision !== undefined
+                        ? { revision: baseRevision }
+                        : {}),
+                  },
+                  data: { ...dataToUpdate, revision: { increment: 1 } },
                });
 
                if (count === 0) {
@@ -367,7 +356,7 @@ async function applyCategoryMutation(
             if (payload.taskType) {
                await tx.task.updateMany({
                   where: { categoryId: catId, userId },
-                  data: { taskType },
+                  data: { taskType, revision: { increment: 1 } },
                });
             }
          }
@@ -381,7 +370,7 @@ async function applyCategoryMutation(
       for (let i = 0; i < categoryIds.length; i++) {
          await tx.category.updateMany({
             where: { id: categoryIds[i], userId },
-            data: { sortOrder: i },
+            data: { sortOrder: i, revision: { increment: 1 } },
          });
       }
       return APPLIED;
@@ -400,7 +389,11 @@ async function applyCategoryMutation(
 
       await tx.task.updateMany({
          where: { categoryId: catId, userId, isDeleted: false },
-         data: { isDeleted: true, deletionTime: now },
+         data: {
+            isDeleted: true,
+            deletionTime: now,
+            revision: { increment: 1 },
+         },
       });
 
       await tx.category.updateMany({
@@ -412,6 +405,7 @@ async function applyCategoryMutation(
                currentCategory.name,
                currentCategory.id
             ),
+            revision: { increment: 1 },
          },
       });
 
@@ -447,6 +441,8 @@ async function applyTaskMutation(
    const isComplete = Boolean(payload.isComplete);
    const sortOrder =
       typeof payload.sortOrder === "number" ? payload.sortOrder : 0;
+   const baseRevision =
+      typeof m.baseRevision === "number" ? m.baseRevision : undefined;
 
    if (m.action === "CREATE") {
       if (!taskId || !title) return APPLIED;
@@ -510,18 +506,8 @@ async function applyTaskMutation(
       }
 
       if (existing) {
-         await tx.task.update({
-            where: { id: taskId },
-            data: {
-               title,
-               isComplete: finalIsComplete,
-               status,
-               dueDate,
-               completedAt: finalIsComplete ? new Date() : null,
-               categoryId,
-               sortOrder,
-            },
-         });
+         // A delayed CREATE retry must not overwrite a newer edit; the
+         // snapshot reconciles the client.
          return categoryMissing
             ? { status: "applied", reason: "category_missing" }
             : APPLIED;
@@ -560,6 +546,40 @@ async function applyTaskMutation(
             };
          }
          throw error;
+      }
+   }
+
+   if (
+      m.action === "UPDATE" ||
+      m.action === "MOVE" ||
+      m.action === "TOGGLE" ||
+      m.action === "DELETE"
+   ) {
+      if (!taskId) return APPLIED;
+
+      const guard = await tx.task.findFirst({
+         where: { id: taskId, userId, isDeleted: false },
+         select: { challengeId: true },
+      });
+
+      if (guard?.challengeId) {
+         try {
+            await assertChallengeWritable(tx, guard.challengeId);
+         } catch (error) {
+            if (error instanceof ChallengeStateError) {
+               const current = await tx.task.findFirst({
+                  where: { id: taskId, userId, isDeleted: false },
+               });
+               return {
+                  status: "conflict",
+                  reason: "challenge_locked",
+                  currentTask: current
+                     ? toTaskItem(current, current.taskType)
+                     : null,
+               };
+            }
+            throw error;
+         }
       }
    }
 
@@ -611,9 +631,20 @@ async function applyTaskMutation(
          dataToUpdate.completedAt = payload.isComplete ? new Date() : null;
       }
 
+      if (Object.keys(dataToUpdate).length === 0) {
+         return categoryMissing
+            ? { status: "applied", reason: "category_missing" }
+            : APPLIED;
+      }
+
       const { count } = await tx.task.updateMany({
-         where: { id: taskId, userId, isDeleted: false },
-         data: dataToUpdate,
+         where: {
+            id: taskId,
+            userId,
+            isDeleted: false,
+            ...(baseRevision !== undefined ? { revision: baseRevision } : {}),
+         },
+         data: { ...dataToUpdate, revision: { increment: 1 } },
       });
 
       if (count === 0) {
@@ -637,7 +668,7 @@ async function applyTaskMutation(
       for (let i = 0; i < taskIds.length; i++) {
          await tx.task.updateMany({
             where: { id: taskIds[i], userId, isDeleted: false },
-            data: { sortOrder: i },
+            data: { sortOrder: i, revision: { increment: 1 } },
          });
       }
       return APPLIED;
@@ -651,11 +682,17 @@ async function applyTaskMutation(
       const finalIsComplete = status === "COMPLETED";
 
       const { count } = await tx.task.updateMany({
-         where: { id: taskId, userId, isDeleted: false },
+         where: {
+            id: taskId,
+            userId,
+            isDeleted: false,
+            ...(baseRevision !== undefined ? { revision: baseRevision } : {}),
+         },
          data: {
             isComplete: finalIsComplete,
             status,
             completedAt: finalIsComplete ? new Date() : null,
+            revision: { increment: 1 },
          },
       });
 
@@ -678,7 +715,11 @@ async function applyTaskMutation(
 
       await tx.task.updateMany({
          where: { id: taskId, userId, isDeleted: false },
-         data: { isDeleted: true, deletionTime: new Date() },
+         data: {
+            isDeleted: true,
+            deletionTime: new Date(),
+            revision: { increment: 1 },
+         },
       });
 
       return APPLIED;

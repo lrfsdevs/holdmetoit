@@ -48,11 +48,11 @@ Toggles already send only `{ taskId, isComplete, status }`; moves and rollovers 
 `processBatchSync` returns `mutationResults: MutationResult[]` alongside the legacy
 `processedMutationIds`.
 
-| Status     | When                                                                                                                                      | Client action                                                                                                        |
-| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- |
-| `applied`  | The mutation applied, was an idempotent no-op, or a locked field was dropped.                                                             | Remove from the queue.                                                                                               |
-| `conflict` | Zero rows matched, a name belongs to another id, or the row belongs to another user. Carries `currentTask`/`currentCategory` (or `null`). | Remove from the queue; apply the current row; delete the local row when `null`; remap a category id when it differs. |
-| `error`    | Unexpected/transient failure.                                                                                                             | Keep in the queue and retry.                                                                                         |
+| Status     | When                                                                                                                                      | Client action                                                                                                                                                                                                                                   |
+| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applied`  | The mutation applied, was an idempotent no-op, or a locked field was dropped.                                                             | Remove from the queue.                                                                                                                                                                                                                          |
+| `conflict` | Zero rows matched, a name belongs to another id, or the row belongs to another user. Carries `currentTask`/`currentCategory` (or `null`). | Task/category `UPDATE`/`TOGGLE`/`MOVE`: rebase the mutation's fields onto the current row and re-enqueue. Other conflicts: remove from the queue, apply the current row, delete the local row when `null`, remap a category id when it differs. |
+| `error`    | Unexpected/transient failure.                                                                                                             | Keep in the queue and retry.                                                                                                                                                                                                                    |
 
 `error` is never used for a known permanent condition. A zero-row update, a missing target
 category, a name collision, and a foreign row are all `conflict`.
@@ -83,8 +83,45 @@ the local row and enqueues a mutation; there is no parallel server-action write.
 - The sync route invalidates the user-task cache tag and calls `revalidatePath("/")` after a
   successful flush. The former task server actions no longer exist.
 
-The Tasker bot is still a direct writer; the revision step brings it under the same
-versioning contract.
+The Tasker bot is still a direct writer; it increments the same revision token on its writes
+(see §2.5).
+
+### 2.5 Revision (optimistic concurrency)
+
+`Task` and `Category` carry `revision Int @default(0)`. Every non-create write increments it.
+The client stores the revision from the snapshot on the local record, and `syncNow` attaches a
+top-level `baseRevision` to each queued mutation.
+
+The server applies an update only when the row is still at the client's base:
+
+```sql
+UPDATE "Task"
+SET ..., revision = revision + 1
+WHERE id = $1 AND "userId" = $2 AND revision = $3 AND "isDeleted" = false;
+```
+
+- One row updated → `applied`; the next snapshot carries the new revision.
+- Zero rows → `conflict` / `zero_rows` with `currentTask` / `currentCategory` (or `null`).
+- Deletes are idempotent and unconditional but still increment.
+- `REORDER` and `ROLLOVER` are bulk and do not carry per-row bases; they increment every
+  affected row. A pending content edit will conflict and rebase.
+- Legacy queue entries without `baseRevision` apply unconditionally once; the snapshot then
+  supplies the revision.
+
+Conflict policy: the client maps the current server row, re-applies the mutation's own fields
+on top, sets the local record to `pending`, and enqueues a new mutation with
+`retryCount + 1` and `baseRevision = current.revision`. After two attempts it accepts the
+server row. A deleted row (`currentTask: null`) deletes the local row. A
+`challenge_locked` conflict adopts the server row without rebasing.
+
+The cockpit is unchanged at its enqueue sites: the base is computed centrally in `syncNow`
+from the local record, and `putLocalTask` / `putLocalCategory` merge-preserve the revision
+when a handler constructs a record from scratch. The wall-clock `updatedAt` reconciliation
+guard is gone; pending entities are identified by their queued mutation.
+
+Every writer must increment the token. The Tasker bot increments on its direct writes (it does
+not send a base because it reads immediately before writing). A missed writer breaks the
+contract.
 
 ---
 
@@ -93,7 +130,9 @@ versioning contract.
 - `Category` no longer declares an exact-case `@@unique`. Active names are unique via
   `Category_userId_lower_name_taskType_active_key`
   (`("userId", LOWER("name"), "taskType") WHERE "isDeleted" = false`).
-- `Task` is unchanged.
+- `Task` and `Category` carry `revision Int @default(0)` (migration
+  `20261031010000_task_category_revision`). Creates start at 0; every non-create writer
+  increments.
 - The operator pre-check is in the migration file. Use `apps/web/scripts/dedupe-categories.ts`
   (dry-run by default) before applying it if duplicates exist.
 
@@ -125,6 +164,7 @@ conflict with `currentCategory.id !== requestedId` means a concurrent create won
   entity or `null`), or `error`.
 - Do not throw for a permanent condition; throw only for unexpected failures.
 - Do not add a second writer (server action) for the same intent.
+- Increment `revision` on every non-create write. A missed writer makes the token lie.
 - Category name comparisons are case-insensitive (`mode: "insensitive"`).
 
 ### Operator runbook

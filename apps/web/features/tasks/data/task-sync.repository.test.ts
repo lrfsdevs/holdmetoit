@@ -95,6 +95,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          updatedAt: new Date(),
          isDeleted: false,
          deletionTime: null,
+         revision: 0,
       });
 
       vi.mocked(prisma.category.findFirst).mockResolvedValue(null); // No collision in WEEKLY
@@ -123,6 +124,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          data: {
             sortOrder: 1,
             taskType: "WEEKLY",
+            revision: { increment: 1 },
          },
       });
 
@@ -131,6 +133,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          where: { categoryId: catId, userId },
          data: {
             taskType: "WEEKLY",
+            revision: { increment: 1 },
          },
       });
    });
@@ -147,6 +150,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          updatedAt: new Date(),
          isDeleted: false,
          deletionTime: null,
+         revision: 0,
       });
 
       // Collision exists in target column
@@ -160,6 +164,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          updatedAt: new Date(),
          isDeleted: false,
          deletionTime: null,
+         revision: 0,
       });
 
       const res = await processBatchSync(userId, [
@@ -187,6 +192,7 @@ describe("processBatchSync (task-sync.repository)", () => {
             name: "Math (Moved)",
             taskType: "WEEKLY",
             sortOrder: 2,
+            revision: { increment: 1 },
          },
       });
    });
@@ -294,6 +300,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          data: {
             isDeleted: true,
             deletionTime: expect.any(Date),
+            revision: { increment: 1 },
          },
       });
       expect(prisma.task.deleteMany).not.toHaveBeenCalled();
@@ -400,23 +407,26 @@ describe("processBatchSync (task-sync.repository)", () => {
 
    it("reports a conflict with the current task when an update matches zero rows", async () => {
       vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 0 });
-      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
-         id: "t_server",
-         userId,
-         categoryId: "cat_1",
-         challengeId: null,
-         title: "Server title",
-         taskType: "DAILY",
-         sortOrder: 0,
-         isComplete: false,
-         status: "TODO",
-         dueDate: null,
-         isDeleted: false,
-         deletionTime: null,
-         createdAt: new Date(),
-         updatedAt: new Date(),
-         completedAt: null,
-      } as never);
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: null } as never)
+         .mockResolvedValueOnce({
+            id: "t_server",
+            userId,
+            categoryId: "cat_1",
+            challengeId: null,
+            title: "Server title",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 5,
+         } as never);
 
       const res = await processBatchSync(userId, [
          {
@@ -438,6 +448,7 @@ describe("processBatchSync (task-sync.repository)", () => {
             currentTask: expect.objectContaining({
                id: "t_server",
                title: "Server title",
+               revision: 5,
             }),
          }),
       ]);
@@ -621,6 +632,229 @@ describe("processBatchSync (task-sync.repository)", () => {
          id: "mut-empty-toggle",
          status: "conflict",
          reason: "invalid_payload",
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("writes a task update with the client base revision and increments it", async () => {
+      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
+         challengeId: null,
+      } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 1 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rev",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_rev", title: "New title" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 3,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rev",
+         status: "applied",
+      });
+      expect(prisma.task.updateMany).toHaveBeenCalledWith({
+         where: {
+            id: "t_rev",
+            userId,
+            isDeleted: false,
+            revision: 3,
+         },
+         data: {
+            title: "New title",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("rejects a stale base revision and returns the current row", async () => {
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: null } as never)
+         .mockResolvedValueOnce({
+            id: "t_stale",
+            userId,
+            categoryId: "cat_1",
+            challengeId: null,
+            title: "Current title",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 4,
+         } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 0 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-stale",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_stale", title: "Stale edit" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 3,
+         },
+      ]);
+
+      expect(prisma.task.updateMany).toHaveBeenCalledWith(
+         expect.objectContaining({
+            where: expect.objectContaining({ revision: 3 }),
+         })
+      );
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-stale",
+         status: "conflict",
+         reason: "zero_rows",
+         currentTask: expect.objectContaining({
+            id: "t_stale",
+            revision: 4,
+         }),
+      });
+   });
+
+   it("applies a legacy mutation without a base revision", async () => {
+      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
+         challengeId: null,
+      } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 1 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-legacy",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_legacy", title: "Legacy edit" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-legacy",
+         status: "applied",
+      });
+      expect(prisma.task.updateMany).toHaveBeenCalledWith({
+         where: { id: "t_legacy", userId, isDeleted: false },
+         data: {
+            title: "Legacy edit",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("bumps revisions on task reorder", async () => {
+      await processBatchSync(userId, [
+         {
+            id: "mut-reorder",
+            entityType: "TASK",
+            action: "REORDER",
+            payload: { taskIds: ["t_a", "t_b"] },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(prisma.task.updateMany).toHaveBeenNthCalledWith(1, {
+         where: { id: "t_a", userId, isDeleted: false },
+         data: { sortOrder: 0, revision: { increment: 1 } },
+      });
+      expect(prisma.task.updateMany).toHaveBeenNthCalledWith(2, {
+         where: { id: "t_b", userId, isDeleted: false },
+         data: { sortOrder: 1, revision: { increment: 1 } },
+      });
+   });
+
+   it("writes a category update with the base revision", async () => {
+      vi.mocked(prisma.category.updateMany).mockResolvedValueOnce({
+         count: 1,
+      });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-cat-rev",
+            entityType: "CATEGORY",
+            action: "UPDATE",
+            payload: { categoryId: "cat_rev", name: "Renamed" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 2,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-cat-rev",
+         status: "applied",
+      });
+      expect(prisma.category.updateMany).toHaveBeenCalledWith({
+         where: {
+            id: "cat_rev",
+            userId,
+            isDeleted: false,
+            revision: 2,
+         },
+         data: {
+            name: "Renamed",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("rejects a weekly goal mutation when the challenge is locked", async () => {
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: "c_locked" } as never)
+         .mockResolvedValueOnce({
+            id: "t_locked",
+            userId,
+            categoryId: "cat_1",
+            challengeId: "c_locked",
+            title: "Weekly goal",
+            taskType: "WEEKLY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 2,
+         } as never);
+      vi.mocked(taskRepo.assertChallengeWritable).mockRejectedValueOnce(
+         new ChallengeStateError("locked")
+      );
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-locked-update",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "t_locked", isComplete: true },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 2,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-locked-update",
+         status: "conflict",
+         reason: "challenge_locked",
+         currentTask: expect.objectContaining({
+            id: "t_locked",
+            revision: 2,
+         }),
       });
       expect(prisma.task.updateMany).not.toHaveBeenCalled();
    });

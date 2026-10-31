@@ -16,6 +16,7 @@ export const queuedMutationSchema = z.object({
    payload: z.record(z.string(), z.unknown()),
    createdAt: z.number().int().positive(),
    retryCount: z.number().int().min(0).default(0),
+   baseRevision: z.number().int().nonnegative().optional(),
 });
 
 export const batchSyncSchema = z.object({

@@ -52,7 +52,12 @@ export async function createCategory(
       if (tombstoned) {
          return await prisma.category.update({
             where: { id: tombstoned.id },
-            data: { name: normalized, isDeleted: false, deletionTime: null },
+            data: {
+               name: normalized,
+               isDeleted: false,
+               deletionTime: null,
+               revision: { increment: 1 },
+            },
          });
       }
 
@@ -147,7 +152,7 @@ export async function deleteCategory(categoryId: string): Promise<boolean> {
             userId: category.userId,
             isDeleted: false,
          },
-         data: { categoryId: fallback.id },
+         data: { categoryId: fallback.id, revision: { increment: 1 } },
       }),
       prisma.category.update({
          where: { id: categoryId },
@@ -155,6 +160,7 @@ export async function deleteCategory(categoryId: string): Promise<boolean> {
             isDeleted: true,
             deletionTime: now,
             name: buildCategoryTombstoneName(category.name, category.id),
+            revision: { increment: 1 },
          },
       }),
    ]);
@@ -184,7 +190,7 @@ export async function updateCategoryName(
    try {
       await prisma.category.update({
          where: { id: category.id },
-         data: { name: newName },
+         data: { name: newName, revision: { increment: 1 } },
       });
    } catch (error) {
       if (
