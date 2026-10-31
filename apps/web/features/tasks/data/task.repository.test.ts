@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/core/db";
 import {
    createCategory,
@@ -544,6 +545,31 @@ describe("task.repository", () => {
 
          expect(result).toEqual(existing);
          expect(prisma.category.create).not.toHaveBeenCalled();
+      });
+
+      it("returns the live category when create hits the unique index", async () => {
+         const winner = {
+            id: "cat_live",
+            name: "Work",
+            taskType: "DAILY",
+         };
+         vi.mocked(prisma.category.findFirst)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(winner as never);
+         vi.mocked(prisma.category.create).mockRejectedValueOnce(
+            new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+               code: "P2002",
+               clientVersion: "test",
+            })
+         );
+
+         const result = await createCategory({
+            userId: "user_1",
+            name: "work",
+            taskType: "DAILY",
+         });
+
+         expect(result).toEqual(winner);
       });
 
       it("creates a new category with given taskType if not existing", async () => {

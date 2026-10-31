@@ -288,6 +288,57 @@ export async function removeQueuedMutations(ids: string[]): Promise<void> {
    });
 }
 
+/**
+ * Moves every local task and queued mutation from a client-generated category id
+ * to the server's winning category id after a create conflict.
+ */
+export async function remapLocalCategoryId(
+   fromId: string,
+   toId: string
+): Promise<void> {
+   if (fromId === toId) return;
+   const db = await openDatabase();
+   if (!db) return;
+
+   await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(
+         [STORES.TASKS, STORES.CATEGORIES, STORES.MUTATIONS],
+         "readwrite"
+      );
+
+      const taskIndex = tx.objectStore(STORES.TASKS).index("categoryId");
+      const cursorRequest = taskIndex.openCursor(IDBKeyRange.only(fromId));
+      cursorRequest.onsuccess = () => {
+         const cursor = cursorRequest.result;
+         if (!cursor) return;
+         cursor.update({
+            ...(cursor.value as LocalTaskRecord),
+            categoryId: toId,
+         });
+         cursor.continue();
+      };
+
+      const mutationStore = tx.objectStore(STORES.MUTATIONS);
+      const allRequest = mutationStore.getAll();
+      allRequest.onsuccess = () => {
+         const mutations = (allRequest.result || []) as QueuedMutation[];
+         for (const mutation of mutations) {
+            const payload = mutation.payload as Record<string, unknown>;
+            if (payload?.categoryId === fromId) {
+               mutationStore.put({
+                  ...mutation,
+                  payload: { ...payload, categoryId: toId },
+               });
+            }
+         }
+      };
+
+      tx.objectStore(STORES.CATEGORIES).delete(fromId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+   });
+}
+
 // ---------------------------------------------------------------------------
 // Guest Data Claim (Transfer local guest tasks to authenticated user)
 // ---------------------------------------------------------------------------

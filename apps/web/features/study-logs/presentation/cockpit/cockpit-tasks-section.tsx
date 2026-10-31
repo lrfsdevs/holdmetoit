@@ -117,6 +117,7 @@ import {
    getTaskScope,
    type TaskScope,
 } from "@/features/tasks/domain/task-scope";
+import { buildTaskEditPatch } from "@/features/tasks/domain/task-edit-patch";
 import type {
    TaskStatus,
    UserCategorizedTasks,
@@ -1524,6 +1525,30 @@ export function CockpitTasksSection({
          }
       }
 
+      const patch = buildTaskEditPatch(
+         {
+            title: editTaskModal.text,
+            status: editTaskModal.status,
+            isComplete: editTaskModal.completed,
+            dueDate: editTaskModal.dueDate ?? null,
+            challengeId: editTaskModal.challengeId ?? null,
+         },
+         {
+            title: trimmed,
+            status: newStatus,
+            isComplete: nextCompleted,
+            dueDate: resolvedDueDate,
+            challengeId:
+               taskType === "weekly" ? editTaskInputChallengeId : undefined,
+         },
+         taskType === "daily" ? "DAILY" : "WEEKLY"
+      );
+
+      if (Object.keys(patch).length === 0) {
+         setEditTaskModal(null);
+         return;
+      }
+
       if (taskType === "daily") {
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
@@ -1598,16 +1623,7 @@ export function CockpitTasksSection({
             id: crypto.randomUUID(),
             entityType: "TASK",
             action: "UPDATE",
-            payload: {
-               taskId: id,
-               title: trimmed,
-               isComplete: nextCompleted,
-               status: newStatus,
-               dueDate: resolvedDueDate,
-               ...(taskType === "weekly"
-                  ? { challengeId: editTaskInputChallengeId }
-                  : {}),
-            },
+            payload: { taskId: id, ...patch },
             createdAt: Date.now(),
             retryCount: 0,
          })
@@ -1618,17 +1634,7 @@ export function CockpitTasksSection({
 
          startTransition(async () => {
             try {
-               await updateTaskAction({
-                  taskId: id,
-                  title: trimmed,
-                  isComplete: nextCompleted,
-                  status: newStatus,
-                  dueDate: resolvedDueDate,
-                  challengeId:
-                     taskType === "weekly"
-                        ? editTaskInputChallengeId
-                        : undefined,
-               });
+               await updateTaskAction({ taskId: id, ...patch });
             } catch (err) {
                logTaskSync("Failed to update task on server", err);
             }

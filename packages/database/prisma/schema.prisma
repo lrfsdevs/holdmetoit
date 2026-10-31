@@ -255,7 +255,10 @@ model Category {
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks Task[]
 
-  @@unique([userId, name, taskType])
+  // Active category names are case-insensitively unique per (userId, taskType)
+  // via the partial unique index created in
+  // 20261031000000_category_active_name_ci_unique. Soft-deleted rows do not
+  // block name reuse, and Prisma cannot express a partial index in the schema.
   @@index([userId, taskType, isDeleted])
 }
 
