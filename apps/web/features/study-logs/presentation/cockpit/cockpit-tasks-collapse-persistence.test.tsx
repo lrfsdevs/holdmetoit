@@ -10,15 +10,6 @@ import {
    readCollapsedCategoryIds,
 } from "./cockpit-tasks-storage";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
    const actual =
       await importOriginal<

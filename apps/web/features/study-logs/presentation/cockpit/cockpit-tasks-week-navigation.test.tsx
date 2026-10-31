@@ -5,15 +5,6 @@ import React from "react";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 afterEach(cleanup);
 
 describe("CockpitTasksSection Interactive Week Navigation (GH #184 / KAN-60)", () => {

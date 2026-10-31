@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-30 (Session 177 on `afnan-jr` · Session 176 on `afnan-jr` · Session 175 on `krish`)
+> **Last Updated:** 2026-10-30 (Session 178 on `afnan-jr` · Session 177 on `afnan-jr` · Session 176 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 178 — 2026-10-30 (One web write path on `afnan-jr`)
+
+- **Dual write removed:** edit, move, and weekly scope changes no longer call `updateTaskAction`; create/toggle/delete already went through the queue.
+- **Rollover is one mutation:** added `ROLLOVER` (`{ taskIds, targetDateKey }`) to the sync protocol; the server applies the incomplete-only guard in one `updateMany`. Removed the per-task `UPDATE`s and `rolloverTasksAction`.
+- **Validation moved:** per-action payload zod schemas in `task-sync.schema.ts`; invalid payloads are `conflict` / `invalid_payload`. A rejected CREATE removes its local row.
+- **Revalidation moved:** the sync route calls `revalidatePath("/")` plus the cache-tag invalidation.
+- **Dead code deleted:** `features/tasks/api/task.actions.ts` and its test; removed the action mocks from eight cockpit tests and the `useTransition` usage.
+- **Tests:** ROLLOVER applied/invalid, overlong title, empty toggle, rejected-CREATE cleanup, route revalidation; web suite 212 files / 2101 tests; typecheck/lint/build clean.
+- **Uncommitted:** changes sit in the working tree on top of the staged quick-wins merge.
+- **NEXT:** server revision (Step 4), then queue hygiene (Step 5).
 
 ### Session 177 — 2026-10-30 (Task sync quick wins on `afnan-jr`)
 

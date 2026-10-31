@@ -353,6 +353,74 @@ describe("task-sync.service", () => {
       );
    });
 
+   it("removes a local task when a CREATE is rejected without a server entity", async () => {
+      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+         {
+            id: "mut_create",
+            entityType: "TASK" as const,
+            action: "CREATE" as const,
+            payload: { id: "t_new", title: "New task" },
+            createdAt: 1,
+            retryCount: 0,
+         },
+      ] as never);
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_create"],
+            mutationResults: [
+               {
+                  id: "mut_create",
+                  status: "conflict",
+                  reason: "invalid_payload",
+               },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.deleteLocalTask).toHaveBeenCalledWith("t_new");
+   });
+
+   it("keeps a local task when an UPDATE is rejected without a server entity", async () => {
+      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+         {
+            id: "mut_update",
+            entityType: "TASK" as const,
+            action: "UPDATE" as const,
+            payload: { taskId: "t_existing", title: "Stale" },
+            createdAt: 1,
+            retryCount: 0,
+         },
+      ] as never);
+
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_update"],
+            mutationResults: [
+               {
+                  id: "mut_update",
+                  status: "conflict",
+                  reason: "invalid_payload",
+               },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.deleteLocalTask).not.toHaveBeenCalledWith("t_existing");
+   });
+
    it("does not overwrite pending local entities with stale server changes", async () => {
       // Local mutation is still in-flight/pending for t_pending
       vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([

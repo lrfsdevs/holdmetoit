@@ -8,15 +8,6 @@ import { TASKS_SYNCED_EVENT } from "@/features/tasks/data/local/task-sync.servic
 import * as taskIdb from "@/features/tasks/data/local/task-idb";
 import * as taskSyncService from "@/features/tasks/data/local/task-sync.service";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
    const actual =
       await importOriginal<

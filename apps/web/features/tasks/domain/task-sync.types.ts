@@ -8,7 +8,7 @@ import type {
 export type SyncState = "synced" | "pending";
 
 export type SyncAction =
-   "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "MOVE" | "REORDER";
+   "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "MOVE" | "REORDER" | "ROLLOVER";
 
 export type SyncEntityType = "TASK" | "CATEGORY";
 

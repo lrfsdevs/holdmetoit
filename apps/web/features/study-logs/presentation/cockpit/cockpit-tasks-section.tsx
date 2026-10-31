@@ -1,13 +1,6 @@
 "use client";
 
-import {
-   useState,
-   useEffect,
-   useTransition,
-   useRef,
-   useMemo,
-   useCallback,
-} from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
    ChevronDown,
    ChevronUp,
@@ -97,15 +90,6 @@ import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { cn } from "@/lib/utils";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
-import {
-   createTaskAction,
-   deleteCategoryAction,
-   deleteTaskAction,
-   rolloverTasksAction,
-   toggleTaskAction,
-   updateCategoryAction,
-   updateTaskAction,
-} from "@/features/tasks/api/task.actions";
 import {
    applyRolloverToCategories,
    findRolloverCandidates,
@@ -207,7 +191,6 @@ export function CockpitTasksSection({
    initialCollapsedCategoryIds,
    initialIsRolloverSnoozed,
 }: CockpitTasksSectionProps) {
-   const [, startTransition] = useTransition();
    const linkableChallengeId =
       challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
    const isChallengeActive = challengeStatus
@@ -1628,17 +1611,9 @@ export function CockpitTasksSection({
             retryCount: 0,
          })
             .then(() => {
-               scheduleSync(userId);
+               scheduleSync(userId, 400);
             })
             .catch(() => {});
-
-         startTransition(async () => {
-            try {
-               await updateTaskAction({ taskId: id, ...patch });
-            } catch (err) {
-               logTaskSync("Failed to update task on server", err);
-            }
-         });
       }
 
       logTaskSync("Task updated", {
@@ -1862,20 +1837,9 @@ export function CockpitTasksSection({
             retryCount: 0,
          })
             .then(() => {
-               scheduleSync(userId);
+               scheduleSync(userId, 400);
             })
             .catch(() => {});
-
-         startTransition(async () => {
-            try {
-               await updateTaskAction({
-                  taskId: foundTask!.id,
-                  dueDate: targetDateKey,
-               });
-            } catch (err) {
-               logTaskSync("Failed to update task day on server", err);
-            }
-         });
       }
 
       logTaskSync("Task moved to day", {
@@ -1940,19 +1904,8 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => scheduleSync(userId))
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
-
-            startTransition(async () => {
-               try {
-                  await updateTaskAction({
-                     taskId,
-                     challengeId: newChallengeId,
-                  });
-               } catch (err) {
-                  logTaskSync("Failed to update task scope on server", err);
-               }
-            });
          }
       },
       [weeklyCategories, userId, isLoggedIn]
@@ -2024,34 +1977,22 @@ export function CockpitTasksSection({
                   syncState: "pending",
                }).catch(() => {});
             }
-
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "UPDATE",
-                  payload: {
-                     taskId: candidate.taskId,
-                     dueDate: effectiveTodayDate,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               }).catch(() => {});
-            }
          });
 
-         if (isLoggedIn && userId) {
-            scheduleSync(userId);
-            startTransition(async () => {
-               try {
-                  await rolloverTasksAction({
-                     taskIds: candidateIds,
-                     targetDateKey: effectiveTodayDate,
-                  });
-               } catch (err) {
-                  logTaskSync("Failed to execute rollover on server", err);
-               }
-            });
+         if (isLoggedIn && userId && candidateIds.length > 0) {
+            enqueueMutation({
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "ROLLOVER",
+               payload: {
+                  taskIds: candidateIds,
+                  targetDateKey: effectiveTodayDate,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId, 400))
+               .catch(() => {});
          }
 
          logTaskSync("Incomplete tasks rolled over to Today", {

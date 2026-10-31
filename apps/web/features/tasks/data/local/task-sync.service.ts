@@ -204,6 +204,21 @@ export async function syncNow(
          for (const result of results) {
             if (result.status !== "conflict") continue;
             const entityId = entityIdFor(result.id);
+            const mutation = mutationById.get(result.id);
+            const isCreate = mutation?.action === "CREATE";
+            const hasCurrentEntity =
+               result.currentTask !== undefined ||
+               result.currentCategory !== undefined;
+
+            // A rejected CREATE has no server row to adopt; remove the local one.
+            if (isCreate && !hasCurrentEntity) {
+               if (mutation?.entityType === "TASK") {
+                  if (entityId) await deleteLocalTask(entityId);
+               } else if (mutation?.entityType === "CATEGORY") {
+                  if (entityId) await deleteLocalCategory(entityId);
+               }
+               continue;
+            }
 
             if (result.currentTask === null) {
                if (entityId) await deleteLocalTask(entityId);

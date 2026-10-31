@@ -28,12 +28,6 @@ vi.mock("./daily-hours-modal", () => ({
    DailyHoursModal: () => null,
 }));
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-}));
-
 vi.mock("@/features/wrapped/presentation/dashboard-wrapped", () => ({
    DashboardWrapped: ({ challenge }: { challenge: any }) =>
       createElement("div", {

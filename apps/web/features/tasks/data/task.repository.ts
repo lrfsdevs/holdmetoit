@@ -594,13 +594,16 @@ export async function updateTask(params: {
    });
 }
 
-export async function rolloverIncompleteTasks(params: {
-   userId: string;
-   taskIds: string[];
-   targetDateKey: string;
-}) {
+export async function rolloverIncompleteTasks(
+   params: {
+      userId: string;
+      taskIds: string[];
+      targetDateKey: string;
+   },
+   client: Prisma.TransactionClient | typeof prisma = prisma
+) {
    const targetDate = new Date(params.targetDateKey);
-   return prisma.task.updateMany({
+   return client.task.updateMany({
       where: {
          id: { in: params.taskIds },
          userId: params.userId,

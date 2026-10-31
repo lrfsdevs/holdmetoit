@@ -69,6 +69,23 @@ category, a name collision, and a foreign row are all `conflict`.
 The tombstone name is produced by `buildCategoryTombstoneName` from
 `@holdmetoit/database`, shared with the Tasker bot.
 
+### 2.4 One web writer
+
+`POST /api/tasks/sync` is the only web writer for tasks and categories. The cockpit writes
+the local row and enqueues a mutation; there is no parallel server-action write.
+
+- Edit, move, and scope change: one queued `UPDATE` with only the changed fields.
+- Rollover: one queued `ROLLOVER` with `{ taskIds, targetDateKey }`. The server applies the
+  incomplete-only guard in a single `updateMany`; there are no per-task `UPDATE`s.
+- Create, toggle, and delete: queued mutations (unchanged).
+- Payloads are validated by the per-action zod schemas in `task-sync.schema.ts`. An invalid
+  payload is a `conflict` (`invalid_payload`), never a retry loop.
+- The sync route invalidates the user-task cache tag and calls `revalidatePath("/")` after a
+  successful flush. The former task server actions no longer exist.
+
+The Tasker bot is still a direct writer; the revision step brings it under the same
+versioning contract.
+
 ---
 
 ## 3. Persistence
@@ -102,9 +119,12 @@ conflict with `currentCategory.id !== requestedId` means a concurrent create won
 ### Adding a mutation
 
 - Send only the fields the action changes.
+- Validate the payload with a schema in `task-sync.schema.ts`; an invalid payload is a
+  `conflict` (`invalid_payload`), not an `error`.
 - Return an `Outcome` from the repository handler: `applied`, `conflict` (with the current
   entity or `null`), or `error`.
 - Do not throw for a permanent condition; throw only for unexpected failures.
+- Do not add a second writer (server action) for the same intent.
 - Category name comparisons are case-insensitive (`mode: "insensitive"`).
 
 ### Operator runbook
@@ -137,7 +157,8 @@ npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts --apply
 
 - No feature flag. The new response field is additive; old clients keep using
   `processedMutationIds`.
-- The partial category index is the database backstop. If the category model is replaced,
-  remove the index together with the create/revive logic.
+- The task mutation server actions were deleted; every new task/category mutation goes
+  through the sync repository. The partial category index is the database backstop. If the
+  category model is replaced, remove the index together with the create/revive logic.
 - Follow-ups: revision tokens (Step 4), queue ownership/cross-tab locking (Step 5), conflict
   UI, default-category naming alignment (`General` vs `Default`).

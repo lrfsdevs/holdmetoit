@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
    AuthError,
    requireSessionUser,
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
 
       if (result.success && result.processedMutationIds.length > 0) {
          invalidateTags([cacheTags.userTasks(user.id)]);
+         revalidatePath("/");
       }
 
       if (result.success) {

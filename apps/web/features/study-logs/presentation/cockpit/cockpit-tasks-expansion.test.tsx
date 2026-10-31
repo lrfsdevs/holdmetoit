@@ -5,15 +5,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 afterEach(cleanup);
 
 describe("CockpitTasksSection - Task Expansion & Collapse", () => {

@@ -1,6 +1,18 @@
 import { prisma } from "@/core/db";
 
-import { compactMutationQueue } from "@/features/tasks/domain/task-sync.schema";
+import {
+   categoryCreatePayloadSchema,
+   categoryDeletePayloadSchema,
+   categoryReorderPayloadSchema,
+   categoryUpdatePayloadSchema,
+   compactMutationQueue,
+   taskCreatePayloadSchema,
+   taskDeletePayloadSchema,
+   taskReorderPayloadSchema,
+   taskRolloverPayloadSchema,
+   taskTogglePayloadSchema,
+   taskUpdatePayloadSchema,
+} from "@/features/tasks/domain/task-sync.schema";
 import type {
    BatchSyncResponse,
    MutationResult,
@@ -13,6 +25,7 @@ import {
    getUserCategorizedTasks,
    getUserCategorizedTasksFromDatabase,
    resolveTaskChallengeId,
+   rolloverIncompleteTasks,
    toCategoryItem,
    toTaskItem,
    validateTaskChallengeId,
@@ -26,6 +39,43 @@ const logger = createLogger("tasks.sync");
 type Outcome = Omit<MutationResult, "id">;
 
 const APPLIED: Outcome = { status: "applied" };
+const INVALID: Outcome = { status: "conflict", reason: "invalid_payload" };
+
+function isValidCategoryMutation(m: QueuedMutation): boolean {
+   switch (m.action) {
+      case "CREATE":
+         return categoryCreatePayloadSchema.safeParse(m.payload).success;
+      case "UPDATE":
+      case "MOVE":
+         return categoryUpdatePayloadSchema.safeParse(m.payload).success;
+      case "DELETE":
+         return categoryDeletePayloadSchema.safeParse(m.payload).success;
+      case "REORDER":
+         return categoryReorderPayloadSchema.safeParse(m.payload).success;
+      default:
+         return false;
+   }
+}
+
+function isValidTaskMutation(m: QueuedMutation): boolean {
+   switch (m.action) {
+      case "CREATE":
+         return taskCreatePayloadSchema.safeParse(m.payload).success;
+      case "UPDATE":
+      case "MOVE":
+         return taskUpdatePayloadSchema.safeParse(m.payload).success;
+      case "TOGGLE":
+         return taskTogglePayloadSchema.safeParse(m.payload).success;
+      case "DELETE":
+         return taskDeletePayloadSchema.safeParse(m.payload).success;
+      case "REORDER":
+         return taskReorderPayloadSchema.safeParse(m.payload).success;
+      case "ROLLOVER":
+         return taskRolloverPayloadSchema.safeParse(m.payload).success;
+      default:
+         return false;
+   }
+}
 
 function isP2002(error: unknown): boolean {
    return (
@@ -83,6 +133,18 @@ async function applyCategoryMutation(
    userId: string,
    m: QueuedMutation
 ): Promise<Outcome> {
+   if (!isValidCategoryMutation(m)) {
+      logger.warn(logEvents.tasksSyncFailed, {
+         context: {
+            userId,
+            mutationId: m.id,
+            action: m.action,
+            reason: "invalid_payload",
+         },
+      });
+      return INVALID;
+   }
+
    const payload = m.payload as Record<string, unknown>;
    const catId = String(payload.id || payload.categoryId || "");
    const explicitName =
@@ -364,6 +426,18 @@ async function applyTaskMutation(
    userId: string,
    m: QueuedMutation
 ): Promise<Outcome> {
+   if (!isValidTaskMutation(m)) {
+      logger.warn(logEvents.tasksSyncFailed, {
+         context: {
+            userId,
+            mutationId: m.id,
+            action: m.action,
+            reason: "invalid_payload",
+         },
+      });
+      return INVALID;
+   }
+
    const payload = m.payload as Record<string, unknown>;
    const taskId = String(payload.id || payload.taskId || "");
    let categoryId = String(payload.categoryId || "");
@@ -606,6 +680,22 @@ async function applyTaskMutation(
          where: { id: taskId, userId, isDeleted: false },
          data: { isDeleted: true, deletionTime: new Date() },
       });
+
+      return APPLIED;
+   }
+
+   if (m.action === "ROLLOVER") {
+      const parsed = taskRolloverPayloadSchema.safeParse(payload);
+      if (!parsed.success) return INVALID;
+
+      await rolloverIncompleteTasks(
+         {
+            userId,
+            taskIds: parsed.data.taskIds,
+            targetDateKey: parsed.data.targetDateKey,
+         },
+         tx
+      );
 
       return APPLIED;
    }

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { revalidatePath } from "next/cache";
 import { POST } from "@/app/api/tasks/sync/route";
 import { AuthError } from "@/features/auth/api/require-session";
 import * as sessionModule from "@/features/auth/api/require-session";
@@ -6,6 +7,7 @@ import * as syncRepo from "@/features/tasks/data/task-sync.repository";
 
 vi.mock("next/cache", () => ({
    revalidateTag: vi.fn(),
+   revalidatePath: vi.fn(),
 }));
 
 vi.mock("@/features/auth/api/require-session", () => ({
@@ -103,6 +105,7 @@ describe("POST /api/tasks/sync route handler", () => {
       const body = await res.json();
       expect(body.success).toBe(true);
       expect(body.processedMutationIds).toContain(mutationId);
+      expect(revalidatePath).toHaveBeenCalledWith("/");
       expect(syncRepo.processBatchSync).toHaveBeenCalledWith(
          "user_123",
          expect.any(Array)

@@ -34,6 +34,7 @@ vi.mock("./task.repository", () => ({
    getUserCategorizedTasksFromDatabase: vi.fn(),
    resolveTaskChallengeId: vi.fn(),
    validateTaskChallengeId: vi.fn(),
+   rolloverIncompleteTasks: vi.fn().mockResolvedValue({ count: 0 }),
    assertChallengeWritable: vi.fn().mockResolvedValue(undefined),
    toTaskItem: vi.fn((task: Record<string, unknown>, taskType: string) => ({
       ...task,
@@ -530,5 +531,97 @@ describe("processBatchSync (task-sync.repository)", () => {
          currentTask: null,
       });
       expect(prisma.task.create).not.toHaveBeenCalled();
+   });
+
+   it("rolls over incomplete daily tasks in one mutation", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rollover",
+            entityType: "TASK",
+            action: "ROLLOVER",
+            payload: {
+               taskIds: ["t_1", "t_2"],
+               targetDateKey: "2026-10-30",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rollover",
+         status: "applied",
+      });
+      expect(taskRepo.rolloverIncompleteTasks).toHaveBeenCalledWith(
+         {
+            userId,
+            taskIds: ["t_1", "t_2"],
+            targetDateKey: "2026-10-30",
+         },
+         expect.anything()
+      );
+   });
+
+   it("rejects a rollover with an invalid date key", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rollover-bad",
+            entityType: "TASK",
+            action: "ROLLOVER",
+            payload: {
+               taskIds: ["t_1"],
+               targetDateKey: "not-a-date",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rollover-bad",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(taskRepo.rolloverIncompleteTasks).not.toHaveBeenCalled();
+   });
+
+   it("rejects an update with an overlong title before writing", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-long-title",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_1", title: "x".repeat(256) },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-long-title",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("rejects a toggle without a status or completion flag", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-empty-toggle",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "t_1" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-empty-toggle",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
    });
 });
