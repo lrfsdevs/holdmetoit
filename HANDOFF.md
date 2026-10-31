@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-30 (Session 178 on `afnan-jr` · Session 177 on `afnan-jr` · Session 176 on `afnan-jr`)
+> **Last Updated:** 2026-10-30 (Session 179 on `afnan-jr` · Session 178 on `afnan-jr` · Session 177 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 179 — 2026-10-30 (Zod 4.6.6 security upgrade on `afnan-jr`)
+
+- **Specs:** `apps/web` and `apps/tasker` now declare `zod: ^4.6.6` (was `^4.5.4` and `^3.24.1`).
+- **Tree:** `npm install` deduped to one `zod@4.6.7`; the nested `apps/tasker/node_modules/zod@3.25.76` was removed. `ypt-js` (`^4.6.7`) shares the root copy.
+- **Tasker Zod 3 → 4:** no schema changes required. Env parsing, `booleanString`, and the summary schema typecheck and pass all 79 tests. Updated the stale "zod 3 here" comment in `summarizer.ts`.
+- **Audit:** `npm audit` no longer reports the oversized-constrained-collections advisory; no zod entries remain in the audit output.
+- **Verification:** `typecheck:web` / `typecheck:tasker` 0, `lint:web` 0, web suite green, tasker 4 files / 79 tests, `build:web` clean.
+- **Uncommitted:** dependency-only change, independent of the one-write-path layer.
+- **NEXT:** server revision (Step 4), then queue hygiene (Step 5).
 
 ### Session 178 — 2026-10-30 (One web write path on `afnan-jr`)
 

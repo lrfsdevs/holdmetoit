@@ -54,7 +54,7 @@
       "sonner": "^2.0.8",
       "tailwind-merge": "^3.3.0",
       "ypt-js": "^0.1.0",
-      "zod": "^4.5.4"
+      "zod": "^4.6.6"
    },
    "devDependencies": {
       "@tailwindcss/postcss": "^4.3.3",
