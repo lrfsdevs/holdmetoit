@@ -37,6 +37,7 @@
 | `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
 | `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
 | `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
+| `/admin/users`                                | Global user directory and participant roster with role assignment, cross-challenge tracking, and audit trail                                               | `ADMIN` / `DEV`                        |
 | `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                  | `ADMIN` / `DEV`                        |
 | `/profile`                                    | Global user profile & career stats view for current session user                                                                                           | Authenticated                          |
 | `/profile/[userId]`                           | Public global profile, career stats, and historical challenge archive snapshot                                                                             | Public spectator / Authenticated       |
@@ -1949,3 +1950,35 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Jira Status:** `KAN-49` transitioned from `In Progress` to `In Review` (`id: 31`).
 - **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#164](https://github.com/lrfsdevs/holdmetoit/issues/164).
 - **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+
+### Session 178 — 2026-11-01 (feat(admin): Global User Directory and Participant Roster — GH-#163 / Jira KAN-48 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#163](https://github.com/lrfsdevs/holdmetoit/issues/163) / Jira Ticket `KAN-48` ("feat(admin): global user directory and participant roster for hosts/admins"). Deliver an administrative platform directory at `/admin/users` listing all registered users with career lifetime hours, cross-challenge roster enrollments, YPT sync status, role assignment, and audit history.
+- **Architectural Enhancements Implemented:**
+   1. **Step 1: Domain & Repository Layer:**
+      - In `user-directory.types.ts`, defined domain contracts: `AdminUserRosterItem` (`id`, `discordId`, `name`, `discordTag`, `image`, `role`, `createdAt`, `lifetimeStudyHours`, `trophies`, `trophyRank`, `walletBalance`, `yptStatus`, `activeChallenges`, `totalChallengesCount`), `UserDirectoryQuery`, `UserDirectorySummary`, and `AdminUserRosterResult`.
+      - In `user-directory.repository.ts`, implemented `getAdminUserRoster(query, options)` computing lifetime study hours from daily study logs, active challenges, competitive trophy rank, wallet coin balances, and YPT connectivity status.
+      - Implemented role resolution (`resolveRosterRole`) and YPT status normalization (`resolveYptStatus`).
+      - Handled search filtering across display name, tag, and Discord snowflake ID, plus filters for `roleFilter` (`USER`, `HOST`, `ADMIN`), `enrollmentFilter` (`ACTIVE`, `IDLE`, `NEVER_ENROLLED`), `yptFilter`, and dynamic sorting/pagination.
+      - Extended `audit-log.ts` with `"USER_ROLE_UPDATED"`.
+      - Added 15 Vitest unit tests in `user-directory.repository.test.ts`.
+   2. **Step 2: Server Actions & Security Gating:**
+      - In `user-directory.actions.ts`, created type-safe Server Actions:
+         - `fetchAdminUserRosterAction(query)`: Protected by `requireAdminUser()`, fetches filtered & paginated user roster results.
+         - `updateUserRoleAction({ targetUserId, newRole, reason })`: Strictly protected by `requireAdminUser()`, validated with Zod, enforces self-demotion protection (`actor.id === targetUserId && newRole !== "ADMIN"` returns `SELF_DEMOTION_FORBIDDEN`), updates database `role` (`PARTICIPANT` for `"USER"`, `ADMIN` for `"HOST"` and `"ADMIN"`), writes an immutable audit record (`USER_ROLE_UPDATED`) with before/after diffs and audit reason, and revalidates `/admin/users`, `/admin`, and `/profile/[userId]`.
+         - `getUserAuditLogsAction({ targetUserId, limit })`: Protected by `requireAdminUser()`, queries user-specific activity and targeting history.
+      - In `audit-log.repository.ts`, added `getUserAuditTrail(targetUserId, limit)` querying audit logs matching either `actorId` or `targetEntityId`.
+      - Added 11 unit tests in `user-directory.actions.test.ts`.
+   3. **Step 3: Presentation, Route & Integration:**
+      - Created `/admin/users/page.tsx` (protected Server Component with `requireAdminUser` and initial data prefetch).
+      - Created Law L9 boundaries: `/admin/users/loading.tsx` (card and table skeletons) and `/admin/users/error.tsx` (recovery view).
+      - Created `user-directory-view.tsx`: Top summary stat cards (Total Registered Users, Active in Battles, Unenrolled/Idle, YPT Connected), debounced search input, filter selects (`Role`, `Enrollment Status`, `YPT Status`, `Sort By`), Roster Table with avatar, display name, tag, copyable Discord Snowflake ID badge, role badge, lifetime hours, trophy rank, YPT connection badge, active challenge pills, profile link, and inspect button, plus `<DataPagination />`.
+      - Created `user-inspector-sheet.tsx`: Radix side-sheet inspector with member profile overview, role assignment dropdown with mandatory audit reason, self-demotion alert banner, quick actions (`AdminAdjustmentDialog` for coins, `AdminTrophyAdjustmentDialog` for trophies, Discord avatar sync), and chronological activity audit trail.
+      - Updated `admin-console-view.tsx` with header link and quick navigation card to `/admin/users`.
+      - Added unit tests in `user-directory-view.test.tsx` and `app/admin/users/page.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 6 test files passed (36/36 tests green across admin domain, data, api, and presentation).
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and sizing rules).
+- **Jira Status:** `KAN-48` assigned to `Krish Jaiswal` and transitioned from `To Do` $\rightarrow$ `In Progress` $\rightarrow$ `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#163](https://github.com/lrfsdevs/holdmetoit/issues/163).
