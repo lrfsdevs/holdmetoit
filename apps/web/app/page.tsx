@@ -116,10 +116,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ? { ...session.user, role: effectiveRole ?? session.user.role }
       : session?.user;
 
-   const profileUrl =
-      cockpit?.challengeId && cockpit?.participant?.id
-         ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
-         : "/profile";
+   const profileUrl = cockpit?.challengeId
+      ? `/profile?challengeId=${cockpit.challengeId}`
+      : "/profile";
 
    const rawSnoozeCookie = cookieStore.get(ROLLOVER_SNOOZE_COOKIE)?.value;
    let initialIsRolloverSnoozed = false;
@@ -133,13 +132,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          if (cockpit?.todayDate) validDates.add(cockpit.todayDate);
 
          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            if (
-               (parsed[scope] && validDates.has(parsed[scope])) ||
-               (parsed["guest"] && validDates.has(parsed["guest"]))
-            ) {
+            if (parsed[scope] && validDates.has(parsed[scope])) {
                initialIsRolloverSnoozed = true;
             }
-         } else if (typeof parsed === "string" && validDates.has(parsed)) {
+         } else if (
+            scope === "guest" &&
+            typeof parsed === "string" &&
+            validDates.has(parsed)
+         ) {
             initialIsRolloverSnoozed = true;
          }
       } catch {

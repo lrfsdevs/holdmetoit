@@ -80,6 +80,8 @@ export function HomeCockpitView({
    const effectiveDisplayName =
       cockpit?.participant.displayName ||
       cockpit?.participant.username ||
+      user?.displayName ||
+      user?.name ||
       displayName;
 
    const isLoggedIn = Boolean(
@@ -89,8 +91,8 @@ export function HomeCockpitView({
 
    const activeProfileUrl =
       profileUrl ??
-      (cockpit?.challengeId && cockpit?.participant?.id
-         ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
+      (cockpit?.challengeId
+         ? `/profile?challengeId=${cockpit.challengeId}`
          : "/profile");
 
    const effectiveTodaySeconds = cockpit

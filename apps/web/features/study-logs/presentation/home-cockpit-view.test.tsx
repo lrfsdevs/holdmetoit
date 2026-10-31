@@ -339,9 +339,21 @@ describe("HomeCockpitView", () => {
       );
 
       expect(html).toContain("Welcome");
-      expect(html).toContain(
-         'href="/challenge/chal-beta/participant/part-gamma"'
+      expect(html).toContain('href="/profile?challengeId=chal-beta"');
+      expect(html).toContain("NrGSIayeR");
+      expect(html).toContain('title="View profile for NrGSIayeR"');
+   });
+
+   it("renders username next to Welcome as a link to /profile when logged in without challenge context", () => {
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-beta", displayName: "NrGSIayeR" },
+            cockpit: null,
+         })
       );
+
+      expect(html).toContain("Welcome");
+      expect(html).toContain('href="/profile"');
       expect(html).toContain("NrGSIayeR");
       expect(html).toContain('title="View profile for NrGSIayeR"');
    });
