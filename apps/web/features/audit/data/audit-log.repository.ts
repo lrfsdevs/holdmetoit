@@ -192,3 +192,85 @@ export async function getAuditTrail(
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 }
+
+/**
+ * Retrieves the audit trail for a specific user, matching either their actorId
+ * or targetEntityId, sorted descending by timestamp.
+ */
+export async function getUserAuditTrail(
+   targetUserId: string,
+   limit: number = 20
+): Promise<AuditEvent[]> {
+   if (forceInMemoryForTests) {
+      const filtered = inMemoryAuditTrail.filter(
+         (event) =>
+            event.actorId === targetUserId ||
+            event.targetEntityId === targetUserId
+      );
+
+      return [...filtered]
+         .sort(
+            (a, b) =>
+               new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+         )
+         .slice(0, limit);
+   }
+
+   try {
+      const logs = await prisma.auditLog.findMany({
+         where: {
+            OR: [{ actorId: targetUserId }, { targetEntityId: targetUserId }],
+         },
+         orderBy: { createdAt: "desc" },
+         take: limit,
+         include: {
+            actor: {
+               select: {
+                  displayName: true,
+                  username: true,
+                  image: true,
+               },
+            },
+         },
+      });
+
+      if (logs && logs.length > 0) {
+         return logs.map((log) => ({
+            id: log.id,
+            timestamp: log.createdAt.toISOString(),
+            actorId: log.actorId ?? "system",
+            actorUsername: log.actorUsername,
+            actorDisplayName: log.actor?.displayName ?? log.actorDisplayName,
+            actorImage: log.actor?.image ?? log.actorImage,
+            actionType: log.actionType as AuditEventType,
+            targetEntityId: log.targetEntityId,
+            targetEntityType: log.targetEntityType as AuditTargetType,
+            targetEntityName: log.targetEntityName,
+            challengeId: log.challengeId ?? undefined,
+            previousValue: log.previousValue,
+            newValue: log.newValue,
+            auditReason: log.auditReason,
+         }));
+      }
+   } catch (error) {
+      if (process.env.NODE_ENV !== "test") {
+         logger.error(logEvents.auditQueryFailed, {
+            context: { targetUserId },
+            error,
+         });
+      }
+   }
+
+   // Fallback to in-memory storage (e.g. for unit tests)
+   const filtered = inMemoryAuditTrail.filter(
+      (event) =>
+         event.actorId === targetUserId || event.targetEntityId === targetUserId
+   );
+
+   return [...filtered]
+      .sort(
+         (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      .slice(0, limit);
+}

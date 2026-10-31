@@ -154,28 +154,8 @@ export async function syncNow(
                   syncState: "synced" as const,
                }));
 
-            const existingTasks = await getAllLocalTasks(userId);
-            const existingTaskMap = new Map(
-               existingTasks.map((t) => [t.id, t])
-            );
-
             const localTasks = data.serverChanges.tasks
-               .filter((t) => {
-                  if (pendingEntityIds.has(t.id)) return false;
-                  const local = existingTaskMap.get(t.id);
-                  if (local && local.syncState === "pending") {
-                     const localTime = local.updatedAt
-                        ? new Date(local.updatedAt).getTime()
-                        : 0;
-                     const serverTime = t.updatedAt
-                        ? new Date(t.updatedAt).getTime()
-                        : 0;
-                     if (localTime > serverTime) {
-                        return false;
-                     }
-                  }
-                  return true;
-               })
+               .filter((t) => !pendingEntityIds.has(t.id))
                .map((t) => ({
                   id: t.id,
                   userId,
@@ -206,7 +186,7 @@ export async function syncNow(
             const serverTaskIdSet = new Set(
                data.serverChanges.tasks.map((t) => t.id)
             );
-            // existingTasks already populated during local task reconciliation
+            const existingTasks = await getAllLocalTasks(userId);
             for (const lt of existingTasks) {
                if (
                   lt.syncState === "synced" &&

@@ -568,12 +568,9 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
-      if (initialIsRolloverSnoozed) {
-         return true;
-      }
-      return isRolloverSnoozedForDate(userId, effectiveTodayDate);
-   });
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(
+      Boolean(initialIsRolloverSnoozed)
+   );
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
@@ -4208,7 +4205,29 @@ export function CockpitTasksSection({
                            >
                               <script
                                  dangerouslySetInnerHTML={{
-                                    __html: `(function(){try{var k='${ROLLOVER_SNOOZE_STORAGE_PREFIX}';var u='${userId || "guest"}';var d='${effectiveTodayDate}';if(localStorage.getItem(k+u+'_'+d)==='true'||localStorage.getItem(k+'guest_'+d)==='true'||localStorage.getItem(k+'all_'+d)==='true'||document.cookie.indexOf('${ROLLOVER_SNOOZE_COOKIE}')!==-1){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
+                                    __html: `(function(){try{var k=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_STORAGE_PREFIX
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var u=${JSON.stringify(
+                                       userId && userId.trim().length > 0
+                                          ? userId.trim()
+                                          : "guest"
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var d=${JSON.stringify(
+                                       effectiveTodayDate
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var c=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_COOKIE
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var s=false;if(typeof localStorage!=='undefined'&&localStorage.getItem(k+u+'_'+d)==='true'){s=true;}if(!s&&typeof document!=='undefined'&&document.cookie){var m=document.cookie.match(new RegExp('(?:^|;\\\\s*)'+c+'=([^;]*)'));if(m&&m[1]){var p=JSON.parse(decodeURIComponent(m[1]));if(p&&typeof p==='object'&&p[u]===d){s=true;}}}if(s){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
                                  }}
                               />
                               <div className="flex items-start justify-between gap-2.5">
