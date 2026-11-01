@@ -119,6 +119,37 @@ The per-challenge standings are separate from the global trophy board. Two forma
    battles rely on the top-3 podium and the team-view cards instead. `matchHeader.hasMatchup`
    is intentionally untouched because Discord embeds still derive their description from it.
 
+### 7.1 Head-to-Head Banner Card Anchoring & Dynamic Leader Badge (GH #206 / KAN-67)
+
+1. **Card Anchoring by Creation Order:**
+   - Head-to-head match cards in `ChallengeLeaderboardTab` are permanently anchored to fixed slots based on team creation order (`sortOrder` ascending) rather than dynamically swapping positions whenever hours lead changes.
+   - Slot 1 (`teamA`) represents the first created team, and Slot 2 (`teamB`) represents the second created team.
+   - Eliminates layout shifting and visual disorientation caused by matchup cards flipping left-to-right mid-challenge.
+
+2. **Dynamic Leading Crown & Margin Delta:**
+   - When a team holds a strictly positive lead in cumulative logged seconds (`matchHeader.leadMarginSeconds > 0`):
+      - The leading team's card displays a high-contrast `👑 Leading` badge (`bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text`) in the card header.
+      - The leading team's total logged hours displays the lead margin delta (`+Xh Ym ahead` or `+Xh Ym Zs ahead` via `formatLeadMarginDelta`) beside the clock time.
+      - The trailing team's card displays standard total hours without leading badges or margin deltas.
+   - When both teams are tied or have 0 logged seconds (`matchHeader.leaderSide === "tie"`), neither card displays a leading badge or ahead delta, preserving mathematical integrity (Law L6/L7).
+
+### 7.2 Unassigned Scholars Section in Team View Mode (GH #209 / KAN-70)
+
+1. **Context & Motivation:**
+   - When scholars enroll in a challenge prior to being assigned to a house or team, their `teamId` is unset (`null` / `"no-assigned"`).
+   - Previously, in "View by Team" mode, the view only rendered houses listed in `challenge.teams`, causing unassigned scholars to disappear completely from the view.
+
+2. **Unassigned Scholars Card:**
+   - When unassigned scholars exist in `filteredStandings`, an "Unassigned Scholars" (`⏳`) card renders alongside house cards in the responsive grid.
+   - Displays a prominent status pill (`{count} unassigned`) and explanatory subtitle (`Awaiting house assignment`).
+   - Lists all unassigned scholars with their rank within the unassigned pool (`#1`, `#2`, ...), overall challenge rank (`(#rank)`), avatar, display name, handle, study telemetry (`totalLoggedClock` and `todayLoggedClock`), and a dedicated `⏳ Unassigned` status badge.
+   - For hosts and administrators (`isAdmin: true`), renders a 1-click shortcut button linking directly to `/challenge/[id]?tab=manage&team=UNASSIGNED` to instantly assign scholars in the roster editor, as well as `Edit hr` and `Edit target` override modals.
+
+3. **Team Filter Dropdown Integration:**
+   - When unassigned scholars exist, an option `⏳ Unassigned ({count})` (`value="UNASSIGNED"`) is dynamically appended to the leaderboard team filter dropdown.
+   - Selecting `UNASSIGNED` scopes both the table view and team view mode strictly to unassigned scholars.
+   - Active filters pill displays `Team: Unassigned` with 1-click filter reset capabilities.
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
