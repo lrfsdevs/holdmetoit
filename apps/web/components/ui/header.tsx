@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Shield, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -246,6 +246,14 @@ export function AppHeader({
                   </Link>
                )}
 
+               <Link
+                  href="/preferences"
+                  data-testid="preferences-nav-link"
+                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
+               >
+                  Preferences
+               </Link>
+
                {isDevRole(effectiveUser?.role) && (
                   <Link
                      href="/devboard"
@@ -267,11 +275,22 @@ export function AppHeader({
                )}
             </div>
 
-            <UserNav
-               user={effectiveUser}
-               redirectTo="/"
-               isPreviewActive={previewActive}
-            />
+            <div className="flex items-center gap-2 shrink-0">
+               <Link
+                  href="/preferences"
+                  data-testid="quick-preferences-button"
+                  title="Preferences"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border-default bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-nested transition-colors shrink-0"
+               >
+                  <Settings className="h-4 w-4" />
+               </Link>
+
+               <UserNav
+                  user={effectiveUser}
+                  redirectTo="/"
+                  isPreviewActive={previewActive}
+               />
+            </div>
 
             <PreviewModeHotkey
                isActualAdmin={resolvedIsActualAdmin}
