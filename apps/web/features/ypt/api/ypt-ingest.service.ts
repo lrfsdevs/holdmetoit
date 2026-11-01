@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { processStudyReward } from "@/features/economy/api/study-reward.service";
 import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import { upsertDailyStudyLog } from "@/features/study-logs/data/daily-study-log.repository";
+import { clampDailyLogSeconds } from "@/features/study-logs/domain/duration";
 import {
    findActiveParticipantForUserOnDate,
    findExistingLogByExternalId,
@@ -17,6 +18,8 @@ export async function ingestYptActivity(
    payload: YptIngestPayload,
    source: "YPT_BOT" | "YPT_MANUAL" = "YPT_BOT"
 ): Promise<YptIngestResult> {
+   const durationSeconds = clampDailyLogSeconds(payload.durationSeconds);
+
    try {
       // 1. Resolve user by YPT ID or Discord ID
       const user = await findUserByYptOrDiscordId({
@@ -37,7 +40,7 @@ export async function ingestYptActivity(
             ok: false,
             code: "USER_NOT_FOUND",
             message: "User not found for provided Discord ID or YPT ID.",
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             coinsCredited: 0,
             isDuplicate: false,
          };
@@ -57,7 +60,7 @@ export async function ingestYptActivity(
             code: "YPT_NOT_VERIFIED",
             message:
                "User does not have an active verified YPT identity. Please request admin verification first.",
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             coinsCredited: 0,
             isDuplicate: false,
          };
@@ -68,7 +71,7 @@ export async function ingestYptActivity(
             userId: user.id,
             yptId: user.yptId,
             date: payload.date,
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
          },
       });
 
@@ -82,7 +85,7 @@ export async function ingestYptActivity(
             ok: false,
             code: "FUTURE_DATE_NOT_ALLOWED",
             message: "Cannot ingest study time for future dates.",
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             coinsCredited: 0,
             isDuplicate: false,
          };
@@ -100,7 +103,7 @@ export async function ingestYptActivity(
             code: "NOT_ENROLLED_IN_ACTIVE_CHALLENGE",
             message:
                "No active, unlocked challenge found for user on the given date.",
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             coinsCredited: 0,
             isDuplicate: false,
          };
@@ -113,10 +116,7 @@ export async function ingestYptActivity(
             payload.externalActivityId
          );
 
-         if (
-            existingLog &&
-            existingLog.durationSeconds >= payload.durationSeconds
-         ) {
+         if (existingLog && existingLog.durationSeconds >= durationSeconds) {
             return {
                ok: true,
                userId: user.id,
@@ -138,7 +138,7 @@ export async function ingestYptActivity(
             participantId: participant.id,
             challengeId: participant.challengeId,
             logDate: payload.date,
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             isLeave: false,
             source,
             externalActivityId: payload.externalActivityId,
@@ -163,7 +163,7 @@ export async function ingestYptActivity(
                ok: false,
                code: "CHALLENGE_LOCKED",
                message: "Challenge results are locked; activity skipped.",
-               durationSeconds: payload.durationSeconds,
+               durationSeconds,
                coinsCredited: 0,
                isDuplicate: false,
             };
@@ -175,7 +175,7 @@ export async function ingestYptActivity(
       let coinsCredited = 0;
       let isDuplicate = false;
 
-      if (updatedLog?.id && payload.durationSeconds > 0) {
+      if (updatedLog?.id && durationSeconds > 0) {
          try {
             const rewardResult = await processStudyReward({
                studyLogId: updatedLog.id,
@@ -224,7 +224,7 @@ export async function ingestYptActivity(
             userId: user.id,
             participantId: participant.id,
             studyLogId: updatedLog.id,
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
             coinsCredited,
          },
       });
@@ -234,7 +234,7 @@ export async function ingestYptActivity(
          userId: user.id,
          participantId: participant.id,
          studyLogId: updatedLog.id,
-         durationSeconds: payload.durationSeconds,
+         durationSeconds,
          coinsCredited,
          isDuplicate,
       };
@@ -243,7 +243,7 @@ export async function ingestYptActivity(
          context: {
             action: "ingestYptActivity",
             date: payload.date,
-            durationSeconds: payload.durationSeconds,
+            durationSeconds,
          },
          error,
       });
@@ -255,7 +255,7 @@ export async function ingestYptActivity(
             error instanceof Error
                ? error.message
                : "An unexpected error occurred during YPT activity ingestion.",
-         durationSeconds: payload.durationSeconds,
+         durationSeconds,
          coinsCredited: 0,
          isDuplicate: false,
       };

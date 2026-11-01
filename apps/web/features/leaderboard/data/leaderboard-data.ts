@@ -11,6 +11,7 @@ import {
    type TeamRef,
 } from "@/features/leaderboard/domain/leaderboard";
 import {
+   capDailyStudySeconds,
    formatSecondsToClock,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
@@ -303,7 +304,9 @@ export function buildScoreboardViewModel(
             log.logDate instanceof Date ? log.logDate : new Date(log.logDate);
          return formatUtcDateKey(logDateObj) === todayDateKey;
       });
-      const todayLoggedSeconds = todayLog?.durationSeconds ?? 0;
+      const todayLoggedSeconds = capDailyStudySeconds(
+         todayLog?.durationSeconds ?? 0
+      );
       const todayLoggedClock = formatSecondsToClock(todayLoggedSeconds);
       const liveStatus =
          todayLog?.status ??
@@ -358,6 +361,7 @@ export function buildScoreboardViewModel(
 
       const team = p.teamId ? teamLookup.get(p.teamId) : null;
 
+      // Raw values for the admin override modal; leaderboard ranking/display uses the capped totals above.
       const dailyLogs: Record<string, number> = {};
       for (const log of p.dailyStudyLogs) {
          if (log.logDate) {

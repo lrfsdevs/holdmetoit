@@ -128,6 +128,51 @@ describe("features/ypt/api/ypt-sync.service", () => {
       );
    });
 
+   it("clamps synced study time to the 20-hour daily log limit", async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+         id: "user-1",
+         yptId: "11338944",
+         yptConnection: {
+            id: "conn-1",
+            lastSyncedAt: null,
+         },
+      } as any);
+      vi.mocked(findYptServiceMember).mockResolvedValue({
+         ...rosterMember,
+         todayStudySeconds: 21 * 3_600,
+      } as any);
+      vi.mocked(ingestYptActivity).mockResolvedValue({
+         ok: true,
+         userId: "user-1",
+         participantId: "part-1",
+         studyLogId: "log-1",
+         durationSeconds: 72_000,
+         coinsCredited: 1_200,
+         isDuplicate: false,
+      });
+
+      const result = await syncUserYptStudy("user-1");
+
+      expect(result.ok).toBe(true);
+      expect(result.importedDurationSeconds).toBe(72_000);
+      expect(ingestYptActivity).toHaveBeenCalledWith(
+         expect.objectContaining({
+            yptId: "11338944",
+            date: "2026-10-16",
+            durationSeconds: 72_000,
+         }),
+         "YPT_MANUAL"
+      );
+      expect(prisma.yptSyncRun.create).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({
+               importedDurationSeconds: 72_000,
+               eligibleDurationSeconds: 43_200,
+            }),
+         })
+      );
+   });
+
    it("marks SYNC_ERROR when the roster cannot be fetched", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
          id: "user-1",

@@ -201,7 +201,7 @@ describe("HomeCockpitView", () => {
          plannedLeaveDays: 2,
          usedLeaveDays: 1,
          teamRank: 1,
-         remainingDailyAllowanceSeconds: 86400,
+         remainingDailyAllowanceSeconds: 72_000,
          todayDayNumber: 1,
       };
 
@@ -269,7 +269,7 @@ describe("HomeCockpitView", () => {
          plannedLeaveDays: 2,
          usedLeaveDays: 0,
          teamRank: null,
-         remainingDailyAllowanceSeconds: 86400,
+         remainingDailyAllowanceSeconds: 72_000,
          todayDayNumber: 1,
       };
 

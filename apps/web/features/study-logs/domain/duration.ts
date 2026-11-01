@@ -1,8 +1,11 @@
-/** Maximum seconds allowed for a single calendar day's study log (Law L8 / FEAT-LOG-02). */
-export const MAX_DAILY_LOG_SECONDS = 86_400;
+/** Maximum seconds counted toward challenge leaderboard, deficit, and scoring in a single calendar day (12 hours). */
+export const MAX_COUNTED_DAILY_STUDY_SECONDS = 12 * 3_600; // 43,200
 
-/** Maximum seconds counted toward challenge leaderboard, deficit, and scoring in a single calendar day (14 hours). */
-export const MAX_COUNTED_DAILY_STUDY_SECONDS = 50_400;
+/**
+ * Maximum seconds accepted for a single day's study log — manual, admin, or YPT sync
+ * (Law L8 / FEAT-LOG-02). Raw history may reach 20 hours; scoring still caps at 12.
+ */
+export const MAX_DAILY_LOG_SECONDS = 20 * 3_600; // 72,000
 
 /** Minimum declared weekly target: 1 hour (FEAT-DECL-01). */
 export const MIN_WEEKLY_TARGET_SECONDS = 3_600;
@@ -160,12 +163,23 @@ export function decomposeSecondsToParts(totalSeconds: number): {
 }
 
 /**
- * Caps a daily study duration to the maximum allowable counted seconds for challenge evaluations (14:00:00).
- * Preserves non-negative integer invariant; values exceeding 14h return 50,400.
+ * Caps a daily study duration to the maximum allowable counted seconds for challenge evaluations (12:00:00).
+ * Preserves non-negative integer invariant; values exceeding 12h return 43,200.
  */
 export function capDailyStudySeconds(totalSeconds: number): number {
    if (!Number.isInteger(totalSeconds) || totalSeconds < 0) {
       throw new DurationRangeError("Seconds must be a non-negative integer.");
    }
    return Math.min(totalSeconds, MAX_COUNTED_DAILY_STUDY_SECONDS);
+}
+
+/**
+ * Clamps a raw daily study duration to the maximum accepted log seconds (20:00:00).
+ * Used by logging paths; scored values must still go through capDailyStudySeconds.
+ */
+export function clampDailyLogSeconds(totalSeconds: number): number {
+   if (!Number.isInteger(totalSeconds) || totalSeconds < 0) {
+      throw new DurationRangeError("Seconds must be a non-negative integer.");
+   }
+   return Math.min(totalSeconds, MAX_DAILY_LOG_SECONDS);
 }

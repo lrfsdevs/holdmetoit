@@ -88,7 +88,7 @@ export function AdminHoursOverrideModal({
       }
       const val = parseInt(clean, 10);
       if (isNaN(val)) return;
-      const clamped = Math.max(0, Math.min(24, val));
+      const clamped = Math.max(0, Math.min(MAX_DAILY_LOG_SECONDS / 3_600, val));
       setHours(String(clamped));
    };
 
@@ -342,7 +342,7 @@ export function AdminHoursOverrideModal({
       if (durationSeconds > MAX_DAILY_LOG_SECONDS) {
          setFeedback({
             type: "error",
-            message: "A single day cannot exceed 24:00:00 of study time.",
+            message: `A single day cannot exceed ${formatSecondsToClock(MAX_DAILY_LOG_SECONDS)} of study time.`,
          });
          return;
       }
@@ -680,12 +680,12 @@ export function AdminHoursOverrideModal({
                   >
                      <div>
                         <span className="block text-meta text-text-tertiary mb-1">
-                           Hours (0–24)
+                           Hours (0–20)
                         </span>
                         <Input
                            type="number"
                            min="0"
-                           max="24"
+                           max="20"
                            placeholder="0"
                            value={hours}
                            disabled={
@@ -769,7 +769,7 @@ export function AdminHoursOverrideModal({
                            <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
                            <div className="text-left">
                               <p className="font-semibold text-amber-300">
-                                 14-Hour Scoring Cap Enforced
+                                 {`${MAX_COUNTED_DAILY_STUDY_SECONDS / 3_600}-Hour Scoring Cap Enforced`}
                               </p>
                               <p className="text-amber-200/80 mt-0.5 leading-relaxed">
                                  The participant will have{" "}
@@ -777,7 +777,10 @@ export function AdminHoursOverrideModal({
                                  {minutes.padStart(2, "0")}:
                                  {seconds.padStart(2, "0")} logged, but
                                  challenge scoring and deficit calculations will
-                                 strictly count a maximum of 14:00:00.
+                                 strictly count a maximum of{" "}
+                                 {`${formatSecondsToClock(
+                                    MAX_COUNTED_DAILY_STUDY_SECONDS
+                                 )}.`}
                               </p>
                            </div>
                         </div>
