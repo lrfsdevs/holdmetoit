@@ -163,6 +163,14 @@ export function getTaskStatus(task: TaskItem): TaskStatus {
 
 export { formatDayDate };
 
+export const SAMPLE_STUDY_TASKS = [
+   "Complete 2h Deep Work block",
+   "Link YPT account",
+   "Join an active Study Challenge",
+] as const;
+
+export const LOAD_SAMPLE_TASK_EVENT = "holdmetoit:load-sample-task";
+
 export interface CategoryGroup {
    id?: string;
    name: string;
@@ -2779,6 +2787,104 @@ export function CockpitTasksSection({
       setAddModalType(null);
    };
 
+   const handleAddSampleTask = useCallback(
+      (taskText: string) => {
+         const trimmed = taskText.trim();
+         if (!trimmed) return;
+         const targetCategoryName = "Study Commitments";
+         const targetDateKey = selectedDateKey || effectiveTodayDate;
+         const newTaskId = crypto.randomUUID();
+         const newTask: TaskItem = {
+            id: newTaskId,
+            text: trimmed,
+            completed: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            challengeId: null,
+         };
+
+         const existingCat = dailyCategories.find(
+            (c) => c.name === targetCategoryName
+         );
+         const targetCatId = existingCat?.id || crypto.randomUUID();
+
+         setDailyCategories((prev) => {
+            const existingIdx = prev.findIndex(
+               (c) => c.name === targetCategoryName
+            );
+            if (existingIdx >= 0) {
+               return prev.map((cat, i) =>
+                  i === existingIdx
+                     ? {
+                          ...cat,
+                          id: cat.id || targetCatId,
+                          tasks: [...cat.tasks, newTask],
+                       }
+                     : cat
+               );
+            }
+            return [
+               ...prev,
+               {
+                  id: targetCatId,
+                  name: targetCategoryName,
+                  isCollapsed: false,
+                  sortOrder: 0,
+                  tasks: [newTask],
+               },
+            ];
+         });
+
+         const nowIso = new Date().toISOString();
+         if (!existingCat) {
+            putLocalCategory({
+               id: targetCatId,
+               userId: userId ?? null,
+               name: targetCategoryName,
+               taskType: "DAILY",
+               sortOrder: 0,
+               createdAt: nowIso,
+               updatedAt: nowIso,
+               syncState: "pending",
+            }).catch(() => {});
+         }
+
+         putLocalTask({
+            id: newTaskId,
+            userId: userId ?? null,
+            categoryId: targetCatId,
+            challengeId: null,
+            title: trimmed,
+            taskType: "DAILY",
+            isComplete: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            completedAt: null,
+            syncState: "pending",
+         }).catch(() => {});
+      },
+      [selectedDateKey, effectiveTodayDate, dailyCategories, userId]
+   );
+
+   useEffect(() => {
+      if (typeof window === "undefined") return;
+      const handleSampleTaskEvent = (e: Event) => {
+         const customEvent = e as CustomEvent<{ title?: string }>;
+         if (customEvent.detail?.title) {
+            handleAddSampleTask(customEvent.detail.title);
+         }
+      };
+      window.addEventListener(LOAD_SAMPLE_TASK_EVENT, handleSampleTaskEvent);
+      return () => {
+         window.removeEventListener(
+            LOAD_SAMPLE_TASK_EVENT,
+            handleSampleTaskEvent
+         );
+      };
+   }, [handleAddSampleTask]);
+
    // ---------------------------------------------------------------------------
    // Drag and Drop Event Handlers
    // ---------------------------------------------------------------------------
@@ -4418,6 +4524,31 @@ export function CockpitTasksSection({
                                  >
                                     + Add todo for {activeDayOption.shortLabel}
                                  </Button>
+                              </div>
+                           )}
+
+                           {!isLoggedIn && (
+                              <div className="pt-3 border-t border-border-strong/50 mt-3 space-y-2">
+                                 <p className="text-xs font-medium text-text-secondary">
+                                    💡 Or load sample study commitments:
+                                 </p>
+                                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                                    {SAMPLE_STUDY_TASKS.map((sample) => (
+                                       <button
+                                          key={sample}
+                                          type="button"
+                                          onClick={() =>
+                                             handleAddSampleTask(sample)
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-nested hover:bg-surface-elevated text-text-primary text-xs font-medium border border-border-default hover:border-brand-1/40 transition-colors"
+                                       >
+                                          <span className="text-brand-1-light font-bold">
+                                             +
+                                          </span>
+                                          <span>{sample}</span>
+                                       </button>
+                                    ))}
+                                 </div>
                               </div>
                            )}
                         </div>

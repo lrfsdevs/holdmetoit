@@ -81,9 +81,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       userId
          ? getUserCategorizedTasks(userId).catch(() => null)
          : Promise.resolve(null),
-      userId
-         ? findLatestAvailableChallenge().catch(() => null)
-         : Promise.resolve(null),
+      findLatestAvailableChallenge().catch(() => null),
       userId
          ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
          : Promise.resolve(null),
@@ -94,7 +92,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
    const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
    const upcomingChallenge =
-      userId && (!cockpit || cockpit.challengeStatus !== "ACTIVE")
+      !cockpit || cockpit.challengeStatus !== "ACTIVE"
          ? fetchedUpcomingChallenge
          : null;
 

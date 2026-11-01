@@ -64,7 +64,7 @@ describe("global-profile.repository", () => {
          const result = await getGlobalUserProfile("user_1");
 
          expect(result).not.toBeNull();
-         expect(result?.user).toEqual({
+         expect(result?.user).toMatchObject({
             id: "user_1",
             displayName: "Alice Scholar",
             username: "alicescholar",

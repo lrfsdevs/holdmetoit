@@ -10,6 +10,7 @@ import {
    CockpitBannerCard,
    CockpitProgressCard,
    CockpitTasksSection,
+   GuestCockpitView,
 } from "./cockpit";
 import type { CockpitViewModel } from "@/features/study-logs/data/cockpit-data";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
@@ -131,6 +132,19 @@ export function HomeCockpitView({
       });
       return { existingLogsMap: logsMap, existingLeavesMap: leavesMap };
    }, [cockpit?.logs]);
+
+   if (!isLoggedIn) {
+      return (
+         <GuestCockpitView
+            displayName={effectiveDisplayName}
+            upcomingChallenge={upcomingChallenge}
+            wrappedChallenge={wrappedChallenge}
+            isAdmin={effectiveIsAdmin}
+            initialCollapsedCategoryIds={initialCollapsedCategoryIds}
+            initialIsRolloverSnoozed={initialIsRolloverSnoozed}
+         />
+      );
+   }
 
    return (
       <div className="space-y-8 max-w-4xl mx-auto px-4 py-8 sm:py-12">

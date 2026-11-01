@@ -4,6 +4,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { GlobalProfileView } from "./global-profile-view";
 import type { GlobalUserProfile } from "../domain/global-profile.types";
 
+vi.mock("@/core/auth", () => ({
+   auth: vi.fn(),
+   signIn: vi.fn(),
+   signOut: vi.fn(),
+}));
+
 vi.mock("next/link", () => ({
    default: ({
       href,
