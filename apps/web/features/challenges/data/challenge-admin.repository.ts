@@ -1114,6 +1114,7 @@ export async function deleteAdminChallenge(
          data: {
             isDeleted: true,
             deletionTime: now,
+            revision: { increment: 1 },
          },
       });
 

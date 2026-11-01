@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { processBatchSync } from "./task-sync.repository";
 import { prisma } from "@/core/db";
 import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import * as taskRepo from "./task.repository";
+
+function p2002(): Prisma.PrismaClientKnownRequestError {
+   return new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+      code: "P2002",
+      clientVersion: "test",
+   });
+}
 
 vi.mock("@/core/db", () => ({
    prisma: {
@@ -13,13 +21,16 @@ vi.mock("@/core/db", () => ({
          findMany: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
-         updateMany: vi.fn(),
+         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
          deleteMany: vi.fn(),
       },
       task: {
          findFirst: vi.fn(),
+         findUnique: vi.fn(),
+         create: vi.fn(),
+         update: vi.fn(),
          upsert: vi.fn(),
-         updateMany: vi.fn(),
+         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
          deleteMany: vi.fn(),
       },
    },
@@ -31,7 +42,15 @@ vi.mock("./task.repository", () => ({
    getUserCategorizedTasksFromDatabase: vi.fn(),
    resolveTaskChallengeId: vi.fn(),
    validateTaskChallengeId: vi.fn(),
+   rolloverIncompleteTasks: vi.fn().mockResolvedValue({ count: 0 }),
    assertChallengeWritable: vi.fn().mockResolvedValue(undefined),
+   toTaskItem: vi.fn((task: Record<string, unknown>, taskType: string) => ({
+      ...task,
+      taskType,
+   })),
+   toCategoryItem: vi.fn((category: Record<string, unknown>) => ({
+      ...category,
+   })),
 }));
 
 describe("processBatchSync (task-sync.repository)", () => {
@@ -39,6 +58,8 @@ describe("processBatchSync (task-sync.repository)", () => {
 
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.category.findFirst).mockResolvedValue(null);
 
       vi.mocked(taskRepo.getUserCategorizedTasksFromDatabase).mockResolvedValue(
          {
@@ -84,6 +105,7 @@ describe("processBatchSync (task-sync.repository)", () => {
          updatedAt: new Date(),
          isDeleted: false,
          deletionTime: null,
+         revision: 0,
       });
 
       vi.mocked(prisma.category.findFirst).mockResolvedValue(null); // No collision in WEEKLY
@@ -112,14 +134,16 @@ describe("processBatchSync (task-sync.repository)", () => {
          data: {
             sortOrder: 1,
             taskType: "WEEKLY",
+            revision: { increment: 1 },
          },
       });
 
       // Verify tasks inside this category are cascaded to target taskType
       expect(prisma.task.updateMany).toHaveBeenCalledWith({
-         where: { categoryId: catId, userId },
+         where: { categoryId: catId, userId, isDeleted: false },
          data: {
             taskType: "WEEKLY",
+            revision: { increment: 1 },
          },
       });
    });
@@ -136,20 +160,24 @@ describe("processBatchSync (task-sync.repository)", () => {
          updatedAt: new Date(),
          isDeleted: false,
          deletionTime: null,
+         revision: 0,
       });
 
-      // Collision exists in target column
-      vi.mocked(prisma.category.findFirst).mockResolvedValue({
-         id: "cat-uuid-weekly-math",
-         userId,
-         name: "Math",
-         taskType: "WEEKLY",
-         sortOrder: 0,
-         createdAt: new Date(),
-         updatedAt: new Date(),
-         isDeleted: false,
-         deletionTime: null,
-      });
+      // Collision exists in target column; the disambiguated name is free.
+      vi.mocked(prisma.category.findFirst)
+         .mockResolvedValueOnce({
+            id: "cat-uuid-weekly-math",
+            userId,
+            name: "Math",
+            taskType: "WEEKLY",
+            sortOrder: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isDeleted: false,
+            deletionTime: null,
+            revision: 0,
+         } as never)
+         .mockResolvedValueOnce(null);
 
       const res = await processBatchSync(userId, [
          {
@@ -176,6 +204,7 @@ describe("processBatchSync (task-sync.repository)", () => {
             name: "Math (Moved)",
             taskType: "WEEKLY",
             sortOrder: 2,
+            revision: { increment: 1 },
          },
       });
    });
@@ -235,8 +264,10 @@ describe("processBatchSync (task-sync.repository)", () => {
       expect(res.processedMutationIds).toContain("mut-good");
    });
 
-   it("fails and leaves task mutation unacknowledged when explicit categoryId does not exist", async () => {
-      vi.mocked(prisma.category.findFirst).mockResolvedValueOnce(null);
+   it("falls back to a default category when an explicit categoryId no longer exists", async () => {
+      vi.mocked(prisma.category.findFirst)
+         .mockResolvedValueOnce(null)
+         .mockResolvedValueOnce({ id: "cat-default", userId } as never);
 
       const res = await processBatchSync(userId, [
          {
@@ -254,8 +285,12 @@ describe("processBatchSync (task-sync.repository)", () => {
       ]);
 
       expect(res.success).toBe(true);
-      expect(res.processedMutationIds).not.toContain("mut-task-orphan");
-      expect(prisma.task.upsert).not.toHaveBeenCalled();
+      expect(res.processedMutationIds).toContain("mut-task-orphan");
+      expect(prisma.task.create).toHaveBeenCalledWith(
+         expect.objectContaining({
+            data: expect.objectContaining({ categoryId: "cat-default" }),
+         })
+      );
    });
 
    it("soft-deletes a task on DELETE mutations instead of removing the row", async () => {
@@ -277,12 +312,18 @@ describe("processBatchSync (task-sync.repository)", () => {
          data: {
             isDeleted: true,
             deletionTime: expect.any(Date),
+            revision: { increment: 1 },
          },
       });
       expect(prisma.task.deleteMany).not.toHaveBeenCalled();
    });
 
    it("stamps a client-sent challengeId on task CREATE after validation", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValue({
+         id: "cat-1",
+         userId,
+      } as never);
+
       const res = await processBatchSync(userId, [
          {
             id: "mut-create-1",
@@ -308,9 +349,9 @@ describe("processBatchSync (task-sync.repository)", () => {
          "c_client",
          expect.anything()
       );
-      expect(prisma.task.upsert).toHaveBeenCalledWith(
+      expect(prisma.task.create).toHaveBeenCalledWith(
          expect.objectContaining({
-            create: expect.objectContaining({ challengeId: "c_client" }),
+            data: expect.objectContaining({ challengeId: "c_client" }),
          })
       );
    });
@@ -346,14 +387,19 @@ describe("processBatchSync (task-sync.repository)", () => {
 
       expect(res.success).toBe(true);
       expect(res.processedMutationIds).toContain("mut-locked-1");
-      expect(prisma.task.upsert).toHaveBeenCalledWith(
+      expect(prisma.task.create).toHaveBeenCalledWith(
          expect.objectContaining({
-            create: expect.objectContaining({ challengeId: null }),
+            data: expect.objectContaining({ challengeId: null }),
          })
       );
    });
 
    it("treats an explicit null challengeId as standalone without resolving", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValue({
+         id: "cat-1",
+         userId,
+      } as never);
+
       await processBatchSync(userId, [
          {
             id: "mut-create-2",
@@ -374,10 +420,546 @@ describe("processBatchSync (task-sync.repository)", () => {
       ]);
 
       expect(taskRepo.resolveTaskChallengeId).not.toHaveBeenCalled();
-      expect(prisma.task.upsert).toHaveBeenCalledWith(
+      expect(prisma.task.create).toHaveBeenCalledWith(
          expect.objectContaining({
-            create: expect.objectContaining({ challengeId: null }),
+            data: expect.objectContaining({ challengeId: null }),
          })
       );
+   });
+
+   it("reports a conflict with the current task when an update matches zero rows", async () => {
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 0 });
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: null } as never)
+         .mockResolvedValueOnce({
+            id: "t_server",
+            userId,
+            categoryId: "cat_1",
+            challengeId: null,
+            title: "Server title",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 5,
+         } as never);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-zero",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_server", title: "Stale title" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.processedMutationIds).toContain("mut-zero");
+      expect(res.mutationResults).toEqual([
+         expect.objectContaining({
+            id: "mut-zero",
+            status: "conflict",
+            reason: "zero_rows",
+            currentTask: expect.objectContaining({
+               id: "t_server",
+               title: "Server title",
+               revision: 5,
+            }),
+         }),
+      ]);
+   });
+
+   it("reports a conflict with null when the task no longer exists", async () => {
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 0 });
+      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce(null);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-gone",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "t_gone", isComplete: true },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-gone",
+         status: "conflict",
+         reason: "zero_rows",
+         currentTask: null,
+      });
+   });
+
+   it("reports a category name conflict when the name belongs to another id", async () => {
+      vi.mocked(prisma.category.findUnique).mockResolvedValueOnce(null);
+      vi.mocked(prisma.category.findFirst).mockResolvedValueOnce({
+         id: "cat_server",
+         userId,
+         name: "Work",
+         taskType: "DAILY",
+         sortOrder: 0,
+         isDeleted: false,
+         deletionTime: null,
+         createdAt: new Date(),
+         updatedAt: new Date(),
+      } as never);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-cat",
+            entityType: "CATEGORY",
+            action: "CREATE",
+            payload: { id: "cat_local", name: "Work", taskType: "DAILY" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-cat",
+         status: "conflict",
+         reason: "category_name_taken",
+         currentCategory: expect.objectContaining({ id: "cat_server" }),
+      });
+      expect(prisma.category.create).not.toHaveBeenCalled();
+   });
+
+   it("rejects a task create that collides with another user's id", async () => {
+      vi.mocked(prisma.category.findFirst).mockResolvedValue({
+         id: "cat-1",
+         userId,
+      } as never);
+      vi.mocked(prisma.task.findUnique).mockResolvedValueOnce({
+         userId: "other_user",
+      } as never);
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-foreign",
+            entityType: "TASK",
+            action: "CREATE",
+            payload: {
+               id: "task-foreign",
+               categoryId: "cat-1",
+               title: "Not mine",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-foreign",
+         status: "conflict",
+         reason: "foreign_row",
+         currentTask: null,
+      });
+      expect(prisma.task.create).not.toHaveBeenCalled();
+   });
+
+   it("rolls over incomplete daily tasks in one mutation", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rollover",
+            entityType: "TASK",
+            action: "ROLLOVER",
+            payload: {
+               taskIds: ["t_1", "t_2"],
+               targetDateKey: "2026-10-30",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rollover",
+         status: "applied",
+      });
+      expect(taskRepo.rolloverIncompleteTasks).toHaveBeenCalledWith(
+         {
+            userId,
+            taskIds: ["t_1", "t_2"],
+            targetDateKey: "2026-10-30",
+         },
+         expect.anything()
+      );
+   });
+
+   it("rejects a rollover with an invalid date key", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rollover-bad",
+            entityType: "TASK",
+            action: "ROLLOVER",
+            payload: {
+               taskIds: ["t_1"],
+               targetDateKey: "not-a-date",
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rollover-bad",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(taskRepo.rolloverIncompleteTasks).not.toHaveBeenCalled();
+   });
+
+   it("rejects an update with an overlong title before writing", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-long-title",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_1", title: "x".repeat(256) },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-long-title",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("rejects a toggle without a status or completion flag", async () => {
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-empty-toggle",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "t_1" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-empty-toggle",
+         status: "conflict",
+         reason: "invalid_payload",
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("writes a task update with the client base revision and increments it", async () => {
+      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
+         challengeId: null,
+      } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 1 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-rev",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_rev", title: "New title" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 3,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-rev",
+         status: "applied",
+      });
+      expect(prisma.task.updateMany).toHaveBeenCalledWith({
+         where: {
+            id: "t_rev",
+            userId,
+            isDeleted: false,
+            revision: 3,
+         },
+         data: {
+            title: "New title",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("rejects a stale base revision and returns the current row", async () => {
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: null } as never)
+         .mockResolvedValueOnce({
+            id: "t_stale",
+            userId,
+            categoryId: "cat_1",
+            challengeId: null,
+            title: "Current title",
+            taskType: "DAILY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 4,
+         } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 0 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-stale",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_stale", title: "Stale edit" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 3,
+         },
+      ]);
+
+      expect(prisma.task.updateMany).toHaveBeenCalledWith(
+         expect.objectContaining({
+            where: expect.objectContaining({ revision: 3 }),
+         })
+      );
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-stale",
+         status: "conflict",
+         reason: "zero_rows",
+         currentTask: expect.objectContaining({
+            id: "t_stale",
+            revision: 4,
+         }),
+      });
+   });
+
+   it("applies a legacy mutation without a base revision", async () => {
+      vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
+         challengeId: null,
+      } as never);
+      vi.mocked(prisma.task.updateMany).mockResolvedValueOnce({ count: 1 });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-legacy",
+            entityType: "TASK",
+            action: "UPDATE",
+            payload: { taskId: "t_legacy", title: "Legacy edit" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-legacy",
+         status: "applied",
+      });
+      expect(prisma.task.updateMany).toHaveBeenCalledWith({
+         where: { id: "t_legacy", userId, isDeleted: false },
+         data: {
+            title: "Legacy edit",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("bumps revisions on task reorder", async () => {
+      await processBatchSync(userId, [
+         {
+            id: "mut-reorder",
+            entityType: "TASK",
+            action: "REORDER",
+            payload: { taskIds: ["t_a", "t_b"] },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(prisma.task.updateMany).toHaveBeenNthCalledWith(1, {
+         where: { id: "t_a", userId, isDeleted: false },
+         data: { sortOrder: 0, revision: { increment: 1 } },
+      });
+      expect(prisma.task.updateMany).toHaveBeenNthCalledWith(2, {
+         where: { id: "t_b", userId, isDeleted: false },
+         data: { sortOrder: 1, revision: { increment: 1 } },
+      });
+   });
+
+   it("writes a category update with the base revision", async () => {
+      vi.mocked(prisma.category.updateMany).mockResolvedValueOnce({
+         count: 1,
+      });
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-cat-rev",
+            entityType: "CATEGORY",
+            action: "UPDATE",
+            payload: { categoryId: "cat_rev", name: "Renamed" },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 2,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-cat-rev",
+         status: "applied",
+      });
+      expect(prisma.category.updateMany).toHaveBeenCalledWith({
+         where: {
+            id: "cat_rev",
+            userId,
+            isDeleted: false,
+            revision: 2,
+         },
+         data: {
+            name: "Renamed",
+            revision: { increment: 1 },
+         },
+      });
+   });
+
+   it("rejects a weekly goal mutation when the challenge is locked", async () => {
+      vi.mocked(prisma.task.findFirst)
+         .mockResolvedValueOnce({ challengeId: "c_locked" } as never)
+         .mockResolvedValueOnce({
+            id: "t_locked",
+            userId,
+            categoryId: "cat_1",
+            challengeId: "c_locked",
+            title: "Weekly goal",
+            taskType: "WEEKLY",
+            sortOrder: 0,
+            isComplete: false,
+            status: "TODO",
+            dueDate: null,
+            isDeleted: false,
+            deletionTime: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            completedAt: null,
+            revision: 2,
+         } as never);
+      vi.mocked(taskRepo.assertChallengeWritable).mockRejectedValueOnce(
+         new ChallengeStateError("locked")
+      );
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-locked-update",
+            entityType: "TASK",
+            action: "TOGGLE",
+            payload: { taskId: "t_locked", isComplete: true },
+            createdAt: Date.now(),
+            retryCount: 0,
+            baseRevision: 2,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-locked-update",
+         status: "conflict",
+         reason: "challenge_locked",
+         currentTask: expect.objectContaining({
+            id: "t_locked",
+            revision: 2,
+         }),
+      });
+      expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("returns a category name conflict before writing a colliding rename", async () => {
+      const current = {
+         id: "cat_1",
+         userId,
+         name: "Old",
+         taskType: "DAILY",
+         sortOrder: 0,
+         isDeleted: false,
+         deletionTime: null,
+         createdAt: new Date(),
+         updatedAt: new Date(),
+         revision: 1,
+      };
+      const winner = { ...current, id: "cat_2", name: "New" };
+
+      vi.mocked(prisma.category.findUnique).mockResolvedValueOnce(
+         current as never
+      );
+      vi.mocked(prisma.category.findFirst).mockResolvedValueOnce(
+         winner as never
+      );
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-cat-rename",
+            entityType: "CATEGORY",
+            action: "UPDATE",
+            payload: { categoryId: "cat_1", name: "New" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-cat-rename",
+         status: "conflict",
+         reason: "category_name_taken",
+         currentCategory: expect.objectContaining({ id: "cat_2" }),
+      });
+      expect(prisma.category.updateMany).not.toHaveBeenCalled();
+   });
+
+   it("recovers a category create race with a post-rollback lookup", async () => {
+      const winner = {
+         id: "cat_server",
+         userId,
+         name: "Work",
+         taskType: "DAILY",
+         sortOrder: 0,
+         isDeleted: false,
+         deletionTime: null,
+         createdAt: new Date(),
+         updatedAt: new Date(),
+         revision: 0,
+      };
+
+      vi.mocked(prisma.category.findFirst)
+         .mockResolvedValueOnce(null)
+         .mockResolvedValueOnce(null)
+         .mockResolvedValueOnce(winner as never);
+      vi.mocked(prisma.category.create).mockRejectedValueOnce(p2002());
+
+      const res = await processBatchSync(userId, [
+         {
+            id: "mut-cat-race",
+            entityType: "CATEGORY",
+            action: "CREATE",
+            payload: { id: "cat_local", name: "Work", taskType: "DAILY" },
+            createdAt: Date.now(),
+            retryCount: 0,
+         },
+      ]);
+
+      expect(res.mutationResults?.[0]).toMatchObject({
+         id: "mut-cat-race",
+         status: "conflict",
+         reason: "category_name_taken",
+         currentCategory: expect.objectContaining({ id: "cat_server" }),
+      });
+      expect(prisma.category.create).toHaveBeenCalled();
    });
 });

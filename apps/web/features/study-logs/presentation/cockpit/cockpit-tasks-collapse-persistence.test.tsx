@@ -10,15 +10,6 @@ import {
    readCollapsedCategoryIds,
 } from "./cockpit-tasks-storage";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
    const actual =
       await importOriginal<
@@ -29,12 +20,17 @@ vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
       getAllLocalCategories: vi.fn().mockResolvedValue([]),
       getAllLocalTasks: vi.fn().mockResolvedValue([]),
       getAllQueuedMutations: vi.fn().mockResolvedValue([]),
+      getQueuedMutationsForUser: vi.fn().mockResolvedValue([]),
       putLocalCategories: vi.fn().mockResolvedValue(undefined),
       putLocalTasks: vi.fn().mockResolvedValue(undefined),
       seedFromUserTasks: vi.fn().mockResolvedValue(undefined),
       putLocalCategory: vi.fn().mockResolvedValue(undefined),
       deleteLocalCategory: vi.fn().mockResolvedValue(undefined),
       enqueueMutation: vi.fn().mockResolvedValue(undefined),
+      commitTaskMutation: vi.fn().mockResolvedValue(undefined),
+      commitTaskBatch: vi.fn().mockResolvedValue(undefined),
+      commitCategoryMutation: vi.fn().mockResolvedValue(undefined),
+      commitLocalBatch: vi.fn().mockResolvedValue(undefined),
       scheduleSync: vi.fn(),
       logTaskSync: vi.fn(),
       migrateGuestDataToUser: vi.fn().mockResolvedValue(undefined),

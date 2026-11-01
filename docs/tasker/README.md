@@ -51,20 +51,29 @@ to `core/auth` first.
 ones) and adds `challengeId: null`. Bot CRUD therefore never mutates challenge-linked weekly
 goals, which are inputs to the Law L6 three-condition accountability evaluation.
 
+Write paths are guarded, not read-then-write: `updateTaskStatus`, `updateTaskContent` and
+`deleteTask` use `updateMany({ where: { id, userId, isDeleted: false } })` and treat
+`count === 0` as "task not found". A concurrent web soft-delete therefore cannot be
+overwritten by the bot.
+
 ### 2.3 Category deletion
 
-The shared schema requires `Task.categoryId`, so categories are soft-deleted and their tasks
-are reassigned to the user's `Default` category inside one transaction. Deleting `Default`
-is refused (`DefaultCategoryDeletionError`) because there is nothing to reassign to.
+The shared schema requires `Task.categoryId`, so categories are soft-deleted and their
+active tasks are reassigned to the user's `Default` category inside one transaction.
+The category name is rewritten with `buildCategoryTombstoneName` (shared with the web app)
+so the original name is immediately reusable. Deleting `Default` is refused
+(`DefaultCategoryDeletionError`) because there is nothing to reassign to.
 
 ### 2.4 Category uniqueness
 
-`Category` has `@@unique([userId, name, taskType])`, and the index includes soft-deleted
-rows. Creating a category therefore:
+Active category names are case-insensitively unique per `(userId, taskType)` via the partial
+index `Category_userId_lower_name_taskType_active_key`
+(`20261031000000_category_active_name_ci_unique`). Soft-deleted rows do not block a name.
+Creating a category therefore:
 
-1. looks up the name case-insensitively,
-2. revives a soft-deleted row instead of inserting,
-3. throws `DuplicateCategoryError` for a live duplicate.
+1. looks up a **live** row case-insensitively; if found, throws `DuplicateCategoryError`,
+2. otherwise revives a soft-deleted row with the same name,
+3. otherwise inserts, and maps a `P2002` race to `DuplicateCategoryError`.
 
 ### 2.5 Prefix commands
 

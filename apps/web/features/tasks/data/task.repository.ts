@@ -1,7 +1,12 @@
 import { prisma } from "@/core/db";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
-import { Prisma, type TaskType } from "@prisma/client";
+import {
+   Prisma,
+   type Category,
+   type Task,
+   type TaskType,
+} from "@prisma/client";
 import {
    calculateChallengeStatus,
    ChallengeStateError,
@@ -21,6 +26,13 @@ function formatUtcDateKey(date: Date | string): string {
 }
 
 export const DEFAULT_CATEGORY_NAME = "General";
+
+function isUniqueConstraintError(error: unknown): boolean {
+   return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+   );
+}
 
 /**
  * Resolves the challenge a newly created task should be linked to (FEAT-TASK-01).
@@ -118,6 +130,48 @@ export async function assertChallengeWritable(
    }
 }
 
+export function toCategoryItem(category: Category): CategoryItem {
+   return {
+      id: category.id,
+      userId: category.userId,
+      name: category.name,
+      taskType: category.taskType,
+      sortOrder: category.sortOrder,
+      isDeleted: category.isDeleted,
+      deletionTime: category.deletionTime,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+      revision: category.revision,
+   };
+}
+
+export function toTaskItem(task: Task, taskType: TaskType): TaskItem {
+   return {
+      id: task.id,
+      userId: task.userId,
+      categoryId: task.categoryId,
+      challengeId: task.challengeId,
+      title: task.title,
+      taskType: taskType as TaskItem["taskType"],
+      sortOrder: task.sortOrder,
+      isComplete: task.isComplete,
+      status:
+         (task.status as TaskStatus) ??
+         (task.isComplete ? "COMPLETED" : "TODO"),
+      dueDate: task.dueDate
+         ? formatUtcDateKey(task.dueDate)
+         : taskType === "DAILY"
+           ? formatUtcDateKey(task.createdAt)
+           : null,
+      isDeleted: task.isDeleted,
+      deletionTime: task.deletionTime,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      completedAt: task.completedAt,
+      revision: task.revision,
+   };
+}
+
 export async function getUserCategorizedTasks(
    userId: string
 ): Promise<UserCategorizedTasks> {
@@ -151,17 +205,7 @@ export async function getUserCategorizedTasksFromDatabase(
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
    });
 
-   const categoryItems: CategoryItem[] = categories.map((c) => ({
-      id: c.id,
-      userId: c.userId,
-      name: c.name,
-      taskType: c.taskType,
-      sortOrder: c.sortOrder,
-      isDeleted: c.isDeleted,
-      deletionTime: c.deletionTime,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-   }));
+   const categoryItems: CategoryItem[] = categories.map(toCategoryItem);
 
    const dailyCategories: CategoryGroup[] = categories
       .filter(
@@ -172,27 +216,7 @@ export async function getUserCategorizedTasksFromDatabase(
       .map((c) => {
          const dailyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "DAILY")
-            .map((t) => ({
-               id: t.id,
-               userId: t.userId,
-               categoryId: t.categoryId,
-               challengeId: t.challengeId,
-               title: t.title,
-               taskType: "DAILY" as const,
-               sortOrder: t.sortOrder,
-               isComplete: t.isComplete,
-               status:
-                  (t.status as TaskStatus) ??
-                  (t.isComplete ? "COMPLETED" : "TODO"),
-               dueDate: t.dueDate
-                  ? formatUtcDateKey(t.dueDate)
-                  : formatUtcDateKey(t.createdAt),
-               isDeleted: t.isDeleted,
-               deletionTime: t.deletionTime,
-               createdAt: t.createdAt,
-               updatedAt: t.updatedAt,
-               completedAt: t.completedAt,
-            }));
+            .map((t) => toTaskItem(t, "DAILY"));
 
          return {
             id: c.id,
@@ -213,25 +237,7 @@ export async function getUserCategorizedTasksFromDatabase(
       .map((c) => {
          const weeklyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "WEEKLY")
-            .map((t) => ({
-               id: t.id,
-               userId: t.userId,
-               categoryId: t.categoryId,
-               challengeId: t.challengeId,
-               title: t.title,
-               taskType: "WEEKLY" as const,
-               sortOrder: t.sortOrder,
-               isComplete: t.isComplete,
-               status:
-                  (t.status as TaskStatus) ??
-                  (t.isComplete ? "COMPLETED" : "TODO"),
-               dueDate: t.dueDate ? formatUtcDateKey(t.dueDate) : null,
-               isDeleted: t.isDeleted,
-               deletionTime: t.deletionTime,
-               createdAt: t.createdAt,
-               updatedAt: t.updatedAt,
-               completedAt: t.completedAt,
-            }));
+            .map((t) => toTaskItem(t, "WEEKLY"));
 
          return {
             id: c.id,
@@ -282,6 +288,7 @@ export async function createTask(params: {
             where: {
                userId: params.userId,
                taskType: params.taskType,
+               isDeleted: false,
                name: { equals: trimmedName, mode: "insensitive" },
             },
          });
@@ -291,6 +298,7 @@ export async function createTask(params: {
                where: {
                   userId: params.userId,
                   taskType: "WEEKLY",
+                  isDeleted: false,
                   name: { equals: trimmedName, mode: "insensitive" },
                },
             });
@@ -315,6 +323,7 @@ export async function createTask(params: {
             where: {
                userId: params.userId,
                taskType: params.taskType,
+               isDeleted: false,
             },
             orderBy: { createdAt: "asc" },
          });
@@ -324,6 +333,7 @@ export async function createTask(params: {
                where: {
                   userId: params.userId,
                   taskType: "WEEKLY",
+                  isDeleted: false,
                },
                orderBy: { createdAt: "asc" },
             });
@@ -420,6 +430,7 @@ export async function toggleTask(params: {
          isComplete: nextIsComplete,
          status: nextStatus,
          completedAt: nextIsComplete ? new Date() : null,
+         revision: { increment: 1 },
       },
       include: {
          category: true,
@@ -445,6 +456,7 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       data: {
          isDeleted: true,
          deletionTime: new Date(),
+         revision: { increment: 1 },
       },
    });
 }
@@ -469,13 +481,28 @@ export async function createCategory(params: {
       return existing;
    }
 
-   return prisma.category.create({
-      data: {
-         userId: params.userId,
-         name: trimmedName,
-         taskType,
-      },
-   });
+   try {
+      return await prisma.category.create({
+         data: {
+            userId: params.userId,
+            name: trimmedName,
+            taskType,
+         },
+      });
+   } catch (error) {
+      if (isUniqueConstraintError(error)) {
+         const winner = await prisma.category.findFirst({
+            where: {
+               userId: params.userId,
+               taskType,
+               isDeleted: false,
+               name: { equals: trimmedName, mode: "insensitive" },
+            },
+         });
+         if (winner) return winner;
+      }
+      throw error;
+   }
 }
 
 export async function updateTask(params: {
@@ -512,6 +539,7 @@ export async function updateTask(params: {
          dueDate?: Date | null;
          completedAt?: Date | null;
          challengeId?: string | null;
+         revision?: { increment: number };
       } = {};
 
       if (params.title !== undefined) {
@@ -563,7 +591,7 @@ export async function updateTask(params: {
 
       return tx.task.update({
          where: { id: params.taskId },
-         data: dataToUpdate,
+         data: { ...dataToUpdate, revision: { increment: 1 } },
          include: {
             category: true,
          },
@@ -571,13 +599,16 @@ export async function updateTask(params: {
    });
 }
 
-export async function rolloverIncompleteTasks(params: {
-   userId: string;
-   taskIds: string[];
-   targetDateKey: string;
-}) {
+export async function rolloverIncompleteTasks(
+   params: {
+      userId: string;
+      taskIds: string[];
+      targetDateKey: string;
+   },
+   client: Prisma.TransactionClient | typeof prisma = prisma
+) {
    const targetDate = new Date(params.targetDateKey);
-   return prisma.task.updateMany({
+   return client.task.updateMany({
       where: {
          id: { in: params.taskIds },
          userId: params.userId,
@@ -590,6 +621,7 @@ export async function rolloverIncompleteTasks(params: {
       },
       data: {
          dueDate: targetDate,
+         revision: { increment: 1 },
       },
    });
 }
@@ -618,7 +650,10 @@ export async function updateCategory(params: {
       if (existing.name !== trimmedName) {
          return prisma.category.update({
             where: { id: params.categoryId },
-            data: { name: trimmedName },
+            data: {
+               name: trimmedName,
+               revision: { increment: 1 },
+            },
          });
       }
       return existing;
@@ -639,12 +674,20 @@ export async function updateCategory(params: {
       throw new Error(`Category "${trimmedName}" already exists.`);
    }
 
-   return prisma.category.update({
-      where: { id: params.categoryId },
-      data: {
-         name: trimmedName,
-      },
-   });
+   try {
+      return await prisma.category.update({
+         where: { id: params.categoryId },
+         data: {
+            name: trimmedName,
+            revision: { increment: 1 },
+         },
+      });
+   } catch (error) {
+      if (isUniqueConstraintError(error)) {
+         throw new Error(`Category "${trimmedName}" already exists.`);
+      }
+      throw error;
+   }
 }
 
 export async function deleteCategory(params: {
@@ -675,6 +718,7 @@ export async function deleteCategory(params: {
          data: {
             isDeleted: true,
             deletionTime: now,
+            revision: { increment: 1 },
          },
       });
 
@@ -684,6 +728,7 @@ export async function deleteCategory(params: {
             isDeleted: true,
             deletionTime: now,
             name: buildCategoryTombstoneName(existing.name, existing.id),
+            revision: { increment: 1 },
          },
       });
    });

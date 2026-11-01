@@ -8,7 +8,7 @@ import type {
 export type SyncState = "synced" | "pending";
 
 export type SyncAction =
-   "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "MOVE" | "REORDER";
+   "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "MOVE" | "REORDER" | "ROLLOVER";
 
 export type SyncEntityType = "TASK" | "CATEGORY";
 
@@ -29,6 +29,7 @@ export interface LocalTaskRecord {
    isDeleted?: boolean;
    deletionTime?: string | null;
    syncState: SyncState;
+   revision?: number;
 }
 
 export interface LocalCategoryRecord {
@@ -42,6 +43,7 @@ export interface LocalCategoryRecord {
    isDeleted?: boolean;
    deletionTime?: string | null;
    syncState: SyncState;
+   revision?: number;
 }
 
 export interface QueuedMutation<TPayload = Record<string, unknown>> {
@@ -51,6 +53,16 @@ export interface QueuedMutation<TPayload = Record<string, unknown>> {
    payload: TPayload;
    createdAt: number;
    retryCount: number;
+   /** Revision the client's copy was based on. Absent for legacy queues. */
+   baseRevision?: number;
+   /** Owner captured at enqueue time. */
+   userId?: string;
+}
+
+export interface DeadLetterMutation extends QueuedMutation {
+   userId: string;
+   failedAt: number;
+   lastError?: string;
 }
 
 /** Batch synchronization request payload sent from offline client. */
@@ -59,10 +71,31 @@ export interface BatchSyncRequest {
    mutations: QueuedMutation[];
 }
 
+export type MutationOutcome = "applied" | "conflict" | "error";
+
+export type MutationReason =
+   | "zero_rows"
+   | "foreign_row"
+   | "category_missing"
+   | "category_name_taken"
+   | "challenge_locked"
+   | "invalid_payload";
+
+export interface MutationResult {
+   id: string;
+   status: MutationOutcome;
+   reason?: MutationReason;
+   /** Present on conflicts so the client can apply the server row immediately. */
+   currentTask?: TaskItem | null;
+   currentCategory?: CategoryItem | null;
+}
+
 /** Response payload returned from batch synchronization endpoint. */
 export interface BatchSyncResponse {
    success: boolean;
+   /** Applied + conflict ids. Kept for clients that predate mutationResults. */
    processedMutationIds: string[];
+   mutationResults?: MutationResult[];
    authenticatedUserId?: string;
    serverChanges?: {
       categories: CategoryItem[];

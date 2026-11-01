@@ -29,8 +29,7 @@ export type SummaryResult = z.infer<typeof SummaryZodSchema>;
 
 /**
  * JSON Schema handed to Gemini's `responseJsonSchema`. Written explicitly so the
- * bot does not depend on a specific zod major version (the monorepo uses zod 4
- * in the web app and zod 3 here).
+ * bot's Gemini contract does not depend on the Zod schema representation.
  */
 export function getSummaryJsonSchema() {
    return {

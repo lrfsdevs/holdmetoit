@@ -126,7 +126,11 @@ async function main() {
             if (target.isDeleted) {
                target = await prisma.category.update({
                   where: { id: target.id },
-                  data: { isDeleted: false, deletionTime: null },
+                  data: {
+                     isDeleted: false,
+                     deletionTime: null,
+                     revision: { increment: 1 },
+                  },
                });
             }
          } else {
