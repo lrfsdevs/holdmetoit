@@ -4,6 +4,7 @@ import { DurationRangeError } from "@/features/study-logs/domain/duration";
 import {
    aggregateTeamScores,
    calculateLeadMargin,
+   calculateParticipantScoredSeconds,
    calculateSharePercentages,
    formatLeadMarginDelta,
    rankByTodaySeconds,
@@ -84,6 +85,54 @@ describe("aggregateTeamScores", () => {
       expect(() =>
          aggregateTeamScores(teams, [{ teamId: "bees", loggedSeconds: -1 }])
       ).toThrow(DurationRangeError);
+   });
+
+   it("preserves frozen historical hours of a withdrawn member and excludes post-withdrawal logs (GH-#210)", () => {
+      const withdrawalAt = new Date("2026-10-25T15:00:00.000Z");
+      const logs = [
+         {
+            teamId: "bees",
+            isWithdrawn: false,
+            dailyStudyLogs: [
+               {
+                  durationSeconds: 10_000,
+                  createdAt: new Date("2026-10-24T12:00:00.000Z"),
+               },
+            ],
+         },
+         {
+            teamId: "bees",
+            isWithdrawn: true,
+            withdrawalAt,
+            dailyStudyLogs: [
+               {
+                  durationSeconds: 14_000,
+                  createdAt: new Date("2026-10-24T10:00:00.000Z"),
+               },
+               {
+                  durationSeconds: 7_000,
+                  createdAt: new Date("2026-10-26T10:00:00.000Z"),
+               },
+            ],
+         },
+         {
+            teamId: "butterflies",
+            isWithdrawn: false,
+            dailyStudyLogs: [
+               {
+                  durationSeconds: 20_000,
+                  createdAt: new Date("2026-10-24T12:00:00.000Z"),
+               },
+            ],
+         },
+      ];
+
+      const result = aggregateTeamScores(teams.slice(0, 2), logs);
+
+      expect(result).toEqual([
+         { teamId: "bees", totalSeconds: 24_000 },
+         { teamId: "butterflies", totalSeconds: 20_000 },
+      ]);
    });
 });
 

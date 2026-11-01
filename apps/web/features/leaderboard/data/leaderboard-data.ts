@@ -21,6 +21,7 @@ import {
    getChallengeDayNumber,
 } from "@/features/study-logs/domain/challenge-day";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { filterLogsBeforeWithdrawal } from "@/features/challenges/domain/withdrawal";
 import { canEditDuoTeamIdentity } from "@/features/challenges/domain/duo-team-identity";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
@@ -88,6 +89,7 @@ export interface RawChallengePayload {
       dailyStudyLogs: Array<{
          durationSeconds: number;
          logDate?: Date | string;
+         createdAt?: Date | string;
          status?: string | null;
       }>;
       punishmentRecords?: Array<{
@@ -160,13 +162,17 @@ export function buildScoreboardViewModel(
       (p) => !p.isWithdrawn
    );
 
-   // 1. Participant logs mapping
-   const participantScores = activeParticipants.map((p) => {
-      const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
+   // 1. Participant logs mapping for team aggregations (Law L1):
+   // Active participants contribute all study logs.
+   // Withdrawn participants freeze and preserve historical study hours prior to withdrawalAt (GH-#210).
+   const scoringLogEntries = challenge.participants.map((p) => {
+      const eligibleLogs = p.isWithdrawn
+         ? filterLogsBeforeWithdrawal(p.dailyStudyLogs, p.withdrawalAt)
+         : p.dailyStudyLogs;
       return {
          participantId: p.id,
          teamId: p.teamId ?? "no-assigned",
-         loggedSeconds: totalLoggedSeconds,
+         loggedSeconds: sumLoggedSeconds(eligibleLogs),
       };
    });
 
@@ -174,7 +180,7 @@ export function buildScoreboardViewModel(
    const teamRefs: TeamRef[] = challenge.teams.map((t) => ({ id: t.id }));
    const teamAggregates = aggregateTeamScores(
       teamRefs,
-      participantScores.map((ps) => ({
+      scoringLogEntries.map((ps) => ({
          teamId: ps.teamId,
          loggedSeconds: ps.loggedSeconds,
       }))

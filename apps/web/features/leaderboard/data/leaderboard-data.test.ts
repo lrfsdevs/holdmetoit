@@ -75,7 +75,7 @@ describe("buildScoreboardViewModel", () => {
 
    const fixedNow = new Date("2026-09-04T12:00:00.000Z");
 
-   it("excludes withdrawn participants from standings and team totals", () => {
+   it("excludes withdrawn participants from individual standings while freezing and preserving historical team hours (GH-#210)", () => {
       const result = buildScoreboardViewModel(
          {
             ...mockChallenge,
@@ -95,7 +95,7 @@ describe("buildScoreboardViewModel", () => {
       const bees = result.teams.find((team) => team.id === "team-bees");
       expect(bees).toMatchObject({
          companionCount: 0,
-         totalLoggedSeconds: 0,
+         totalLoggedSeconds: 35_100,
       });
 
       const butterflies = result.teams.find(
@@ -104,6 +104,38 @@ describe("buildScoreboardViewModel", () => {
       expect(butterflies?.totalLoggedSeconds).toBe(7_200);
 
       expect(result.currentUser.isEnrolled).toBe(false);
+   });
+
+   it("excludes study logs recorded after withdrawalAt from frozen team totals (GH-#210)", () => {
+      const withdrawalAt = new Date("2026-09-04T12:00:00.000Z");
+      const result = buildScoreboardViewModel(
+         {
+            ...mockChallenge,
+            participants: [
+               {
+                  ...mockChallenge.participants[0],
+                  isWithdrawn: true,
+                  withdrawalAt,
+                  dailyStudyLogs: [
+                     {
+                        durationSeconds: 16_200,
+                        createdAt: new Date("2026-09-03T10:00:00.000Z"),
+                     },
+                     {
+                        durationSeconds: 18_900,
+                        createdAt: new Date("2026-09-05T10:00:00.000Z"),
+                     },
+                  ],
+               },
+               mockChallenge.participants[1],
+            ],
+         },
+         "user-1",
+         fixedNow
+      );
+
+      const bees = result.teams.find((team) => team.id === "team-bees");
+      expect(bees?.totalLoggedSeconds).toBe(16_200);
    });
 
    it("exposes the caller's duo identity and edit eligibility", () => {

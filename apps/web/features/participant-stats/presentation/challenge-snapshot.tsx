@@ -15,6 +15,7 @@ export interface ChallengeSnapshotProps {
    showChallengeHeader?: boolean;
    showCockpitLink?: boolean;
    onEditTarget?: () => void;
+   weeklyGoalsPageSize?: number;
    className?: string;
 }
 
@@ -42,7 +43,7 @@ function getParticipantStatusBadge(stats: ParticipantStatsViewModel): {
    switch (status) {
       case "WITHDRAWN":
          return {
-            label: "Withdrawn",
+            label: "Withdrawn (Hours Frozen)",
             className:
                "bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text",
          };
@@ -107,6 +108,7 @@ export function ChallengeSnapshot({
    showChallengeHeader = true,
    showCockpitLink = true,
    onEditTarget,
+   weeklyGoalsPageSize,
    className = "",
 }: ChallengeSnapshotProps) {
    const {
@@ -213,6 +215,7 @@ export function ChallengeSnapshot({
                   stats.totalGoalsCount ??
                   (stats.weeklyGoals ? stats.weeklyGoals.length : 0)
                }
+               pageSize={weeklyGoalsPageSize}
             />
          )}
 

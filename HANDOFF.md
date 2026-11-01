@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 189 on `afnan-jr` · Session 186 on `krish`)
+> **Last Updated:** 2026-11-02 (Session 189 on `afnan-jr` · Session 188 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2326,3 +2326,69 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Test suites: ✅ 10/10 test files green (85/85 tests passed) in `features/participant-stats`, 235/235 test files green (2,304/2,304 tests passed) across the full web workspace.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
 - **NEXT STEP:** Submit PR for `KAN-68` / GH-#207, and transition Jira ticket `KAN-68` to `In Review`.
+
+### Session 187 — 2026-11-02 (feat(participant-stats): add responsive pagination to participant weekly goals card on profiles on `krish`)
+
+- **Context & Objectives:** The challenge-linked weekly goals section on participant profiles could grow excessively long when a participant declared numerous goals (e.g. 18+ items). Add responsive pagination to keep the card compact, prevent vertical page stretching, and avoid mobile scroll trapping.
+- **Decision: Pagination vs. Fixed Height Scroll Container:**
+   - Evaluated fixed height scroll (`max-h-[300px] overflow-y-auto`) vs. pagination. Fixed-height nested scrolls cause scroll trapping / gesture hijacking on mobile viewports (360px+), violating UX quality guidelines.
+   - Selected clean client-side pagination utilizing the repository's standard `DataPagination` component with a default `pageSize = 5`.
+- **Architectural Enhancements Implemented:**
+   1. **`ParticipantWeeklyGoalsCard` (`apps/web/features/participant-stats/presentation/participant-weekly-goals-card.tsx`):**
+      - Added `"use client"` directive and interactive state (`currentPage`, `pageSize = 5`, `DEFAULT_WEEKLY_GOALS_PAGE_SIZE = 5`).
+      - Derived `totalPages` and clamped `safeCurrentPage` (`Math.min(Math.max(1, currentPage), totalPages)`).
+      - Added state key detection to automatically reset pagination to page 1 whenever the underlying goals list changes (e.g. switching challenges or participants).
+      - Integrated `DataPagination` (renders "Showing X–Y of Z goals" and Prev/Next/numbered page controls) only when `totalPages > 1`.
+   2. **`ChallengeSnapshot` (`apps/web/features/participant-stats/presentation/challenge-snapshot.tsx`):**
+      - Added optional `weeklyGoalsPageSize?: number` prop to `ChallengeSnapshotProps` and passed down to `ParticipantWeeklyGoalsCard`.
+   3. **Documentation & Tests:**
+      - Updated `docs/implementation/participant-statistics.md`.
+      - Expanded `participant-weekly-goals-card.test.tsx` to 10 comprehensive tests covering default page size constant, page slicing, hidden pagination when goals <= pageSize, pagination controls on multi-page lists, interactive page changes, and automatic page reset on goal list switch.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 10/10 test files green (90/90 tests passed) in `features/participant-stats`.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP:** Submit PR for `KAN-68` / GH-#207 with weekly goals checklist and pagination.
+
+### Session 188 — 2026-11-02 (fix(challenges): freeze and preserve historical study hours upon mid-challenge withdrawal — GH-#210 / Jira KAN-71 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#210](https://github.com/lrfsdevs/holdmetoit/issues/210) / Jira Ticket `KAN-71` ("fix(challenges): freeze and preserve historical study hours upon mid-challenge withdrawal"). Previously, when a participant withdrew mid-challenge, `isWithdrawn` was set to `true`, and scoreboard queries filtered out all withdrawn participants, instantly dropping all their previously logged study hours from their team's cumulative score and unfairly penalizing remaining teammates.
+- **Jira Status:** Transitioned `KAN-71` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team scores are aggregated uniformly. Historical hours logged by a participant prior to or on `withdrawalAt` remain frozen and permanently credited to their team's cumulative score.
+   - **Law L6 (Three-Condition Accountability Invariant):** In team battles, winning team determination at results lock includes frozen historical study hours of withdrawn members, ensuring teammates are not unfairly punished due to another member's departure. Withdrawn participants remain exempt from individual rankings, podiums, reward distributions, and post-lock punishment records.
+   - **Law L7 (Pure Domain Isolation):** Pure domain functions `isStudyLogBeforeWithdrawal` and `filterLogsBeforeWithdrawal` isolate withdrawal boundary checks with zero database or framework imports.
+   - **Law L8 (Second-Level Clock Precision):** Frozen study hours retain exact second-level integer precision.
+   - **Law L9 (Zero-State & Error Resilience):** Historical challenge breakdown cards display an explicit, subtle `Withdrawn (Hours Frozen)` badge for complete transparency.
+- **Architectural Slices Implemented:**
+   1. **Domain Layer (`features/challenges/domain/` & `features/leaderboard/domain/`):**
+      - In `features/challenges/domain/withdrawal.ts`:
+         - Added `isStudyLogBeforeWithdrawal(log, withdrawalAt)`: accurately compares log `createdAt` timestamp against `withdrawalAt`, falling back to `logDate` UTC date key comparison when `createdAt` is omitted.
+         - Added `filterLogsBeforeWithdrawal(logs, withdrawalAt)`: filters study logs to only those recorded on or before withdrawal.
+      - In `features/leaderboard/domain/leaderboard.ts`:
+         - Updated `aggregateTeamScores` and `ParticipantLogEntry` to support participant withdrawal info and daily logs.
+         - Added `calculateParticipantScoredSeconds(participant)`: preserves frozen historical hours for withdrawn members while active members contribute all logs.
+   2. **Data Layer (`features/leaderboard/data/` & `features/challenges/data/`):**
+      - In `features/leaderboard/data/leaderboard-data.ts`:
+         - Updated `buildScoreboardViewModel`: calculates team scores using `scoringLogEntries` that preserve frozen hours of withdrawn participants up to `withdrawalAt`, while keeping active podiums and individual standings restricted to `activeParticipants`.
+         - Updated `getCachedChallengeScoreboardPayload`: selected `createdAt` on daily study logs to ensure sub-day second precision against `withdrawalAt`.
+      - In `features/challenges/data/challenge-admin.repository.ts`:
+         - In `lockChallengeResults`: calculated `teamTotals` including frozen study logs of withdrawn participants when evaluating `winningTeamIds`, while keeping `evaluatedParticipants` filtered to active participants so withdrawn members are never penalized.
+      - In `features/study-logs/data/daily-study-log.repository.ts`:
+         - In `upsertDailyStudyLogOnce`: enforced that any study hours logged for a withdrawn participant (or for a log date after `withdrawalAt`) are rejected with `ChallengeStateError`.
+   3. **Presentation Layer (`features/participant-stats/presentation/challenge-snapshot.tsx`):**
+      - Updated `getParticipantStatusBadge` to render `Withdrawn (Hours Frozen)` on historical challenge breakdown cards for enrolled scholars who withdrew mid-challenge.
+   4. **Documentation & Quality Gates:**
+      - Updated `docs/challenges/withdrawal.md` (§5 Data Exclusion & Frozen Historical Hours).
+      - Added comprehensive test suites:
+         - `features/challenges/domain/withdrawal.test.ts`: 4 new unit tests covering timestamp millisecond comparisons, fallback date key comparison, and log filtering.
+         - `features/leaderboard/domain/leaderboard.test.ts`: verified frozen hours preservation in `aggregateTeamScores`.
+         - `features/leaderboard/data/leaderboard-data.test.ts`: verified historical team score retention and post-withdrawal log exclusion.
+         - `features/study-logs/data/daily-study-log.repository.test.ts`: verified post-withdrawal logging rejection.
+         - `features/challenges/data/challenge-admin.repository.test.ts`: verified winning team resolution with frozen hours and punishment exemption.
+         - `features/challenges/data/participant.repository.test.ts`: verified historical study hour preservation upon withdrawal.
+         - `features/participant-stats/presentation/challenge-snapshot.test.tsx`: verified `Withdrawn (Hours Frozen)` badge rendering.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 235/235 test files green (2,318/2,318 tests passed) across the full web workspace.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP:** Submit PR for `KAN-71` / GH-#210 and transition Jira ticket `KAN-71` to `In Review`.

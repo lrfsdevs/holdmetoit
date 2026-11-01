@@ -229,7 +229,7 @@ describe("ChallengeSnapshot", () => {
       const withdrawnHtml = renderToStaticMarkup(
          <ChallengeSnapshot stats={withdrawnStats} />
       );
-      expect(withdrawnHtml).toContain("Withdrawn");
+      expect(withdrawnHtml).toContain("Withdrawn (Hours Frozen)");
 
       const completedStats: ParticipantStatsViewModel = {
          ...mockStats,
