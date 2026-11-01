@@ -60,12 +60,12 @@ describe("adminOverrideStudyHoursAction (Law L5 / FEAT-LOG-04)", () => {
       );
    });
 
-   it("rejects duration exceeding 24 hours (86,400s)", async () => {
+   it("rejects duration exceeding 20 hours (72,000s)", async () => {
       const result = await adminOverrideStudyHoursAction({
          challengeId: "c_1",
          participantId: "p_1",
          logDate: "2026-09-05",
-         hours: 24,
+         hours: 20,
          minutes: 1,
          seconds: 0,
          reason: "Typo test",
@@ -75,6 +75,27 @@ describe("adminOverrideStudyHoursAction (Law L5 / FEAT-LOG-04)", () => {
       expect(result).toMatchObject({
          code: "DAILY_LIMIT_EXCEEDED",
       });
+   });
+
+   it("accepts a 16-hour override below the 20-hour limit", async () => {
+      vi.mocked(overrideRepoModule.executeAdminHoursOverride).mockResolvedValue(
+         {} as never
+      );
+
+      const result = await adminOverrideStudyHoursAction({
+         challengeId: "c_1",
+         participantId: "p_1",
+         logDate: "2026-09-05",
+         hours: 16,
+         minutes: 0,
+         seconds: 0,
+         reason: "Timer app crashed during evening session",
+      });
+
+      expect(result).toEqual({ ok: true });
+      expect(overrideRepoModule.executeAdminHoursOverride).toHaveBeenCalledWith(
+         expect.objectContaining({ durationSeconds: 57_600 })
+      );
    });
 
    it("rejects when reason is too short", async () => {

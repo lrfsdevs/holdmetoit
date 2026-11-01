@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 186 on `afnan-jr` · Session 184 on `krish`)
+> **Last Updated:** 2026-11-01 (Session 189 on `afnan-jr` · Session 181 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -23,7 +23,7 @@
 | Phase 2 (YPT, Challenge Economy, & Betting)                  | ✅ 100% Shipped & Verified: YPT webhook ingest & account linking, incremental study rewards, challenge reward settlement on lock, virtual-coin betting on Solo/Duo/Team challenges with atomic stake reservation and idempotent settlement                                                                                                                                                                       |
 | Phase 2A (Pokémon Catalogue Data — DB-resident)              | ✅ Catalogue lives entirely in the DB (1,025 species + 326 forms). The one-off bundle importer, its CLI, and the 21-species seed were removed; the `metadata` JSON was normalized into `PokemonForm` / `PokemonAbility` tables + scalar columns via `20261022000000_normalize_pokemon_catalogue`. The DB is the source of truth; the offline seeder `npm run db:seed:pokemon` re-populates an empty environment. |
 | Phase 3 (Pokémon Catalogue, Collection & Progression Found.) | ✅ 100% Shipped & Verified: Normalized schema (`PokemonSpecies`, `UserPokemon`), 6-tier rarity hierarchy, pure domain progress engine, Pokédex catalogue & collection views at `/pokemon`, detail modal, idempotent seeding script, spectator support                                                                                                                                                            |
-| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 86.4ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
+| Phase 4 (Pokémon Acquisition, Gacha & Economy Integrity)     | ✅ 100% Shipped & Verified: Elimination of arbitrary manual adjustments, authoritative deduplicated study hours (capped at 43.2ks/day), 500h/1000h hidden lifetime progression gates, CSPRNG acquisition engine, pity lock preservation, atomic transactions                                                                                                                                                     |
 | Phase 5 (Verified YPT Identity & Trophy Ranking System)      | ✅ 100% Shipped & Verified: Searchable member selector dropdown, strict admin approval gate, 1:1 verified YPT identity protection, immutable TrophyTransaction ledger, Clash of Clans–style ranking (Recruit -> Champion), 3-layer progression profile                                                                                                                                                           |
 | Phase 6 (ypt-js Integration & Automated Study Sync)          | ✅ 100% Shipped & Verified (Session 137 rework): a shared YPT **service account** (`YPT_EMAIL`/`YPT_PASSWORD`/`YPT_GROUP_IDS`) reads the group roster; users pick their own account from the list (no email/password), DEV-only approval, and **no per-user tokens**. Live study-hour sync (1 coin / 36s, fractional carry) now runs through the service account.                                                |
 
@@ -77,7 +77,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 | `FEAT-DECL-03`  | Declaration lock on `ACTIVE`       |   ✅   | Targets can't be edited after enrollment at all. Late enrollment is still allowed while `ACTIVE` (only `COMPLETED` blocks it)                                                                                                                                                                                                                                                              |
 | `FEAT-DECL-04`  | Host weekly target hours edit      |   ✅   | `AdminTargetOverrideModal`: mods/devs can adjust any participant's weekly target commitment (1h–105h) with immutable `TARGET_HOURS_OVERRIDE` audit logging; integrated across Manage tab, Leaderboard tab, and Participant Stats profile                                                                                                                                                   |
 | `FEAT-LOG-01`   | Daily `HH:MM:SS` self-logging      |   ✅   | `daily-hours-modal.tsx`: participants restricted to today/yesterday self-logging (`ONLY_TODAY_OR_YESTERDAY_ALLOWED`), non-scrolling 7-day selector, native picker (`max=today`), domain guards                                                                                                                                                                                             |
-| `FEAT-LOG-02`   | 24h single-day limit               |   ✅   | `MAX_DAILY_LOG_SECONDS` in `daily-log.validation.ts`                                                                                                                                                                                                                                                                                                                                       |
+| `FEAT-LOG-02`   | 20h log limit · 12h counted cap    |   ✅   | `MAX_DAILY_LOG_SECONDS` (72,000s) accepts raw logs; `MAX_COUNTED_DAILY_STUDY_SECONDS` (43,200s) caps all scoring via `capDailyStudySeconds`                                                                                                                                                                                                                                                |
 | `FEAT-LOG-04`   | Admin inline hours override UI     |   ✅   | `AdminHoursOverrideModal`: mods and devs (`ADMIN`, `DEV`) can override any participant's hours for any day of the week (D1..D7) with mandatory audit reason; integrated into Manage tab roster & Leaderboard tab                                                                                                                                                                           |
 | `FEAT-LEAD-01`  | Head-to-head scoreboard            |   ✅   | `challenge-leaderboard-tab.tsx`: matchup card with share % and team targets                                                                                                                                                                                                                                                                                                                |
 | `FEAT-LEAD-02`  | Unified standings table            |   ✅   | Desktop table plus mobile card layout. Standings now carry real weekly-task counts (challenge-linked, soft-deletes included) which also drive the sort tie-break — no "Goals Done" column                                                                                                                                                                                                  |
@@ -183,6 +183,27 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 188 — 2026-11-01 (20h log limit / 12h counted cap on `afnan-jr`)
+
+- **Split limits (supersedes the raw-log portion of Session 187):** `MAX_DAILY_LOG_SECONDS` is now `20h (72,000s)`; `MAX_COUNTED_DAILY_STUDY_SECONDS` remains `12h (43,200s)`. Added `clampDailyLogSeconds()` for raw logging paths.
+- **Raw logging:** manual and admin entry accept up to 20h (`max="20"`, messages/feedback derive 20:00:00); cockpit remaining allowance is now 20h.
+- **YPT web path:** `ingestYptActivity` and `syncUserYptStudy` clamp to 20h raw instead of 12h. `YptSyncRun.eligibleDurationSeconds` now records the 12h counted value while `importedDurationSeconds` keeps the raw log value.
+- **Challenge LB:** `todayLoggedSeconds` is capped with `capDailyStudySeconds` (12h) for the Today view. The `dailyLogs` map stays raw exclusively for the admin override modal.
+- **Unchanged counted paths:** standings, deficit, lock outcome, coin rewards (max 1,200/day), personal cumulative history, and Pokémon authoritative hours all remain at 12h.
+- **Tests:** updated domain/validation/action/leaderboard/YPT coverage. No Prisma migration; legacy rows remain and are capped at read/scoring time.
+- **NEXT:** run the web gates and manual 20h/12h smoke checks, then open the `afnan-jr` → `dev` PR.
+
+### Session 187 — 2026-11-01 (12h daily study cap on `afnan-jr`)
+
+- **Cap:** `MAX_COUNTED_DAILY_STUDY_SECONDS` 50,400 → 43,200 (12h). `MAX_DAILY_LOG_SECONDS` now aliases it, so manual/admin entries above 12h are rejected. `capDailyStudySeconds` keeps scoring, catch-up deficit, lock outcome, coin rewards, and cumulative timeline consistent.
+- **Authoritative hours:** `MAX_SECONDS_PER_DAY` in `study-hours.repository.ts` now uses the same 12h cap (Pokémon pity/acquisition).
+- **Cockpit:** `remainingDailyAllowanceSeconds` now computes from the 12h cap instead of 24h.
+- **YPT web path:** `ingestYptActivity` and `syncUserYptStudy` clamp incoming durations to 43,200s. The `apps/ypt-bot` raw clamp and the ingest API's 24h transport bound are intentionally untouched.
+- **UI:** manual/admin modals show 12h cap copy, `max=12`, and 1,200 coins/day; participant history badges derive `12h counted`.
+- **Tests:** web `234 files / 2,274 tests` green; `typecheck:web` green; `build:web` clean (pre-existing warnings only).
+- **No Prisma migration.** Legacy rows above 12h remain stored but are capped at 12h by every read/scoring path.
+- **NEXT:** run the affected two-tab/manual smoke checks, then open the `afnan-jr` → `dev` PR.
 
 ### Session 186 — 2026-10-31 (Queue hygiene on `afnan-jr`)
 

@@ -7,31 +7,32 @@ import {
 import { MAX_DAILY_LOG_SECONDS } from "@/features/study-logs/domain/duration";
 
 describe("validateDailyLogDurationSeconds", () => {
-   it("accepts valid positive durations within the daily cap", () => {
+   it("accepts valid positive durations within the daily log limit", () => {
       expect(validateDailyLogDurationSeconds(3_600)).toEqual({ ok: true });
       expect(validateDailyLogDurationSeconds(16_200)).toEqual({ ok: true });
-      expect(validateDailyLogDurationSeconds(72_000)).toEqual({ ok: true });
+      expect(validateDailyLogDurationSeconds(43_201)).toEqual({ ok: true });
+      expect(validateDailyLogDurationSeconds(16 * 3_600)).toEqual({ ok: true });
    });
 
    it("accepts exactly zero duration (0s / 00:00:00)", () => {
       expect(validateDailyLogDurationSeconds(0)).toEqual({ ok: true });
    });
 
-   it("accepts exactly the 24-hour boundary (86,400s / 24:00:00)", () => {
-      expect(validateDailyLogDurationSeconds(86_400)).toEqual({ ok: true });
+   it("accepts exactly the 20-hour boundary (72,000s / 20:00:00)", () => {
+      expect(validateDailyLogDurationSeconds(72_000)).toEqual({ ok: true });
       expect(validateDailyLogDurationSeconds(MAX_DAILY_LOG_SECONDS)).toEqual({
          ok: true,
       });
    });
 
-   it("rejects durations strictly greater than 24 hours (86,401s)", () => {
+   it("rejects durations strictly greater than 20 hours (72,001s)", () => {
       const boundaryPlusOne = validateDailyLogDurationSeconds(
          MAX_DAILY_LOG_SECONDS + 1
       );
       expect(boundaryPlusOne).toEqual({
          ok: false,
          code: "DAILY_LIMIT_EXCEEDED",
-         message: "A single day cannot exceed 24:00:00 of study time.",
+         message: "A single day cannot exceed 20:00:00 of study time.",
       });
 
       const farExceeded = validateDailyLogDurationSeconds(100_000);

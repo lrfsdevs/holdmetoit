@@ -85,7 +85,7 @@ describe("logStudyTimeAction", () => {
       );
    });
 
-   it("accepts exactly 24:00:00 boundary", async () => {
+   it("accepts exactly 20:00:00 boundary", async () => {
       vi.mocked(requireSessionModule.requireSessionUser).mockResolvedValue({
          id: "usr_1",
       } as never);
@@ -103,7 +103,7 @@ describe("logStudyTimeAction", () => {
       const result = await logStudyTimeAction({
          challengeId: "chal_1",
          challengeDay: 1,
-         hours: 24,
+         hours: 20,
          minutes: 0,
          seconds: 0,
       });
@@ -114,13 +114,13 @@ describe("logStudyTimeAction", () => {
             participantId: "part_1",
             challengeId: "chal_1",
             logDate: "2026-10-05",
-            durationSeconds: 86_400,
+            durationSeconds: 72_000,
             actor: expect.objectContaining({ id: "usr_1" }),
          })
       );
    });
 
-   it("rejects durations exceeding 24 hours (e.g. 24:00:01)", async () => {
+   it("accepts a 16-hour log below the 20-hour limit", async () => {
       vi.mocked(requireSessionModule.requireSessionUser).mockResolvedValue({
          id: "usr_1",
       } as never);
@@ -138,7 +138,36 @@ describe("logStudyTimeAction", () => {
       const result = await logStudyTimeAction({
          challengeId: "chal_1",
          challengeDay: 1,
-         hours: 24,
+         hours: 16,
+         minutes: 0,
+         seconds: 0,
+      });
+
+      expect(result).toEqual({ ok: true });
+      expect(dailyStudyLogRepo.upsertDailyStudyLog).toHaveBeenCalledWith(
+         expect.objectContaining({ durationSeconds: 57_600 })
+      );
+   });
+
+   it("rejects durations exceeding 20 hours (e.g. 20:00:01)", async () => {
+      vi.mocked(requireSessionModule.requireSessionUser).mockResolvedValue({
+         id: "usr_1",
+      } as never);
+
+      vi.mocked(
+         requireParticipantModule.requireOwnedParticipant
+      ).mockResolvedValue({
+         id: "part_1",
+         challenge: {
+            startAt: new Date("2026-10-05T18:00:00.000Z"),
+            endAt: new Date("2026-10-12T18:00:00.000Z"),
+         },
+      } as never);
+
+      const result = await logStudyTimeAction({
+         challengeId: "chal_1",
+         challengeDay: 1,
+         hours: 20,
          minutes: 0,
          seconds: 1,
       });
@@ -146,7 +175,7 @@ describe("logStudyTimeAction", () => {
       expect(result).toEqual({
          ok: false,
          code: "DAILY_LIMIT_EXCEEDED",
-         message: "A single day cannot exceed 24:00:00 of study time.",
+         message: "A single day cannot exceed 20:00:00 of study time.",
       });
       expect(dailyStudyLogRepo.upsertDailyStudyLog).not.toHaveBeenCalled();
    });

@@ -10,7 +10,7 @@ describe("Authoritative Cumulative Study Hours Repository (Section 5)", () => {
       expect(total).toBe(0);
    });
 
-   it("deduplicates multiple logs on the same calendar date and caps at 86,400s", async () => {
+   it("deduplicates multiple logs on the same calendar date and caps at 43,200s", async () => {
       const mockTx = {
          dailyStudyLog: {
             findMany: vi.fn().mockResolvedValue([
@@ -28,7 +28,7 @@ describe("Authoritative Cumulative Study Hours Repository (Section 5)", () => {
                   logDate: new Date("2026-10-11T00:00:00.000Z"),
                   durationSeconds: 5 * 3600,
                },
-               // Day 3: A corrupted/glitched log of 100,000s -> should be capped at 86,400s
+               // Day 3: A corrupted/glitched log of 100,000s -> should be capped at 43,200s
                {
                   logDate: new Date("2026-10-12T00:00:00.000Z"),
                   durationSeconds: 100000,
@@ -45,9 +45,9 @@ describe("Authoritative Cumulative Study Hours Repository (Section 5)", () => {
       // Expected:
       // Day 1: 14,400s
       // Day 2: 18,000s
-      // Day 3: 86,400s
-      // Total = 14,400 + 18,000 + 86,400 = 118,800s
-      expect(totalSeconds).toBe(118800);
+      // Day 3: 43,200s
+      // Total = 14,400 + 18,000 + 43,200 = 75,600s
+      expect(totalSeconds).toBe(75_600);
    });
 
    it("returns 0 if user has no study logs", async () => {

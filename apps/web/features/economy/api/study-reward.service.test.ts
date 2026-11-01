@@ -209,7 +209,7 @@ describe("study-reward.service", () => {
       expect(result.coinsCredited).toBe(0);
       expect(rewardRepo.recordStudyRewardTransaction).not.toHaveBeenCalled();
    });
-   it("caps eligible study seconds at 14 hours (50,400s) for daily study logs exceeding 14h", async () => {
+   it("caps eligible study seconds at 12 hours (43,200s) for daily study logs exceeding 12h", async () => {
       vi.mocked(prisma.dailyStudyLog.findUnique).mockResolvedValue({
          id: "log_over14",
          durationSeconds: 16 * 3600, // 16 hours
@@ -227,7 +227,7 @@ describe("study-reward.service", () => {
 
       vi.mocked(rewardRepo.recordStudyRewardTransaction).mockResolvedValue({
          rewardRecord: { id: "rec_2" },
-         coinsCredited: 1400,
+         coinsCredited: 1_200,
          fractionalSecondsRemaining: 0,
          isDuplicate: false,
       });
@@ -242,7 +242,7 @@ describe("study-reward.service", () => {
          expect.objectContaining({
             userId: "usr_123",
             studySessionId: "log_over14",
-            eligibleSeconds: 50_400, // strictly capped to 14 hours
+            eligibleSeconds: 43_200, // strictly capped to 12 hours
             idempotencyKey: "study-log:log_over14",
          })
       );

@@ -265,7 +265,7 @@ describe("DailyHoursModal", () => {
       expect(html).toContain("🌴 Mark as Leave");
       expect(html).not.toContain("🌴 Remove Leave");
    });
-   it("renders 14-hour daily cap notice when hours exceed 14", () => {
+   it("renders 12-hour daily cap notice when hours exceed 12", () => {
       const html = renderToHtml(
          createElement(DailyHoursModal, {
             challengeId: "chal-1",
@@ -277,11 +277,11 @@ describe("DailyHoursModal", () => {
          })
       );
 
-      expect(html).toContain("14-Hour Scoring Cap Active");
+      expect(html).toContain("12-Hour Scoring Cap Active");
       expect(html).toContain(
-         "To support healthy habits, a maximum of 14:00:00 counts"
+         "To support healthy habits, a maximum of 12:00:00 counts"
       );
-      expect(html).toContain("+1400 coins");
+      expect(html).toContain("+1200 coins");
       expect(html).toContain("(max/day)");
    });
 });
