@@ -36,9 +36,10 @@ The feature provides deep visibility into an enrolled scholar's study performanc
 3. **Data Access Layer (`features/participant-stats/data/`):**
    - `getChallengeParticipantStats`:
       - Queries participant, user, team, challenge, and daily study logs.
+      - Queries challenge-linked weekly goals (`prisma.task.findMany({ where: { challengeId, userId, taskType: 'WEEKLY', isDeleted: false } })`) to evaluate Law L6 weekly commitment.
       - Enforces strict cross-challenge isolation: `participant.challengeId === challengeId`. Mismatched requests return `null` immediately.
       - Reuses authoritative `getChallengeScoreboard` to guarantee identical ranking, tie-breaking, and team aggregates.
-   - Test suite in `participant-stats.repository.test.ts` (5 tests, 100% green).
+   - Test suite in `participant-stats.repository.test.ts` (10 tests, 100% green).
 
 4. **Presentation Layer (`features/participant-stats/presentation/`):**
    - `ParticipantProfileHeader`: Displays Discord avatar (with initials fallback), display name, `@username`, house badge, challenge rank pill, pace status, and breadcrumbs (`Challenges / [Challenge] / Leaderboard / [Participant]`).
@@ -47,7 +48,8 @@ The feature provides deep visibility into an enrolled scholar's study performanc
    - `ParticipantDailyHistory`: Full chronological table (desktop) and card list (mobile) with override indicators.
    - `ParticipantTeamStats`: Team standing, team total, and member contribution meter (omitted for `SOLOS`).
    - `ParticipantAccountability`: Target deficit, required catch-up pace per day, and pardon/forfeit badges.
-   - Test suite in `participant-stats-view.test.tsx` (7 tests, 100% green).
+   - `ParticipantWeeklyGoalsCard`: Renders declared challenge-linked weekly goals with completion ratio pill (`X/Y Goals Completed`), emerald checkmarks (`CheckCircle2`) for done items, neutral circles for pending, and an on-theme empty state when no goals were committed.
+   - Test suites in `participant-stats-view.test.tsx` (12 tests) and `participant-weekly-goals-card.test.tsx` (5 tests, 100% green).
 
 5. **Navigation Entry Points:**
    - `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`: Top 3 podium cards, mobile cards, desktop table rows.

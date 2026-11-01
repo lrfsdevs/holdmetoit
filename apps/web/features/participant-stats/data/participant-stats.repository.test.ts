@@ -15,6 +15,9 @@ vi.mock("@/core/db", () => ({
       challenge: {
          findUnique: vi.fn(),
       },
+      task: {
+         findMany: vi.fn(),
+      },
    },
 }));
 
@@ -25,6 +28,7 @@ vi.mock("@/features/leaderboard/data/leaderboard-data", () => ({
 describe("getChallengeParticipantStats repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.task.findMany).mockResolvedValue([]);
    });
 
    const mockParticipant = {
@@ -200,6 +204,9 @@ describe("getChallengeParticipantStats repository", () => {
       expect(result?.summary.targetSeconds).toBe(0);
       expect(result?.summary.totalLoggedSeconds).toBe(0);
       expect(result?.teamStats).toBeNull();
+      expect(result?.weeklyGoals).toEqual([]);
+      expect(result?.completedGoalsCount).toBe(0);
+      expect(result?.totalGoalsCount).toBe(0);
       expect(result?.viewer.isOwner).toBe(true);
       expect(result?.viewer.isAdmin).toBe(false);
    });
@@ -307,5 +314,68 @@ describe("getChallengeParticipantStats repository", () => {
 
       const result = await getChallengeParticipantStats("chal_1", "part_1");
       expect(result?.teamStats).toBeNull();
+   });
+
+   it("queries and maps challenge-linked weekly goals for participant", async () => {
+      vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+         mockParticipant as any
+      );
+      vi.mocked(getChallengeScoreboard).mockResolvedValue(
+         mockScoreboard as any
+      );
+      const mockTasks = [
+         {
+            id: "task_1",
+            title: "Calculus Problem Set 1",
+            status: "COMPLETED",
+            isComplete: true,
+            completedAt: new Date("2026-10-02T12:00:00.000Z"),
+         },
+         {
+            id: "task_2",
+            title: "Physics Lab Report",
+            status: "TODO",
+            isComplete: false,
+            completedAt: null,
+         },
+      ];
+      vi.mocked(prisma.task.findMany).mockResolvedValue(mockTasks as any);
+
+      const result = await getChallengeParticipantStats("chal_1", "part_1");
+
+      expect(prisma.task.findMany).toHaveBeenCalledWith({
+         where: {
+            challengeId: "chal_1",
+            userId: "user_1",
+            taskType: "WEEKLY",
+            isDeleted: false,
+         },
+         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+         select: {
+            id: true,
+            title: true,
+            status: true,
+            isComplete: true,
+            completedAt: true,
+         },
+      });
+
+      expect(result?.weeklyGoals).toHaveLength(2);
+      expect(result?.weeklyGoals[0]).toEqual({
+         id: "task_1",
+         title: "Calculus Problem Set 1",
+         status: "COMPLETED",
+         isComplete: true,
+         completedAt: "2026-10-02T12:00:00.000Z",
+      });
+      expect(result?.weeklyGoals[1]).toEqual({
+         id: "task_2",
+         title: "Physics Lab Report",
+         status: "TODO",
+         isComplete: false,
+         completedAt: null,
+      });
+      expect(result?.completedGoalsCount).toBe(1);
+      expect(result?.totalGoalsCount).toBe(2);
    });
 });

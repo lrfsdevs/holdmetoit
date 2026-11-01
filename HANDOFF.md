@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 189 on `afnan-jr` · Session 185 on `krish`)
+> **Last Updated:** 2026-11-02 (Session 189 on `afnan-jr` · Session 186 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2289,3 +2289,40 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Test suites: ✅ 31/31 tests green in `challenge-leaderboard-tab.test.tsx`, 113/113 tests green across `features/leaderboard`.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design tokens and anti-slop rules).
 - **NEXT STEP:** Submit PR for `KAN-69` / GH-#208, and transition Jira ticket `KAN-69` to `In Review`.
+
+### Session 186 — 2026-11-02 (feat(participant-stats): display challenge-linked weekly goals checklist on participant profile — GH-#207 / Jira KAN-68 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#207](https://github.com/lrfsdevs/holdmetoit/issues/207) / Jira Ticket `KAN-68` ("Under Law L6 (Three-Condition Accountability Invariant), every participant must complete 100% of their challenge-linked weekly tasks to avoid punishment at results lock. Display challenge-linked weekly goals checklist on participant profile at `/challenge/[id]/participant/[participantId]`").
+- **Jira Status:** Transitioned `KAN-68` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L6 (Three-Condition Accountability Invariant):** Provides direct, unambiguous visibility into whether scholars committed to and completed their challenge-linked weekly tasks.
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Teammates and spectators can view the full list of declared weekly tasks on the participant profile without requiring write permissions.
+   - **Law L9 (Zero-State & Error Resilience):** Obsidian Dark semantic tokens enforced (`bg-surface-primary`, `bg-surface-tertiary`, `border-border-default`, `text-feedback-success`, `text-caption`). Polished on-theme empty state rendered when an enrolled scholar has not committed any weekly goals. Fully responsive down to 360px viewports with `min-w-0 break-words` text wrapping.
+- **Architectural Enhancements Implemented:**
+   1. **Domain Layer (`features/participant-stats/domain/participant-stats.types.ts`):**
+      - Defined `ParticipantWeeklyGoalItem` interface (`{ id, title, status, isComplete, completedAt }`).
+      - Updated `ParticipantStatsViewModel` to include `weeklyGoals: ParticipantWeeklyGoalItem[]`, `completedGoalsCount: number`, and `totalGoalsCount: number`.
+      - Exported `ParticipantChallengeStatsViewModel` type alias for backward and domain compatibility.
+   2. **Data Layer (`features/participant-stats/data/participant-stats.repository.ts`):**
+      - Queried `prisma.task.findMany({ where: { challengeId, userId: participant.userId, taskType: 'WEEKLY', isDeleted: false }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] })` in parallel with scoreboard fetching.
+      - Mapped tasks into serializable `weeklyGoals` array, normalizing `isComplete` and ISO timestamp strings.
+      - Accurately computed `completedGoalsCount` and `totalGoalsCount`.
+      - Provided zero-state defaults (`weeklyGoals: []`, `completedGoalsCount: 0`, `totalGoalsCount: 0`) in fallback unenrolled resolution mode.
+   3. **Presentation Layer (`features/participant-stats/presentation/`):**
+      - Created `ParticipantWeeklyGoalsCard` (`participant-weekly-goals-card.tsx`) featuring:
+         - Target icon and section heading.
+         - Completion ratio pill (`X/Y Goals Completed`) with dynamic success styling (`bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`) on 100% completion.
+         - On-theme empty state container (`bg-surface-tertiary/40 border-dashed`) with `ListTodo` icon when no goals are declared.
+         - Goal list with `CheckCircle2` (in `text-feedback-success`) and "Done" tag for completed goals, neutral `Circle` (`text-text-tertiary`) for pending goals, and strikethrough styling for completed tasks.
+      - Embedded `ParticipantWeeklyGoalsCard` into `ChallengeSnapshot` (and exported from `participant-stats-view.tsx`), ensuring consistent rendering across participant profile views and global profile challenge history snapshots.
+   4. **Documentation (`docs/implementation/participant-statistics.md`):** Updated repository query documentation and presentation layer catalog to reflect weekly goals capability.
+   5. **Testing & Verification:**
+      - Added 5 unit tests in `participant-weekly-goals-card.test.tsx` verifying ratio pills, empty states, 100% complete styling, partial states, and icon decorations.
+      - Added repository tests in `participant-stats.repository.test.ts` verifying task query isolation (`taskType = 'WEEKLY'`, `challengeId`, `isDeleted: false`), mapping, and count calculation.
+      - Added 3 unit tests in `participant-stats-view.test.tsx` verifying goal checklist rendering, empty state handling, and exclusion in unenrolled fallback states.
+      - Updated snapshot integration tests in `challenge-snapshot.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 10/10 test files green (85/85 tests passed) in `features/participant-stats`, 235/235 test files green (2,304/2,304 tests passed) across the full web workspace.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP:** Submit PR for `KAN-68` / GH-#207, and transition Jira ticket `KAN-68` to `In Review`.
