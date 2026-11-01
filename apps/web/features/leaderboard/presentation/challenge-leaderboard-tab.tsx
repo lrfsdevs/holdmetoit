@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import type {
    ChallengeScoreboardViewModel,
+   ParticipantPaceStatus,
    ScoreboardStandingEntry,
 } from "../domain/leaderboard.types";
 import {
@@ -94,6 +95,76 @@ function isUnassignedScholar(entry: ScoreboardStandingEntry): boolean {
 function YptStatusPill({ status }: { status?: string | null }) {
    const badge = getYptStatusBadge(status);
    if (!badge) return null;
+   return (
+      <span
+         className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badge.className}`}
+      >
+         {badge.label}
+      </span>
+   );
+}
+
+function getPaceStatusBadge(
+   status?: ParticipantPaceStatus | null,
+   label?: string | null
+): {
+   label: string;
+   className: string;
+} {
+   const normalized = (status || label || "").toLowerCase();
+   if (normalized.includes("serene") || normalized.includes("completed")) {
+      return {
+         label: label || "Serene",
+         className:
+            "bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text",
+      };
+   }
+   if (normalized.includes("on-track") || normalized.includes("on track")) {
+      return {
+         label: label || "On Track",
+         className:
+            "bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text",
+      };
+   }
+   if (
+      normalized.includes("catch-up") ||
+      normalized.includes("catch up") ||
+      normalized.includes("at risk") ||
+      normalized.includes("at-risk")
+   ) {
+      return {
+         label: label || "Catch-Up",
+         className:
+            "bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text",
+      };
+   }
+   if (normalized.includes("punish")) {
+      return {
+         label: label || "Punished",
+         className:
+            "bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text",
+      };
+   }
+   if (normalized.includes("excuse") || normalized.includes("pardon")) {
+      return {
+         label: label || "Excused",
+         className: "bg-accent-bg border-accent/40 text-accent-text",
+      };
+   }
+   return {
+      label: label || "On Track",
+      className: "bg-surface-elevated border-border-strong text-text-secondary",
+   };
+}
+
+function PaceStatusBadge({
+   status,
+   label,
+}: {
+   status?: ParticipantPaceStatus | null;
+   label?: string | null;
+}) {
+   const badge = getPaceStatusBadge(status, label);
    return (
       <span
          className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badge.className}`}
@@ -1532,9 +1603,17 @@ export function ChallengeLeaderboardTab({
                                  Today&apos;s hours
                               </TableHead>
                               {viewMode !== "today" && (
-                                 <TableHead className="px-4 py-3 text-right">
-                                    Total hours
-                                 </TableHead>
+                                 <>
+                                    <TableHead className="px-4 py-3 min-w-[120px]">
+                                       Progress
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-center">
+                                       Pace Status
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-right">
+                                       Total hours
+                                    </TableHead>
+                                 </>
                               )}
                            </TableRow>
                         </TableHeader>
@@ -1682,6 +1761,51 @@ export function ChallengeLeaderboardTab({
                                           </span>
                                        )}
                                     </TableCell>
+
+                                    {/* Progress & Pace Status (Overall Rank mode) */}
+                                    {viewMode !== "today" && (
+                                       <>
+                                          {/* Progress */}
+                                          <TableCell className="px-4 py-3 min-w-[120px]">
+                                             <div className="space-y-1 w-full max-w-[140px]">
+                                                <div className="flex items-center justify-between text-meta font-sans font-sans-tabular">
+                                                   <span className="font-semibold text-white">
+                                                      {Math.round(
+                                                         entry.completionPercentage ??
+                                                            0
+                                                      )}
+                                                      %
+                                                   </span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-surface-elevated rounded-full overflow-hidden border border-border-subtle">
+                                                   <div
+                                                      className="h-full bg-feedback-success transition-all duration-300 rounded-full"
+                                                      style={{
+                                                         width: `${Math.min(
+                                                            100,
+                                                            Math.max(
+                                                               0,
+                                                               Math.round(
+                                                                  entry.completionPercentage ??
+                                                                     0
+                                                               )
+                                                            )
+                                                         )}%`,
+                                                      }}
+                                                   />
+                                                </div>
+                                             </div>
+                                          </TableCell>
+
+                                          {/* Pace Status */}
+                                          <TableCell className="px-4 py-3 text-center">
+                                             <PaceStatusBadge
+                                                status={entry.paceStatus}
+                                                label={entry.paceLabel}
+                                             />
+                                          </TableCell>
+                                       </>
+                                    )}
 
                                     {/* Total Hours */}
                                     {viewMode !== "today" && (

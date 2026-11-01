@@ -821,4 +821,136 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).not.toContain("Awaiting house assignment");
       });
    });
+
+   describe("Desktop Standings Table Progress & Pace Status Columns (GH-#208 / KAN-69)", () => {
+      it("renders dedicated Progress and Pace Status column headers in desktop table", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+            })
+         );
+
+         expect(html).toContain(">Progress<");
+         expect(html).toContain(">Pace Status<");
+         expect(html).toContain("20%");
+         expect(html).toContain("width:20%");
+         expect(html).toContain("Catch-Up");
+      });
+
+      it("renders semantic pace status badges for serene, on-track, catch-up, punished, and excused", () => {
+         const variedChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-serene",
+                  displayName: "Scholar Serene",
+                  completionPercentage: 100,
+                  paceStatus: "serene",
+                  paceLabel: "Serene",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-ontrack",
+                  displayName: "Scholar OnTrack",
+                  completionPercentage: 50,
+                  paceStatus: "on-track",
+                  paceLabel: "On Track",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-catchup",
+                  displayName: "Scholar CatchUp",
+                  completionPercentage: 25,
+                  paceStatus: "catch-up",
+                  paceLabel: "Catch-Up",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-punished",
+                  displayName: "Scholar Punished",
+                  completionPercentage: 10,
+                  paceStatus: "punished",
+                  paceLabel: "Punished",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-excused",
+                  displayName: "Scholar Excused",
+                  completionPercentage: 80,
+                  paceStatus: "excused",
+                  paceLabel: "Excused",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: variedChallenge,
+            })
+         );
+
+         expect(html).toContain("Scholar Serene");
+         expect(html).toContain("100%");
+         expect(html).toContain("Serene");
+         expect(html).toContain("Scholar OnTrack");
+         expect(html).toContain("50%");
+         expect(html).toContain("On Track");
+         expect(html).toContain("Scholar CatchUp");
+         expect(html).toContain("25%");
+         expect(html).toContain("Catch-Up");
+         expect(html).toContain("Scholar Punished");
+         expect(html).toContain("10%");
+         expect(html).toContain("Punished");
+         expect(html).toContain("Scholar Excused");
+         expect(html).toContain("80%");
+         expect(html).toContain("Excused");
+      });
+
+      it("omits Progress and Pace Status columns in Today's LB view mode", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               initialViewMode: "today",
+            })
+         );
+
+         expect(html).not.toContain(">Progress<");
+         expect(html).not.toContain(">Pace Status<");
+         expect(html).toContain("Today&#x27;s hours");
+      });
+
+      it("safely handles 0% and caps 100%+ progress bar widths", () => {
+         const extremeProgressChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-zero",
+                  displayName: "Zero Scholar",
+                  completionPercentage: 0,
+                  paceStatus: "catch-up",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-over",
+                  displayName: "Overachiever Scholar",
+                  completionPercentage: 125,
+                  paceStatus: "serene",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: extremeProgressChallenge,
+            })
+         );
+
+         expect(html).toContain("0%");
+         expect(html).toContain("width:0%");
+         expect(html).toContain("125%");
+         expect(html).toContain("width:100%");
+      });
+   });
 });

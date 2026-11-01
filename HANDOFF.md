@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 186 on `afnan-jr` · Session 184 on `krish`)
+> **Last Updated:** 2026-11-02 (Session 186 on `afnan-jr` · Session 185 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2239,3 +2239,32 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and anti-slop rules).
 - **GitHub PR & Issues Status:** Submitted PR [#214](https://github.com/lrfsdevs/holdmetoit/pull/214) (`krish` $\rightarrow$ `dev`) closing GitHub Issues [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) and [#206](https://github.com/lrfsdevs/holdmetoit/issues/206).
 - **NEXT STEP:** Peer review and merge PR #214 into `dev`, then proceed to release integration.
+
+### Session 185 — 2026-11-02 (feat(leaderboard): add progress percentage and pace status columns to desktop standings table — GH-#208 / Jira KAN-69 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#208](https://github.com/lrfsdevs/holdmetoit/issues/208) / Jira Ticket `KAN-69` ("In accordance with FEATURES.md §7.2, add dedicated Progress (% Completed progress bar) and Pace Status (semantic status badge) columns to the desktop standings table in `ChallengeLeaderboardTab`").
+- **Jira Status:** Transitioned `KAN-69` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team aggregation and individual scoring math remain intact across all battle modes.
+   - **Law L6 (Three-Condition Accountability Invariant):** Surfaces live accountability status badges (`Serene`, `On Track`, `Catch-Up`, `Punished`, `Excused`) directly in the standings table.
+   - **Law L8 (Second-Level Precision):** Second-level precision preserved across study duration and target timestamps; progress percentage accurately derived from integer seconds.
+   - **Law L9 (Zero-State & Error Resilience):** Obsidian Dark semantic tokens enforced with zero hardcoded hex values. Desktop table retains `overflow-x-auto` container ensuring smooth horizontal scroll safety on 640px–1024px tablet viewports.
+- **Architectural Enhancements Implemented:**
+   1. **Presentation Layer (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+      - Added pure `getPaceStatusBadge` and `PaceStatusBadge` component with token-compliant semantic styling (`bg-feedback-success-bg`, `bg-feedback-warning-bg`, `bg-feedback-error-bg`, `bg-accent-bg`, and `bg-surface-elevated`).
+      - In `<TableHeader>`, added dedicated `Progress` (`min-w-[120px]`) and `Pace Status` (`text-center`) column headers when `viewMode !== "today"`.
+      - In `<TableRow>`, added dedicated Progress cell rendering formatted completion percentage (`{Math.round(entry.completionPercentage)}%`) with a slim progress bar track (`bg-surface-elevated` track, `bg-feedback-success` fill clamped between 0% and 100%).
+      - In `<TableRow>`, added dedicated Pace Status cell rendering the semantic `PaceStatusBadge`.
+      - Kept Today's LB view mode (`initialViewMode: "today"`) focused purely on daily study duration.
+   2. **Documentation (`docs/leaderboard/README.md`):** Added §7.3 documenting Desktop Standings Table Progress & Pace Status Columns.
+   3. **Testing & Verification (`challenge-leaderboard-tab.test.tsx`):**
+      - Added 4 new unit tests under `Desktop Standings Table Progress & Pace Status Columns (GH-#208 / KAN-69)`:
+         1. Renders dedicated Progress and Pace Status column headers, percentage, progress bar track, and status badge in desktop table.
+         2. Renders semantic pace status badges for serene, on-track, catch-up, punished, and excused.
+         3. Omits Progress and Pace Status columns in Today's LB view mode.
+         4. Safely handles 0% and caps 100%+ progress bar widths.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 31/31 tests green in `challenge-leaderboard-tab.test.tsx`, 113/113 tests green across `features/leaderboard`.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design tokens and anti-slop rules).
+- **NEXT STEP:** Submit PR for `KAN-69` / GH-#208, and transition Jira ticket `KAN-69` to `In Review`.

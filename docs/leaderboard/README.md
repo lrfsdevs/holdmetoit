@@ -150,6 +150,30 @@ The per-challenge standings are separate from the global trophy board. Two forma
    - Selecting `UNASSIGNED` scopes both the table view and team view mode strictly to unassigned scholars.
    - Active filters pill displays `Team: Unassigned` with 1-click filter reset capabilities.
 
+### 7.3 Desktop Standings Table Progress & Pace Status Columns (GH #208 / KAN-69)
+
+1. **Context & Problem Statement:**
+   - In accordance with **FEATURES.md §7.2 (Unified Roster Standings Table)**, the scoreboard standings table requires dedicated visibility into goal progress and participant pace status.
+   - Previously, the desktop table (`hidden sm:block`) only displayed `Rank`, `Name`, `Team`, `Today's hours`, and `Total hours`.
+
+2. **Architectural Implementation:**
+   - **Progress Column:**
+      - `<TableHead className="px-4 py-3 min-w-[120px]">Progress</TableHead>` in `<TableHeader>`.
+      - Displays formatted completion percentage (`{Math.round(entry.completionPercentage)}%`) alongside a slim, accessible progress bar track (`bg-surface-elevated` track, `bg-feedback-success` fill clamped between 0% and 100%).
+   - **Pace Status Column:**
+      - `<TableHead className="px-4 py-3 text-center">Pace Status</TableHead>` in `<TableHeader>`.
+      - Renders semantic status pills via `PaceStatusBadge`:
+         - `Serene` / `Completed`: `bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`
+         - `On Track`: `bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`
+         - `Catch-Up`: `bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text`
+         - `Punished`: `bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text`
+         - `Excused`: `bg-accent-bg border-accent/40 text-accent-text`
+   - **View Mode Isolation:**
+      - Progress and Pace Status columns are rendered in `viewMode !== "today"` (Overall Rank mode) and omitted in Today's LB mode (`initialViewMode: "today"`), preserving dedicated focus on today's study duration.
+   - **Responsive & Design Integrity:**
+      - Fully compliant with Obsidian Dark theme and semantic design tokens (zero hex values).
+      - Compact padding and `overflow-x-auto` container ensure smooth horizontal scroll safety on 640px–1024px tablet viewports.
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
