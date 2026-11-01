@@ -322,13 +322,15 @@ export function buildScoreboardViewModel(
       const weeklyTasksTotalCount = p.weeklyTasksTotalCount ?? 0;
       const deficitSeconds = Math.max(0, p.targetSeconds - totalLoggedSeconds);
 
-      const completionPercentage =
+      const rawPercentage =
          p.targetSeconds > 0
             ? Math.min(
                  100,
                  Math.round((totalLoggedSeconds / p.targetSeconds) * 100)
               )
             : 100;
+      const completionPercentage =
+         deficitSeconds > 0 && rawPercentage === 100 ? 99 : rawPercentage;
 
       const punishmentRecords = p.punishmentRecords ?? [];
       const isPardonedRecord =
@@ -345,10 +347,12 @@ export function buildScoreboardViewModel(
          if (isPardonedRecord) {
             paceStatus = "excused";
             paceLabel = "Excused";
-         } else if (isPunishedRecord) {
-            paceStatus = "punished";
-            paceLabel = "Punished";
-         } else if (!isResultsLocked && deficitSeconds > 0) {
+         } else if (
+            isPunishedRecord ||
+            deficitSeconds > 0 ||
+            (weeklyTasksTotalCount > 0 &&
+               weeklyTasksCompletedCount < weeklyTasksTotalCount)
+         ) {
             paceStatus = "punished";
             paceLabel = "Punished";
          } else {
@@ -356,7 +360,10 @@ export function buildScoreboardViewModel(
             paceLabel = "Completed";
          }
       } else {
-         if (deficitSeconds === 0) {
+         if (isPardonedRecord) {
+            paceStatus = "excused";
+            paceLabel = "Excused";
+         } else if (deficitSeconds === 0) {
             paceStatus = "serene";
             paceLabel = "Serene";
          } else {

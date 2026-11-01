@@ -426,7 +426,7 @@ describe("buildScoreboardViewModel", () => {
       expect(result.standings[1].paceLabel).toBe("Punished");
    });
 
-   it("treats locked punishment records as the source of truth over live deficits", () => {
+   it("marks uncompleted participants with target deficits as punished on locked challenges (GH-#217)", () => {
       const lockedChallenge: RawChallengePayload = {
          ...mockChallenge,
          status: "COMPLETED",
@@ -434,7 +434,7 @@ describe("buildScoreboardViewModel", () => {
          participants: [
             {
                ...mockChallenge.participants[0],
-               // Personal deficit but saved at lock by the three-condition rule
+               // 126_000 target, 7_200 logged -> 118_800 deficit: MUST be punished on locked challenge
                dailyStudyLogs: [{ durationSeconds: 7_200 }],
             },
             {
@@ -451,13 +451,115 @@ describe("buildScoreboardViewModel", () => {
          fixedNow
       );
 
-      expect(result.standings[0].paceStatus).toBe("serene");
-      expect(result.standings[0].paceLabel).toBe("Completed");
+      expect(result.standings[0].paceStatus).toBe("punished");
+      expect(result.standings[0].paceLabel).toBe("Punished");
 
       const punished = result.standings.find(
          (s) => s.participantId === "part-2"
       );
       expect(punished?.paceStatus).toBe("punished");
+      expect(punished?.paceLabel).toBe("Punished");
+   });
+
+   it("marks participants who fully met target hours with no punishment as Completed on locked challenges (GH-#217)", () => {
+      const lockedChallenge: RawChallengePayload = {
+         ...mockChallenge,
+         status: "COMPLETED",
+         resultsLockedAt: new Date("2026-09-09T00:00:00.000Z"),
+         participants: [
+            {
+               ...mockChallenge.participants[0],
+               // 126_000 target met with 5 x 7h capped daily logs -> 0 deficit
+               dailyStudyLogs: [
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+               ],
+               status: "NORMAL",
+               punishmentRecords: [],
+            },
+            {
+               ...mockChallenge.participants[1],
+               // Excused participant
+               status: "EXCUSED",
+               punishmentRecords: [
+                  { isPardoned: true, pardonReason: "Medical leave" },
+               ],
+            },
+         ],
+      };
+
+      const result = buildScoreboardViewModel(
+         lockedChallenge,
+         undefined,
+         fixedNow
+      );
+
+      expect(result.standings[0].paceStatus).toBe("serene");
+      expect(result.standings[0].paceLabel).toBe("Completed");
+
+      const excused = result.standings.find(
+         (s) => s.participantId === "part-2"
+      );
+      expect(excused?.paceStatus).toBe("excused");
+      expect(excused?.paceLabel).toBe("Excused");
+   });
+
+   it("marks participants with incomplete weekly goals as punished on locked challenges even if hours met (GH-#217)", () => {
+      const lockedChallenge: RawChallengePayload = {
+         ...mockChallenge,
+         status: "COMPLETED",
+         resultsLockedAt: new Date("2026-09-09T00:00:00.000Z"),
+         participants: [
+            {
+               ...mockChallenge.participants[0],
+               // 126_000 target met
+               dailyStudyLogs: [
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+                  { durationSeconds: 7 * 3600 },
+               ],
+               weeklyTasksCompletedCount: 2,
+               weeklyTasksTotalCount: 3, // Incomplete tasks: 2/3
+            },
+         ],
+      };
+
+      const result = buildScoreboardViewModel(
+         lockedChallenge,
+         undefined,
+         fixedNow
+      );
+
+      expect(result.standings[0].paceStatus).toBe("punished");
+      expect(result.standings[0].paceLabel).toBe("Punished");
+   });
+
+   it("clamps completionPercentage below 100% when there is a remaining deficit (GH-#217)", () => {
+      const activeChallenge: RawChallengePayload = {
+         ...mockChallenge,
+         participants: [
+            {
+               ...mockChallenge.participants[0],
+               targetSeconds: 10_000,
+               // 9,960 / 10,000 = 99.6% -> Math.round would yield 100%, but 40s deficit remains
+               dailyStudyLogs: [{ durationSeconds: 9_960 }],
+            },
+         ],
+      };
+
+      const result = buildScoreboardViewModel(
+         activeChallenge,
+         undefined,
+         fixedNow
+      );
+
+      expect(result.standings[0].deficitSeconds).toBe(40);
+      expect(result.standings[0].completionPercentage).toBe(99);
    });
 
    it("handles empty participants gracefully", () => {

@@ -985,6 +985,50 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).toContain("125%");
          expect(html).toContain("width:100%");
       });
+
+      it("renders Punished badge for uncompleted scholars and Completed badge for finished scholars on locked challenges (GH-#217)", () => {
+         const lockedChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            status: "COMPLETED",
+            resultsLockedAt: "2026-10-08T00:00:00.000Z",
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-completed",
+                  displayName: "Champion Scholar",
+                  completionPercentage: 100,
+                  deficitSeconds: 0,
+                  paceStatus: "serene",
+                  paceLabel: "Completed",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-uncompleted",
+                  displayName: "Deficit Scholar",
+                  completionPercentage: 14,
+                  deficitSeconds: 108_000,
+                  paceStatus: "punished",
+                  paceLabel: "Punished",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+            })
+         );
+
+         expect(html).toContain("Champion Scholar");
+         expect(html).toContain("100%");
+         expect(html).toContain("Completed");
+         expect(html).toContain("bg-feedback-success-bg");
+
+         expect(html).toContain("Deficit Scholar");
+         expect(html).toContain("14%");
+         expect(html).toContain("Punished");
+         expect(html).toContain("bg-feedback-error-bg");
+      });
    });
 
    describe("Admin Quick-Pardon Trigger (FEAT-PUN-04 / GH-#211)", () => {
