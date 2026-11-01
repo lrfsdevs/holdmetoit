@@ -96,6 +96,7 @@ import {
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { cn } from "@/lib/utils";
+import { triggerTaskConfetti } from "@/lib/confetti";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -1192,7 +1193,13 @@ export function CockpitTasksSection({
       catIndex: number,
       taskId: string,
       taskType: "daily" | "weekly",
-      nextStatusOrCompleted: TaskStatus | boolean
+      nextStatusOrCompleted: TaskStatus | boolean,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
    ) => {
       const nextStatus: TaskStatus =
          typeof nextStatusOrCompleted === "boolean"
@@ -1220,6 +1227,14 @@ export function CockpitTasksSection({
          if (!targetTask) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
+
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
 
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
@@ -1312,6 +1327,14 @@ export function CockpitTasksSection({
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
+
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
                i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
@@ -1387,7 +1410,16 @@ export function CockpitTasksSection({
       }
    };
 
-   const toggleDailyTask = (catIndex: number, taskId: string) => {
+   const toggleDailyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = dailyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1400,10 +1432,19 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "daily", nextStatus);
+      setTaskStatus(catIndex, taskId, "daily", nextStatus, clickOrigin);
    };
 
-   const toggleWeeklyTask = (catIndex: number, taskId: string) => {
+   const toggleWeeklyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = weeklyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1416,7 +1457,7 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "weekly", nextStatus);
+      setTaskStatus(catIndex, taskId, "weekly", nextStatus, clickOrigin);
    };
 
    const handleDeleteTask = (
@@ -1518,6 +1559,20 @@ export function CockpitTasksSection({
          );
          if (!check.ok) {
             return;
+         }
+      }
+
+      if (nextCompleted) {
+         const prevTask =
+            taskType === "daily"
+               ? dailyCategories[catIdx]?.tasks.find((t) => t.id === id)
+               : weeklyCategories[catIdx]?.tasks.find((t) => t.id === id);
+         if (prevTask && getTaskStatus(prevTask) !== "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${id}"]`)
+                  : null;
+            triggerTaskConfetti(targetEl);
          }
       }
 
@@ -4638,6 +4693,9 @@ export function CockpitTasksSection({
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -4707,10 +4765,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() => {
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
                                                                            toggleDailyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            );
                                                                         }}
                                                                         className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
@@ -4864,7 +4925,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "daily",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"
@@ -5541,6 +5603,9 @@ export function CockpitTasksSection({
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -5610,10 +5675,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() =>
+                                                                        onClick={(
+                                                                           e
+                                                                        ) =>
                                                                            toggleWeeklyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            )
                                                                         }
                                                                         className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
@@ -5746,7 +5814,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "weekly",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"

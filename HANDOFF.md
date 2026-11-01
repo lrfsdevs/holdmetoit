@@ -1982,3 +1982,29 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and sizing rules).
 - **Jira Status:** `KAN-48` assigned to `Krish Jaiswal` and transitioned from `To Do` $\rightarrow$ `In Progress` $\rightarrow$ `In Review` (`id: 31`).
 - **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#163](https://github.com/lrfsdevs/holdmetoit/issues/163).
+
+### Session 179 — 2026-11-01 (feat(tasks): Lightweight Obsidian Confetti on Daily & Weekly Task Completion)
+
+- **Context & Objectives:** User requested a lightweight yet visible confetti animation whenever completing a task in the to-do list (Daily as well as Weekly) on the website.
+- **Architectural Enhancements Implemented:**
+   1. **Confetti Engine (`apps/web/lib/confetti.ts`):**
+      - Built a custom, zero-dependency HTML5 canvas confetti simulation engine tailored to HoldMeToIt's Obsidian Dark palette (`OBSIDIAN_CONFETTI_COLORS`: Emerald Green `#10b981`, Mint `#34d399`, Brand Gold `#fbbf24`, Amber `#f59e0b`, Sky `#38bdf8`, Azure `#60a5fa`, Purple `#c084fc`, Rose `#f43f5e`, and Crisp Silver `#ffffff`).
+      - Full High-DPI / Retina display support via `devicePixelRatio` scaling.
+      - Fixed viewport overlay with `pointer-events: none`, `z-index: 99999`, and automatic DOM creation and cleanup: canvas element and `requestAnimationFrame` loops are fully destroyed once all particles fall off-screen.
+      - 3D tumbling physics with rotation around X, Y, and Z axes, gravity, aerodynamic drag, horizontal flutter wobble, and smooth fade-out.
+      - Accessibility compliant: skips animation if `window.matchMedia('(prefers-reduced-motion: reduce)')` is active.
+      - Fail-soft in SSR and jsdom testing environments.
+      - Added `triggerTaskConfetti(target)` supporting click coordinates (`clientX`, `clientY`), `Element` bounding rects, or fallback center viewport.
+   2. **Cockpit Tasks Integration (`cockpit-tasks-section.tsx`):**
+      - Wired `triggerTaskConfetti` into `setTaskStatus`: triggers celebration burst whenever a task transitions to `COMPLETED` for both **Daily** and **Weekly** tasks.
+      - Attached `data-task-id={task.id}` to both Daily and Weekly task card elements for accurate spatial origin detection.
+      - Passed click pointer events from Daily checkbox (`toggleDailyTask`), Weekly checkbox (`toggleWeeklyTask`), and In-Progress status pills into the status updater so confetti bursts directly from the checked checkbox.
+      - Handled task editing modal (`handleSaveEditTask`) when transitioning an existing task to `COMPLETED`.
+      - Unchecking a completed task (resetting to `TODO`) intentionally does NOT trigger confetti.
+   3. **Verification & Testing:**
+      - Added unit test suite in `apps/web/lib/confetti.test.ts` (7 tests: token exports, headless jsdom execution, mouse coordinate targets, bounding rect targets, reduced motion compliance, 2D context simulation).
+      - Added integration test suite in `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-confetti.test.tsx` (3 tests: daily task completion trigger, weekly task completion trigger, completed uncheck suppression).
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 225 test files passed (2184/2184 tests green across the web application).
+   - `npm run lint:web`: ✅ 0 errors.
