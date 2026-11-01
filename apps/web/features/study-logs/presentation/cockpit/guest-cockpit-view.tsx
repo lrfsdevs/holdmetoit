@@ -401,85 +401,7 @@ export function GuestCockpitView({
             </div>
          </section>
 
-         {/* 3. Gamification & Ecosystem Strip (3 Compact Feature Cards) */}
-         <section
-            aria-label="Platform Gamification Ecosystem"
-            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-         >
-            {/* Card 1: Economy & Wagers */}
-            <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
-               <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-brand-1/15 border border-brand-1/30 flex items-center justify-center text-brand-1-light">
-                     <Coins className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                     Economy &amp; Wagers
-                  </h3>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                     Earn study coins for every verified hour logged. Place
-                     wagers on battle matchups to test your study convictions
-                     and grow your coin stash.
-                  </p>
-               </div>
-               <Link
-                  href="/wallet"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-1-light hover:underline pt-2"
-               >
-                  <span>View Wallet &amp; Rules</span>
-                  <ArrowRight className="h-3 w-3" />
-               </Link>
-            </div>
-
-            {/* Card 2: Pokémon Gacha & Pokédex */}
-            <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
-               <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-accent-bg border border-accent flex items-center justify-center text-accent-text">
-                     <Sparkles className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                     Pokémon Gacha &amp; Pokédex
-                  </h3>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                     Spend earned study coins on gacha banners with a built-in
-                     pity engine to summon rare Pokémon companions and complete
-                     your Pokédex.
-                  </p>
-               </div>
-               <Link
-                  href="/pokemon"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:underline pt-2"
-               >
-                  <span>Explore Pokédex</span>
-                  <ArrowRight className="h-3 w-3" />
-               </Link>
-            </div>
-
-            {/* Card 3: Trophy Ranks & Wrapped */}
-            <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
-               <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-feedback-success-bg border border-feedback-success/30 flex items-center justify-center text-feedback-success">
-                     <Trophy className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                     Trophy Ranks &amp; Wrapped
-                  </h3>
-                  <p className="text-xs text-text-secondary leading-relaxed">
-                     Climb seasonal Trophy tiers based on battle performance,
-                     dodge punishment forfeits, and unlock shareable
-                     end-of-event Wrapped recap stories.
-                  </p>
-               </div>
-               <Link
-                  href="/leaderboard"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-feedback-success hover:underline pt-2"
-               >
-                  <span>Check Trophy Ranks</span>
-                  <ArrowRight className="h-3 w-3" />
-               </Link>
-            </div>
-         </section>
-
-         {/* 4. Reframed "Guest Sandbox" Task Manager */}
+         {/* 3. Reframed "Guest Sandbox" Task Manager */}
          <section
             aria-label="Interactive Guest Task Manager"
             className="space-y-4"
@@ -507,9 +429,9 @@ export function GuestCockpitView({
                   Tasks and categories you organize below are stored securely in
                   your browser (
                   <strong className="text-white">IndexedDB</strong>
-                  ). You can add, reorder, and complete tasks immediately. When
-                  you sign in with Discord, your tasks will automatically sync
-                  to your cloud account.
+                  ). You can add, reorder, modify status, and remove tasks
+                  immediately. When you sign in with Discord, your tasks will
+                  automatically sync to your cloud account.
                </p>
 
                {/* Starter Chips */}
@@ -546,6 +468,116 @@ export function GuestCockpitView({
                   initialIsRolloverSnoozed={initialIsRolloverSnoozed}
                />
             )}
+         </section>
+
+         {/* 4. Planned Features & Ecosystem Strip (3 Compact Feature Cards) */}
+         <section
+            aria-label="Planned Platform Features"
+            className="space-y-4 pt-4 border-t border-border-subtle"
+         >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+               <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-1/15 text-brand-1-light border border-brand-1/30">
+                     <Sparkles className="h-3.5 w-3.5" />
+                     <span>Planned Features</span>
+                  </span>
+                  <h3 className="text-sm font-semibold text-text-secondary tracking-tight">
+                     Upcoming Gamification &amp; Study Ecosystem
+                  </h3>
+               </div>
+               <span className="text-meta text-text-tertiary">
+                  Roadmap &amp; Ecosystem Preview
+               </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               {/* Card 1: Economy & Wagers */}
+               <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
+                  <div className="space-y-2">
+                     <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-brand-1/15 border border-brand-1/30 flex items-center justify-center text-brand-1-light">
+                           <Coins className="h-5 w-5" />
+                        </div>
+                        <span className="px-2 py-0.5 text-meta uppercase font-bold tracking-wider rounded-md bg-surface-nested text-brand-1-light border border-brand-1/30">
+                           Planned
+                        </span>
+                     </div>
+                     <h3 className="text-base font-bold text-white tracking-tight">
+                        Economy &amp; Wagers
+                     </h3>
+                     <p className="text-xs text-text-secondary leading-relaxed">
+                        Earn study coins for every verified hour logged. Place
+                        wagers on battle matchups to test your study convictions
+                        and grow your coin stash.
+                     </p>
+                  </div>
+                  <Link
+                     href="/wallet"
+                     className="inline-flex items-center gap-1 text-xs font-semibold text-brand-1-light hover:underline pt-2"
+                  >
+                     <span>View Wallet &amp; Rules</span>
+                     <ArrowRight className="h-3 w-3" />
+                  </Link>
+               </div>
+
+               {/* Card 2: Pokémon Gacha & Pokédex */}
+               <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
+                  <div className="space-y-2">
+                     <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-accent-bg border border-accent flex items-center justify-center text-accent-text">
+                           <Sparkles className="h-5 w-5" />
+                        </div>
+                        <span className="px-2 py-0.5 text-meta uppercase font-bold tracking-wider rounded-md bg-surface-nested text-accent-text border border-accent">
+                           Planned
+                        </span>
+                     </div>
+                     <h3 className="text-base font-bold text-white tracking-tight">
+                        Pokémon Gacha &amp; Pokédex
+                     </h3>
+                     <p className="text-xs text-text-secondary leading-relaxed">
+                        Spend earned study coins on gacha banners with a
+                        built-in pity engine to summon rare Pokémon companions
+                        and complete your Pokédex.
+                     </p>
+                  </div>
+                  <Link
+                     href="/pokemon"
+                     className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:underline pt-2"
+                  >
+                     <span>Explore Pokédex</span>
+                     <ArrowRight className="h-3 w-3" />
+                  </Link>
+               </div>
+
+               {/* Card 3: Trophy Ranks & Wrapped */}
+               <div className="rounded-2xl border border-border-default bg-surface-primary p-5 shadow-sm flex flex-col justify-between space-y-3 hover:border-border-strong transition-all">
+                  <div className="space-y-2">
+                     <div className="flex items-center justify-between">
+                        <div className="h-10 w-10 rounded-xl bg-feedback-success-bg border border-feedback-success/30 flex items-center justify-center text-feedback-success">
+                           <Trophy className="h-5 w-5" />
+                        </div>
+                        <span className="px-2 py-0.5 text-meta uppercase font-bold tracking-wider rounded-md bg-surface-nested text-feedback-success border border-feedback-success/30">
+                           Planned
+                        </span>
+                     </div>
+                     <h3 className="text-base font-bold text-white tracking-tight">
+                        Trophy Ranks &amp; Wrapped
+                     </h3>
+                     <p className="text-xs text-text-secondary leading-relaxed">
+                        Climb seasonal Trophy tiers based on battle performance,
+                        dodge punishment forfeits, and unlock shareable
+                        end-of-event Wrapped recap stories.
+                     </p>
+                  </div>
+                  <Link
+                     href="/leaderboard"
+                     className="inline-flex items-center gap-1 text-xs font-semibold text-feedback-success hover:underline pt-2"
+                  >
+                     <span>Check Trophy Ranks</span>
+                     <ArrowRight className="h-3 w-3" />
+                  </Link>
+               </div>
+            </div>
          </section>
 
          {/* Optional Wrapped Challenge Modal/Story if active */}

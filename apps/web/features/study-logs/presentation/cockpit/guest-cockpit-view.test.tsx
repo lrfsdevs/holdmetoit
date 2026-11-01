@@ -157,8 +157,12 @@ describe("GuestCockpitView", () => {
       expect(html).toContain("Explore Active Challenges &amp; Matchups");
    });
 
-   it("renders the 3 gamification & ecosystem strip cards", () => {
+   it("renders the 3 planned features ecosystem strip cards at the bottom of the page", () => {
       const html = renderToStaticMarkup(createElement(GuestCockpitView, {}));
+
+      // Planned features header & badges
+      expect(html).toContain("Planned Features");
+      expect(html).toContain("Planned");
 
       // Economy
       expect(html).toContain("Economy &amp; Wagers");
@@ -174,6 +178,13 @@ describe("GuestCockpitView", () => {
       expect(html).toContain("Trophy Ranks &amp; Wrapped");
       expect(html).toContain('href="/leaderboard"');
       expect(html).toContain("Check Trophy Ranks");
+
+      // Verifies they are moved to the bottom below the guest sandbox tasks section
+      const taskIndex = html.indexOf("mocked-cockpit-tasks-section");
+      const plannedIndex = html.indexOf("Planned Features");
+      expect(taskIndex).toBeGreaterThan(-1);
+      expect(plannedIndex).toBeGreaterThan(-1);
+      expect(plannedIndex).toBeGreaterThan(taskIndex);
    });
 
    it("renders the guest sandbox banner and starter chips", () => {

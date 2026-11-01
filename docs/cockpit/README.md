@@ -28,16 +28,19 @@ The **Guest Cockpit View** (`GuestCockpitView`) delivers a rich, on-theme, publi
       - Automatically falls back to an arena overview explaining Solo, Duo, and Squad battles if no active challenge exists.
       - Outlines the **Three-Condition Accountability Law** and Forfeit PFP wall mechanic, linking visitors directly to `/challenges`.
 
-3. **Showcases the 3-Pillar Gamification & Study Ecosystem:**
-   - **Economy & Wagers (`/wallet`):** 100 virtual coins/hour study rewards, immutable append-only ledger, and head-to-head match betting.
-   - **Pokémon Gacha & Pokédex (`/pokemon`):** Study-funded banner pulls with a transparent pity counter to collect 1,025+ species.
-   - **Trophy Ranks & Wrapped (`/leaderboard`):** Competitive tier advancement (Recruit $\rightarrow$ Champion) and end-of-event personal Wrapped stories.
-
-4. **Reframes Tasks into an Interactive "Guest Sandbox":**
+3. **Reframes Tasks into a Fully Interactive "Guest Sandbox":**
    - Keeps the existing offline-first IndexedDB task checklist fully interactive for guests (`isLoggedIn = false`).
+   - Unlocked full task actions for guests: 1-click quick delete trash button (`Trash2`), task status modification (clicking `To-Do` sets `In Progress`, cycling through `Completed` and back), task editing modal, and 3-dots dropdown options (`TaskMenuItems`) fully supported locally in IndexedDB.
    - Wraps the task checklist in a distinct **"Local Guest Sandbox"** banner with a database badge.
    - Educates the user that tasks created offline persist locally in their browser and automatically sync to their cloud account and the **Discord Tasker Bot** (`/task`) upon signing in.
    - Surfaces one-click **"Load Sample Study Tasks"** starter chips (_"Complete 2h Deep Work block"_, _"Link YPT account"_, _"Join an active Study Challenge"_) so visitors can immediately test checking off and interacting with the task system.
+
+4. **Showcases Planned Features & Ecosystem Strip (Bottom of the Page):**
+   - Placed at the bottom of the dashboard beneath the interactive task sandbox.
+   - Explicitly marked with a **"Planned Features"** section badge and individual **"Planned"** badges on each card:
+      - **Economy & Wagers (`/wallet`):** 100 virtual coins/hour study rewards, immutable append-only ledger, and head-to-head match betting.
+      - **Pokémon Gacha & Pokédex (`/pokemon`):** Study-funded banner pulls with a transparent pity counter to collect 1,025+ species.
+      - **Trophy Ranks & Wrapped (`/leaderboard`):** Competitive tier advancement (Recruit $\rightarrow$ Champion) and end-of-event personal Wrapped stories.
 
 ---
 

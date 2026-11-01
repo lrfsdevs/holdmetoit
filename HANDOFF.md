@@ -2066,24 +2066,28 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - **Hero Banner:** Full-width hero banner with battle artwork (`/assets/challenge_hero_battle.jpg`), value proposition headline (_"Competitive Study Accountability & Challenge Cockpit"_), primary Discord sign-in CTA button (`loginWithDiscordAction`), and secondary quick navigation links to `/challenges` and `/leaderboard`.
       - **Simulated Progress & YPT Telemetry Card (Bento Left):** Mirrors the layout of `CockpitProgressCard` in preview mode with simulated weekly progress (`24:30:00 / 35:00:00`, 70%, on target), daily pace target (`05:00:00`), streak counter (🔥 5 days), leave balance (🌴 1/2), YPT auto-sync ready badge, and lock CTA footer.
       - **Active Challenges & Accountability Pulse Card (Bento Right):** Live event summary from `upcomingChallenge` (or arena overview fallback), format badge (`SOLO`, `DUOS`, `TEAM_VS_TEAM`), Three-Condition Accountability Law callout, and link to `/challenges`.
-      - **Gamification & Ecosystem Strip (3 Cards):** Economy & Wagers (`/wallet`), Pokémon Gacha & Pokédex (`/pokemon`), and Trophy Ranks & Wrapped (`/leaderboard`).
-      - **Local Guest Sandbox Banner:** Explains browser IndexedDB storage and seamless cloud + Discord Tasker sync upon login, with 3 one-click starter chips: _"Complete 2h Deep Work block"_, _"Link YPT account"_, _"Join an active Study Challenge"_.
+      - **Interactive Local Guest Sandbox:** Explains browser IndexedDB storage and seamless cloud + Discord Tasker sync upon login, with 3 one-click starter chips: _"Complete 2h Deep Work block"_, _"Link YPT account"_, _"Join an active Study Challenge"_.
+      - **Planned Features & Ecosystem Strip (Bottom of Page):** Moved to the bottom of the dashboard beneath the task sandbox, with a dedicated "Planned Features" section header badge and individual "Planned" badges on Economy & Wagers (`/wallet`), Pokémon Gacha & Pokédex (`/pokemon`), and Trophy Ranks & Wrapped (`/leaderboard`).
    2. **Cockpit Tasks Section Updates (`cockpit-tasks-section.tsx`):**
       - Exported `LOAD_SAMPLE_TASK_EVENT` and `SAMPLE_STUDY_TASKS`.
       - Added event listener for `LOAD_SAMPLE_TASK_EVENT` to automatically create and persist sample tasks into local IndexedDB (`putLocalCategory`, `putLocalTask`).
       - Rendered starter chips in the empty state when `!isLoggedIn && totalDailyTasksForDay === 0`.
+      - **Guest Task Actions Unlocked:** Removed `!isLoggedIn` restrictions from task and category dropdowns and context menus.
+      - **1-Click Quick Delete:** Added explicit `Trash2` icon button on hover/mobile to immediately remove tasks locally (or enqueue deletion on cloud).
+      - **Status Modification:** Added `To-Do` status hover button that sets `IN_PROGRESS` on click, and unlocked full 3-dots dropdown status changer (`TaskMenuItems`) for guests.
    3. **Home Page & Cockpit Wiring (`apps/web/app/page.tsx` & `home-cockpit-view.tsx`):**
       - Extended `app/page.tsx` so unauthenticated visitors also receive `upcomingChallenge` via `findLatestAvailableChallenge()`.
       - Updated `home-cockpit-view.tsx` to conditionally render `<GuestCockpitView />` when `!isLoggedIn` after hook initializations.
    4. **Documentation (`docs/cockpit/README.md`):** Comprehensive architecture and developer usage documentation created per Rule §9.4.
    5. **Testing & Verification:**
-      - Added `guest-cockpit-view.test.tsx` (8 unit tests covering all visual elements, CTAs, telemetry, fallback state, and custom sample task dispatches).
+      - Added `guest-cockpit-view.test.tsx` (8 unit tests covering all visual elements, CTAs, telemetry, fallback state, planned features ordering, and custom sample task dispatches).
       - Updated `home-cockpit-view.test.tsx` and `app/page.test.tsx` with unauthenticated assertions.
+      - Updated `cockpit-tasks-section.test.tsx` verifying options trigger buttons and delete actions for unauthenticated guests.
 - **Quality Gates:**
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - Test suites: ✅ 232/232 test files passing (2,238/2,238 tests green across `@holdmetoit/web`).
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and no hex tokens).
    - `npm run build:web`: ✅ Production build successful (all routes compiled cleanly).
-- **Jira Status:** `KAN-9` in `In Progress`. Ready for transition to `In Review` (`id: 31`) upon PR submission.
-- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#91](https://github.com/lrfsdevs/holdmetoit/issues/91).
-- **NEXT STEP:** Create Pull Request from `krish` $\rightarrow$ `dev` closing #91, transition Jira ticket `KAN-9` to `In Review` (`id: 31`).
+- **Jira Status:** `KAN-9` transitioned to `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#91](https://github.com/lrfsdevs/holdmetoit/issues/91), PR [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) updated.
+- **NEXT STEP:** Peer review and merge PR #204 into `dev`, then proceed to next roadmap milestone.
