@@ -2009,51 +2009,44 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Test suites: ✅ 225 test files passed (2184/2184 tests green across the web application).
    - `npm run lint:web`: ✅ 0 errors.
 
-### Session 180 â€” 2026-11-01 (feat(participant): sick mode status badge with 3-day reminder and leaderboard visibility â€” GH-#205 / KAN-66)
+### Session 180 — 2026-11-01 (feat(participant): sick mode status badge with 3-day reminder and leaderboard visibility — GH-#205 / KAN-66)
 
 - **Context & Objectives:** Implemented Participant Sick Mode (Under the Weather status) (#205, KAN-66) providing an empathetic status indicator across leaderboards, matchup rosters, profile, and admin views, with a 3-day non-blocking recovery check-in prompt and 7-day auto-expiry safeguard.
 - **Law Invariants Preserved:**
-   - **Law L3 (Catch-Up Deficit Model / Zero Grace Passes):** Sick Mode is strictly an informational social indicator. It does NOT pause timers, freeze deficit accrual, grant grace passes, or reduce required study hours. Remaining deficit and required pace calculations in eatures/leaderboard/domain/deficit.ts remain 100% pure and untouched.
+   - **Law L3 (Catch-Up Deficit Model / Zero Grace Passes):** Sick Mode is strictly an informational social indicator. It does NOT pause timers, freeze deficit accrual, grant grace passes, or reduce required study hours. Remaining deficit and required pace calculations in `features/leaderboard/domain/deficit.ts` remain 100% pure and untouched.
    - **Law L6 (Three-Condition Accountability Invariant):** Activating Sick Mode does NOT grant automated immunity from results-lock consequences or punishments.
-   - **Law L5 (Admin Override Absolute):** Hosts retain full visibility of participant Sick Mode history in /admin/users and can issue an administrative pardon under FEAT-PUN-04 if warranted.
+   - **Law L5 (Admin Override Absolute):** Hosts retain full visibility of participant Sick Mode history in `/admin/users` and can issue an administrative pardon under `FEAT-PUN-04` if warranted.
 - **Architectural Enhancements Implemented:**
-   1. **Prisma Schema & Migration (packages/database):**
-      - Added isSick (Boolean @default(false)), sickModeActivatedAt (DateTime?), sickModeNote (String? @db.VarChar(120)), sickModeReminderSnoozedUntil (DateTime?), sickModeLastDeactivatedAt (DateTime?) to User model.
-      - Generated migration 20261101000000_add_user_sick_mode/migration.sql and deployed to PostgreSQL database.
-   2. **Pure Domain Layer (eatures/participant-status/domain):**
-      - sick-mode.types.ts: Status summary, duration, check-in, and badge prop contracts.
-      - sick-mode.ts: sanitizeSickModeNote (enforces <= 80 characters, collapses newlines/whitespace), calculateSickDuration (returns elapsed hours/days and formatted string), isSickModeAutoExpired (>= 168 hours safeguard), isSickReminderDue (>= 72 hours reminder with snooze evaluation), getSickModeTooltipText (empathetic copy with date and optional note).
-      - Added 19 Vitest unit tests in sick-mode.test.ts covering note sanitization, duration formatting, reminder due logic, auto-expiry, and Law L3 invariant preservation.
-   3. **Data Layer (eatures/participant-status/data):**
-      - sick-mode.repository.ts: getUserSickStatus (with auto-expiry DB synchronization), ctivateSickMode, deactivateSickMode, and snoozeSickReminder.
-      - Added 6 Vitest unit tests in sick-mode.repository.test.ts.
-   4. **API / Server Actions Layer (eatures/participant-status/api):**
-      - sick-mode.actions.ts: oggleSickModeAction,
-        espondSickReminderAction (turn_off or extend), and getMySickStatusAction with session authentication and path revalidations.
-      - Added 8 Vitest unit tests in sick-mode.actions.test.ts.
-   5. **Presentation Layer (eatures/participant-status/presentation):**
-      - sick-status-badge.tsx: Empathetic soft amber pill (g-amber-500/15 text-amber-300 border border-amber-500/30) with icon ðŸ¤’ and accessible Radix Tooltip explaining duration and optional note.
-      - sick-mode-quick-toggle.tsx: Cockpit Header chip button with accessible Dialog modal for 1-click activation/deactivation, optional note input (80 char countdown), and Sonner toast feedback.
-      - sick-reminder-banner.tsx: Non-blocking 3-day recovery prompt banner on / with "I'm Better (Turn Off)" and "Still Recovering (+2 Days)" actions.
-      - sick-mode-settings-card.tsx: Settings card under Participant Preferences in /profile (tab="settings").
-      - Added 12 Vitest presentation tests in sick-status-badge.test.tsx, sick-reminder-banner.test.tsx, and sick-mode-quick-toggle.test.tsx.
+   1. **Prisma Schema & Migration (`packages/database`):**
+      - Added `isSick` (Boolean `@default(false)`), `sickModeActivatedAt` (DateTime?), `sickModeNote` (String? `@db.VarChar(120)`), `sickModeReminderSnoozedUntil` (DateTime?), `sickModeLastDeactivatedAt` (DateTime?) to `User` model.
+      - Generated migration `20261101000000_add_user_sick_mode/migration.sql` and deployed cleanly to PostgreSQL database.
+   2. **Pure Domain Layer (`features/participant-status/domain`):**
+      - `sick-mode.types.ts`: Status summary, duration, check-in, and badge prop contracts.
+      - `sick-mode.ts`: `sanitizeSickModeNote` (enforces $\le 80$ characters, collapses newlines/whitespace), `calculateSickDuration` (returns elapsed hours/days and formatted string), `isSickModeAutoExpired` ($\ge 168$ hours safeguard), `isSickReminderDue` ($\ge 72$ hours reminder with snooze evaluation), `getSickModeTooltipText` (empathetic copy with date and optional note).
+      - Added 19 Vitest unit tests in `sick-mode.test.ts` covering note sanitization, duration formatting, reminder due logic, auto-expiry, and Law L3 invariant preservation.
+   3. **Data Layer (`features/participant-status/data`):**
+      - `sick-mode.repository.ts`: `getUserSickStatus` (with auto-expiry DB synchronization), `activateSickMode`, `deactivateSickMode`, and `snoozeSickReminder`.
+      - Added 6 Vitest unit tests in `sick-mode.repository.test.ts`.
+   4. **API / Server Actions Layer (`features/participant-status/api`):**
+      - `sick-mode.actions.ts`: `toggleSickModeAction`, `respondSickReminderAction` (turn_off or extend), and `getMySickStatusAction` with session authentication and path revalidations.
+      - Added 8 Vitest unit tests in `sick-mode.actions.test.ts`.
+   5. **Presentation Layer (`features/participant-status/presentation`):**
+      - `sick-status-badge.tsx`: Empathetic soft amber pill (`bg-amber-500/15 text-amber-300 border border-amber-500/30`) with icon 🤒 and accessible Radix Tooltip explaining duration and optional note.
+      - `sick-mode-quick-toggle.tsx`: Cockpit Header chip button with accessible Dialog modal for 1-click activation/deactivation, optional note input (80 char countdown), and Sonner toast feedback.
+      - `sick-reminder-banner.tsx`: Non-blocking 3-day recovery prompt banner on `/` with _"I'm Better (Turn Off)"_ and _"Still Recovering (+2 Days)"_ actions.
+      - `sick-mode-settings-card.tsx`: Settings card under Participant Preferences in `/profile` (`tab="settings"`).
+      - Added 12 Vitest presentation tests in `sick-status-badge.test.tsx`, `sick-reminder-banner.test.tsx`, and `sick-mode-quick-toggle.test.tsx`.
    6. **Cross-Surface Integrations:**
-      - **Home Cockpit (pps/web/features/study-logs/presentation/home-cockpit-view.tsx):** Added SickModeQuickToggle to Cockpit Header and SickReminderBanner above cockpit cards.
-      - **Global Profile (pps/web/features/participant-stats/presentation/global-profile-view.tsx):** Added SickStatusBadge to profile header and SickModeSettingsCard to Settings tab.
-      - **Challenge Leaderboard (pps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx):** Added SickStatusBadge beside participant display names in desktop table, compact table, and mobile card views.
-      - **Matchup Rosters (pps/web/features/challenges/presentation/challenge-overview-tab.tsx):** Added SickStatusBadge beside participant names in Head-to-Head team member cards.
-      - **Admin User Directory & Inspector (pps/web/features/admin/presentation):** Added SickStatusBadge to user directory table and member card badge stacks (user-directory-view.tsx), and rendered active Sick Mode alert with note in UserInspectorSheet.
-   7. **Documentation (docs/participant-status/README.md):** Complete architectural documentation, stack law invariants, and developer guide.
+      - **Home Cockpit (`apps/web/features/study-logs/presentation/home-cockpit-view.tsx`):** Added `SickModeQuickToggle` to Cockpit Header and `SickReminderBanner` above cockpit cards.
+      - **Global Profile (`apps/web/features/participant-stats/presentation/global-profile-view.tsx`):** Added `SickStatusBadge` to profile header and `SickModeSettingsCard` to Settings tab.
+      - **Challenge Leaderboard (`apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):** Added `SickStatusBadge` beside participant display names in desktop table, compact table, and mobile card views.
+      - **Matchup Rosters (`apps/web/features/challenges/presentation/challenge-overview-tab.tsx`):** Added `SickStatusBadge` beside participant names in Head-to-Head team member cards.
+      - **Admin User Directory & Inspector (`apps/web/features/admin/presentation`):** Added `SickStatusBadge` to user directory table and member card badge stacks (`user-directory-view.tsx`), and rendered active Sick Mode alert with note in `UserInspectorSheet`.
+   7. **Documentation (`docs/participant-status/README.md`):** Complete architectural documentation, stack law invariants, and developer guide.
 - **Quality Gates:**
-  -
-
-pm run typecheck:web: âœ… 0 compiler errors ( sc --noEmit exited 0).
-
-- Test suites: âœ… 45/45 feature tests passing + 79/79 regression tests passing.
--
-
-pm run lint:web: âœ… 0 errors.
-
-- **Jira Status:** KAN-66 transitioned to In Progress (ID 21).
-- **GitHub Issue Status:** Implementation complete for [#205](https://github.com/lrfsdevs/holdmetoit/issues/205).
-- **NEXT STEP:** Submit Pull Request and transition KAN-66 to In Review.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 45/45 feature tests passing + 79/79 regression tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-66` transitioned from `In Progress` to `In Review` (transition ID `31`).
+- **GitHub PR & Issue Status:** Updated PR [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) (`krish` $\rightarrow$ `dev`) closing GitHub Issue [#205](https://github.com/lrfsdevs/holdmetoit/issues/205) (`Closes #205`).
+- **NEXT STEP:** Peer review and merge PR #204 into `dev`, then proceed to next roadmap milestone.
