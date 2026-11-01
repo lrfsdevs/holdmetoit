@@ -11,16 +11,6 @@ import {
    setRolloverSnoozedForDate,
 } from "./cockpit-tasks-storage";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-   rolloverTasksAction: vi.fn(),
-}));
-
 afterEach(cleanup);
 beforeEach(() => {
    if (typeof window !== "undefined" && window.localStorage) {

@@ -30,15 +30,29 @@ export async function updateTaskStatus(
    userId: string,
    status: TaskStatusInput
 ): Promise<Task | null> {
-   const existing = await getTaskById(taskId, userId);
-   if (!existing) return null;
-
    const isCompleted = status === "completed";
-   return prisma.task.update({
-      where: { id: existing.id },
+
+   const { count } = await prisma.task.updateMany({
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
       data: isCompleted
-         ? { status: "COMPLETED", isComplete: true, completedAt: new Date() }
-         : { status: "TODO", isComplete: false, completedAt: null },
+         ? {
+              status: "COMPLETED",
+              isComplete: true,
+              completedAt: new Date(),
+              revision: { increment: 1 },
+           }
+         : {
+              status: "TODO",
+              isComplete: false,
+              completedAt: null,
+              revision: { increment: 1 },
+           },
+   });
+
+   if (count === 0) return null;
+
+   return prisma.task.findFirst({
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
    });
 }
 
@@ -72,14 +86,15 @@ export async function deleteTask(
    taskId: string,
    userId: string
 ): Promise<boolean> {
-   const existing = await getTaskById(taskId, userId);
-   if (!existing) return false;
-
-   await prisma.task.update({
-      where: { id: existing.id },
-      data: { isDeleted: true, deletionTime: new Date() },
+   const { count } = await prisma.task.updateMany({
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
+      data: {
+         isDeleted: true,
+         deletionTime: new Date(),
+         revision: { increment: 1 },
+      },
    });
-   return true;
+   return count > 0;
 }
 
 export async function updateTaskContent(
@@ -88,15 +103,19 @@ export async function updateTaskContent(
    content: string,
    categoryId?: string
 ): Promise<Task | null> {
-   const existing = await getTaskById(taskId, userId);
-   if (!existing) return null;
-
-   return prisma.task.update({
-      where: { id: existing.id },
+   const { count } = await prisma.task.updateMany({
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
       data: {
          title: content,
          ...(categoryId !== undefined ? { categoryId } : {}),
+         revision: { increment: 1 },
       },
+   });
+
+   if (count === 0) return null;
+
+   return prisma.task.findFirst({
+      where: { id: taskId, userId, challengeId: null, isDeleted: false },
    });
 }
 

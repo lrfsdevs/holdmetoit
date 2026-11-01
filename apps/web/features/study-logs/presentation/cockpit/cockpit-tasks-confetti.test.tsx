@@ -6,15 +6,6 @@ import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 import * as confettiModule from "@/lib/confetti";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
    const actual =
       await importOriginal<

@@ -2,7 +2,7 @@
 
 > **Target Database:** PostgreSQL 15+ (Supabase / Neon)  
 > **ORM & Tooling:** Prisma ORM 6.x (`prisma/schema.prisma`)  
-> **Last Updated:** 2026-10-11
+> **Last Updated:** 2026-10-31
 
 ---
 
@@ -35,6 +35,10 @@ The repository tracks the following declarative migrations under `prisma/migrati
 | `20261019010000_add_feedback_github_issue`                            |  2026-10-19  | Adds `GitHubDeliveryStatus` enum and `githubStatus`/`githubIssueNumber`/`githubIssueUrl`/`githubSyncedAt` columns to `Feedback` for fail-soft GitHub issue synchronization, plus a `githubStatus` index.                                                                                                                                                                                                               |
 | `20261019020000_add_feedback_jira_issue`                              |  2026-10-19  | Adds `JiraDeliveryStatus` enum and `jiraStatus`/`jiraIssueKey`/`jiraIssueUrl`/`jiraSyncedAt` columns to `Feedback` for fail-soft Jira Cloud issue synchronization, plus a `jiraStatus` index.                                                                                                                                                                                                                          |
 | `20261029000000_team_active_name_ci_unique`                           |  2026-10-29  | Replaces the exact-case `Team_challengeId_name_key` unique index with a partial unique index on `(challengeId, LOWER(name)) WHERE "isDeleted" = false`, enforcing case-insensitive uniqueness only for active teams so soft-deleted names can be reused.                                                                                                                                                               |
+| `20261030000000_punishment_unique_per_participant`                    |  2026-10-30  | Adds a unique `(challengeId, participantId)` index to `PunishmentRecord` so a concurrent or repeated results lock cannot duplicate punishment rows.                                                                                                                                                                                                                                                                    |
+| `20261031000000_category_active_name_ci_unique`                       |  2026-10-30  | Replaces the exact-case `categories_userId_name_task_type_key` unique index with a partial unique index on `("userId", LOWER("name"), "taskType") WHERE "isDeleted" = false`, enforcing case-insensitive uniqueness only for active categories so tombstoned names can be reused.                                                                                                                                      |
+| `20261031010000_task_category_revision`                               |  2026-10-31  | Adds `revision` (`INTEGER NOT NULL DEFAULT 0`) to `Task` and `Category` for the task-sync optimistic concurrency protocol. Existing rows start at 0; every non-create writer increments it and stale clients write with a `baseRevision` predicate.                                                                                                                                                                    |
+| `20261101000000_add_user_sick_mode`                                   |  2026-11-01  | Adds the Sick Mode fields to `User` (`isSick`, `sickModeActivatedAt`, `sickModeNote`, `sickModeReminderSnoozedUntil`, `sickModeLastDeactivatedAt`) for the participant status feature (GH-#205 / KAN-66).                                                                                                                                                                                                              |
 
 ---
 

@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-01 (Session 181 on `krish` · Session 176 on `afnan-jr`)
+> **Last Updated:** 2026-11-01 (Session 186 on `afnan-jr` · Session 181 on `krish`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -183,6 +183,58 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 186 — 2026-10-31 (Queue hygiene on `afnan-jr`)
+
+- **IndexedDB v2:** `queued_mutations.userId` index and the new `dead_letter_mutations` store (`userId`, `failedAt`, `createdAt`). Upgrade is additive.
+- **Ownership:** every mutation carries `userId`; `getQueuedMutationsForUser(userId)` reads only the current user's partition and claims legacy unowned entries once. `syncNow` and cockpit hydration use it.
+- **Cross-tab leader:** `navigator.locks` (`holdmetoit-task-sync`, `ifAvailable`) wraps the entire read → POST → apply → remove cycle. A losing tab skips and reschedules fresh edits; `isSyncing` remains a per-tab fast guard.
+- **Atomic local commits:** `commitTaskMutation` / `commitTaskBatch` / `commitCategoryMutation` / `commitLocalBatch` write the local records and the mutation in one IndexedDB transaction. The cockpit put+enqueue pairs were replaced; `putLocal*` remains for snapshot/hydration writes.
+- **Bounded retries:** per-mutation `error` increments `retryCount`; at 5 the mutation moves to `dead_letter_mutations`. `TaskSyncIssueBanner` offers Retry (reset to 0) / Discard. Network failures do not increment.
+- **Freshness:** jittered 30s visible-tab `forcePull`, plus a `BroadcastChannel` `tasks-synced` signal so other tabs re-hydrate from shared IndexedDB. The 15s pending ticker remains.
+- **Tests:** web `214 files / 2,127 tests` (new IDB, lock, ownership, dead-letter, idle-pull, and banner coverage); tasker `4 files / 81 tests`; `typecheck:web` 0; `lint:web` 0; `build:web` clean.
+- **Dependency:** `fake-indexeddb` (dev-only, web workspace) for real IDB tests.
+- **Committed as `5c98153`**; no Prisma migration.
+- **NEXT:** two-tab/account-switch/dead-letter/idle-pull manual checks, then the `afnan-jr` → `dev` PR.
+
+### Session 185 — 2026-10-31 (Server revision on `afnan-jr`)
+
+- **Schema:** `Task` and `Category` gained `revision Int @default(0)`. Migration `20261031010000_task_category_revision` (additive, no backfill) + migrations README.
+- **Protocol:** queued mutations carry an optional top-level `baseRevision`; `syncNow` computes it centrally from the local records (sequential per entity, creates start at 0, legacy records omit it). The server updates with `WHERE revision = baseRevision` and `revision: { increment: 1 }`.
+- **Conflicts:** `zero_rows` with a current row is rebased onto the current revision and re-enqueued (max 2 attempts); `currentTask: null` deletes the local row; `challenge_locked` adopts the server row. The wall-clock `updatedAt` reconciliation guard was removed; pending entities are identified by their queued mutation.
+- **Local state:** `putLocalTask` / `putLocalCategory` merge-preserve `revision`; the cockpit's enqueue sites were unchanged at this layer (queue hygiene later replaced them with atomic commit helpers).
+- **Server writers:** every non-create write increments `revision` — sync repository, direct task repository helpers, challenge soft-delete, dedupe script, Tasker bot, backfill script. The weekly challenge lock guard is restored at the sync path (`challenge_locked`).
+- **Tests:** web `212 files / 2,111 tests`; tasker `4 files / 81 tests`; `typecheck:web` / `typecheck:tasker` 0; `lint:web` 0 (one pre-existing warning); `build:web` clean.
+- **Committed as `80fdc72`.**
+
+### Session 184 — 2026-10-30 (Zod 4.6.6 security upgrade on `afnan-jr`)
+
+- **Specs:** `apps/web` and `apps/tasker` now declare `zod: ^4.6.6` (was `^4.5.4` and `^3.24.1`).
+- **Tree:** `npm install` deduped to one `zod@4.6.7`; the nested `apps/tasker/node_modules/zod@3.25.76` was removed. `ypt-js` (`^4.6.7`) shares the root copy.
+- **Tasker Zod 3 → 4:** no schema changes required. Env parsing, `booleanString`, and the summary schema typecheck and pass all 79 tests. Updated the stale "zod 3 here" comment in `summarizer.ts`.
+- **Audit:** `npm audit` no longer reports the oversized-constrained-collections advisory; no zod entries remain in the audit output.
+- **Verification:** `typecheck:web` / `typecheck:tasker` 0, `lint:web` 0, web suite green, tasker 4 files / 79 tests, `build:web` clean.
+- **Committed as `841bd84`.**
+
+### Session 183 — 2026-10-30 (One web write path on `afnan-jr`)
+
+- **Dual write removed:** edit, move, and weekly scope changes no longer call `updateTaskAction`; create/toggle/delete already went through the queue.
+- **Rollover is one mutation:** added `ROLLOVER` (`{ taskIds, targetDateKey }`) to the sync protocol; the server applies the incomplete-only guard in one `updateMany`. Removed the per-task `UPDATE`s and `rolloverTasksAction`.
+- **Validation moved:** per-action payload zod schemas in `task-sync.schema.ts`; invalid payloads are `conflict` / `invalid_payload`. A rejected CREATE removes its local row.
+- **Revalidation moved:** the sync route calls `revalidatePath("/")` plus the cache-tag invalidation.
+- **Dead code deleted:** `features/tasks/api/task.actions.ts` and its test; removed the action mocks from eight cockpit tests and the `useTransition` usage.
+- **Tests:** ROLLOVER applied/invalid, overlong title, empty toggle, rejected-CREATE cleanup, route revalidation; web suite 212 files / 2101 tests; typecheck/lint/build clean.
+- **Committed as `205fb8c`.**
+
+### Session 182 — 2026-10-30 (Task sync quick wins on `afnan-jr`)
+
+- **Field-scoped edits:** added `buildTaskEditPatch`; the edit modal now sends only changed fields (title, status+isComplete, dueDate, challengeId). An unchanged edit is a no-op, so a stale edit cannot revert another device's toggle.
+- **Ack semantics:** `processBatchSync` now returns `mutationResults` (`applied | conflict | error`). Zero-row updates, missing categories, name collisions, and foreign rows are `conflict` with the current row (or `null`); only unexpected failures remain `error`. The client removes applied+conflict, applies the current row, deletes it when `null`, and remaps category ids via `remapLocalCategoryId`.
+- **Bot predicates:** `updateTaskStatus`, `updateTaskContent`, `deleteTask` use `updateMany` with `userId` + `isDeleted`; `deleteCategory` writes the shared tombstone; `createCategory` is live → revive → create with P2002 handling. The tombstone helper now lives in `@holdmetoit/database`.
+- **Category index:** removed the exact-case `@@unique`; added `20261031000000_category_active_name_ci_unique` (partial `LOWER(name)` where active). Pre-check + `scripts/dedupe-categories.ts` (dry-run default).
+- **Tests:** edit-patch diff, mutation-result/conflict cases, client reconcile/remap, bot model predicates, category P2002. `typecheck:web` and `typecheck:tasker` clean; targeted suites green.
+- **Docs:** `docs/tasks/README.md`; `docs/tasker/README.md` §2.2-2.4.
+- **Committed in the quick-wins merge (`db7ebe0`).**
 
 ### Session 176 — 2026-10-30 (Results lock hardening on `afnan-jr`)
 

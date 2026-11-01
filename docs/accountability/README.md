@@ -182,7 +182,10 @@ Then perform the write with the same `tx`.
 await assertChallengeWritable(tx, challengeId); // features/tasks/data/task.repository.ts
 ```
 
-`createTask` and `updateTask` are transactional and guard both linking and unlinking. The sync path never throws on a locked challenge; it drops the linkage change so the mutation is acknowledged rather than retried forever.
+`createTask` and `updateTask` are transactional and guard both linking and unlinking. In the
+sync path, a mutation that would change an existing weekly goal while results are locked
+returns `conflict` / `challenge_locked` with the current row, so the client reverts to the
+server state; a new task with a locked `challengeId` is created unlinked.
 
 ### Operator runbook
 
