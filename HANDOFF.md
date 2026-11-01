@@ -2392,3 +2392,37 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Test suites: ✅ 235/235 test files green (2,318/2,318 tests passed) across the full web workspace.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
 - **NEXT STEP:** Submit PR for `KAN-71` / GH-#210 and transition Jira ticket `KAN-71` to `In Review`.
+
+### Session 189 — 2026-11-02 (feat(accountability): add admin quick-pardon modal trigger to post-lock leaderboard rows — GH-#211 / Jira KAN-72 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#211](https://github.com/lrfsdevs/holdmetoit/issues/211) / Jira Ticket `KAN-72` ("feat(accountability): add admin quick-pardon modal trigger to post-lock leaderboard rows"). Administrators inspecting final standings on the public Leaderboard tab (`/challenge/[id]?tab=leaderboard`) could see "Edit hr" and "Edit target", but had no direct way to pardon an unfairly punished scholar from their standings row without having to navigate away to the Manage tab roster.
+- **Jira Status:** Transitioned `KAN-72` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Spectators and regular participants do not see admin pardon controls; only authenticated admins/devs see quick-pardon triggers on completed/locked challenges.
+   - **Law L5 (Admin Override Absolute):** Community hosts possess unconditional authority to pardon/excuse any participant directly from final leaderboard standings with verified rationale, creating an immutable audit trail.
+   - **Law L6 (Three-Condition Accountability Invariant):** Excusing a participant sets `status = "EXCUSED"` and `isPardoned = true`, relieving them from forfeit obligations while preserving team scoring integrity.
+   - **Law L9 (Zero-State & Error Resilience):** Modal dialog mounts cleanly with pre-selected scholar identity card, handles validation (minimum 3 characters), loading state, and error handling.
+- **Architectural Slices Implemented:**
+   1. **Presentation Layer (`features/leaderboard/presentation/`):**
+      - In `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`:
+         - Imported and mounted `AdminPardonModal` from `@/features/accountability/presentation/admin-pardon-modal`.
+         - Conditioned pardon visibility on `canPardon = isAdmin && isChallengeLocked` where `isChallengeLocked = challenge.status === "COMPLETED" || Boolean(challenge.resultsLockedAt)`.
+         - Added `isPunishedScholar` helper to identify punished scholars (`entry.paceStatus === "punished" || entry.status === "PUNISHED"`) while excluding excused scholars.
+         - Rendered high-contrast `Pardon` button with `HeartHandshake` icon (`data-testid="admin-pardon-button"`) next to `Edit hr` / `Edit target` across:
+            - Team View mode: House member rows
+            - Team View mode: Unassigned scholars section
+            - Individual View mode: Mobile card list
+            - Individual View mode: Desktop standings table (both `today` and total hours columns)
+         - Connected `handleOpenPardon` to pre-populate `pardonParticipant` and open modal.
+         - Connected `onSuccess` callback to fire `router.refresh()` to revalidate server-rendered scoreboard standings immediately upon successful pardon.
+   2. **Documentation & Quality Gates:**
+      - Updated `docs/accountability/README.md` (§7 Host Pardon & Leaderboard Quick-Pardon Trigger).
+      - Added 5 unit tests in `features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (`Admin Quick-Pardon Trigger (FEAT-PUN-04 / GH-#211)`):
+         - Verified Pardon button renders for punished participants when `isAdmin` is true on completed/locked challenges.
+         - Verified Pardon button is omitted for regular participants and spectators (`isAdmin: false`).
+         - Verified Pardon button is omitted when challenge is still active/unlocked.
+         - Verified Pardon button renders in Team View mode for punished house members and unassigned scholars.
+         - Verified clicking Pardon opens `AdminPardonModal` with pre-selected participant and triggers `router.refresh()` on success.
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+      - Test suites: ✅ 36/36 tests green in `challenge-leaderboard-tab.test.tsx`, 121/121 green across `features/leaderboard`.
+- **NEXT STEP:** Create atomic commit for `KAN-72` / GH-#211, and prepare pull request for peer review.

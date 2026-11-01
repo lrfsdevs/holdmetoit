@@ -1,14 +1,47 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ChallengeLeaderboardTab } from "./challenge-leaderboard-tab";
 import type { ChallengeScoreboardViewModel } from "../domain/leaderboard.types";
 
+const mockRefresh = vi.fn();
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
       push: vi.fn(),
-      refresh: vi.fn(),
+      refresh: mockRefresh,
    }),
+}));
+
+vi.mock("@/features/accountability/presentation/admin-pardon-modal", () => ({
+   AdminPardonModal: ({
+      isOpen,
+      participant,
+      onSuccess,
+   }: {
+      isOpen: boolean;
+      participant: any;
+      onSuccess?: () => void;
+   }) =>
+      isOpen && participant
+         ? createElement(
+              "div",
+              {
+                 "data-testid": "admin-pardon-modal",
+                 "data-participant-id": participant.participantId,
+                 "data-participant-name": participant.displayName,
+              },
+              createElement(
+                 "button",
+                 {
+                    "data-testid": "mock-pardon-success-btn",
+                    onClick: () => onSuccess?.(),
+                 },
+                 "Confirm Pardon"
+              )
+           )
+         : null,
 }));
 
 vi.mock("@/features/challenges/presentation/edit-duo-team-modal", () => ({
@@ -951,6 +984,165 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).toContain("width:0%");
          expect(html).toContain("125%");
          expect(html).toContain("width:100%");
+      });
+   });
+
+   describe("Admin Quick-Pardon Trigger (FEAT-PUN-04 / GH-#211)", () => {
+      const lockedChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         status: "COMPLETED",
+         resultsLockedAt: "2026-10-08T00:00:00.000Z",
+         standings: [
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-punished",
+               userId: "user-punished",
+               displayName: "Punished Scholar",
+               username: "punished_one",
+               teamName: "Serpents",
+               paceStatus: "punished",
+               status: "PUNISHED",
+            },
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-serene",
+               userId: "user-serene",
+               displayName: "Serene Scholar",
+               username: "serene_one",
+               teamName: "Serpents",
+               paceStatus: "serene",
+               status: "ACTIVE",
+            },
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-excused",
+               userId: "user-excused",
+               displayName: "Excused Scholar",
+               username: "excused_one",
+               teamName: "Serpents",
+               paceStatus: "excused",
+               status: "EXCUSED",
+            },
+         ],
+      };
+
+      it("renders Pardon button for punished participants when isAdmin is true on completed/locked challenges", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).toContain('data-testid="admin-pardon-button"');
+         expect(html).toContain("Pardon");
+         expect(html).toContain("Edit hr");
+         expect(html).toContain("Edit target");
+      });
+
+      it("does not render Pardon button for regular participants or spectators (isAdmin: false)", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain('data-testid="admin-pardon-button"');
+         expect(html).not.toContain("Admin: Grant Pardon");
+      });
+
+      it("does not render Pardon button when challenge is still active / unlocked even if isAdmin is true", () => {
+         const activeChallenge: ChallengeScoreboardViewModel = {
+            ...lockedChallenge,
+            status: "ACTIVE",
+            resultsLockedAt: null,
+            standings: [
+               {
+                  ...lockedChallenge.standings[0]!,
+                  paceStatus: "catch-up",
+                  status: "ACTIVE",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: activeChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain('data-testid="admin-pardon-button"');
+      });
+
+      it("renders Pardon button in Team View mode for punished house members and unassigned scholars", () => {
+         const teamChallengeWithUnassigned: ChallengeScoreboardViewModel = {
+            ...lockedChallenge,
+            standings: [
+               ...lockedChallenge.standings,
+               {
+                  ...lockedChallenge.standings[0]!,
+                  participantId: "part-unassigned-punished",
+                  userId: "user-unassigned",
+                  displayName: "Unassigned Punished Scholar",
+                  teamId: "no-assigned",
+                  teamName: "Unassigned",
+                  paceStatus: "punished",
+                  status: "PUNISHED",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: teamChallengeWithUnassigned,
+               isAdmin: true,
+               initialViewMode: "team",
+            })
+         );
+
+         expect(html).toContain('data-testid="admin-pardon-button"');
+      });
+
+      it("opens AdminPardonModal with pre-selected participant on click and triggers router.refresh on success", () => {
+         mockRefresh.mockClear();
+
+         render(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         // Initially modal is not open
+         expect(screen.queryByTestId("admin-pardon-modal")).toBeNull();
+
+         // Find pardon button and click it
+         const pardonButtons = screen.getAllByTestId("admin-pardon-button");
+         expect(pardonButtons.length).toBeGreaterThan(0);
+         fireEvent.click(pardonButtons[0]!);
+
+         // Modal should now be open with the punished participant
+         const modal = screen.getByTestId("admin-pardon-modal");
+         expect(modal).not.toBeNull();
+         expect(modal.getAttribute("data-participant-id")).toBe(
+            "part-punished"
+         );
+         expect(modal.getAttribute("data-participant-name")).toBe(
+            "Punished Scholar"
+         );
+
+         // Simulate successful pardon
+         const successBtn = screen.getByTestId("mock-pardon-success-btn");
+         fireEvent.click(successBtn);
+
+         // router.refresh should have been triggered
+         expect(mockRefresh).toHaveBeenCalled();
       });
    });
 });

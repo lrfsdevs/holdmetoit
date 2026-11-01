@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import {
    X,
    RotateCcw,
    Target,
+   HeartHandshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,10 @@ import {
    AdminTargetOverrideModal,
    type AdminTargetOverrideParticipant,
 } from "@/features/challenges/presentation/admin-target-override-modal";
+import {
+   AdminPardonModal,
+   type AdminPardonParticipant,
+} from "@/features/accountability/presentation/admin-pardon-modal";
 import { EditDuoTeamModal } from "@/features/challenges/presentation/edit-duo-team-modal";
 import { DataPagination } from "@/components/ui/data-pagination";
 import {
@@ -89,6 +95,19 @@ function isUnassignedScholar(entry: ScoreboardStandingEntry): boolean {
       entry.teamId === "no-assigned" ||
       entry.teamId === "UNASSIGNED" ||
       entry.teamName === "Unassigned"
+   );
+}
+
+function isPunishedScholar(entry: ScoreboardStandingEntry): boolean {
+   if (
+      entry.paceStatus === "excused" ||
+      entry.status?.toUpperCase() === "EXCUSED"
+   ) {
+      return false;
+   }
+   return (
+      entry.paceStatus === "punished" ||
+      entry.status?.toUpperCase() === "PUNISHED"
    );
 }
 
@@ -189,6 +208,7 @@ export function ChallengeLeaderboardTab({
    initialViewMode,
    isGlobalLeaderboardEnabled = false,
 }: ChallengeLeaderboardTabProps) {
+   const router = useRouter();
    const [searchQuery, setSearchQuery] = useState("");
    const [selectedTeamId, setSelectedTeamId] = useState("ALL");
    const [statusFilter, setStatusFilter] = useState<
@@ -267,6 +287,30 @@ export function ChallengeLeaderboardTab({
       useState<AdminTargetOverrideParticipant | null>(null);
    const [isTargetOverrideModalOpen, setIsTargetOverrideModalOpen] =
       useState(false);
+
+   const isChallengeLocked =
+      challenge.status === "COMPLETED" || Boolean(challenge.resultsLockedAt);
+   const canPardon = isAdmin && isChallengeLocked;
+
+   // Admin Pardon State (FEAT-PUN-04)
+   const [pardonParticipant, setPardonParticipant] =
+      useState<AdminPardonParticipant | null>(null);
+   const [isPardonModalOpen, setIsPardonModalOpen] = useState(false);
+
+   const handleOpenPardon = (entry: ScoreboardStandingEntry) => {
+      setPardonParticipant({
+         participantId: entry.participantId,
+         userId: entry.userId,
+         displayName: entry.displayName,
+         username: entry.username,
+         image: entry.image,
+         teamName: entry.teamName,
+         teamColor: entry.teamColor,
+         paceStatus: entry.paceStatus,
+         status: entry.status || entry.paceStatus.toUpperCase(),
+      });
+      setIsPardonModalOpen(true);
+   };
 
    const handleOpenOverride = (entry: ScoreboardStandingEntry) => {
       setOverrideParticipant({
@@ -1218,6 +1262,27 @@ export function ChallengeLeaderboardTab({
                                                             Edit target
                                                          </span>
                                                       </button>
+                                                      {canPardon &&
+                                                         isPunishedScholar(
+                                                            entry
+                                                         ) && (
+                                                            <button
+                                                               type="button"
+                                                               data-testid="admin-pardon-button"
+                                                               onClick={() =>
+                                                                  handleOpenPardon(
+                                                                     entry
+                                                                  )
+                                                               }
+                                                               className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
+                                                               title="Admin: Grant Pardon / Excuse Member"
+                                                            >
+                                                               <HeartHandshake className="h-3 w-3 text-feedback-success" />
+                                                               <span>
+                                                                  Pardon
+                                                               </span>
+                                                            </button>
+                                                         )}
                                                    </div>
                                                 )}
                                              </div>
@@ -1415,6 +1480,23 @@ export function ChallengeLeaderboardTab({
                                                    <Target className="h-3 w-3 text-accent" />
                                                    <span>Edit target</span>
                                                 </button>
+                                                {canPardon &&
+                                                   isPunishedScholar(entry) && (
+                                                      <button
+                                                         type="button"
+                                                         data-testid="admin-pardon-button"
+                                                         onClick={() =>
+                                                            handleOpenPardon(
+                                                               entry
+                                                            )
+                                                         }
+                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
+                                                         title="Admin: Grant Pardon / Excuse Member"
+                                                      >
+                                                         <HeartHandshake className="h-3 w-3 text-feedback-success" />
+                                                         <span>Pardon</span>
+                                                      </button>
+                                                   )}
                                              </div>
                                           )}
                                        </div>
@@ -1576,6 +1658,21 @@ export function ChallengeLeaderboardTab({
                                              <Target className="h-3 w-3 text-accent" />
                                              <span>Edit target</span>
                                           </button>
+                                          {canPardon &&
+                                             isPunishedScholar(entry) && (
+                                                <button
+                                                   type="button"
+                                                   data-testid="admin-pardon-button"
+                                                   onClick={() =>
+                                                      handleOpenPardon(entry)
+                                                   }
+                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
+                                                   title="Admin: Grant Pardon / Excuse Member"
+                                                >
+                                                   <HeartHandshake className="h-3 w-3 text-feedback-success" />
+                                                   <span>Pardon</span>
+                                                </button>
+                                             )}
                                        </div>
                                     )}
                                  </div>
@@ -1739,17 +1836,40 @@ export function ChallengeLeaderboardTab({
                                                 </span>
                                              </div>
                                              {isAdmin && (
-                                                <button
-                                                   type="button"
-                                                   onClick={() =>
-                                                      handleOpenOverride(entry)
-                                                   }
-                                                   className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
-                                                   title="Admin: Edit Participant Study Hours"
-                                                >
-                                                   <Clock className="h-3.5 w-3.5 text-feedback-info" />
-                                                   <span>Edit hr</span>
-                                                </button>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                   <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                         handleOpenOverride(
+                                                            entry
+                                                         )
+                                                      }
+                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
+                                                      title="Admin: Edit Participant Study Hours"
+                                                   >
+                                                      <Clock className="h-3.5 w-3.5 text-feedback-info" />
+                                                      <span>Edit hr</span>
+                                                   </button>
+                                                   {canPardon &&
+                                                      isPunishedScholar(
+                                                         entry
+                                                      ) && (
+                                                         <button
+                                                            type="button"
+                                                            data-testid="admin-pardon-button"
+                                                            onClick={() =>
+                                                               handleOpenPardon(
+                                                                  entry
+                                                               )
+                                                            }
+                                                            className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold hover:border-feedback-success/50 hover:text-feedback-success shrink-0"
+                                                            title="Admin: Grant Pardon / Excuse Member"
+                                                         >
+                                                            <HeartHandshake className="h-3.5 w-3.5 text-feedback-success" />
+                                                            <span>Pardon</span>
+                                                         </button>
+                                                      )}
+                                                </div>
                                              )}
                                           </div>
                                        ) : (
@@ -1848,6 +1968,25 @@ export function ChallengeLeaderboardTab({
                                                       <Target className="h-3.5 w-3.5 text-accent" />
                                                       <span>Edit target</span>
                                                    </button>
+                                                   {canPardon &&
+                                                      isPunishedScholar(
+                                                         entry
+                                                      ) && (
+                                                         <button
+                                                            type="button"
+                                                            data-testid="admin-pardon-button"
+                                                            onClick={() =>
+                                                               handleOpenPardon(
+                                                                  entry
+                                                               )
+                                                            }
+                                                            className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
+                                                            title="Admin: Grant Pardon / Excuse Member"
+                                                         >
+                                                            <HeartHandshake className="h-3.5 w-3.5 text-feedback-success" />
+                                                            <span>Pardon</span>
+                                                         </button>
+                                                      )}
                                                 </div>
                                              )}
                                           </div>
@@ -1906,6 +2045,20 @@ export function ChallengeLeaderboardTab({
                   }}
                   challengeId={challenge.id}
                   participant={targetOverrideParticipant}
+               />
+
+               {/* Admin Pardon Modal (FEAT-PUN-04) */}
+               <AdminPardonModal
+                  isOpen={isPardonModalOpen}
+                  onClose={() => {
+                     setIsPardonModalOpen(false);
+                     setPardonParticipant(null);
+                  }}
+                  challengeId={challenge.id}
+                  participant={pardonParticipant}
+                  onSuccess={() => {
+                     router.refresh();
+                  }}
                />
             </>
          )}
