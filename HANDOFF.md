@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 189 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-02 (Session 190 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2472,3 +2472,43 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
       - `npm run test:web`: ✅ 240/240 test files green (2,355/2,355 tests passed).
 - **NEXT STEP:** Submit PR for `KAN-73` / GH-#216 and transition Jira ticket `KAN-73` to `In Review`.
+
+### Session 190 — 2026-11-02 (fix(leaderboard): prevent uncompleted participants from showing 'Completed' pace status on locked challenges — GH-#217 / Jira KAN-74 on `krish`)
+
+- **Context & Objectives:** Implement and fix GitHub Issue [#217](https://github.com/lrfsdevs/holdmetoit/issues/217) / Jira Ticket `KAN-74` ("fix(leaderboard): prevent uncompleted participants from showing 'Completed' pace status on locked challenges"). Fix display fallback in `buildScoreboardViewModel` so that participants with target hour deficits (`deficitSeconds > 0`) or incomplete challenge-linked weekly goals are strictly evaluated as `punished` on locked challenges, rather than falsely displaying a green "Completed" badge. Clamp `completionPercentage` so that deficits never round to 100%. Implement `reconcileChallengeAccountability` in `apps/ypt-bot` to evaluate participant outcomes and write `PunishmentRecord` rows upon 6-hour post-grace auto-lock.
+- **Jira Status:** Transitioned `KAN-74` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L3 (The Catch-Up Deficit Model: Zero Grace Passes):** Uncompleted target hours remain active deficits that must not be masked as completed once a challenge is locked.
+   - **Law L6 (Three-Condition Accountability Invariant):** At event lock, scholars are saved only when (1) all challenge-linked weekly tasks are completed, (2) target hours are met, and (3) their team is a winning team (ties are draws where all max-score teams win; solo format evaluates individually). If any condition fails, the scholar is flagged `PUNISHED` and never displays `Completed`.
+   - **Law L8 (Second-Level Precision):** Deficit and completion percentage calculations respect exact integer seconds without rounding up to 100% when time remains uncompleted.
+   - **Law L9 (Zero-State & Error Resilience):** Auto-lock and leaderboard view models safely handle null/undefined participant structures, missing tasks, and disconnected states with defensive fallback.
+- **Architectural Slices Implemented:**
+   1. **Leaderboard Data Layer (`apps/web/features/leaderboard/data/leaderboard-data.ts`):**
+      - Removed buggy `!isResultsLocked &&` guard in `buildScoreboardViewModel` line 351 that previously bypassed the deficit check on locked challenges.
+      - Enforced that if `status === "COMPLETED"`, participants with `deficitSeconds > 0` or incomplete weekly tasks (`weeklyTasksCompletedCount < weeklyTasksTotalCount`) are assigned `paceStatus: "punished"` and `paceLabel: "Punished"` unless pardoned/excused (`isPardonedRecord`).
+      - Added safeguard clamping `completionPercentage` to 99% if `deficitSeconds > 0` and raw rounded percentage would have been 100%.
+   2. **Accountability & Automated Auto-Lock Reconciliation (`apps/ypt-bot/src/db/challenge-repository.js`):**
+      - Implemented `reconcileChallengeAccountability(challengeId, now, log)`: reads challenge, teams, non-withdrawn participants, and challenge-linked weekly tasks.
+      - Calculates capped team study totals (`clampDailyStudySeconds`), determines winning team IDs, and checks all 3 conditions under Law L6.
+      - Atomically transitions qualifying participants to `status: "NORMAL"`, failing participants to `status: "PUNISHED"`, and writes corresponding `PunishmentRecord` entries.
+      - Wired `reconcileChallengeAccountability` into `lockExpiredChallengesAfterGrace` immediately following challenge lock update and audit log creation.
+   3. **Presentation & Rendering Layer (`apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+      - Verified semantic badge styling via `PaceStatusBadge`: `Punished` renders error styling (`bg-feedback-error-bg text-feedback-error-text`), `Completed` renders success styling (`bg-feedback-success-bg text-feedback-success-text`), and `Excused` renders accent styling.
+   4. **Documentation & Quality Gates:**
+      - Updated architecture documentation in `docs/leaderboard/README.md` (§7.4).
+      - Added unit tests in `apps/web/features/leaderboard/data/leaderboard-data.test.ts` (34/34 tests green):
+         - Tested uncompleted participants with target deficits are marked `punished` on locked challenges.
+         - Tested participants with 0 deficit and no punishments are marked `Completed`.
+         - Tested participants with incomplete weekly goals are marked `punished` even if hours are met.
+         - Tested `completionPercentage` clamp when fractional deficit remains.
+      - Added unit tests in `apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (37/37 tests green):
+         - Verified locked challenge standings table badge rendering for uncompleted vs completed scholars.
+      - Added unit tests in `apps/ypt-bot/test/db/challenge-repository.test.js` (100/100 tests green):
+         - Tested three-condition evaluation during auto-lock (hours, tasks, losing team).
+         - Tested SOLOS format exemption from team loss penalty.
+         - Tested tie draws where all tied maximum teams are saved.
+      - `npm run typecheck:web`: ✅ 0 compiler errors.
+      - `npm run lint:web`: ✅ 0 errors.
+      - `npm --prefix apps/web test -- features/leaderboard`: ✅ 125/125 tests passing.
+      - `npm run test:ypt-bot`: ✅ 100/100 tests passing.
+- **NEXT STEP:** Create atomic commits for `KAN-74` / GH-#217, prepare pull request for peer review, and update Jira status to In Review upon PR submission.

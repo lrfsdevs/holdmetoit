@@ -174,6 +174,22 @@ The per-challenge standings are separate from the global trophy board. Two forma
       - Fully compliant with Obsidian Dark theme and semantic design tokens (zero hex values).
       - Compact padding and `overflow-x-auto` container ensure smooth horizontal scroll safety on 640px–1024px tablet viewports.
 
+### 7.4 Locked Challenge Pace Status Invariant & Auto-Lock Reconciliation (GH #217 / KAN-74)
+
+1. **Context & Problem Statement:**
+   - On the challenge Leaderboard tab (`/challenge/[id]?tab=leaderboard`), scholars with uncompleted weekly target hours (e.g. 14%, 11%, 3% progress) were displaying a green **'Completed'** badge under Pace Status when a challenge was locked.
+   - In `buildScoreboardViewModel` (`features/leaderboard/data/leaderboard-data.ts`), a line guarded `!isResultsLocked && deficitSeconds > 0`. Consequently, once `resultsLockedAt` was set (`isResultsLocked = true`), the deficit check was skipped. If a participant had no explicit `PunishmentRecord` and their status was `NORMAL`, they fell through to the default `Completed` state.
+   - Additionally, the YPT ingestion daemon auto-lock (`apps/ypt-bot/src/db/challenge-repository.js`) updated `resultsLockedAt: now` directly without evaluating participants or creating `PunishmentRecord` entries.
+
+2. **Architectural Implementation:**
+   - **Leaderboard Data Invariant (`features/leaderboard/data/leaderboard-data.ts`):**
+      - Any participant with `deficitSeconds > 0` or uncompleted challenge-linked weekly tasks (`weeklyTasksCompletedCount < weeklyTasksTotalCount`) on a completed/locked challenge is strictly evaluated as `paceStatus: "punished"` and `paceLabel: "Punished"` unless pardoned/excused (`isPardonedRecord`), preserving **Law L6 (Three-Condition Accountability Invariant)** and **Law L3 (The Catch-Up Deficit Model)**.
+      - Safeguard against false 100% completion percentages: `completionPercentage` is clamped below 100% (to 99%) whenever `deficitSeconds > 0`.
+   - **Automated Accountability Reconciliation (`apps/ypt-bot/src/db/challenge-repository.js`):**
+      - `lockExpiredChallengesAfterGrace` triggers `reconcileChallengeAccountability` upon auto-locking expired challenges.
+      - Reconciles all 3 conditions: target hours met, weekly tasks completed, and winning team (ties are draws: all teams at the maximum score win; individual competition in SOLOS format).
+      - Automatically sets `status: "PUNISHED"` and creates `PunishmentRecord` rows for uncompleted participants, while setting qualifying participants to `status: "NORMAL"`.
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
