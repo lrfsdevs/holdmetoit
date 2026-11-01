@@ -119,6 +119,20 @@ The per-challenge standings are separate from the global trophy board. Two forma
    battles rely on the top-3 podium and the team-view cards instead. `matchHeader.hasMatchup`
    is intentionally untouched because Discord embeds still derive their description from it.
 
+### 7.1 Head-to-Head Banner Card Anchoring & Dynamic Leader Badge (GH #206 / KAN-67)
+
+1. **Card Anchoring by Creation Order:**
+   - Head-to-head match cards in `ChallengeLeaderboardTab` are permanently anchored to fixed slots based on team creation order (`sortOrder` ascending) rather than dynamically swapping positions whenever hours lead changes.
+   - Slot 1 (`teamA`) represents the first created team, and Slot 2 (`teamB`) represents the second created team.
+   - Eliminates layout shifting and visual disorientation caused by matchup cards flipping left-to-right mid-challenge.
+
+2. **Dynamic Leading Crown & Margin Delta:**
+   - When a team holds a strictly positive lead in cumulative logged seconds (`matchHeader.leadMarginSeconds > 0`):
+      - The leading team's card displays a high-contrast `👑 Leading` badge (`bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text`) in the card header.
+      - The leading team's total logged hours displays the lead margin delta (`+Xh Ym ahead` or `+Xh Ym Zs ahead` via `formatLeadMarginDelta`) beside the clock time.
+      - The trailing team's card displays standard total hours without leading badges or margin deltas.
+   - When both teams are tied or have 0 logged seconds (`matchHeader.leaderSide === "tie"`), neither card displays a leading badge or ahead delta, preserving mathematical integrity (Law L6/L7).
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
