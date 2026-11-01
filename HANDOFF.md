@@ -2157,7 +2157,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ### Session 184 — 2026-11-01 (feat(leaderboard): render unassigned scholars section in team view mode — GH-#209 / Jira KAN-70 on `krish`)
 
 - **Context & Objectives:** Implement GitHub Issue [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) / Jira Ticket `KAN-70` ("When participants enroll in a challenge before being assigned to a house, their teamId is null ('no-assigned'). In 'View by Team' mode, render an 'Unassigned Scholars (⏳)' card alongside house cards, provide a 1-click shortcut link to the Manage tab for hosts/admins, and add 'UNASSIGNED' to the leaderboard team filter dropdown").
-- **Jira Status:** Transitioned `KAN-70` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Jira Status:** Transitioned `KAN-70` from `To Do` $\rightarrow$ `In Progress` $\rightarrow$ `In Review` (transition ID `31`) and `KAN-67` from `In Progress` $\rightarrow$ `In Review` (transition ID `31`) via Jira Cloud API.
 - **Law Invariants Preserved:**
    - **Law L1 (Single Entity & Mathematical Unity):** Team aggregation math remains intact. Unassigned participants are accounted for and visible across team and individual standings.
    - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Unassigned participants are visible to all spectators with their avatars, Discord handles, and live study logs.
@@ -2185,4 +2185,5 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - Test suites: ✅ 27/27 tests green in `challenge-leaderboard-tab.test.tsx`, 109/109 tests green across `features/leaderboard`.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and anti-slop rules).
-- **NEXT STEP:** Commit and create PR for `KAN-70` / GH-#209, and transition Jira ticket `KAN-70` to `In Review`.
+- **GitHub PR & Issues Status:** Submitted PR [#214](https://github.com/lrfsdevs/holdmetoit/pull/214) (`krish` $\rightarrow$ `dev`) closing GitHub Issues [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) and [#206](https://github.com/lrfsdevs/holdmetoit/issues/206).
+- **NEXT STEP:** Peer review and merge PR #214 into `dev`, then proceed to release integration.
