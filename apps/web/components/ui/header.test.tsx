@@ -203,5 +203,9 @@ describe("AppHeader", () => {
       expect(html).toContain('data-testid="preferences-nav-link"');
       expect(html).toContain('href="/preferences"');
       expect(html).toContain('data-testid="quick-preferences-button"');
+      expect(html).toContain(
+         'data-testid="quick-preferences-button" title="Preferences"'
+      );
+      expect(html).toContain("Preferences");
    });
 });

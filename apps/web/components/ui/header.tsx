@@ -275,14 +275,17 @@ export function AppHeader({
                )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                <Link
                   href="/preferences"
                   data-testid="quick-preferences-button"
                   title="Preferences"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-border-default bg-surface-elevated text-text-secondary hover:text-text-primary hover:bg-surface-nested transition-colors shrink-0"
+                  className="flex h-8 items-center gap-1.5 rounded-full border border-border-strong bg-surface-elevated hover:bg-surface-nested hover:border-brand-1/50 px-2.5 sm:px-3 text-xs font-medium text-text-primary hover:text-white shadow-sm transition-all shrink-0 group cursor-pointer"
                >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-3.5 w-3.5 text-brand-1 group-hover:rotate-45 transition-transform duration-300 shrink-0" />
+                  <span className="font-medium tracking-tight">
+                     Preferences
+                  </span>
                </Link>
 
                <UserNav
