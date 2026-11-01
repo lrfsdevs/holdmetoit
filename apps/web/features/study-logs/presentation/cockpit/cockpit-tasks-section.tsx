@@ -90,6 +90,7 @@ import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { cn } from "@/lib/utils";
 import { triggerTaskConfetti } from "@/lib/confetti";
+import { playCompletionAudio } from "@/features/preferences/presentation/audio-service";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    applyRolloverToCategories,
@@ -1304,6 +1305,7 @@ export function CockpitTasksSection({
                   ? document.querySelector(`[data-task-id="${taskId}"]`)
                   : null;
             triggerTaskConfetti(clickOrigin ?? targetEl);
+            void playCompletionAudio();
          }
 
          setDailyCategories((prev) =>
@@ -1401,6 +1403,7 @@ export function CockpitTasksSection({
                   ? document.querySelector(`[data-task-id="${taskId}"]`)
                   : null;
             triggerTaskConfetti(clickOrigin ?? targetEl);
+            void playCompletionAudio();
          }
 
          setWeeklyCategories((prev) =>
@@ -1657,6 +1660,7 @@ export function CockpitTasksSection({
                   ? document.querySelector(`[data-task-id="${id}"]`)
                   : null;
             triggerTaskConfetti(targetEl);
+            void playCompletionAudio();
          }
       }
 
