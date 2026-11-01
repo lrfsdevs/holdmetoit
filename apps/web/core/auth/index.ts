@@ -149,6 +149,21 @@ const nextAuthResult = NextAuth({
             session.user.role = user.role;
             session.user.discordId = user.discordId;
             session.user.displayName = user.displayName;
+            session.user.isSick = Boolean((user as any).isSick);
+            session.user.sickModeActivatedAt = (user as any).sickModeActivatedAt
+               ? new Date((user as any).sickModeActivatedAt).toISOString()
+               : null;
+            session.user.sickModeNote = (user as any).sickModeNote ?? null;
+            session.user.sickModeReminderSnoozedUntil = (user as any)
+               .sickModeReminderSnoozedUntil
+               ? new Date(
+                    (user as any).sickModeReminderSnoozedUntil
+                 ).toISOString()
+               : null;
+            session.user.sickModeLastDeactivatedAt = (user as any)
+               .sickModeLastDeactivatedAt
+               ? new Date((user as any).sickModeLastDeactivatedAt).toISOString()
+               : null;
 
             if (
                user.discordId &&
