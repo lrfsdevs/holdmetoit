@@ -30,6 +30,13 @@ model User {
   displayName String?
   role        UserRole @default(PARTICIPANT)
 
+  // Sick Mode / Under the Weather status (FEAT-PART-SICK / #205)
+  isSick                       Boolean   @default(false)
+  sickModeActivatedAt          DateTime?
+  sickModeNote                 String?   @db.VarChar(120)
+  sickModeReminderSnoozedUntil DateTime?
+  sickModeLastDeactivatedAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

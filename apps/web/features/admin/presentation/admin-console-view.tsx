@@ -9,6 +9,7 @@ import {
    ExternalLink,
    Search,
    Wrench,
+   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,15 +60,55 @@ export function AdminConsoleView() {
                   </div>
                </div>
 
-               <Link
-                  href="/challenges"
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-text-secondary hover:text-white transition-colors"
-               >
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Challenges</span>
-                  <ExternalLink className="h-3 w-3" />
-               </Link>
+               <div className="flex items-center gap-2">
+                  <Link
+                     href="/admin/users"
+                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-brand-1/10 border border-brand-1/30 text-brand-1 hover:bg-brand-1/20 transition-colors"
+                  >
+                     <Users className="h-3.5 w-3.5" />
+                     <span>User Directory</span>
+                  </Link>
+
+                  <Link
+                     href="/challenges"
+                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-text-secondary hover:text-white transition-colors"
+                  >
+                     <Calendar className="h-3.5 w-3.5" />
+                     <span>Challenges</span>
+                     <ExternalLink className="h-3 w-3" />
+                  </Link>
+               </div>
             </div>
+         </div>
+
+         {/* Global User Directory Navigation Card */}
+         <div className="rounded-3xl border border-border-default bg-surface-primary p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-1/10 border border-brand-1/30 text-brand-1 shrink-0">
+                  <Users className="h-5 w-5" />
+               </div>
+               <div>
+                  <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                     Global User Directory & Rosters
+                  </h2>
+                  <p className="text-xs text-text-tertiary mt-0.5">
+                     Browse registered platform members, view lifetime study
+                     hours, track battle enrollments, manage roles, and inspect
+                     audit trails.
+                  </p>
+               </div>
+            </div>
+            <Button
+               asChild
+               variant="default"
+               size="sm"
+               className="h-9 px-4 text-xs font-semibold shrink-0"
+            >
+               <Link href="/admin/users">
+                  <span>Open Directory</span>
+                  <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+               </Link>
+            </Button>
          </div>
 
          {/* Trophy Management */}

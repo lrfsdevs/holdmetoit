@@ -8,6 +8,11 @@ declare module "next-auth" {
          role: UserRole;
          discordId: string | null;
          displayName: string | null;
+         isSick?: boolean;
+         sickModeActivatedAt?: string | null;
+         sickModeNote?: string | null;
+         sickModeReminderSnoozedUntil?: string | null;
+         sickModeLastDeactivatedAt?: string | null;
       } & DefaultSession["user"];
    }
 
@@ -15,6 +20,11 @@ declare module "next-auth" {
       role: UserRole;
       discordId: string | null;
       displayName: string | null;
+      isSick?: boolean;
+      sickModeActivatedAt?: Date | string | null;
+      sickModeNote?: string | null;
+      sickModeReminderSnoozedUntil?: Date | string | null;
+      sickModeLastDeactivatedAt?: Date | string | null;
    }
 }
 

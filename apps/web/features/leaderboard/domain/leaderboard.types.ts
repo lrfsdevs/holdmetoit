@@ -58,6 +58,9 @@ export interface ScoreboardStandingEntry {
    deficitSeconds: number;
    dailyLogs?: Record<string, number>;
    trophies?: number;
+   isSick?: boolean;
+   sickModeActivatedAt?: string | null;
+   sickModeNote?: string | null;
 }
 
 export interface ChallengeScoreboardViewModel {

@@ -1,17 +1,23 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/core/auth";
-import { prisma } from "@/core/db";
-import { findParticipantForUser } from "@/features/challenges/data/participant.repository";
+import { hasAdminPrivileges } from "@/features/auth/domain/auth-roles";
+import {
+   getGlobalUserProfile,
+   getChallengeSnapshotForUser,
+} from "@/features/participant-stats/data/global-profile.repository";
+import { GlobalProfileView } from "@/features/participant-stats/presentation/global-profile-view";
+import type { ParticipantStatsViewModel } from "@/features/participant-stats/domain/participant-stats.types";
 
 export const dynamic = "force-dynamic";
 
 interface ProfilePageProps {
    searchParams?: {
       challengeId?: string;
+      tab?: string;
    };
 }
 
-/** Resolves the current user's profile route to an enrolled participant page or fallback profile. */
+/** Renders the current authenticated session user's global profile view. */
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
    const session = await auth();
 
@@ -20,56 +26,44 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       return;
    }
 
-   // 1. If challengeId is explicitly provided in query, find participant for that challenge first
-   if (searchParams?.challengeId) {
-      const participant = await findParticipantForUser(
-         session.user.id,
-         searchParams.challengeId
-      );
-      if (participant) {
-         redirect(
-            `/challenge/${participant.challengeId}/participant/${participant.id}`
-         );
-         return;
-      }
-
-      // If user is not enrolled in this challenge, redirect to their fallback profile in this challenge
-      const targetChallenge = await prisma.challenge.findUnique({
-         where: { id: searchParams.challengeId, isDeleted: false },
-         select: { id: true },
-      });
-      if (targetChallenge) {
-         redirect(
-            `/challenge/${targetChallenge.id}/participant/${session.user.id}`
-         );
-         return;
-      }
-   }
-
-   // 2. Otherwise find the user's active, upcoming, or most recent challenge participant record
-   const participant = await findParticipantForUser(session.user.id);
-   if (participant) {
-      redirect(
-         `/challenge/${participant.challengeId}/participant/${participant.id}`
-      );
+   const profile = await getGlobalUserProfile(session.user.id);
+   if (!profile) {
+      redirect("/");
       return;
    }
 
-   // 3. Fallback for users with no challenge participation (e.g. registered after last event ended):
-   // Resolve to the latest challenge so they can see their profile and status in context.
-   const latestChallenge = await prisma.challenge.findFirst({
-      where: { isDeleted: false },
-      orderBy: { createdAt: "desc" },
-      select: { id: true },
-   });
+   let initialSnapshot: ParticipantStatsViewModel | null = null;
+   let selectedChallengeId = searchParams?.challengeId;
 
-   if (latestChallenge) {
-      redirect(
-         `/challenge/${latestChallenge.id}/participant/${session.user.id}`
+   if (profile.challengeHistory.length > 0) {
+      const match = profile.challengeHistory.find(
+         (c) => c.challengeId === selectedChallengeId
       );
-      return;
+      if (!match) {
+         selectedChallengeId = profile.challengeHistory[0].challengeId;
+      }
+
+      if (selectedChallengeId) {
+         initialSnapshot = await getChallengeSnapshotForUser(
+            session.user.id,
+            selectedChallengeId,
+            {
+               currentUserId: session.user.id,
+               isAdmin: hasAdminPrivileges(session.user.role),
+            }
+         );
+      }
    }
 
-   // 4. If no challenges exist in database at all, redirect to challenges catalog
-   redirect("/challenges");
+   return (
+      <GlobalProfileView
+         profile={profile}
+         initialChallengeSnapshot={initialSnapshot}
+         selectedChallengeId={selectedChallengeId}
+         isAuthorizedHistory={true}
+         isOwnProfile={true}
+         viewerRole={session.user.role}
+         initialYptId={profile.user.yptId}
+      />
+   );
 }

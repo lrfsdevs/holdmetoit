@@ -453,7 +453,7 @@ describe("ChallengeLeaderboardTab", () => {
 
       // Links should contain ?view=today
       expect(todayHtml).toContain(
-         `/challenge/${todayChallenge.id}/participant/part-test-123?view=today`
+         `/profile/user-1?challengeId=${todayChallenge.id}`
       );
 
       const defaultHtml = renderToStaticMarkup(
@@ -465,10 +465,10 @@ describe("ChallengeLeaderboardTab", () => {
 
       // Default (overall rank) links should NOT have ?view=
       expect(defaultHtml).toContain(
-         `/challenge/${todayChallenge.id}/participant/part-test-123"`
+         `/profile/user-1?challengeId=${todayChallenge.id}`
       );
       expect(defaultHtml).not.toContain(
-         `/challenge/${todayChallenge.id}/participant/part-test-123?`
+         `/profile/user-1?challengeId=${todayChallenge.id}&view=`
       );
    });
 
@@ -561,11 +561,9 @@ describe("ChallengeLeaderboardTab", () => {
       );
 
       expect(teamHtml).toContain(
-         `/challenge/${duoChallenge.id}/participant/part-duo-1"`
+         `/profile/user-1?challengeId=${duoChallenge.id}`
       );
-      expect(teamHtml).not.toContain(
-         `/challenge/${duoChallenge.id}/participant/part-duo-1?view=team`
-      );
+      expect(teamHtml).not.toContain(`&view=team`);
 
       const individualHtml = renderToStaticMarkup(
          createElement(ChallengeLeaderboardTab, {
@@ -575,7 +573,7 @@ describe("ChallengeLeaderboardTab", () => {
       );
 
       expect(individualHtml).toContain(
-         `/challenge/${duoChallenge.id}/participant/part-duo-1?view=individual`
+         `/profile/user-1?challengeId=${duoChallenge.id}`
       );
    });
 

@@ -575,8 +575,6 @@ async function runSync(
                .filter((c) => !pendingEntityIds.has(c.id))
                .map((c) => mapCategoryItemToLocal(c, userId));
 
-            const existingTasks = await getAllLocalTasks(userId);
-
             const localTasks = data.serverChanges.tasks
                .filter((t) => !pendingEntityIds.has(t.id))
                .map((t) => mapTaskItemToLocal(t, userId));
@@ -588,7 +586,7 @@ async function runSync(
             const serverTaskIdSet = new Set(
                data.serverChanges.tasks.map((t) => t.id)
             );
-            // existingTasks already populated during local task reconciliation
+            const existingTasks = await getAllLocalTasks(userId);
             for (const lt of existingTasks) {
                if (
                   lt.syncState === "synced" &&

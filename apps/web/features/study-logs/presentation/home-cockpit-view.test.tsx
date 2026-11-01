@@ -19,6 +19,12 @@ vi.mock("next/link", () => ({
    }) => createElement("a", { href, className, ...props }, children),
 }));
 
+vi.mock("@/core/auth", () => ({
+   auth: vi.fn(),
+   signIn: vi.fn(),
+   signOut: vi.fn(),
+}));
+
 vi.mock("@/features/challenges/presentation/enrollment-modal", () => ({
    EnrollmentModal: () => null,
    JoinChallengeModal: () => null,
@@ -279,7 +285,7 @@ describe("HomeCockpitView", () => {
       expect(html).not.toContain("Weekly Commitment Progress");
    });
 
-   it("renders guest view gracefully when user is not logged in", () => {
+   it("renders guest cockpit view with hero banner, Discord CTA, ecosystem cards, and task sandbox when user is not logged in", () => {
       const html = renderToStaticMarkup(
          createElement(HomeCockpitView, {
             user: null,
@@ -287,6 +293,18 @@ describe("HomeCockpitView", () => {
             displayName: "Guest",
          })
       );
+      expect(html).toContain('data-testid="guest-cockpit-view"');
+      expect(html).toContain("Level Up Your Focus with Gamified Study Battles");
+      expect(html).toContain("Sign in with Discord");
+      expect(html).toContain('href="/challenges"');
+      expect(html).toContain("Browse Challenges");
+      expect(html).toContain('href="/leaderboard"');
+      expect(html).toContain("Trophy Leaderboard");
+      expect(html).toContain("Weekly Commitment Progress");
+      expect(html).toContain("Preview Mode");
+      expect(html).toContain("YPT Ready");
+      expect(html).toContain("Local Guest Sandbox");
+      expect(html).toContain("Complete 2h Deep Work block");
       expect(html).toContain("Daily Todos");
       expect(html).toContain("Weekly Todos");
    });
@@ -333,9 +351,21 @@ describe("HomeCockpitView", () => {
       );
 
       expect(html).toContain("Welcome");
-      expect(html).toContain(
-         'href="/challenge/chal-beta/participant/part-gamma"'
+      expect(html).toContain('href="/profile?challengeId=chal-beta"');
+      expect(html).toContain("NrGSIayeR");
+      expect(html).toContain('title="View profile for NrGSIayeR"');
+   });
+
+   it("renders username next to Welcome as a link to /profile when logged in without challenge context", () => {
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-beta", displayName: "NrGSIayeR" },
+            cockpit: null,
+         })
       );
+
+      expect(html).toContain("Welcome");
+      expect(html).toContain('href="/profile"');
       expect(html).toContain("NrGSIayeR");
       expect(html).toContain('title="View profile for NrGSIayeR"');
    });
