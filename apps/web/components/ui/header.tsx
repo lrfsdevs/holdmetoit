@@ -246,14 +246,6 @@ export function AppHeader({
                   </Link>
                )}
 
-               <Link
-                  href="/preferences"
-                  data-testid="preferences-nav-link"
-                  className="text-xs sm:text-sm font-medium text-nav-text hover:text-nav-active transition-colors border-l border-border-default pl-2 sm:pl-3 shrink-0"
-               >
-                  Preferences
-               </Link>
-
                {isDevRole(effectiveUser?.role) && (
                   <Link
                      href="/devboard"
