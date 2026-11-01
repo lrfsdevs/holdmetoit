@@ -39,6 +39,11 @@ export interface GlobalUserProfileIdentity {
    joinedAt: string;
    trophyBalance: number;
    yptId?: string | null;
+   isSick?: boolean;
+   sickModeActivatedAt?: string | null;
+   sickModeNote?: string | null;
+   sickModeReminderSnoozedUntil?: string | null;
+   sickModeLastDeactivatedAt?: string | null;
 }
 
 export interface GlobalUserProfile {

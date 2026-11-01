@@ -31,6 +31,9 @@ export interface AdminUserRosterItem {
    yptStatus: AdminYptStatus;
    activeChallenges: ActiveChallengeItem[];
    totalChallengesCount: number;
+   isSick?: boolean;
+   sickModeActivatedAt?: string | null;
+   sickModeNote?: string | null;
 }
 
 export interface UserDirectoryQuery {

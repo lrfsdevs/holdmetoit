@@ -29,6 +29,10 @@ import { EmptyState } from "@/components/state/empty-state";
 import { CockpitSkeleton } from "@/components/state/cockpit-skeleton";
 import { YptSettingsCard } from "@/features/ypt/presentation/ypt-settings-card";
 import {
+   SickModeSettingsCard,
+   SickStatusBadge,
+} from "@/features/participant-status/presentation";
+import {
    Select,
    SelectContent,
    SelectItem,
@@ -139,6 +143,14 @@ export function GlobalProfileView({
                         <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
                            {user.displayName}
                         </h1>
+
+                        {/* Sick Status Badge */}
+                        <SickStatusBadge
+                           isSick={user.isSick}
+                           activatedAt={user.sickModeActivatedAt}
+                           note={user.sickModeNote}
+                           variant="default"
+                        />
 
                         {/* Trophy Rank Badge */}
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-brand-1/40 bg-brand-1/15 text-brand-1 shadow-sm">

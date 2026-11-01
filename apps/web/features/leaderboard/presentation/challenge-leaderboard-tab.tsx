@@ -51,6 +51,7 @@ import {
    getTeamBadgeStyle,
 } from "@/features/challenges/domain/team-colors";
 import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
+import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import {
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
@@ -978,6 +979,16 @@ export function ChallengeLeaderboardTab({
                                                       <YptStatusPill
                                                          status={entry.status}
                                                       />
+                                                      <SickStatusBadge
+                                                         isSick={entry.isSick}
+                                                         activatedAt={
+                                                            entry.sickModeActivatedAt
+                                                         }
+                                                         note={
+                                                            entry.sickModeNote
+                                                         }
+                                                         variant="compact"
+                                                      />
                                                       {entry.paceLabel && (
                                                          <span
                                                             className={`px-1.5 py-0.2 rounded text-caption font-semibold shrink-0 ${
@@ -1133,6 +1144,14 @@ export function ChallengeLeaderboardTab({
                                              />
                                           )}
                                        <YptStatusPill status={entry.status} />
+                                       <SickStatusBadge
+                                          isSick={entry.isSick}
+                                          activatedAt={
+                                             entry.sickModeActivatedAt
+                                          }
+                                          note={entry.sickModeNote}
+                                          variant="compact"
+                                       />
                                        <span
                                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold border shrink-0"
                                           style={{
@@ -1299,6 +1318,14 @@ export function ChallengeLeaderboardTab({
                                                    )}
                                                 <YptStatusPill
                                                    status={entry.status}
+                                                />
+                                                <SickStatusBadge
+                                                   isSick={entry.isSick}
+                                                   activatedAt={
+                                                      entry.sickModeActivatedAt
+                                                   }
+                                                   note={entry.sickModeNote}
+                                                   variant="compact"
                                                 />
                                              </div>
                                              {entry.username && (

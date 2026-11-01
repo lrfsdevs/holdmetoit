@@ -36,6 +36,11 @@ export async function getGlobalUserProfile(
          createdAt: true,
          trophyBalance: true,
          yptId: true,
+         isSick: true,
+         sickModeActivatedAt: true,
+         sickModeNote: true,
+         sickModeReminderSnoozedUntil: true,
+         sickModeLastDeactivatedAt: true,
       },
    });
 
@@ -202,6 +207,17 @@ export async function getGlobalUserProfile(
          joinedAt: user.createdAt.toISOString(),
          trophyBalance: trophyTotal,
          yptId: user.yptId,
+         isSick: Boolean(user.isSick),
+         sickModeActivatedAt: user.sickModeActivatedAt
+            ? user.sickModeActivatedAt.toISOString()
+            : null,
+         sickModeNote: user.sickModeNote ?? null,
+         sickModeReminderSnoozedUntil: user.sickModeReminderSnoozedUntil
+            ? user.sickModeReminderSnoozedUntil.toISOString()
+            : null,
+         sickModeLastDeactivatedAt: user.sickModeLastDeactivatedAt
+            ? user.sickModeLastDeactivatedAt.toISOString()
+            : null,
       },
       careerStats: {
          lifetimeStudyHours,

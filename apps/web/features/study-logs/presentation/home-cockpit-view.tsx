@@ -15,6 +15,10 @@ import type { CockpitViewModel } from "@/features/study-logs/data/cockpit-data";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 import type { ChallengeScoreboardViewModel } from "@/features/leaderboard/domain/leaderboard.types";
 import { DashboardWrapped } from "@/features/wrapped/presentation/dashboard-wrapped";
+import {
+   SickModeQuickToggle,
+   SickReminderBanner,
+} from "@/features/participant-status/presentation";
 
 export interface HomeCockpitViewProps {
    displayName?: string;
@@ -28,6 +32,11 @@ export interface HomeCockpitViewProps {
       username?: string | null;
       image?: string | null;
       role?: string | null;
+      isSick?: boolean;
+      sickModeActivatedAt?: string | null;
+      sickModeNote?: string | null;
+      sickModeReminderSnoozedUntil?: string | null;
+      sickModeLastDeactivatedAt?: string | null;
    } | null;
    cockpit?: CockpitViewModel | null;
    upcomingChallenge?: {
@@ -146,7 +155,26 @@ export function HomeCockpitView({
                   <span>{formattedDate} (UTC)</span>
                </p>
             </div>
+
+            {isLoggedIn && (
+               <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <SickModeQuickToggle
+                     initialIsSick={user?.isSick}
+                     initialActivatedAt={user?.sickModeActivatedAt}
+                     initialNote={user?.sickModeNote}
+                  />
+               </div>
+            )}
          </div>
+
+         {/* 3-day Check-in Reminder Prompt Banner */}
+         {isLoggedIn && (
+            <SickReminderBanner
+               isSick={user?.isSick}
+               activatedAt={user?.sickModeActivatedAt}
+               reminderSnoozedUntil={user?.sickModeReminderSnoozedUntil}
+            />
+         )}
 
          {/* Dynamic Cockpit Banner Card (Variants 1–7) */}
          {isLoggedIn && (

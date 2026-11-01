@@ -27,6 +27,7 @@ import { DataPagination } from "@/components/ui/data-pagination";
 import { EmptyState } from "@/components/state/empty-state";
 import { fetchAdminUserRosterAction } from "../api/user-directory.actions";
 import { UserInspectorSheet } from "./user-inspector-sheet";
+import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import type {
    AdminEnrollmentFilter,
    AdminRosterRole,
@@ -457,17 +458,25 @@ export function UserDirectoryView({
 
                               {/* Role Column */}
                               <td className="py-3.5 px-3">
-                                 <span
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-label font-bold uppercase ${
-                                       user.role === "ADMIN"
-                                          ? "bg-purple-500/15 text-purple-300 border border-purple-500/30"
-                                          : user.role === "HOST"
-                                            ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                                            : "bg-zinc-500/15 text-zinc-300 border border-zinc-500/30"
-                                    }`}
-                                 >
-                                    {user.role}
-                                 </span>
+                                 <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                       className={`inline-flex items-center px-2 py-0.5 rounded-md text-label font-bold uppercase ${
+                                          user.role === "ADMIN"
+                                             ? "bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                                             : user.role === "HOST"
+                                               ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                               : "bg-zinc-500/15 text-zinc-300 border border-zinc-500/30"
+                                       }`}
+                                    >
+                                       {user.role}
+                                    </span>
+                                    <SickStatusBadge
+                                       isSick={user.isSick}
+                                       activatedAt={user.sickModeActivatedAt}
+                                       note={user.sickModeNote}
+                                       variant="compact"
+                                    />
+                                 </div>
                               </td>
 
                               {/* Lifetime & Rank Column */}

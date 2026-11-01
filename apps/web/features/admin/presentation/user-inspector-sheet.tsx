@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import { AdminAdjustmentDialog } from "@/features/economy/presentation/admin-adjustment-dialog";
 import { AdminTrophyAdjustmentDialog } from "@/features/trophies/presentation/admin-trophy-adjustment-dialog";
 import {
@@ -244,6 +245,12 @@ export function UserInspectorSheet({
                         <span className="text-label text-text-tertiary font-mono">
                            @{user.discordTag}
                         </span>
+                        <SickStatusBadge
+                           isSick={user.isSick}
+                           activatedAt={user.sickModeActivatedAt}
+                           note={user.sickModeNote}
+                           variant="default"
+                        />
                      </div>
 
                      {user.discordId ? (
@@ -274,6 +281,20 @@ export function UserInspectorSheet({
                      </p>
                   </div>
                </div>
+
+               {user.isSick && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200">
+                     <div className="font-bold flex items-center gap-1.5 text-amber-300">
+                        <span>🤒</span>
+                        <span>Participant Currently in Sick Mode</span>
+                     </div>
+                     <p className="mt-1 text-text-secondary">
+                        {user.sickModeNote
+                           ? `Note: "${user.sickModeNote}"`
+                           : "No status note provided."}
+                     </p>
+                  </div>
+               )}
 
                {/* Quick Stats Grid */}
                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">

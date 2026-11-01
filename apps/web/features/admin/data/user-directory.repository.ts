@@ -66,6 +66,9 @@ export async function getAdminUserRoster(
          role: true,
          createdAt: true,
          trophyBalance: true,
+         isSick: true,
+         sickModeActivatedAt: true,
+         sickModeNote: true,
          wallet: {
             select: {
                totalBalance: true,
@@ -164,6 +167,11 @@ export async function getAdminUserRoster(
          yptStatus,
          activeChallenges,
          totalChallengesCount: user.participations?.length || 0,
+         isSick: Boolean(user.isSick),
+         sickModeActivatedAt: user.sickModeActivatedAt
+            ? user.sickModeActivatedAt.toISOString()
+            : null,
+         sickModeNote: user.sickModeNote ?? null,
       };
    });
 
