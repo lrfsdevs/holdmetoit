@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 190 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-02 (Session 193 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2512,3 +2512,85 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm --prefix apps/web test -- features/leaderboard`: ✅ 125/125 tests passing.
       - `npm run test:ypt-bot`: ✅ 100/100 tests passing.
 - **NEXT STEP:** Create atomic commits for `KAN-74` / GH-#217, prepare pull request for peer review, and update Jira status to In Review upon PR submission.
+
+### Session 191 — 2026-11-02 (fix(leaderboard): normalize duo battle team cards and scholar blocks for symmetrical visual UI layout — GH-#220 / Jira KAN-77 on `krish`)
+
+- **Context & Objectives:** Fix visual crookedness, uneven heights, and layout misalignment across duo battle cards in the Leaderboard tab ("View by Team" mode, `viewMode === "team"`). Previously, differences in team name character lengths, display names, handles, and hour values caused cards to expand unpredictably (some headers 2 lines vs 3 lines, and some scholar blocks 2 lines, 3 lines, or 4 lines). Normalize both the team card header and the member rows into strict, predictable 2-line structures with fixed minimum heights (`min-h-[68px]`) and graceful truncation so all duo blocks remain identical in size and shape.
+- **Product Invariants & Laws Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Duo battles represent 2-member team structures and maintain structural parity with multi-member house and unassigned cards.
+   - **Law L8 (Second-Level Precision):** All duration meters render standard clock formatting with tabular numbers (`whitespace-nowrap font-sans font-sans-tabular`) to prevent line wrapping on clock values.
+   - **Law L9 (Zero-State & Error Resilience, Mobile Verified 360px+):** Responsive 2-column grid (`grid-cols-1 lg:grid-cols-2`) collapses safely to single column on mobile viewports without horizontal overflow or clipped text.
+- **Architectural Slices Implemented:**
+   1. **Normalized Team Card Header (Strict 2-Row Layout in `challenge-leaderboard-tab.tsx`):**
+      - **Row 1:** Team emoji, team name (`truncate font-bold` with native `title` tooltip), optional duo edit button (`Pencil`), and right-aligned total study duration (`t.totalLoggedClock`) with bounded progress bar track (`w-16 sm:w-24`).
+      - **Row 2:** Scholars count badge (`{count} / {companionCount} scholars`), optional `Leading House` badge, and right-aligned weekly commitment summary (`Weekly Target: {targetHours}h • Completed: {completionPercentage}%`).
+      - Eliminates multi-line header expansion: long team names like "Justice for chunaid khan" or "can't think of a name" truncate gracefully on Row 1 without pushing metadata downward.
+   2. **Normalized Scholar Block (Strict 2-Line Layout & `min-h-[68px]` in `challenge-leaderboard-tab.tsx`):**
+      - **Line 1:** Intra-team rank (`#idx`), overall rank (`(#rank)`), 32px circular avatar, scholar display name (`truncate block font-bold text-xs`), global trophy badge (if enabled), and YPT status pill (`YptStatusPill`, `shrink-0`).
+      - **Line 2:** Scholar handle (`@{username}`, `truncate max-w-[90px] sm:max-w-[130px]`), compact sick mode indicator (`SickStatusBadge`), and pace status pill (`Catch-Up` / `Serene` / `On Track` / `Punished`, `shrink-0`).
+      - **Right-Aligned Telemetry & Controls:** Tabular total and target clock (`totalLoggedClock / targetClock`, `whitespace-nowrap`), today's logged hours (`+todayLoggedClock`, `whitespace-nowrap`), and vertically centered compact icon-only admin controls with hover tooltips (`Clock`: "Edit Study Hours", `Target`: "Edit Weekly Target", `HeartHandshake`: "Grant Pardon"), saving ~88px of horizontal width for display names.
+      - Eliminates random 3-line and 4-line wrapping caused by dynamic `flex-wrap`: Line 1 is strictly 1 line, Line 2 is strictly 1 line, and total block height is anchored to `min-h-[68px]`.
+   3. **Unassigned Scholars Card Parity:**
+      - Applied identical 2-row header structure and 2-line scholar block normalization to the unassigned scholars card (`unassigned-scholars-card`).
+   4. **Documentation & Quality Gates:**
+      - Documented architecture and developer usage in `docs/leaderboard/README.md` (§7.5).
+      - Added regression unit test in `apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (38/38 tests green).
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit`).
+      - `npm run test:web -- features/leaderboard`: ✅ 126/126 tests passing across domain, data, and presentation layers.
+- **NEXT STEP:** Review working tree diff, prepare pull request to `dev`, and transition associated Jira issue to In Review.
+
+### Session 192 — 2026-11-02 (feat(tasks): remove header quick-add buttons & adapt calendar week navigation for weekly todos — on `krish`)
+
+- **Context & Objectives:** User requested two refinements on the Home Cockpit task board (`CockpitTasksSection`):
+   1. Remove the top Quick-Add (`+ Add`) buttons from both Daily Todos and Weekly Todos card headers since the todo lists now have bounded/contained heights (`max-h-[520px] overflow-y-auto`) and bottom add buttons are always conveniently accessible.
+   2. Add the calendar week navigation feature to the Weekly Todos column, adapted specifically for the weekly system (week-level range display, "This Week" quick snap, week-level row selection in the calendar popover, and weekly task scoping).
+- **Architectural Slices Implemented:**
+   1. **Top Add Buttons Removal (`cockpit-tasks-section.tsx`):**
+      - Removed `data-testid="quick-add-daily-button"` from the Daily Todos header row.
+      - Removed `data-testid="quick-add-weekly-button"` from the Weekly Todos header row.
+      - Maintained clean visual symmetry in Row 1 across both cards: Left has section title and status badge (`Daily Todos` + `Day X` vs `Weekly Todos` + `Trophy Goals`), and Right has completed counter (`0/0 Completed` vs `18/18 Completed`).
+      - Preserved bottom add buttons (`+ Add more todos for Day X` and `+ Add more todos`) as primary addition triggers.
+   2. **Calendar Week Navigation Adapted for Weekly System (`cockpit-date-picker-popover.tsx` & `cockpit-tasks-section.tsx`):**
+      - Enhanced `CockpitWeekNavigator` and `CockpitDatePickerPopover` with `mode?: "daily" | "weekly"` support.
+      - In `mode="weekly"`, chevrons page week by week (`weekly-prev-week`, `weekly-next-week`).
+      - Popover trigger displays `Calendar` icon with the active week range (`Oct 26 – Nov 1`).
+      - When navigated away from current week, renders a dedicated "This Week" quick snap button (replacing Daily's day-level "Today" button).
+      - Popover footer renders "Jump to This Week" alongside the formatted week range.
+      - In popover month grid, active week days form a cohesive continuous week highlight (`rounded-l-lg`, `rounded-none`, `rounded-r-lg`).
+      - Wired `activeWeeklyAnchorDateKey`, `weeklyRangeLabel`, `activeWeeklyWeekDateKeys`, and `isViewingCurrentWeeklyWeek` in `CockpitTasksSection`.
+      - Added `isTaskInWeeklyWeek` filter: tasks with `dueDate` in that week, challenge goals in challenge week, or unassigned tasks in current week are shown.
+      - Added dynamic completion counters for Weekly Todos (`{completedWeeklyTasksForWeek}/{totalWeeklyTasksForWeek} Completed`).
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `cockpit-date-picker-popover.test.tsx` verifying weekly trigger aria-label, weekly footer "Jump to This Week", and weekly navigator chevrons and "This Week" snap button.
+      - Updated `cockpit-tasks-quick-add-and-scroll.test.tsx` asserting top add buttons are removed while bottom add buttons remain fully functional.
+      - Updated `cockpit-tasks-week-navigation.test.tsx` adding dedicated weekly navigation test suite.
+      - `npm run typecheck -w @holdmetoit/web`: ✅ 0 compiler errors.
+      - `npm run test -w @holdmetoit/web`: ✅ 240 test files, 2364 tests passed (100% green exit).
+- **NEXT STEP:** Verify mobile responsiveness on 360px+ viewport and present walkthrough to user.
+
+### Session 193 — 2026-11-02 (fix(leaderboard): replace admin action buttons with compact icon buttons and align total hours — GH-#217 / Jira KAN-74 on `krish`)
+
+- **Context & Objectives:** User identified UI defect on `/challenge/[id]?tab=leaderboard`:
+   1. Admin action buttons (`Edit hr`, `Edit target`, `Pardon`) were overflowing horizontally across the desktop table, generating unwanted scrollbars.
+   2. Total Hours column was compressed in admin view when 3 buttons were present (~260px), wrapping `/ 45:00:00` onto a second line underneath logged hours and causing uneven, lopsided vertical and horizontal alignment compared to the clean normal user layout.
+   3. Shorten action buttons to compact icon-only buttons with hover tooltips and ensure the Total Hours format matches the clean single-line format of the normal user layout.
+- **Product Invariants & Laws Preserved:**
+   - **Law L8 (Second-Level Precision):** Tabular numbers and clock values remain strictly on a single line (`whitespace-nowrap font-sans font-sans-tabular`) without multi-line breaks.
+   - **Law L9 (Zero-State & Error Resilience):** Icon-only buttons maintain full screen-reader accessibility (`<span className="sr-only">`, `aria-label`) and descriptive hover tooltips via Radix UI `Tooltip` and native `title`.
+   - **Visual Symmetry:** Decoupled admin controls into a dedicated `Actions` column (`w-[100px]`), ensuring the `Total hours` column is 100% identical in format and position between regular participant and admin views.
+- **Architectural Slices Implemented:**
+   1. **Compact Icon-Only Actions (`AdminRowActions` in `challenge-leaderboard-tab.tsx`):**
+      - Rendered 28px (`h-7 w-7`) icon buttons for `Clock` (Edit Study Hours), `Target` (Edit Weekly Target), and `HeartHandshake` (Grant Pardon).
+      - Styled with Obsidian Dark tokens (`bg-surface-elevated hover:bg-surface-nested border-border-strong`).
+      - Wrapped in Radix UI `Tooltip` with 150ms delay and SSR hydration mounting guard (`mounted` state) to prevent React server layout effect warnings.
+      - Scaled to `size="sm"` (`h-6 w-6` with `h-3 w-3` icons) in mobile cards (`sm:hidden`) and team view mode.
+   2. **Dedicated Desktop Actions Column & Aligned Total Hours:**
+      - Added dedicated `Actions` column header (`TableHead`) when `isAdmin` is true.
+      - Aligned `Total hours` column to `text-right font-sans font-sans-tabular text-sm font-bold text-white whitespace-nowrap` matching normal user layout.
+      - Clean single-line rendering: `(clock) HH:MM:SS / HH:MM:SS` without lopsidedness or horizontal shifting between rows.
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `challenge-leaderboard-tab.test.tsx` verifying dedicated `Actions` column rendering for admins, omission for regular users, and identical total hours structure.
+      - `npm --prefix apps/web test -- features/leaderboard`: ✅ 5 test files, 129/129 tests passing.
+      - `npm run typecheck:web`: ✅ 0 TypeScript errors.
+      - `npm run lint:web`: ✅ 0 lint errors.
+- **NEXT STEP:** Prepare release PR to `dev`, review with peer, and transition Jira `KAN-74` to In Review.

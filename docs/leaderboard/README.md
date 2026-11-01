@@ -190,6 +190,44 @@ The per-challenge standings are separate from the global trophy board. Two forma
       - Reconciles all 3 conditions: target hours met, weekly tasks completed, and winning team (ties are draws: all teams at the maximum score win; individual competition in SOLOS format).
       - Automatically sets `status: "PUNISHED"` and creates `PunishmentRecord` rows for uncompleted participants, while setting qualifying participants to `status: "NORMAL"`.
 
+### 7.5 Duo Battle Card Normalization & UI Alignment (GH #220 / KAN-77)
+
+1. **Context & Problem Statement:**
+   - In "View by Team" mode (`viewMode === "team"`), duo battles render side-by-side in a 2-column responsive grid (`lg:grid-cols-2`).
+   - Previously, team cards and internal scholar blocks displayed uneven heights and crooked layouts depending on team name lengths, scholar display names, and hour goal numbers:
+      - Team names longer than 10–12 characters pushed the scholars badge onto a second line, expanding the header to 3 lines while shorter teams remained 2 lines.
+      - Inside scholar blocks, unconstrained `flex-wrap` caused badges (`Offline`, `Catch-Up`, `Serene`) and handles (`@username`) to wrap into 2, 3, or 4 random lines depending on the exact character widths of display names and clock values (`totalLoggedClock / targetClock`).
+      - This produced severely misaligned, crooked cards with different vertical heights across the grid.
+
+2. **Architectural Implementation (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+   - **Normalized Team Header (Strict 2-Row Layout):**
+      - **Row 1:** Left: Emoji, team name (`truncate` with native title tooltip), and duo edit pencil (caller's team only). Right: Total study time (`totalLoggedClock`) and bounded progress bar track (`w-16 sm:w-24`).
+      - **Row 2:** Left: Scholars count pill (`{count} / {target} scholars`) and `Leading House` badge. Right: Weekly target hours and completion percentage (`Weekly Target: {targetHours}h • Completed: {completionPercentage}%`).
+      - Row 1 and Row 2 have fixed, single-line heights across all house and unassigned cards regardless of name or hour lengths.
+   - **Normalized Scholar Block (Strict 2-Line Layout & `min-h-[68px]`):**
+      - **Line 1:** Intra-team rank (`#idx`), overall rank (`(#rank)`), 32px avatar, display name (`truncate font-bold`), trophy badge, and YPT status pill (`Offline` / `Studying`, `shrink-0`).
+      - **Line 2:** Scholar handle (`@{username}`, `truncate max-w-[90px] sm:max-w-[130px]`), compact sick badge (`SickStatusBadge`), and pace status pill (`Catch-Up` / `Serene` / `On Track` / `Punished`, `shrink-0`).
+      - **Right-Aligned Telemetry & Actions:** Formatted tabular clock (`totalLoggedClock / targetClock`, `whitespace-nowrap`), today's hours (`+todayLoggedClock`, `whitespace-nowrap`), and vertically centered compact icon-only admin controls with hover tooltips (`Clock`: "Edit Study Hours", `Target`: "Edit Weekly Target", `HeartHandshake`: "Grant Pardon"), saving ~88px of horizontal width for display names.
+   - **Visual Symmetry & Equal Block Shapes:**
+      - All duo cards and unassigned cards render with identical height bounding boxes and visual symmetry down to 360px mobile viewports (Law L9).
+
+### 7.6 Compact Admin Action Buttons & Aligned Total Hours Layout
+
+1. **Context & Problem Statement:**
+   - In dev/admin view (`isAdmin: true`), the Leaderboard desktop table displayed full-text action buttons (`Edit hr`, `Edit target`, `Pardon`) directly within the `Total hours` cell.
+   - For rows with 3 buttons (~260px width), the hours container was compressed, forcing `/ 45:00:00` onto a second line underneath the logged hours, creating a lopsided layout relative to rows with only 2 buttons. The wide buttons also triggered horizontal page scrolling.
+
+2. **Architectural Implementation (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+   - **Compact Icon-Only Action Buttons (`AdminRowActions`):**
+      - Full-text buttons are replaced with compact icon-only buttons (`Clock`, `Target`, `HeartHandshake`).
+      - Accessible for screen readers via `<span className="sr-only">` and accessible labels.
+      - Includes hover tooltips via Radix UI `Tooltip` (`TooltipProvider`, `Tooltip`, `TooltipTrigger`, `TooltipContent`) alongside native `title` tooltips, explaining button capabilities ("Edit Study Hours", "Edit Weekly Target", "Grant Pardon").
+   - **Dedicated Desktop `Actions` Column:**
+      - In desktop standings (`hidden sm:block`), admin controls are decoupled from the hours cell into a dedicated centered `Actions` column (`w-[100px]`).
+      - The `Total hours` column is rendered identically between regular and admin views (`(clock) HH:MM:SS / HH:MM:SS`, `whitespace-nowrap`, `text-right font-sans font-sans-tabular text-sm font-bold text-white`), eliminating line breaks and horizontal lopsidedness across all participant rows.
+   - **Mobile Cards & Team Mode Sizing:**
+      - Uses `size="sm"` (`h-6 w-6` with `h-3 w-3` icons) in mobile cards (`sm:hidden`) and team view mode to preserve responsive layout without clipping or horizontal overflow on 360px+ viewports (Law L9).
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
