@@ -30,6 +30,13 @@ model User {
   displayName String?
   role        UserRole @default(PARTICIPANT)
 
+  // Sick Mode / Under the Weather status (FEAT-PART-SICK / #205)
+  isSick                       Boolean   @default(false)
+  sickModeActivatedAt          DateTime?
+  sickModeNote                 String?   @db.VarChar(120)
+  sickModeReminderSnoozedUntil DateTime?
+  sickModeLastDeactivatedAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -251,11 +258,15 @@ model Category {
   deletionTime DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  revision     Int       @default(0)
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks Task[]
 
-  @@unique([userId, name, taskType])
+  // Active category names are case-insensitively unique per (userId, taskType)
+  // via the partial unique index created in
+  // 20261031000000_category_active_name_ci_unique. Soft-deleted rows do not
+  // block name reuse, and Prisma cannot express a partial index in the schema.
   @@index([userId, taskType, isDeleted])
 }
 
@@ -275,6 +286,7 @@ model Task {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   completedAt  DateTime?
+  revision     Int        @default(0)
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   category  Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -306,6 +318,7 @@ model PunishmentRecord {
   participant ChallengeParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   pardonedBy  User?                @relation("PardonAdmin", fields: [pardonedById], references: [id], onDelete: SetNull)
 
+  @@unique([challengeId, participantId])
   @@index([challengeId])
   @@index([participantId])
 }

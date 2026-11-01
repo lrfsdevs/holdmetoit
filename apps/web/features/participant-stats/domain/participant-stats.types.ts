@@ -20,6 +20,9 @@ export interface ParticipantProfileHeader {
    challengeStatus: "UPCOMING" | "ACTIVE" | "COMPLETED";
    trophies?: number;
    role?: string;
+   startDate?: string;
+   endDate?: string;
+   participantStatus?: "ACTIVE" | "COMPLETED" | "WITHDRAWN";
 }
 
 export interface ParticipantSummaryStats {

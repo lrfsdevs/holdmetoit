@@ -8,6 +8,7 @@ import {
    formatSecondsToHuman,
    MAX_COUNTED_DAILY_STUDY_SECONDS,
    capDailyStudySeconds,
+   clampDailyLogSeconds,
    MAX_DAILY_LOG_SECONDS,
    MAX_WEEKLY_TARGET_SECONDS,
    MIN_WEEKLY_TARGET_SECONDS,
@@ -33,8 +34,8 @@ describe("parseDurationToSeconds", () => {
       );
    });
 
-   it("supports daily log upper bound (24:00:00)", () => {
-      expect(parseDurationToSeconds("24:00:00")).toBe(MAX_DAILY_LOG_SECONDS);
+   it("supports daily log upper bound (20:00:00)", () => {
+      expect(parseDurationToSeconds("20:00:00")).toBe(MAX_DAILY_LOG_SECONDS);
    });
 
    it("trims surrounding whitespace", () => {
@@ -122,7 +123,8 @@ describe("duration constants", () => {
    it("exposes specification limits", () => {
       expect(MIN_WEEKLY_TARGET_SECONDS).toBe(3_600);
       expect(MAX_WEEKLY_TARGET_SECONDS).toBe(378_000);
-      expect(MAX_DAILY_LOG_SECONDS).toBe(86_400);
+      expect(MAX_COUNTED_DAILY_STUDY_SECONDS).toBe(43_200);
+      expect(MAX_DAILY_LOG_SECONDS).toBe(72_000);
    });
 });
 
@@ -183,24 +185,43 @@ describe("decomposeSecondsToParts", () => {
 });
 
 describe("capDailyStudySeconds", () => {
-   it("returns the original duration when under 14 hours", () => {
+   it("returns the original duration when under 12 hours", () => {
       expect(capDailyStudySeconds(0)).toBe(0);
       expect(capDailyStudySeconds(3_600)).toBe(3_600);
-      expect(capDailyStudySeconds(50_399)).toBe(50_399);
+      expect(capDailyStudySeconds(43_199)).toBe(43_199);
       expect(capDailyStudySeconds(MAX_COUNTED_DAILY_STUDY_SECONDS)).toBe(
-         50_400
+         43_200
       );
    });
 
-   it("caps durations exceeding 14 hours to 50,400 seconds (14:00:00)", () => {
-      expect(capDailyStudySeconds(50_401)).toBe(50_400);
-      expect(capDailyStudySeconds(16 * 3_600)).toBe(50_400);
-      expect(capDailyStudySeconds(24 * 3_600)).toBe(50_400);
+   it("caps durations exceeding 12 hours to 43,200 seconds (12:00:00)", () => {
+      expect(capDailyStudySeconds(43_201)).toBe(43_200);
+      expect(capDailyStudySeconds(16 * 3_600)).toBe(43_200);
+      expect(capDailyStudySeconds(24 * 3_600)).toBe(43_200);
    });
 
    it("rejects negative numbers and non-integers", () => {
       expect(() => capDailyStudySeconds(-1)).toThrow(DurationRangeError);
       expect(() => capDailyStudySeconds(14.5)).toThrow(DurationRangeError);
       expect(() => capDailyStudySeconds(NaN)).toThrow(DurationRangeError);
+   });
+});
+
+describe("clampDailyLogSeconds", () => {
+   it("passes through raw durations up to 20 hours", () => {
+      expect(clampDailyLogSeconds(0)).toBe(0);
+      expect(clampDailyLogSeconds(16 * 3_600)).toBe(57_600);
+      expect(clampDailyLogSeconds(MAX_DAILY_LOG_SECONDS)).toBe(72_000);
+   });
+
+   it("caps raw durations exceeding 20 hours to 72,000 seconds (20:00:00)", () => {
+      expect(clampDailyLogSeconds(72_001)).toBe(72_000);
+      expect(clampDailyLogSeconds(24 * 3_600)).toBe(72_000);
+   });
+
+   it("rejects negative numbers and non-integers", () => {
+      expect(() => clampDailyLogSeconds(-1)).toThrow(DurationRangeError);
+      expect(() => clampDailyLogSeconds(14.5)).toThrow(DurationRangeError);
+      expect(() => clampDailyLogSeconds(NaN)).toThrow(DurationRangeError);
    });
 });

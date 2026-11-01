@@ -7,9 +7,11 @@ import {
    aggregateTeamScores,
    calculateLeadMargin,
    calculateSharePercentages,
+   formatLeadMarginDelta,
    type TeamRef,
 } from "@/features/leaderboard/domain/leaderboard";
 import {
+   capDailyStudySeconds,
    formatSecondsToClock,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
@@ -79,6 +81,9 @@ export interface RawChallengePayload {
          username: string | null;
          name: string | null;
          image: string | null;
+         isSick?: boolean;
+         sickModeActivatedAt?: Date | string | null;
+         sickModeNote?: string | null;
       };
       dailyStudyLogs: Array<{
          durationSeconds: number;
@@ -231,14 +236,14 @@ export function buildScoreboardViewModel(
    });
 
    // 3. Head-to-Head Banner (FEAT-LEAD-01)
-   const sortedTeams = [...teams].sort(
-      (a, b) =>
-         b.totalLoggedSeconds - a.totalLoggedSeconds ||
-         a.sortOrder - b.sortOrder
-   );
+   // Anchor matchup cards to fixed slots by creation order (sortOrder asc)
+   // instead of dynamically flipping card positions when hours lead changes.
+   const matchupTeams = [...teams]
+      .filter((team) => !team.isDeleted)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
 
-   const teamA = sortedTeams[0] ?? null;
-   const teamB = sortedTeams[1] ?? null;
+   const teamA = matchupTeams[0] ?? null;
+   const teamB = matchupTeams[1] ?? null;
 
    let leadMarginResult = {
       marginSeconds: 0,
@@ -269,6 +274,7 @@ export function buildScoreboardViewModel(
       leadMarginSeconds: leadMarginResult.marginSeconds,
       leadMarginClock: formatSecondsToClock(leadMarginResult.marginSeconds),
       leadMarginHuman: formatSecondsToHuman(leadMarginResult.marginSeconds),
+      leadMarginDelta: formatLeadMarginDelta(leadMarginResult.marginSeconds),
       leaderTeamId:
          leadMarginResult.leader === "a" && teamA
             ? teamA.id
@@ -298,7 +304,9 @@ export function buildScoreboardViewModel(
             log.logDate instanceof Date ? log.logDate : new Date(log.logDate);
          return formatUtcDateKey(logDateObj) === todayDateKey;
       });
-      const todayLoggedSeconds = todayLog?.durationSeconds ?? 0;
+      const todayLoggedSeconds = capDailyStudySeconds(
+         todayLog?.durationSeconds ?? 0
+      );
       const todayLoggedClock = formatSecondsToClock(todayLoggedSeconds);
       const liveStatus =
          todayLog?.status ??
@@ -353,6 +361,7 @@ export function buildScoreboardViewModel(
 
       const team = p.teamId ? teamLookup.get(p.teamId) : null;
 
+      // Raw values for the admin override modal; leaderboard ranking/display uses the capped totals above.
       const dailyLogs: Record<string, number> = {};
       for (const log of p.dailyStudyLogs) {
          if (log.logDate) {
@@ -394,6 +403,11 @@ export function buildScoreboardViewModel(
          deficitSeconds,
          dailyLogs,
          trophies: (p.user as any)?.trophyBalance ?? 0,
+         isSick: Boolean(p.user.isSick),
+         sickModeActivatedAt: p.user.sickModeActivatedAt
+            ? new Date(p.user.sickModeActivatedAt).toISOString()
+            : null,
+         sickModeNote: p.user.sickModeNote ?? null,
       };
    });
 
@@ -518,6 +532,9 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                            name: true,
                            image: true,
                            trophyBalance: true,
+                           isSick: true,
+                           sickModeActivatedAt: true,
+                           sickModeNote: true,
                         },
                      },
                      dailyStudyLogs: {

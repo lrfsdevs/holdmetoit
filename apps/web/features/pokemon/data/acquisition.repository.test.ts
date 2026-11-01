@@ -427,11 +427,11 @@ describe("Acquisition Repository & Atomic Pull Transaction", () => {
                .fn()
                .mockResolvedValue({ totalBalance: 500, reservedBalance: 0 }),
          },
-         // 499 hours logged (1,796,400s across 21 days <= 86400s/day) -> ineligible for Legendary (requires 1,800,000s)
+         // 499 hours logged (1,796,400s across 42 days <= 43,200s/day) -> ineligible for Legendary (requires 1,800,000s)
          dailyStudyLog: {
             findMany: vi.fn().mockResolvedValue(
-               Array.from({ length: 21 }, (_, i) => ({
-                  durationSeconds: i === 20 ? 68400 : 86400,
+               Array.from({ length: 42 }, (_, i) => ({
+                  durationSeconds: i === 41 ? 25_200 : 43_200,
                   logDate: new Date(Date.UTC(2026, 0, i + 1)),
                   participant: { challenge: { status: "COMPLETED" } },
                   isLeave: false,
@@ -496,11 +496,11 @@ describe("Acquisition Repository & Atomic Pull Transaction", () => {
                .fn()
                .mockResolvedValue({ totalBalance: 500, reservedBalance: 0 }),
          },
-         // Exactly 500 hours logged (1,800,000s across 21 days <= 86400s/day) -> eligible for Legendary!
+         // Exactly 500 hours logged (1,800,000s across 42 days <= 43,200s/day) -> eligible for Legendary!
          dailyStudyLog: {
             findMany: vi.fn().mockResolvedValue(
-               Array.from({ length: 21 }, (_, i) => ({
-                  durationSeconds: i === 20 ? 72000 : 86400,
+               Array.from({ length: 42 }, (_, i) => ({
+                  durationSeconds: i === 41 ? 28_800 : 43_200,
                   logDate: new Date(Date.UTC(2026, 0, i + 1)),
                   participant: { challenge: { status: "COMPLETED" } },
                   isLeave: false,

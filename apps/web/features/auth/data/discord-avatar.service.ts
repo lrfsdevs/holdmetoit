@@ -1,3 +1,8 @@
+import {
+   DiscordAPIError,
+   requestDiscord,
+   type DiscordUser,
+} from "@holdmetoit/discord";
 import { prisma } from "@/core/db";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
@@ -8,13 +13,7 @@ import {
 
 const logger = createLogger("discord-avatar");
 
-export interface DiscordUserApiResponse {
-   id: string;
-   username: string;
-   avatar: string | null;
-   discriminator: string;
-   global_name?: string | null;
-}
+export type DiscordUserApiResponse = DiscordUser;
 
 export interface DiscordAvatarFetchResult {
    avatarUrl: string;
@@ -39,17 +38,19 @@ export async function fetchDiscordUserAvatar(
    }
 
    try {
-      const res = await fetch(
-         `https://discord.com/api/v10/users/${discordUserId}`,
-         {
-            headers: {
-               Authorization: `Bot ${botToken}`,
-            },
-            cache: "no-store",
-         }
+      const data = await requestDiscord<DiscordUserApiResponse>(
+         `/users/${discordUserId}`
       );
+      const avatarUrl = data.avatar
+         ? buildDiscordAvatarUrl(discordUserId, data.avatar)
+         : getDiscordDefaultAvatarUrl(discordUserId, data.discriminator ?? "0");
 
-      if (res.status === 404) {
+      return {
+         avatarUrl,
+         avatarHash: data.avatar ?? null,
+      };
+   } catch (error) {
+      if (error instanceof DiscordAPIError && error.status === 404) {
          // User not found or deleted on Discord, return deterministic embed default
          return {
             avatarUrl: getDiscordDefaultAvatarUrl(discordUserId),
@@ -57,31 +58,20 @@ export async function fetchDiscordUserAvatar(
          };
       }
 
-      if (!res.ok) {
+      if (error instanceof DiscordAPIError) {
          logger.warn(logEvents.appError, {
             context: {
                discordUserId,
-               status: res.status,
+               status: error.status,
                message: "Failed to fetch Discord user from REST API",
             },
          });
-         return null;
+      } else {
+         logger.error(logEvents.appError, {
+            context: { discordUserId, action: "fetchDiscordUserAvatar" },
+            error,
+         });
       }
-
-      const data = (await res.json()) as DiscordUserApiResponse;
-      const avatarUrl = data.avatar
-         ? buildDiscordAvatarUrl(discordUserId, data.avatar)
-         : getDiscordDefaultAvatarUrl(discordUserId, data.discriminator);
-
-      return {
-         avatarUrl,
-         avatarHash: data.avatar,
-      };
-   } catch (error) {
-      logger.error(logEvents.appError, {
-         context: { discordUserId, action: "fetchDiscordUserAvatar" },
-         error,
-      });
       return null;
    }
 }
@@ -119,21 +109,24 @@ export async function fetchDiscordUserAvatarViaOAuth(
             account.expires_at !== undefined &&
             account.expires_at <= Math.floor(Date.now() / 1000));
 
-      // Attempt fetch with existing token if not explicitly expired
-      let res: Response | null = null;
-      if (accessToken && !shouldRefresh) {
-         res = await fetch("https://discord.com/api/v10/users/@me", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            cache: "no-store",
-         }).catch(() => null);
+      let fetchedUser: DiscordUserApiResponse | null = null;
 
-         if (res && res.status === 401) {
-            shouldRefresh = true;
+      // Attempt the fetch with the existing token if it is not explicitly expired.
+      if (accessToken && !shouldRefresh) {
+         try {
+            fetchedUser = await requestDiscord<DiscordUserApiResponse>(
+               "/users/@me",
+               { auth: "bearer", token: accessToken }
+            );
+         } catch (error) {
+            if (error instanceof DiscordAPIError && error.status === 401) {
+               shouldRefresh = true;
+            }
          }
       }
 
-      // Refresh token if needed
-      if ((shouldRefresh || !res || !res.ok) && account.refresh_token) {
+      // Refresh the OAuth token if the access token is missing, expired or rejected.
+      if ((shouldRefresh || !fetchedUser) && account.refresh_token) {
          const clientId =
             process.env.AUTH_DISCORD_ID || process.env.DISCORD_CLIENT_ID;
          const clientSecret =
@@ -148,24 +141,18 @@ export async function fetchDiscordUserAvatarViaOAuth(
                refresh_token: account.refresh_token,
             });
 
-            const refreshRes = await fetch(
-               "https://discord.com/api/v10/oauth2/token",
-               {
-                  method: "POST",
-                  headers: {
-                     "Content-Type": "application/x-www-form-urlencoded",
-                  },
-                  body: params.toString(),
-               }
-            ).catch(() => null);
+            const refreshData = await requestDiscord<{
+               access_token?: string;
+               refresh_token?: string;
+               expires_in?: number;
+            }>("/oauth2/token", {
+               method: "POST",
+               auth: "none",
+               body: params,
+               passThroughBody: true,
+            }).catch(() => null);
 
-            if (refreshRes && refreshRes.ok) {
-               const refreshData = (await refreshRes.json()) as {
-                  access_token?: string;
-                  refresh_token?: string;
-                  expires_in?: number;
-               };
-
+            if (refreshData) {
                if (refreshData.access_token && refreshData.refresh_token) {
                   accessToken = refreshData.access_token;
                   const newExpiresAt =
@@ -191,17 +178,20 @@ export async function fetchDiscordUserAvatarViaOAuth(
                         });
                      });
 
-                  res = await fetch("https://discord.com/api/v10/users/@me", {
-                     headers: { Authorization: `Bearer ${accessToken}` },
-                     cache: "no-store",
-                  }).catch(() => null);
+                  try {
+                     fetchedUser = await requestDiscord<DiscordUserApiResponse>(
+                        "/users/@me",
+                        { auth: "bearer", token: accessToken }
+                     );
+                  } catch {
+                     fetchedUser = null;
+                  }
                }
             } else {
                logger.warn(logEvents.appError, {
                   context: {
                      action: "refreshDiscordOAuthToken",
                      userId,
-                     status: refreshRes?.status,
                   },
                });
                return {
@@ -213,16 +203,16 @@ export async function fetchDiscordUserAvatarViaOAuth(
          }
       }
 
-      if (res && res.ok) {
-         const data = (await res.json()) as DiscordUserApiResponse;
+      if (fetchedUser) {
+         const data = fetchedUser;
          const avatarUrl = data.avatar
             ? buildDiscordAvatarUrl(data.id, data.avatar)
-            : getDiscordDefaultAvatarUrl(data.id, data.discriminator);
+            : getDiscordDefaultAvatarUrl(data.id, data.discriminator ?? "0");
 
          return {
             success: true,
             avatarUrl,
-            avatarHash: data.avatar,
+            avatarHash: data.avatar ?? null,
          };
       }
 

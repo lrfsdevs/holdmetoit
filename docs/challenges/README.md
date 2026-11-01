@@ -150,3 +150,13 @@ Participants in `DUOS` challenges can edit their own duo team **name and emoji**
 - An emoji-only change skips the duplicate-name query.
 - A partner who is withdrawn cannot edit; re-enrollment restores eligibility.
 - The edit button is rendered only for the caller's team, never for opponents.
+
+## 9. Results Lock Concurrency
+
+The lock now serialises on the `Challenge` row and reads every accountability input inside the transaction. See [`docs/accountability/README.md`](../accountability/README.md) for the full invariants, lock order, and operator runbook.
+
+- `lockChallengeResults` / `unlockChallengeResults` take `SELECT ... FOR UPDATE` and use a guarded `updateMany` (`resultsLockedAt IS NULL` / `IS NOT NULL`).
+- Withdrawal, daily study logs, and task goal linkage take `FOR SHARE` and are rejected once results are locked.
+- `PunishmentRecord` has a unique `(challengeId, participantId)`; a second settlement cannot duplicate rows.
+- Weekly-goal evaluation excludes soft-deleted tasks and includes only active challenge rows.
+- Challenge rewards use `increment` rather than a read-modify-write, and the `CHALLENGE_LOCKED` audit is written in the same transaction.

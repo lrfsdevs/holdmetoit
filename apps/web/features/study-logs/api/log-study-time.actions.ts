@@ -14,6 +14,7 @@ import {
 import {
    calculateChallengeStatus,
    canLogStudyTime,
+   ChallengeStateError,
 } from "@/features/challenges/domain/challenge-lifecycle";
 import { upsertDailyStudyLog } from "@/features/study-logs/data/daily-study-log.repository";
 import {
@@ -228,6 +229,21 @@ export async function logStudyTimeAction(
             ok: false,
             code: "MAX_LEAVES_REACHED",
             message: MAX_LEAVES_ERROR,
+         };
+      }
+
+      if (error instanceof ChallengeStateError) {
+         logger.warn(logEvents.studyLogAdded, {
+            context: {
+               code: "CHALLENGE_LOCKED",
+               challengeId: input?.challengeId,
+            },
+            error,
+         });
+         return {
+            ok: false,
+            code: "CHALLENGE_LOCKED",
+            message: error.message,
          };
       }
 

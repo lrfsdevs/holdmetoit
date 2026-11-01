@@ -1,16 +1,34 @@
 import {
    deleteLocalCategory,
    deleteLocalTask,
+   enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
-   getAllQueuedMutations,
+   getQueuedMutationsForUser,
    logTaskSync,
    migrateGuestDataToUser,
    putLocalCategories,
+   putLocalCategory,
+   putLocalTask,
    putLocalTasks,
+   recordMutationFailure,
+   remapLocalCategoryId,
    removeQueuedMutations,
+   setActiveQueueUser,
 } from "./task-idb";
-import type { BatchSyncResponse } from "@/features/tasks/domain/task-sync.types";
+import type {
+   BatchSyncResponse,
+   LocalCategoryRecord,
+   LocalTaskRecord,
+   MutationResult,
+   QueuedMutation,
+} from "@/features/tasks/domain/task-sync.types";
+import type {
+   CategoryItem,
+   TaskItem,
+   TaskStatus,
+} from "@/features/tasks/domain/task.types";
+import { sortMutationsChronologically } from "@/features/tasks/domain/task-sync.schema";
 
 /** Options controlling sync execution behavior. */
 export interface SyncOptions {
@@ -21,11 +39,143 @@ export interface SyncOptions {
 /** Custom DOM event dispatched when task synchronization reconciles server changes. */
 export const TASKS_SYNCED_EVENT = "holdmetoit:task-synced";
 
+/** Custom DOM event dispatched when a mutation moves to the dead-letter store. */
+export const TASKS_DEAD_LETTER_EVENT = "holdmetoit:task-sync-dead-letter";
+
+export const TASK_SYNC_LOCK_NAME = "holdmetoit-task-sync";
+const TASKS_SYNC_CHANNEL = "holdmetoit-task-sync";
+const LOCK_BUSY = Symbol("task-sync-lock-busy");
+
 let isSyncing = false;
 let syncTimeout: NodeJS.Timeout | null = null;
+let syncChannel: BroadcastChannel | null = null;
+let warnedNoLocks = false;
 let retryAttempts = 0;
 const INITIAL_RETRY_DELAY_MS = 2000;
 const MAX_RETRY_DELAY_MS = 30000;
+
+function mapTaskItemToLocal(task: TaskItem, userId: string): LocalTaskRecord {
+   return {
+      id: task.id,
+      userId,
+      categoryId: task.categoryId,
+      challengeId: task.challengeId ?? null,
+      title: task.title,
+      taskType: task.taskType,
+      sortOrder: task.sortOrder ?? 0,
+      isComplete: task.isComplete,
+      status: task.status || (task.isComplete ? "COMPLETED" : "TODO"),
+      dueDate: task.dueDate
+         ? typeof task.dueDate === "string"
+            ? task.dueDate.slice(0, 10)
+            : new Date(task.dueDate).toISOString().slice(0, 10)
+         : null,
+      createdAt: new Date(task.createdAt).toISOString(),
+      updatedAt: new Date(task.updatedAt).toISOString(),
+      completedAt: task.completedAt
+         ? new Date(task.completedAt).toISOString()
+         : null,
+      syncState: "synced",
+      revision: task.revision,
+   };
+}
+
+function mapCategoryItemToLocal(
+   category: CategoryItem,
+   userId: string
+): LocalCategoryRecord {
+   return {
+      id: category.id,
+      userId,
+      name: category.name,
+      taskType: category.taskType,
+      sortOrder: category.sortOrder ?? 0,
+      createdAt: new Date(category.createdAt).toISOString(),
+      updatedAt: new Date(category.updatedAt).toISOString(),
+      syncState: "synced",
+      revision: category.revision,
+   };
+}
+
+const REBASE_LIMIT = 2;
+
+function entityIdOf(mutation: QueuedMutation | undefined): string {
+   if (!mutation) return "";
+   const payload = mutation.payload as Record<string, unknown>;
+   return String(payload.id || payload.taskId || payload.categoryId || "");
+}
+
+/**
+ * Re-applies a rejected task mutation's own fields on top of the authoritative
+ * server row, so the rebased mutation preserves the user's intent.
+ */
+function applyTaskPayloadToLocal(
+   local: LocalTaskRecord,
+   payload: Record<string, unknown>
+): LocalTaskRecord {
+   const next: LocalTaskRecord = {
+      ...local,
+      syncState: "pending",
+      updatedAt: new Date().toISOString(),
+   };
+
+   if (typeof payload.title === "string" && payload.title.trim()) {
+      next.title = payload.title.trim();
+   }
+   if (typeof payload.categoryId === "string") {
+      next.categoryId = payload.categoryId;
+   }
+   if (payload.taskType === "DAILY" || payload.taskType === "WEEKLY") {
+      next.taskType = payload.taskType;
+   }
+   if (typeof payload.sortOrder === "number") {
+      next.sortOrder = payload.sortOrder;
+   }
+   if (payload.dueDate !== undefined) {
+      next.dueDate = payload.dueDate
+         ? String(payload.dueDate).slice(0, 10)
+         : null;
+   }
+   if (payload.challengeId !== undefined) {
+      next.challengeId = payload.challengeId as string | null;
+   }
+   if (typeof payload.isComplete === "boolean") {
+      next.isComplete = payload.isComplete;
+      next.status = payload.isComplete ? "COMPLETED" : "TODO";
+      next.completedAt = payload.isComplete ? new Date().toISOString() : null;
+   }
+   if (typeof payload.status === "string") {
+      next.status = payload.status as TaskStatus;
+      next.isComplete = payload.status === "COMPLETED";
+      next.completedAt =
+         payload.status === "COMPLETED" ? new Date().toISOString() : null;
+   }
+
+   return next;
+}
+
+function applyCategoryPayloadToLocal(
+   local: LocalCategoryRecord,
+   payload: Record<string, unknown>
+): LocalCategoryRecord {
+   const next: LocalCategoryRecord = {
+      ...local,
+      syncState: "pending",
+      updatedAt: new Date().toISOString(),
+   };
+
+   if (typeof payload.name === "string" && payload.name.trim()) {
+      next.name = payload.name.trim();
+   }
+   if (payload.taskType === "DAILY" || payload.taskType === "WEEKLY") {
+      next.taskType = payload.taskType;
+   }
+   if (typeof payload.sortOrder === "number") {
+      next.sortOrder = payload.sortOrder;
+   }
+
+   return next;
+}
 
 /**
  * Schedules an exponential-backoff retry attempt for synchronization failures.
@@ -74,14 +224,117 @@ export async function syncNow(
    }
 
    isSyncing = true;
+
+   try {
+      if (
+         typeof navigator === "undefined" ||
+         typeof navigator.locks?.request !== "function"
+      ) {
+         if (!warnedNoLocks) {
+            warnedNoLocks = true;
+            logTaskSync(
+               "Web Locks unavailable; running sync without cross-tab coordination."
+            );
+         }
+         return await runSync(userId, options);
+      }
+
+      const result = await navigator.locks.request(
+         TASK_SYNC_LOCK_NAME,
+         { mode: "exclusive", ifAvailable: true },
+         async (lock) => (lock ? runSync(userId, options) : LOCK_BUSY)
+      );
+
+      if (result === LOCK_BUSY) {
+         // The leader drains the shared queue. Retry shortly in case it read
+         // the queue before this edit was enqueued.
+         if (!options?.forcePull) {
+            scheduleSync(userId, 300);
+         }
+         return null;
+      }
+
+      return result;
+   } finally {
+      isSyncing = false;
+   }
+}
+
+async function runSync(
+   userId: string,
+   options?: SyncOptions
+): Promise<BatchSyncResponse | null> {
    const startTime = Date.now();
 
    try {
-      const mutations = await getAllQueuedMutations();
+      const mutations = await getQueuedMutationsForUser(userId);
       if (mutations.length === 0 && !options?.forcePull) {
-         isSyncing = false;
          return null;
       }
+
+      const [localTaskRecords, localCategoryRecords] = await Promise.all([
+         getAllLocalTasks(userId),
+         getAllLocalCategories(userId),
+      ]);
+
+      const tracked = new Map<string, number>();
+      for (const task of localTaskRecords) {
+         if (typeof task.revision === "number") {
+            tracked.set(task.id, task.revision);
+         }
+      }
+      for (const category of localCategoryRecords) {
+         if (typeof category.revision === "number") {
+            tracked.set(category.id, category.revision);
+         }
+      }
+
+      const enriched = sortMutationsChronologically(mutations).map((m) => {
+         const id = entityIdOf(m);
+
+         if (m.action === "CREATE") {
+            // A locally created entity starts at revision 0.
+            if (!tracked.has(id)) tracked.set(id, 0);
+            return m;
+         }
+
+         if (m.action === "REORDER" || m.action === "ROLLOVER") {
+            const payload = m.payload as {
+               taskIds?: string[];
+               categoryIds?: string[];
+            };
+            const affected =
+               m.action === "ROLLOVER" || m.entityType === "TASK"
+                  ? (payload.taskIds ?? [])
+                  : (payload.categoryIds ?? []);
+            for (const affectedId of affected) {
+               const revision = tracked.get(affectedId);
+               if (typeof revision === "number") {
+                  tracked.set(affectedId, revision + 1);
+               }
+            }
+            return m;
+         }
+
+         if (m.action === "DELETE") {
+            // The row is gone; a later mutation must not match a stale revision.
+            const revision = tracked.get(id);
+            if (typeof revision === "number") {
+               tracked.set(id, revision + 1);
+            }
+            return m;
+         }
+
+         const baseRevision = tracked.get(id);
+         if (typeof baseRevision === "number") {
+            tracked.set(id, baseRevision + 1);
+            return { ...m, baseRevision };
+         }
+
+         // Legacy local record: apply unconditionally once, then the snapshot
+         // supplies the revision.
+         return m;
+      });
 
       logTaskSync(
          mutations.length > 0
@@ -92,7 +345,7 @@ export async function syncNow(
       const res = await fetch("/api/tasks/sync", {
          method: "POST",
          headers: { "Content-Type": "application/json" },
-         body: JSON.stringify({ mutations }),
+         body: JSON.stringify({ mutations: enriched }),
       });
 
       if (!res.ok) {
@@ -124,80 +377,207 @@ export async function syncNow(
             return data;
          }
 
-         if (data.processedMutationIds.length > 0) {
-            await removeQueuedMutations(data.processedMutationIds);
+         const results: MutationResult[] =
+            data.mutationResults ??
+            data.processedMutationIds.map((id) => ({
+               id,
+               status: "applied" as const,
+            }));
+
+         const acknowledged = results.filter((r) => r.status !== "error");
+         const acknowledgedSet = new Set(acknowledged.map((r) => r.id));
+
+         if (acknowledged.length > 0) {
+            await removeQueuedMutations(acknowledged.map((r) => r.id));
+         }
+
+         const mutationById = new Map(mutations.map((m) => [m.id, m]));
+         const rebasedEntityIds = new Set<string>();
+
+         // Conflicts with a current row are rebased onto its revision; other
+         // conflicts adopt the authoritative row immediately.
+         for (const result of results) {
+            if (result.status !== "conflict") continue;
+            const mutation = mutationById.get(result.id);
+            const entityId = entityIdOf(mutation);
+            const isCreate = mutation?.action === "CREATE";
+            const hasCurrentEntity =
+               result.currentTask !== undefined ||
+               result.currentCategory !== undefined;
+
+            // A rejected CREATE has no server row to adopt; remove the local one.
+            if (isCreate && !hasCurrentEntity) {
+               if (mutation?.entityType === "TASK") {
+                  if (entityId) await deleteLocalTask(entityId);
+               } else if (mutation?.entityType === "CATEGORY") {
+                  if (entityId) await deleteLocalCategory(entityId);
+               }
+               continue;
+            }
+
+            const isTaskRevisionConflict =
+               result.reason === "zero_rows" &&
+               Boolean(result.currentTask) &&
+               mutation?.entityType === "TASK" &&
+               (mutation.action === "UPDATE" ||
+                  mutation.action === "TOGGLE" ||
+                  mutation.action === "MOVE");
+
+            if (isTaskRevisionConflict && result.currentTask && mutation) {
+               const current = mapTaskItemToLocal(result.currentTask, userId);
+               if (!entityId || mutation.retryCount >= REBASE_LIMIT) {
+                  await putLocalTask(current);
+                  if (entityId && mutation.retryCount >= REBASE_LIMIT) {
+                     logTaskSync(
+                        "Task conflict rebase limit reached; accepting the server row.",
+                        { taskId: entityId }
+                     );
+                  }
+                  continue;
+               }
+
+               const rebased = applyTaskPayloadToLocal(
+                  current,
+                  mutation.payload as Record<string, unknown>
+               );
+               await putLocalTask(rebased);
+               await enqueueMutation({
+                  ...mutation,
+                  id: crypto.randomUUID(),
+                  createdAt: Date.now(),
+                  retryCount: mutation.retryCount + 1,
+               });
+               rebasedEntityIds.add(entityId);
+               logTaskSync(
+                  "Task conflict rebased onto the current server revision.",
+                  { taskId: entityId, retryCount: mutation.retryCount + 1 }
+               );
+               continue;
+            }
+
+            const isCategoryRevisionConflict =
+               result.reason === "zero_rows" &&
+               Boolean(result.currentCategory) &&
+               mutation?.entityType === "CATEGORY" &&
+               (mutation.action === "UPDATE" || mutation.action === "MOVE");
+
+            if (
+               isCategoryRevisionConflict &&
+               result.currentCategory &&
+               mutation
+            ) {
+               const current = mapCategoryItemToLocal(
+                  result.currentCategory,
+                  userId
+               );
+               if (!entityId || mutation.retryCount >= REBASE_LIMIT) {
+                  await putLocalCategory(current);
+                  if (entityId && mutation.retryCount >= REBASE_LIMIT) {
+                     logTaskSync(
+                        "Category conflict rebase limit reached; accepting the server row.",
+                        { categoryId: entityId }
+                     );
+                  }
+                  continue;
+               }
+
+               const rebased = applyCategoryPayloadToLocal(
+                  current,
+                  mutation.payload as Record<string, unknown>
+               );
+               await putLocalCategory(rebased);
+               await enqueueMutation({
+                  ...mutation,
+                  id: crypto.randomUUID(),
+                  createdAt: Date.now(),
+                  retryCount: mutation.retryCount + 1,
+               });
+               rebasedEntityIds.add(entityId);
+               logTaskSync(
+                  "Category conflict rebased onto the current server revision.",
+                  { categoryId: entityId, retryCount: mutation.retryCount + 1 }
+               );
+               continue;
+            }
+
+            // Non-revision conflicts (name taken, challenge locked, row gone)
+            // adopt the authoritative row.
+            if (result.currentTask === null) {
+               if (entityId) await deleteLocalTask(entityId);
+            } else if (result.currentTask) {
+               await putLocalTask(
+                  mapTaskItemToLocal(result.currentTask, userId)
+               );
+            }
+
+            if (result.currentCategory === null) {
+               if (entityId) await deleteLocalCategory(entityId);
+            } else if (result.currentCategory) {
+               const requestedCategoryId =
+                  (mutation?.payload as { id?: string } | undefined)?.id ??
+                  entityId;
+
+               if (
+                  requestedCategoryId &&
+                  requestedCategoryId !== result.currentCategory.id
+               ) {
+                  await remapLocalCategoryId(
+                     requestedCategoryId,
+                     result.currentCategory.id
+                  );
+               }
+
+               await putLocalCategory(
+                  mapCategoryItemToLocal(result.currentCategory, userId)
+               );
+            }
+         }
+
+         let deadLettered = 0;
+         for (const result of results) {
+            if (result.status !== "error") continue;
+            const mutation = mutationById.get(result.id);
+            if (!mutation) continue;
+            try {
+               const outcome = await recordMutationFailure(
+                  mutation,
+                  result.reason
+               );
+               if (outcome === "dead-letter") deadLettered++;
+            } catch (error) {
+               logTaskSync("Failed to record mutation failure:", error);
+            }
+         }
+
+         if (deadLettered > 0 && typeof window !== "undefined") {
+            window.dispatchEvent(
+               new CustomEvent(TASKS_DEAD_LETTER_EVENT, {
+                  detail: { count: deadLettered, userId },
+               })
+            );
+         }
+
+         if (rebasedEntityIds.size > 0) {
+            scheduleSync(userId, 100);
          }
 
          // Reconcile server changes locally without clobbering pending local edits
          if (data.serverChanges) {
-            const acknowledgedSet = new Set(data.processedMutationIds);
             const remainingMutations = mutations.filter(
                (m) => !acknowledgedSet.has(m.id)
             );
             const pendingEntityIds = new Set(
-               remainingMutations.map((m) => {
-                  const p = m.payload as Record<string, unknown>;
-                  return String(p.id || p.taskId || p.categoryId || "");
-               })
+               remainingMutations.map(entityIdOf)
             );
+            rebasedEntityIds.forEach((id) => pendingEntityIds.add(id));
 
             const localCategories = data.serverChanges.categories
                .filter((c) => !pendingEntityIds.has(c.id))
-               .map((c) => ({
-                  id: c.id,
-                  userId,
-                  name: c.name,
-                  taskType: c.taskType,
-                  sortOrder: c.sortOrder ?? 0,
-                  createdAt: new Date(c.createdAt).toISOString(),
-                  updatedAt: new Date(c.updatedAt).toISOString(),
-                  syncState: "synced" as const,
-               }));
-
-            const existingTasks = await getAllLocalTasks(userId);
-            const existingTaskMap = new Map(
-               existingTasks.map((t) => [t.id, t])
-            );
+               .map((c) => mapCategoryItemToLocal(c, userId));
 
             const localTasks = data.serverChanges.tasks
-               .filter((t) => {
-                  if (pendingEntityIds.has(t.id)) return false;
-                  const local = existingTaskMap.get(t.id);
-                  if (local && local.syncState === "pending") {
-                     const localTime = local.updatedAt
-                        ? new Date(local.updatedAt).getTime()
-                        : 0;
-                     const serverTime = t.updatedAt
-                        ? new Date(t.updatedAt).getTime()
-                        : 0;
-                     if (localTime > serverTime) {
-                        return false;
-                     }
-                  }
-                  return true;
-               })
-               .map((t) => ({
-                  id: t.id,
-                  userId,
-                  categoryId: t.categoryId,
-                  challengeId: t.challengeId ?? null,
-                  title: t.title,
-                  taskType: t.taskType,
-                  sortOrder: t.sortOrder ?? 0,
-                  isComplete: t.isComplete,
-                  status: t.status || (t.isComplete ? "COMPLETED" : "TODO"),
-                  dueDate: t.dueDate
-                     ? typeof t.dueDate === "string"
-                        ? t.dueDate.slice(0, 10)
-                        : new Date(t.dueDate).toISOString().slice(0, 10)
-                     : null,
-                  createdAt: new Date(t.createdAt).toISOString(),
-                  updatedAt: new Date(t.updatedAt).toISOString(),
-                  completedAt: t.completedAt
-                     ? new Date(t.completedAt).toISOString()
-                     : null,
-                  syncState: "synced" as const,
-               }));
+               .filter((t) => !pendingEntityIds.has(t.id))
+               .map((t) => mapTaskItemToLocal(t, userId));
 
             await putLocalCategories(localCategories);
             await putLocalTasks(localTasks);
@@ -206,7 +586,7 @@ export async function syncNow(
             const serverTaskIdSet = new Set(
                data.serverChanges.tasks.map((t) => t.id)
             );
-            // existingTasks already populated during local task reconciliation
+            const existingTasks = await getAllLocalTasks(userId);
             for (const lt of existingTasks) {
                if (
                   lt.syncState === "synced" &&
@@ -241,8 +621,10 @@ export async function syncNow(
             }
          }
 
+         syncChannel?.postMessage({ type: "tasks-synced", userId });
+
          logTaskSync(
-            `Batch sync completed in ${durationMs}ms: ${data.processedMutationIds.length} mutations processed.`
+            `Batch sync completed in ${durationMs}ms: ${acknowledged.length} mutations processed.`
          );
          return data;
       } else {
@@ -254,8 +636,6 @@ export async function syncNow(
       logTaskSync("Network error during sync flush:", err);
       scheduleRetry(userId, options);
       return null;
-   } finally {
-      isSyncing = false;
    }
 }
 
@@ -267,7 +647,7 @@ export async function syncNow(
  * @param options - Optional sync configuration flags such as forcePull.
  */
 export function scheduleSync(
-   userId: string | null,
+   userId: string | null | undefined,
    delayMs = 1500,
    options?: SyncOptions
 ): void {
@@ -292,6 +672,21 @@ export function scheduleSync(
 export function initTaskSync(userId?: string | null): () => void {
    if (typeof window === "undefined") {
       return () => {};
+   }
+
+   setActiveQueueUser(userId ?? null);
+
+   if (typeof BroadcastChannel !== "undefined") {
+      syncChannel = new BroadcastChannel(TASKS_SYNC_CHANNEL);
+      syncChannel.onmessage = (event) => {
+         const data = event.data as { type?: string; userId?: string };
+         if (
+            data?.type === "tasks-synced" &&
+            (!userId || data.userId === userId)
+         ) {
+            window.dispatchEvent(new CustomEvent(TASKS_SYNCED_EVENT));
+         }
+      };
    }
 
    const handleOnline = () => {
@@ -335,7 +730,7 @@ export function initTaskSync(userId?: string | null): () => void {
          navigator.onLine &&
          !isSyncing
       ) {
-         getAllQueuedMutations()
+         getQueuedMutationsForUser(userId)
             .then((mutations) => {
                if (mutations.length > 0) {
                   logTaskSync(
@@ -348,6 +743,40 @@ export function initTaskSync(userId?: string | null): () => void {
       }
    }, SYNC_INTERVAL_MS);
 
+   // Visible-tab idle pull: keeps an otherwise idle tab fresh without waiting
+   // for a click. Jitter avoids every tab firing at the same moment.
+   const IDLE_PULL_MS = 30000;
+   const IDLE_PULL_JITTER_MS = 5000;
+   let idleTimeout: ReturnType<typeof setTimeout> | null = null;
+   let isActive = true;
+
+   const scheduleIdlePull = () => {
+      if (!userId || !isActive) return;
+      const jitter =
+         Math.floor(Math.random() * (IDLE_PULL_JITTER_MS * 2 + 1)) -
+         IDLE_PULL_JITTER_MS;
+      idleTimeout = setTimeout(() => {
+         const run = async () => {
+            if (
+               !isActive ||
+               document.visibilityState !== "visible" ||
+               !navigator.onLine ||
+               isSyncing
+            ) {
+               return;
+            }
+            const pending = await getQueuedMutationsForUser(userId);
+            if (pending.length > 0) return;
+            await syncNow(userId, { forcePull: true });
+         };
+         run()
+            .catch(() => {})
+            .finally(() => scheduleIdlePull());
+      }, IDLE_PULL_MS + jitter);
+   };
+
+   scheduleIdlePull();
+
    // Initial trigger & guest data migration check
    if (userId) {
       migrateGuestDataToUser(userId)
@@ -358,12 +787,22 @@ export function initTaskSync(userId?: string | null): () => void {
    }
 
    return () => {
+      isActive = false;
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(intervalId);
+      if (idleTimeout) {
+         clearTimeout(idleTimeout);
+         idleTimeout = null;
+      }
       if (syncTimeout) {
          clearTimeout(syncTimeout);
+      }
+      setActiveQueueUser(null);
+      if (syncChannel) {
+         syncChannel.close();
+         syncChannel = null;
       }
    };
 }

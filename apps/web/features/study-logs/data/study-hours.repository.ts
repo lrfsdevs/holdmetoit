@@ -10,8 +10,9 @@
 
 import { prisma } from "@/core/db";
 import { Prisma } from "@prisma/client";
+import { MAX_COUNTED_DAILY_STUDY_SECONDS } from "@/features/study-logs/domain/duration";
 
-export const MAX_SECONDS_PER_DAY = 86_400; // 24 hours
+export const MAX_SECONDS_PER_DAY = MAX_COUNTED_DAILY_STUDY_SECONDS; // 12 hours
 
 export interface UserStudyHoursSummary {
    userId: string;
@@ -27,7 +28,7 @@ export interface UserStudyHoursSummary {
  * Rules (Section 5):
  * 1. Only validated study logs belonging to the user across valid challenges are counted.
  * 2. Leave days (isLeave = true) are excluded.
- * 3. Daily durations are capped at 86,400s (24 hours) per unique calendar date.
+ * 3. Daily durations are capped at 43,200s (12 hours) per unique calendar date.
  * 4. Deduplicates study hours across multiple overlapping challenges on the same calendar day.
  * 5. Returns exact integer seconds.
  */

@@ -23,6 +23,7 @@ export interface ScoreboardMatchHeader {
    leadMarginSeconds: number;
    leadMarginClock: string;
    leadMarginHuman: string;
+   leadMarginDelta?: string;
    leaderTeamId: string | null;
    leaderSide: "a" | "b" | "tie";
    ratioPercentageA: number;
@@ -58,6 +59,9 @@ export interface ScoreboardStandingEntry {
    deficitSeconds: number;
    dailyLogs?: Record<string, number>;
    trophies?: number;
+   isSick?: boolean;
+   sickModeActivatedAt?: string | null;
+   sickModeNote?: string | null;
 }
 
 export interface ChallengeScoreboardViewModel {

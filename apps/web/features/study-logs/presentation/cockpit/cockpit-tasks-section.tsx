@@ -1,13 +1,6 @@
 "use client";
 
-import {
-   useState,
-   useEffect,
-   useTransition,
-   useRef,
-   useMemo,
-   useCallback,
-} from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
    ChevronDown,
    ChevronUp,
@@ -96,16 +89,8 @@ import {
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { cn } from "@/lib/utils";
+import { triggerTaskConfetti } from "@/lib/confetti";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
-import {
-   createTaskAction,
-   deleteCategoryAction,
-   deleteTaskAction,
-   rolloverTasksAction,
-   toggleTaskAction,
-   updateCategoryAction,
-   updateTaskAction,
-} from "@/features/tasks/api/task.actions";
 import {
    applyRolloverToCategories,
    findRolloverCandidates,
@@ -117,17 +102,21 @@ import {
    getTaskScope,
    type TaskScope,
 } from "@/features/tasks/domain/task-scope";
+import { buildTaskEditPatch } from "@/features/tasks/domain/task-edit-patch";
 import type {
    TaskStatus,
    UserCategorizedTasks,
 } from "@/features/tasks/domain/task.types";
 import {
+   commitCategoryMutation,
+   commitLocalBatch,
+   commitTaskBatch,
+   commitTaskMutation,
    deleteLocalCategory,
    deleteLocalTask,
-   enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
-   getAllQueuedMutations,
+   getQueuedMutationsForUser,
    logTaskSync,
    putLocalCategories,
    putLocalCategory,
@@ -139,9 +128,11 @@ import {
    scheduleSync,
    TASKS_SYNCED_EVENT,
 } from "@/features/tasks/data/local/task-sync.service";
+import { TaskSyncIssueBanner } from "@/features/tasks/presentation/task-sync-issue-banner";
 import type {
    LocalCategoryRecord,
    LocalTaskRecord,
+   QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
 
 export interface TaskItem {
@@ -161,6 +152,14 @@ export function getTaskStatus(task: TaskItem): TaskStatus {
 }
 
 export { formatDayDate };
+
+export const SAMPLE_STUDY_TASKS = [
+   "Complete 2h Deep Work block",
+   "Link YPT account",
+   "Join an active Study Challenge",
+] as const;
+
+export const LOAD_SAMPLE_TASK_EVENT = "holdmetoit:load-sample-task";
 
 export interface CategoryGroup {
    id?: string;
@@ -206,7 +205,73 @@ export function CockpitTasksSection({
    initialCollapsedCategoryIds,
    initialIsRolloverSnoozed,
 }: CockpitTasksSectionProps) {
-   const [, startTransition] = useTransition();
+   const persistTask = useCallback(
+      (
+         task: LocalTaskRecord,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskMutation(task, { ...mutation, userId })
+            : putLocalTask(task),
+      [isLoggedIn, userId]
+   );
+
+   const persistTasks = useCallback(
+      (
+         tasks: LocalTaskRecord[],
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskBatch(tasks, { ...mutation, userId })
+            : putLocalTasks(tasks),
+      [isLoggedIn, userId]
+   );
+
+   const persistCategory = useCallback(
+      (
+         category: LocalCategoryRecord,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitCategoryMutation(category, { ...mutation, userId })
+            : putLocalCategory(category),
+      [isLoggedIn, userId]
+   );
+
+   const deleteTaskWithMutation = useCallback(
+      (
+         taskId: string,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskMutation(
+                 null,
+                 { ...mutation, userId },
+                 {
+                    deleteTaskId: taskId,
+                 }
+              )
+            : deleteLocalTask(taskId),
+      [isLoggedIn, userId]
+   );
+
+   const deleteCategoryWithMutation = useCallback(
+      (
+         categoryId: string,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitCategoryMutation(
+                 null,
+                 { ...mutation, userId },
+                 {
+                    deleteCategoryId: categoryId,
+                 }
+              )
+            : deleteLocalCategory(categoryId),
+      [isLoggedIn, userId]
+   );
+
    const linkableChallengeId =
       challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
    const isChallengeActive = challengeStatus
@@ -568,12 +633,9 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
-      if (initialIsRolloverSnoozed) {
-         return true;
-      }
-      return isRolloverSnoozedForDate(userId, effectiveTodayDate);
-   });
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(
+      Boolean(initialIsRolloverSnoozed)
+   );
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
@@ -791,7 +853,9 @@ export function CockpitTasksSection({
       async function hydrateFromIndexedDB(options?: { isSyncEvent?: boolean }) {
          try {
             const isSyncEvent = options?.isSyncEvent ?? false;
-            const pendingMutations = await getAllQueuedMutations();
+            const pendingMutations = userId
+               ? await getQueuedMutationsForUser(userId)
+               : [];
             const pendingTaskIds = new Set(
                pendingMutations.map((m) => {
                   const p = m.payload as Record<string, unknown>;
@@ -829,6 +893,7 @@ export function CockpitTasksSection({
                         name: c.name,
                         taskType: c.taskType,
                         sortOrder: c.sortOrder ?? 0,
+                        revision: c.revision,
                         createdAt: new Date(c.createdAt).toISOString(),
                         updatedAt: new Date(c.updatedAt).toISOString(),
                         syncState: "synced",
@@ -859,6 +924,7 @@ export function CockpitTasksSection({
                      completedAt: t.completedAt
                         ? new Date(t.completedAt).toISOString()
                         : null,
+                     revision: t.revision,
                      syncState: "synced",
                   }));
 
@@ -1111,6 +1177,7 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: c.taskType,
                      sortOrder: c.sortOrder ?? 0,
+                     revision: c.revision,
                      createdAt: new Date(c.createdAt).toISOString(),
                      updatedAt: new Date(c.updatedAt).toISOString(),
                      syncState: "synced",
@@ -1141,6 +1208,7 @@ export function CockpitTasksSection({
                   completedAt: t.completedAt
                      ? new Date(t.completedAt).toISOString()
                      : null,
+                  revision: t.revision,
                   syncState: "synced",
                }));
 
@@ -1195,7 +1263,13 @@ export function CockpitTasksSection({
       catIndex: number,
       taskId: string,
       taskType: "daily" | "weekly",
-      nextStatusOrCompleted: TaskStatus | boolean
+      nextStatusOrCompleted: TaskStatus | boolean,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
    ) => {
       const nextStatus: TaskStatus =
          typeof nextStatusOrCompleted === "boolean"
@@ -1224,6 +1298,14 @@ export function CockpitTasksSection({
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
+
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
                i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
@@ -1248,7 +1330,7 @@ export function CockpitTasksSection({
             dailyCategories[resolvedCatIdx] ||
             dailyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
@@ -1262,11 +1344,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: nextCompleted ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "TOGGLE",
@@ -1278,11 +1358,11 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => {
-                  scheduleSync(userId, 400);
-               })
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
+         }
 
+         if (isLoggedIn && userId) {
             trackLogRocketEvent("TaskStatusChanged", {
                taskId,
                taskType: "daily",
@@ -1315,6 +1395,14 @@ export function CockpitTasksSection({
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
+
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
                i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
@@ -1339,7 +1427,7 @@ export function CockpitTasksSection({
             weeklyCategories[resolvedCatIdx] ||
             weeklyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
@@ -1353,11 +1441,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: nextCompleted ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "TOGGLE",
@@ -1369,11 +1455,11 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => {
-                  scheduleSync(userId, 400);
-               })
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
+         }
 
+         if (isLoggedIn && userId) {
             trackLogRocketEvent("TaskStatusChanged", {
                taskId,
                taskType: "weekly",
@@ -1390,7 +1476,16 @@ export function CockpitTasksSection({
       }
    };
 
-   const toggleDailyTask = (catIndex: number, taskId: string) => {
+   const toggleDailyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = dailyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1403,10 +1498,19 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "daily", nextStatus);
+      setTaskStatus(catIndex, taskId, "daily", nextStatus, clickOrigin);
    };
 
-   const toggleWeeklyTask = (catIndex: number, taskId: string) => {
+   const toggleWeeklyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = weeklyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1419,7 +1523,7 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "weekly", nextStatus);
+      setTaskStatus(catIndex, taskId, "weekly", nextStatus, clickOrigin);
    };
 
    const handleDeleteTask = (
@@ -1460,22 +1564,16 @@ export function CockpitTasksSection({
          );
       }
 
-      deleteLocalTask(taskId).catch(() => {});
-
-      if (isLoggedIn && userId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "TASK",
-            action: "DELETE",
-            payload: { taskId },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
-      }
+      deleteTaskWithMutation(taskId, {
+         id: crypto.randomUUID(),
+         entityType: "TASK",
+         action: "DELETE",
+         payload: { taskId },
+         createdAt: Date.now(),
+         retryCount: 0,
+      })
+         .then(() => scheduleSync(userId))
+         .catch(() => {});
 
       logTaskSync("Task deleted", { taskId });
    };
@@ -1521,6 +1619,44 @@ export function CockpitTasksSection({
          );
          if (!check.ok) {
             return;
+         }
+      }
+
+      const patch = buildTaskEditPatch(
+         {
+            title: editTaskModal.text,
+            status: editTaskModal.status,
+            isComplete: editTaskModal.completed,
+            dueDate: editTaskModal.dueDate ?? null,
+            challengeId: editTaskModal.challengeId ?? null,
+         },
+         {
+            title: trimmed,
+            status: newStatus,
+            isComplete: nextCompleted,
+            dueDate: resolvedDueDate,
+            challengeId:
+               taskType === "weekly" ? editTaskInputChallengeId : undefined,
+         },
+         taskType === "daily" ? "DAILY" : "WEEKLY"
+      );
+
+      if (Object.keys(patch).length === 0) {
+         setEditTaskModal(null);
+         return;
+      }
+
+      if (nextCompleted) {
+         const prevTask =
+            taskType === "daily"
+               ? dailyCategories[catIdx]?.tasks.find((t) => t.id === id)
+               : weeklyCategories[catIdx]?.tasks.find((t) => t.id === id);
+         if (prevTask && getTaskStatus(prevTask) !== "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${id}"]`)
+                  : null;
+            triggerTaskConfetti(targetEl);
          }
       }
 
@@ -1573,7 +1709,7 @@ export function CockpitTasksSection({
             ? dailyCategories[catIdx]
             : weeklyCategories[catIdx];
       if (cat?.id) {
-         putLocalTask({
+         const localTask: LocalTaskRecord = {
             id,
             userId: userId ?? null,
             categoryId: cat.id,
@@ -1590,49 +1726,18 @@ export function CockpitTasksSection({
             updatedAt: nowIso,
             completedAt: nextCompleted ? nowIso : null,
             syncState: "pending",
-         }).catch(() => {});
-      }
+         };
 
-      if (isLoggedIn && userId) {
-         enqueueMutation({
+         persistTask(localTask, {
             id: crypto.randomUUID(),
             entityType: "TASK",
             action: "UPDATE",
-            payload: {
-               taskId: id,
-               title: trimmed,
-               isComplete: nextCompleted,
-               status: newStatus,
-               dueDate: resolvedDueDate,
-               ...(taskType === "weekly"
-                  ? { challengeId: editTaskInputChallengeId }
-                  : {}),
-            },
+            payload: { taskId: id, ...patch },
             createdAt: Date.now(),
             retryCount: 0,
          })
-            .then(() => {
-               scheduleSync(userId);
-            })
+            .then(() => scheduleSync(userId, 400))
             .catch(() => {});
-
-         startTransition(async () => {
-            try {
-               await updateTaskAction({
-                  taskId: id,
-                  title: trimmed,
-                  isComplete: nextCompleted,
-                  status: newStatus,
-                  dueDate: resolvedDueDate,
-                  challengeId:
-                     taskType === "weekly"
-                        ? editTaskInputChallengeId
-                        : undefined,
-               });
-            } catch (err) {
-               logTaskSync("Failed to update task on server", err);
-            }
-         });
       }
 
       logTaskSync("Task updated", {
@@ -1682,18 +1787,18 @@ export function CockpitTasksSection({
             };
             currentDailyCats = [...dailyCategories, newDailyCat];
             targetDailyIdx = currentDailyCats.length - 1;
-            putLocalCategory({
-               id: newCatId,
-               userId: userId ?? null,
-               name: sourceCat.name,
-               taskType: "DAILY",
-               sortOrder: targetDailyIdx,
-               createdAt: new Date().toISOString(),
-               updatedAt: new Date().toISOString(),
-               syncState: "pending",
-            }).catch(() => {});
-            if (isLoggedIn && userId) {
-               enqueueMutation({
+            persistCategory(
+               {
+                  id: newCatId,
+                  userId: userId ?? null,
+                  name: sourceCat.name,
+                  taskType: "DAILY",
+                  sortOrder: targetDailyIdx,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  syncState: "pending",
+               },
+               {
                   id: crypto.randomUUID(),
                   entityType: "CATEGORY",
                   action: "CREATE",
@@ -1705,8 +1810,8 @@ export function CockpitTasksSection({
                   },
                   createdAt: Date.now(),
                   retryCount: 0,
-               }).catch(() => {});
-            }
+               }
+            ).catch(() => {});
          }
 
          const res = moveTaskBetweenCategories({
@@ -1732,7 +1837,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -1748,26 +1853,24 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: res.movedTask.id,
-                     categoryId: res.targetCategoryId,
-                     taskType: "DAILY",
-                     sortOrder: currentDailyCats[targetDailyIdx].tasks.length,
-                     dueDate: targetDateKey,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => scheduleSync(userId))
-                  .catch(() => {});
-            }
+            persistTask(movedLocalTask, {
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "MOVE",
+               payload: {
+                  taskId: res.movedTask.id,
+                  categoryId: res.targetCategoryId,
+                  taskType: "DAILY",
+                  sortOrder: currentDailyCats[targetDailyIdx].tasks.length,
+                  dueDate: targetDateKey,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
          return;
       }
@@ -1825,7 +1928,7 @@ export function CockpitTasksSection({
 
       if (targetCat?.id) {
          const isComplete = Boolean(foundTask.completed);
-         putLocalTask({
+         const localTask: LocalTaskRecord = {
             id: foundTask.id,
             userId: userId ?? null,
             categoryId: targetCat.id,
@@ -1840,11 +1943,9 @@ export function CockpitTasksSection({
             updatedAt: nowIso,
             completedAt: isComplete ? nowIso : null,
             syncState: "pending",
-         }).catch(() => {});
-      }
+         };
 
-      if (isLoggedIn && userId) {
-         enqueueMutation({
+         persistTask(localTask, {
             id: crypto.randomUUID(),
             entityType: "TASK",
             action: "UPDATE",
@@ -1855,21 +1956,8 @@ export function CockpitTasksSection({
             createdAt: Date.now(),
             retryCount: 0,
          })
-            .then(() => {
-               scheduleSync(userId);
-            })
+            .then(() => scheduleSync(userId, 400))
             .catch(() => {});
-
-         startTransition(async () => {
-            try {
-               await updateTaskAction({
-                  taskId: foundTask!.id,
-                  dueDate: targetDateKey,
-               });
-            } catch (err) {
-               logTaskSync("Failed to update task day on server", err);
-            }
-         });
       }
 
       logTaskSync("Task moved to day", {
@@ -1905,7 +1993,7 @@ export function CockpitTasksSection({
 
          const nowIso = new Date().toISOString();
          if (foundCat.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: foundCat.id,
@@ -1919,11 +2007,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: foundTask.completed ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "UPDATE",
@@ -1934,22 +2020,11 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => scheduleSync(userId))
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
-
-            startTransition(async () => {
-               try {
-                  await updateTaskAction({
-                     taskId,
-                     challengeId: newChallengeId,
-                  });
-               } catch (err) {
-                  logTaskSync("Failed to update task scope on server", err);
-               }
-            });
          }
       },
-      [weeklyCategories, userId, isLoggedIn]
+      [weeklyCategories, userId, persistTask]
    );
 
    const rolloverSummary = useMemo(() => {
@@ -2000,9 +2075,10 @@ export function CockpitTasksSection({
          setDailyCategories(updatedCategories);
 
          const nowIso = new Date().toISOString();
+         const localTasks: LocalTaskRecord[] = [];
          candidates.forEach((candidate) => {
             if (candidate.categoryId) {
-               putLocalTask({
+               localTasks.push({
                   id: candidate.taskId,
                   userId: userId ?? null,
                   categoryId: candidate.categoryId,
@@ -2016,36 +2092,26 @@ export function CockpitTasksSection({
                   updatedAt: nowIso,
                   completedAt: null,
                   syncState: "pending",
-               }).catch(() => {});
-            }
-
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "UPDATE",
-                  payload: {
-                     taskId: candidate.taskId,
-                     dueDate: effectiveTodayDate,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               }).catch(() => {});
+               });
             }
          });
 
-         if (isLoggedIn && userId) {
-            scheduleSync(userId);
-            startTransition(async () => {
-               try {
-                  await rolloverTasksAction({
-                     taskIds: candidateIds,
-                     targetDateKey: effectiveTodayDate,
-                  });
-               } catch (err) {
-                  logTaskSync("Failed to execute rollover on server", err);
-               }
-            });
+         if (isLoggedIn && userId && candidateIds.length > 0) {
+            persistTasks(localTasks, {
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "ROLLOVER",
+               payload: {
+                  taskIds: candidateIds,
+                  targetDateKey: effectiveTodayDate,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId, 400))
+               .catch(() => {});
+         } else if (localTasks.length > 0) {
+            putLocalTasks(localTasks).catch(() => {});
          }
 
          logTaskSync("Incomplete tasks rolled over to Today", {
@@ -2053,7 +2119,7 @@ export function CockpitTasksSection({
             targetDateKey: effectiveTodayDate,
          });
       },
-      [dailyCategories, effectiveTodayDate, userId, isLoggedIn]
+      [dailyCategories, effectiveTodayDate, userId, isLoggedIn, persistTasks]
    );
 
    const moveCategoryToDayAction = (
@@ -2086,7 +2152,7 @@ export function CockpitTasksSection({
             const nowIso = new Date().toISOString();
             const catId = res.movedCategory.id;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -2095,28 +2161,25 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (res.movedTasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] = res.movedTasks.map(
-                  (t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text || "",
-                     taskType: "DAILY",
-                     sortOrder: idx,
-                     isComplete: Boolean(t.completed),
-                     status: getTaskStatus(t),
-                     dueDate: targetDateKey,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  })
-               );
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            const tasksToUpdate: LocalTaskRecord[] = res.movedTasks.map(
+               (t, idx) => ({
+                  id: t.id,
+                  userId: userId ?? null,
+                  categoryId: catId,
+                  title: t.text || "",
+                  taskType: "DAILY",
+                  sortOrder: idx,
+                  isComplete: Boolean(t.completed),
+                  status: getTaskStatus(t),
+                  dueDate: targetDateKey,
+                  createdAt: t.createdAt || nowIso,
+                  updatedAt: nowIso,
+                  completedAt: t.completed ? nowIso : null,
+                  syncState: "pending",
+               })
+            );
 
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
@@ -2144,10 +2207,9 @@ export function CockpitTasksSection({
                      syncState: "pending" as const,
                   })),
             ];
-            putLocalCategories(allCatsToUpdate).catch(() => {});
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [
+               {
                   id: crypto.randomUUID(),
                   entityType: "CATEGORY",
                   action: "MOVE",
@@ -2158,27 +2220,34 @@ export function CockpitTasksSection({
                   },
                   createdAt: Date.now(),
                   retryCount: 0,
-               })
-                  .then(() => scheduleSync(userId))
-                  .catch(() => {});
+               },
+               ...res.movedTasks.map((t) => ({
+                  id: crypto.randomUUID(),
+                  entityType: "TASK" as const,
+                  action: "MOVE" as const,
+                  payload: {
+                     taskId: t.id,
+                     categoryId: catId,
+                     taskType: "DAILY",
+                     dueDate: targetDateKey,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })),
+            ];
 
-               for (const t of res.movedTasks) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "MOVE",
-                     payload: {
-                        taskId: t.id,
-                        categoryId: catId,
-                        taskType: "DAILY",
-                        dueDate: targetDateKey,
-                     },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-               scheduleSync(userId);
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
 
+            if (isLoggedIn && userId) {
                trackLogRocketEvent("WeeklyCategoryMovedToDay", {
                   categoryId: res.movedCategory.id,
                   targetDateKey,
@@ -2245,26 +2314,33 @@ export function CockpitTasksSection({
                syncState: "pending",
             })
          );
-         putLocalTasks(tasksToUpdate).catch(() => {});
+
+         const mutations: Array<Omit<QueuedMutation, "userId">> =
+            res.movedTasks.map((t) => ({
+               id: crypto.randomUUID(),
+               entityType: "TASK" as const,
+               action: "MOVE" as const,
+               payload: {
+                  taskId: t.id,
+                  categoryId: catId,
+                  taskType: "DAILY",
+                  dueDate: targetDateKey,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            }));
+
+         commitLocalBatch({
+            tasks: tasksToUpdate,
+            mutations:
+               isLoggedIn && userId
+                  ? mutations.map((mutation) => ({ ...mutation, userId }))
+                  : [],
+         })
+            .then(() => scheduleSync(userId))
+            .catch(() => {});
 
          if (isLoggedIn && userId) {
-            for (const t of res.movedTasks) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: t.id,
-                     categoryId: catId,
-                     taskType: "DAILY",
-                     dueDate: targetDateKey,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               }).catch(() => {});
-            }
-            scheduleSync(userId);
-
             trackLogRocketEvent("DailyCategoryMovedToDay", {
                categoryId: catId,
                targetDateKey,
@@ -2314,29 +2390,26 @@ export function CockpitTasksSection({
       );
 
       if (catId) {
-         putLocalCategory({
-            id: catId,
-            userId: userId ?? null,
-            name: trimmed,
-            taskType: catType === "daily" ? "DAILY" : "WEEKLY",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            syncState: "pending",
-         }).catch(() => {});
-      }
-
-      if (isLoggedIn && userId && catId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "CATEGORY",
-            action: "UPDATE",
-            payload: { categoryId: catId, name: trimmed },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
+         persistCategory(
+            {
+               id: catId,
+               userId: userId ?? null,
+               name: trimmed,
+               taskType: catType === "daily" ? "DAILY" : "WEEKLY",
+               createdAt: new Date().toISOString(),
+               updatedAt: new Date().toISOString(),
+               syncState: "pending",
+            },
+            {
+               id: crypto.randomUUID(),
+               entityType: "CATEGORY",
+               action: "UPDATE",
+               payload: { categoryId: catId, name: trimmed },
+               createdAt: Date.now(),
+               retryCount: 0,
+            }
+         )
+            .then(() => scheduleSync(userId))
             .catch(() => {});
       }
 
@@ -2390,7 +2463,16 @@ export function CockpitTasksSection({
       }
 
       if (catId) {
-         deleteLocalCategory(catId).catch(() => {});
+         deleteCategoryWithMutation(catId, {
+            id: crypto.randomUUID(),
+            entityType: "CATEGORY",
+            action: "DELETE",
+            payload: { categoryId: catId },
+            createdAt: Date.now(),
+            retryCount: 0,
+         })
+            .then(() => scheduleSync(userId))
+            .catch(() => {});
       }
 
       if (catId || targetName) {
@@ -2410,21 +2492,6 @@ export function CockpitTasksSection({
             collapsedCategoryIdsRef.current = next;
             return next;
          });
-      }
-
-      if (isLoggedIn && userId && catId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "CATEGORY",
-            action: "DELETE",
-            payload: { categoryId: catId },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
       }
 
       logTaskSync("Category deleted", { categoryId: catId, name: targetName });
@@ -2638,23 +2705,67 @@ export function CockpitTasksSection({
             -1
          );
          initialSortOrder = highestOrder + 1;
-
-         putLocalCategory({
-            id: targetCatId,
-            userId: userId ?? null,
-            name: targetCategoryName,
-            taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
-            sortOrder: initialSortOrder,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-            syncState: "pending",
-         }).catch(() => {});
       }
 
-      if (targetCatId) {
-         putLocalTask({
+      const localCategories: LocalCategoryRecord[] =
+         isNew && targetCatId
+            ? [
+                 {
+                    id: targetCatId,
+                    userId: userId ?? null,
+                    name: targetCategoryName,
+                    taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+                    sortOrder: initialSortOrder,
+                    createdAt: nowIso,
+                    updatedAt: nowIso,
+                    syncState: "pending",
+                 },
+              ]
+            : [];
+
+      const localTasks: LocalTaskRecord[] = targetCatId
+         ? [
+              {
+                 id: newTaskId,
+                 userId: userId ?? null,
+                 categoryId: targetCatId,
+                 challengeId: targetChallengeId,
+                 title: newTodoText.trim(),
+                 taskType,
+                 isComplete: nextCompleted,
+                 status: newTodoStatus,
+                 dueDate: resolvedDueDate,
+                 createdAt: nowIso,
+                 updatedAt: nowIso,
+                 completedAt: nextCompleted ? nowIso : null,
+                 syncState: "pending",
+              },
+           ]
+         : [];
+
+      const mutations: Array<Omit<QueuedMutation, "userId">> = [];
+      if (isNew && targetCatId) {
+         mutations.push({
+            id: crypto.randomUUID(),
+            entityType: "CATEGORY",
+            action: "CREATE",
+            payload: {
+               id: targetCatId,
+               name: targetCategoryName,
+               taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+               sortOrder: initialSortOrder,
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         });
+      }
+
+      mutations.push({
+         id: crypto.randomUUID(),
+         entityType: "TASK",
+         action: "CREATE",
+         payload: {
             id: newTaskId,
-            userId: userId ?? null,
             categoryId: targetCatId,
             challengeId: targetChallengeId,
             title: newTodoText.trim(),
@@ -2662,52 +2773,23 @@ export function CockpitTasksSection({
             isComplete: nextCompleted,
             status: newTodoStatus,
             dueDate: resolvedDueDate,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-            completedAt: nextCompleted ? nowIso : null,
-            syncState: "pending",
-         }).catch(() => {});
-      }
+         },
+         createdAt: Date.now() + 1,
+         retryCount: 0,
+      });
+
+      commitLocalBatch({
+         categories: localCategories,
+         tasks: localTasks,
+         mutations:
+            isLoggedIn && userId
+               ? mutations.map((mutation) => ({ ...mutation, userId }))
+               : [],
+      })
+         .then(() => scheduleSync(userId))
+         .catch(() => {});
 
       if (isLoggedIn && userId) {
-         if (isNew && targetCatId) {
-            enqueueMutation({
-               id: crypto.randomUUID(),
-               entityType: "CATEGORY",
-               action: "CREATE",
-               payload: {
-                  id: targetCatId,
-                  name: targetCategoryName,
-                  taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
-                  sortOrder: initialSortOrder,
-               },
-               createdAt: Date.now(),
-               retryCount: 0,
-            }).catch(() => {});
-         }
-
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "TASK",
-            action: "CREATE",
-            payload: {
-               id: newTaskId,
-               categoryId: targetCatId,
-               challengeId: targetChallengeId,
-               title: newTodoText.trim(),
-               taskType,
-               isComplete: nextCompleted,
-               status: newTodoStatus,
-               dueDate: resolvedDueDate,
-            },
-            createdAt: Date.now() + 1,
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
-
          trackLogRocketEvent("TaskCreated", {
             taskType,
             isNewCategory: isNew,
@@ -2726,6 +2808,104 @@ export function CockpitTasksSection({
       setIsCreatingCategory(false);
       setAddModalType(null);
    };
+
+   const handleAddSampleTask = useCallback(
+      (taskText: string) => {
+         const trimmed = taskText.trim();
+         if (!trimmed) return;
+         const targetCategoryName = "Study Commitments";
+         const targetDateKey = selectedDateKey || effectiveTodayDate;
+         const newTaskId = crypto.randomUUID();
+         const newTask: TaskItem = {
+            id: newTaskId,
+            text: trimmed,
+            completed: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            challengeId: null,
+         };
+
+         const existingCat = dailyCategories.find(
+            (c) => c.name === targetCategoryName
+         );
+         const targetCatId = existingCat?.id || crypto.randomUUID();
+
+         setDailyCategories((prev) => {
+            const existingIdx = prev.findIndex(
+               (c) => c.name === targetCategoryName
+            );
+            if (existingIdx >= 0) {
+               return prev.map((cat, i) =>
+                  i === existingIdx
+                     ? {
+                          ...cat,
+                          id: cat.id || targetCatId,
+                          tasks: [...cat.tasks, newTask],
+                       }
+                     : cat
+               );
+            }
+            return [
+               ...prev,
+               {
+                  id: targetCatId,
+                  name: targetCategoryName,
+                  isCollapsed: false,
+                  sortOrder: 0,
+                  tasks: [newTask],
+               },
+            ];
+         });
+
+         const nowIso = new Date().toISOString();
+         if (!existingCat) {
+            putLocalCategory({
+               id: targetCatId,
+               userId: userId ?? null,
+               name: targetCategoryName,
+               taskType: "DAILY",
+               sortOrder: 0,
+               createdAt: nowIso,
+               updatedAt: nowIso,
+               syncState: "pending",
+            }).catch(() => {});
+         }
+
+         putLocalTask({
+            id: newTaskId,
+            userId: userId ?? null,
+            categoryId: targetCatId,
+            challengeId: null,
+            title: trimmed,
+            taskType: "DAILY",
+            isComplete: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            completedAt: null,
+            syncState: "pending",
+         }).catch(() => {});
+      },
+      [selectedDateKey, effectiveTodayDate, dailyCategories, userId]
+   );
+
+   useEffect(() => {
+      if (typeof window === "undefined") return;
+      const handleSampleTaskEvent = (e: Event) => {
+         const customEvent = e as CustomEvent<{ title?: string }>;
+         if (customEvent.detail?.title) {
+            handleAddSampleTask(customEvent.detail.title);
+         }
+      };
+      window.addEventListener(LOAD_SAMPLE_TASK_EVENT, handleSampleTaskEvent);
+      return () => {
+         window.removeEventListener(
+            LOAD_SAMPLE_TASK_EVENT,
+            handleSampleTaskEvent
+         );
+      };
+   }, [handleAddSampleTask]);
 
    // ---------------------------------------------------------------------------
    // Drag and Drop Event Handlers
@@ -3168,22 +3348,24 @@ export function CockpitTasksSection({
                   syncState: "pending",
                })
             );
-            putLocalTasks(tasksToUpdate).catch(() => {});
 
-            if (isLoggedIn && userId) {
-               const taskIds = targetCatGroup.tasks
-                  .map((t) => t.id)
-                  .filter((id) => Boolean(id));
-               if (taskIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "REORDER",
-                     payload: { taskIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const taskIds = targetCatGroup.tasks
+               .map((t) => t.id)
+               .filter((id) => Boolean(id));
+
+            if (isLoggedIn && userId && taskIds.length > 0) {
+               persistTasks(tasksToUpdate, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "REORDER",
+                  payload: { taskIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
+            } else {
+               putLocalTasks(tasksToUpdate).catch(() => {});
             }
          } else {
             const isMovedComplete = Boolean(
@@ -3192,7 +3374,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -3208,29 +3390,31 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
+
+            if (isLoggedIn && userId) {
+               persistTask(movedLocalTask, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "MOVE",
+                  payload: {
+                     taskId: res.movedTask.id,
+                     categoryId: res.targetCategoryId,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIdx,
+                     dueDate: res.movedTask.dueDate ?? null,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
+            } else {
+               putLocalTask(movedLocalTask).catch(() => {});
+            }
          }
 
          if (isLoggedIn && userId) {
-            enqueueMutation({
-               id: crypto.randomUUID(),
-               entityType: "TASK",
-               action: "MOVE",
-               payload: {
-                  taskId: res.movedTask.id,
-                  categoryId: res.targetCategoryId,
-                  taskType: res.targetTaskType,
-                  sortOrder: destIdx,
-                  dueDate: res.movedTask.dueDate ?? null,
-               },
-               createdAt: Date.now(),
-               retryCount: 0,
-            })
-               .then(() => {
-                  scheduleSync(userId);
-               })
-               .catch(() => {});
-
             trackLogRocketEvent("TaskMoved", {
                taskId: res.movedTask.id,
                targetTaskType: res.targetTaskType,
@@ -3315,7 +3499,7 @@ export function CockpitTasksSection({
             const catId = res.movedCategory.id;
             const targetType = res.targetTaskType;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -3324,30 +3508,28 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            // Cascade taskType and dueDate to all tasks inside this category in IndexedDB
-            if (res.movedCategory.tasks && res.movedCategory.tasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] =
-                  res.movedCategory.tasks.map((t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text,
-                     taskType: targetType,
-                     sortOrder: idx,
-                     isComplete: t.completed,
-                     status: getTaskStatus(t),
-                     dueDate: t.dueDate ?? null,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  }));
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            // Cascade taskType and dueDate to all tasks inside this category.
+            const tasksToUpdate: LocalTaskRecord[] = (
+               res.movedCategory.tasks ?? []
+            ).map((t, idx) => ({
+               id: t.id,
+               userId: userId ?? null,
+               categoryId: catId,
+               title: t.text,
+               taskType: targetType,
+               sortOrder: idx,
+               isComplete: t.completed,
+               status: getTaskStatus(t),
+               dueDate: t.dueDate ?? null,
+               createdAt: t.createdAt || nowIso,
+               updatedAt: nowIso,
+               completedAt: t.completed ? nowIso : null,
+               syncState: "pending",
+            }));
 
-            // Persist updated sortOrder for all categories in both columns
+            // Persist updated sortOrder for all categories in both columns.
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
                   .filter((c): c is typeof c & { id: string } => Boolean(c.id))
@@ -3383,81 +3565,81 @@ export function CockpitTasksSection({
                   })),
             ];
 
-            putLocalCategories(allCatsToUpdate).catch(() => {});
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [];
 
-            if (isLoggedIn && userId) {
-               const dailyCatIds = res.dailyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (dailyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: dailyCatIds },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const dailyCatIds = res.dailyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (dailyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: dailyCatIds },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               });
+            }
 
-               const weeklyCatIds = res.weeklyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (weeklyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: weeklyCatIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const weeklyCatIds = res.weeklyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (weeklyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: weeklyCatIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               });
+            }
 
-               if (draggedItem.sourceColumn !== targetColumn) {
-                  enqueueMutation({
+            if (draggedItem.sourceColumn !== targetColumn) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "MOVE",
+                  payload: {
+                     categoryId: res.movedCategory.id,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIndex,
+                  },
+                  createdAt: Date.now() + 2,
+                  retryCount: 0,
+               });
+            }
+
+            if (isMovingWeeklyToDaily) {
+               for (const t of res.movedCategory.tasks ?? []) {
+                  mutations.push({
                      id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
+                     entityType: "TASK",
                      action: "MOVE",
                      payload: {
-                        categoryId: res.movedCategory.id,
-                        taskType: res.targetTaskType,
-                        sortOrder: destIndex,
+                        taskId: t.id,
+                        categoryId: catId,
+                        taskType: "DAILY",
+                        dueDate: selectedDateKey,
                      },
-                     createdAt: Date.now() + 2,
+                     createdAt: Date.now(),
                      retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               } else {
-                  scheduleSync(userId);
+                  });
                }
+            }
 
-               if (
-                  isMovingWeeklyToDaily &&
-                  res.movedCategory.tasks &&
-                  res.movedCategory.tasks.length > 0
-               ) {
-                  for (const t of res.movedCategory.tasks) {
-                     enqueueMutation({
-                        id: crypto.randomUUID(),
-                        entityType: "TASK",
-                        action: "MOVE",
-                        payload: {
-                           taskId: t.id,
-                           categoryId: catId,
-                           taskType: "DAILY",
-                           dueDate: selectedDateKey,
-                        },
-                        createdAt: Date.now(),
-                        retryCount: 0,
-                     }).catch(() => {});
-                  }
-                  scheduleSync(userId);
-               }
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
 
+            if (isLoggedIn && userId) {
                trackLogRocketEvent("CategoryMoved", {
                   categoryId: res.movedCategory.id,
                   targetTaskType: res.targetTaskType,
@@ -3504,7 +3686,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -3520,28 +3702,24 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: res.movedTask.id,
-                     categoryId: res.targetCategoryId,
-                     taskType: res.targetTaskType,
-                     sortOrder: 0,
-                     dueDate: res.movedTask.dueDate ?? null,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
-                  })
-                  .catch(() => {});
-            }
+            persistTask(movedLocalTask, {
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "MOVE",
+               payload: {
+                  taskId: res.movedTask.id,
+                  categoryId: res.targetCategoryId,
+                  taskType: res.targetTaskType,
+                  sortOrder: 0,
+                  dueDate: res.movedTask.dueDate ?? null,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
       }
 
@@ -3601,7 +3779,7 @@ export function CockpitTasksSection({
             const catId = res.movedCategory.id;
             const targetType = res.targetTaskType;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -3610,27 +3788,25 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (res.movedCategory.tasks && res.movedCategory.tasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] =
-                  res.movedCategory.tasks.map((t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text,
-                     taskType: targetType,
-                     sortOrder: idx,
-                     isComplete: t.completed,
-                     status: getTaskStatus(t),
-                     dueDate: t.dueDate ?? null,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  }));
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            const tasksToUpdate: LocalTaskRecord[] = (
+               res.movedCategory.tasks ?? []
+            ).map((t, idx) => ({
+               id: t.id,
+               userId: userId ?? null,
+               categoryId: catId,
+               title: t.text,
+               taskType: targetType,
+               sortOrder: idx,
+               isComplete: t.completed,
+               status: getTaskStatus(t),
+               dueDate: t.dueDate ?? null,
+               createdAt: t.createdAt || nowIso,
+               updatedAt: nowIso,
+               completedAt: t.completed ? nowIso : null,
+               syncState: "pending",
+            }));
 
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
@@ -3667,58 +3843,61 @@ export function CockpitTasksSection({
                   })),
             ];
 
-            putLocalCategories(allCatsToUpdate).catch(() => {});
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [];
 
-            if (isLoggedIn && userId) {
-               const dailyCatIds = res.dailyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (dailyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: dailyCatIds },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-
-               const weeklyCatIds = res.weeklyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (weeklyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: weeklyCatIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-
-               if (draggedItem.sourceColumn !== targetColumn) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "MOVE",
-                     payload: {
-                        categoryId: res.movedCategory.id,
-                        taskType: res.targetTaskType,
-                        sortOrder: destIndex,
-                     },
-                     createdAt: Date.now() + 2,
-                     retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               } else {
-                  scheduleSync(userId);
-               }
+            const dailyCatIds = res.dailyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (dailyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: dailyCatIds },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               });
             }
+
+            const weeklyCatIds = res.weeklyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (weeklyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: weeklyCatIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               });
+            }
+
+            if (draggedItem.sourceColumn !== targetColumn) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "MOVE",
+                  payload: {
+                     categoryId: res.movedCategory.id,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIndex,
+                  },
+                  createdAt: Date.now() + 2,
+                  retryCount: 0,
+               });
+            }
+
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
       } else if (draggedItem.type === "task" && draggedItem.id) {
          if (
@@ -3744,19 +3923,18 @@ export function CockpitTasksSection({
                   currentDailyCats = [...dailyCategories, newDailyCat];
                   targetDailyIdx = currentDailyCats.length - 1;
 
-                  putLocalCategory({
-                     id: newCatId,
-                     userId: userId ?? null,
-                     name: sourceCat.name,
-                     taskType: "DAILY",
-                     sortOrder: targetDailyIdx,
-                     createdAt: new Date().toISOString(),
-                     updatedAt: new Date().toISOString(),
-                     syncState: "pending",
-                  }).catch(() => {});
-
-                  if (isLoggedIn && userId) {
-                     enqueueMutation({
+                  persistCategory(
+                     {
+                        id: newCatId,
+                        userId: userId ?? null,
+                        name: sourceCat.name,
+                        taskType: "DAILY",
+                        sortOrder: targetDailyIdx,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        syncState: "pending",
+                     },
+                     {
                         id: crypto.randomUUID(),
                         entityType: "CATEGORY",
                         action: "CREATE",
@@ -3768,8 +3946,8 @@ export function CockpitTasksSection({
                         },
                         createdAt: Date.now(),
                         retryCount: 0,
-                     }).catch(() => {});
-                  }
+                     }
+                  ).catch(() => {});
                }
 
                const res = moveTaskBetweenCategories({
@@ -3796,7 +3974,7 @@ export function CockpitTasksSection({
                   const movedStatus =
                      (res.movedTask.status as TaskStatus) ||
                      (isMovedComplete ? "COMPLETED" : "TODO");
-                  putLocalTask({
+                  const movedLocalTask: LocalTaskRecord = {
                      id: res.movedTask.id,
                      userId: userId ?? null,
                      categoryId: res.targetCategoryId,
@@ -3812,29 +3990,25 @@ export function CockpitTasksSection({
                      updatedAt: nowIso,
                      completedAt: isMovedComplete ? nowIso : null,
                      syncState: "pending",
-                  }).catch(() => {});
+                  };
 
-                  if (isLoggedIn && userId) {
-                     enqueueMutation({
-                        id: crypto.randomUUID(),
-                        entityType: "TASK",
-                        action: "MOVE",
-                        payload: {
-                           taskId: res.movedTask.id,
-                           categoryId: res.targetCategoryId,
-                           taskType: res.targetTaskType,
-                           sortOrder:
-                              currentDailyCats[targetDailyIdx].tasks.length,
-                           dueDate: selectedDateKey,
-                        },
-                        createdAt: Date.now(),
-                        retryCount: 0,
-                     })
-                        .then(() => {
-                           scheduleSync(userId);
-                        })
-                        .catch(() => {});
-                  }
+                  persistTask(movedLocalTask, {
+                     id: crypto.randomUUID(),
+                     entityType: "TASK",
+                     action: "MOVE",
+                     payload: {
+                        taskId: res.movedTask.id,
+                        categoryId: res.targetCategoryId,
+                        taskType: res.targetTaskType,
+                        sortOrder:
+                           currentDailyCats[targetDailyIdx].tasks.length,
+                        dueDate: selectedDateKey,
+                     },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  })
+                     .then(() => scheduleSync(userId))
+                     .catch(() => {});
                }
             }
          } else if (targetCategories.length > 0) {
@@ -3874,7 +4048,7 @@ export function CockpitTasksSection({
                const movedStatus =
                   (res.movedTask.status as TaskStatus) ||
                   (isMovedComplete ? "COMPLETED" : "TODO");
-               putLocalTask({
+               const movedLocalTask: LocalTaskRecord = {
                   id: res.movedTask.id,
                   userId: userId ?? null,
                   categoryId: res.targetCategoryId,
@@ -3890,28 +4064,24 @@ export function CockpitTasksSection({
                   updatedAt: nowIso,
                   completedAt: isMovedComplete ? nowIso : null,
                   syncState: "pending",
-               }).catch(() => {});
+               };
 
-               if (isLoggedIn && userId) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "MOVE",
-                     payload: {
-                        taskId: res.movedTask.id,
-                        categoryId: res.targetCategoryId,
-                        taskType: res.targetTaskType,
-                        sortOrder: targetCategories[lastCatIdx].tasks.length,
-                        dueDate: res.movedTask.dueDate ?? null,
-                     },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               }
+               persistTask(movedLocalTask, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "MOVE",
+                  payload: {
+                     taskId: res.movedTask.id,
+                     categoryId: res.targetCategoryId,
+                     taskType: res.targetTaskType,
+                     sortOrder: targetCategories[lastCatIdx].tasks.length,
+                     dueDate: res.movedTask.dueDate ?? null,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
             }
          }
       }
@@ -3921,6 +4091,7 @@ export function CockpitTasksSection({
 
    return (
       <>
+         <TaskSyncIssueBanner userId={userId} />
          {/* Mobile Segmented Switcher (< sm: 360px–639px) */}
          <div
             role="tablist"
@@ -4208,7 +4379,29 @@ export function CockpitTasksSection({
                            >
                               <script
                                  dangerouslySetInnerHTML={{
-                                    __html: `(function(){try{var k='${ROLLOVER_SNOOZE_STORAGE_PREFIX}';var u='${userId || "guest"}';var d='${effectiveTodayDate}';if(localStorage.getItem(k+u+'_'+d)==='true'||localStorage.getItem(k+'guest_'+d)==='true'||localStorage.getItem(k+'all_'+d)==='true'||document.cookie.indexOf('${ROLLOVER_SNOOZE_COOKIE}')!==-1){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
+                                    __html: `(function(){try{var k=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_STORAGE_PREFIX
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var u=${JSON.stringify(
+                                       userId && userId.trim().length > 0
+                                          ? userId.trim()
+                                          : "guest"
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var d=${JSON.stringify(
+                                       effectiveTodayDate
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var c=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_COOKIE
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var s=false;if(typeof localStorage!=='undefined'&&localStorage.getItem(k+u+'_'+d)==='true'){s=true;}if(!s&&typeof document!=='undefined'&&document.cookie){var m=document.cookie.match(new RegExp('(?:^|;\\\\s*)'+c+'=([^;]*)'));if(m&&m[1]){var p=JSON.parse(decodeURIComponent(m[1]));if(p&&typeof p==='object'&&p[u]===d){s=true;}}}if(s){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
                                  }}
                               />
                               <div className="flex items-start justify-between gap-2.5">
@@ -4346,6 +4539,31 @@ export function CockpitTasksSection({
                                  </Button>
                               </div>
                            )}
+
+                           {!isLoggedIn && (
+                              <div className="pt-3 border-t border-border-strong/50 mt-3 space-y-2">
+                                 <p className="text-xs font-medium text-text-secondary">
+                                    💡 Or load sample study commitments:
+                                 </p>
+                                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                                    {SAMPLE_STUDY_TASKS.map((sample) => (
+                                       <button
+                                          key={sample}
+                                          type="button"
+                                          onClick={() =>
+                                             handleAddSampleTask(sample)
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-nested hover:bg-surface-elevated text-text-primary text-xs font-medium border border-border-default hover:border-brand-1/40 transition-colors"
+                                       >
+                                          <span className="text-brand-1-light font-bold">
+                                             +
+                                          </span>
+                                          <span>{sample}</span>
+                                       </button>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
                         </div>
                      ) : (
                         <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian">
@@ -4403,10 +4621,7 @@ export function CockpitTasksSection({
                                     }`}
                                  >
                                     <ContextMenu modal={false}>
-                                       <ContextMenuTrigger
-                                          asChild
-                                          disabled={!isLoggedIn}
-                                       >
+                                       <ContextMenuTrigger asChild>
                                           <div
                                              draggable
                                              onDragStart={(e) =>
@@ -4441,90 +4656,82 @@ export function CockpitTasksSection({
                                                    e.stopPropagation()
                                                 }
                                              >
-                                                {isLoggedIn && (
-                                                   <DropdownMenu modal={false}>
-                                                      <DropdownMenuTrigger
-                                                         asChild
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
                                                       >
-                                                         <button
-                                                            type="button"
-                                                            className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
-                                                            title="Category options"
-                                                            aria-label={`Options for category ${cat.name}`}
-                                                         >
-                                                            <MoreVertical className="h-4 w-4" />
-                                                         </button>
-                                                      </DropdownMenuTrigger>
-                                                      <DropdownMenuContent
-                                                         align="end"
-                                                         className="min-w-dropdown-min"
-                                                      >
-                                                         <CategoryMenuItems
-                                                            isChallengeActive={
-                                                               hasChallengeContext
-                                                            }
-                                                            cat={cat}
-                                                            catType="daily"
-                                                            dailyCategories={
-                                                               dailyCategories
-                                                            }
-                                                            weeklyCategories={
-                                                               weeklyCategories
-                                                            }
-                                                            selectedDateKey={
-                                                               selectedDateKey
-                                                            }
-                                                            effectiveTodayDate={
-                                                               effectiveTodayDate
-                                                            }
-                                                            dayOptions={
-                                                               dayOptions
-                                                            }
-                                                            onMoveCategoryToDay={(
-                                                               targetDateKey
-                                                            ) =>
-                                                               moveCategoryToDayAction(
-                                                                  catIdx,
-                                                                  targetDateKey,
-                                                                  "daily"
-                                                               )
-                                                            }
-                                                            onRenameCategory={() => {
-                                                               setEditCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "daily",
-                                                                  }
-                                                               );
-                                                               setEditCategoryInputName(
-                                                                  cat.name
-                                                               );
-                                                            }}
-                                                            onDeleteCategory={() => {
-                                                               setDeleteCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "daily",
-                                                                  }
-                                                               );
-                                                            }}
-                                                            Item={
-                                                               DropdownMenuItem
-                                                            }
-                                                            Separator={
-                                                               DropdownMenuSeparator
-                                                            }
-                                                            Label={
-                                                               DropdownMenuLabel
-                                                            }
-                                                         />
-                                                      </DropdownMenuContent>
-                                                   </DropdownMenu>
-                                                )}
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-dropdown-min"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
+                                                         cat={cat}
+                                                         catType="daily"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "daily"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
                                                 {isCollapsed ? (
                                                    <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                                 ) : (
@@ -4533,59 +4740,51 @@ export function CockpitTasksSection({
                                              </div>
                                           </div>
                                        </ContextMenuTrigger>
-                                       {isLoggedIn && (
-                                          <ContextMenuContent className="min-w-dropdown-min">
-                                             <CategoryMenuItems
-                                                isChallengeActive={
-                                                   hasChallengeContext
-                                                }
-                                                cat={cat}
-                                                catType="daily"
-                                                dailyCategories={
-                                                   dailyCategories
-                                                }
-                                                weeklyCategories={
-                                                   weeklyCategories
-                                                }
-                                                selectedDateKey={
-                                                   selectedDateKey
-                                                }
-                                                effectiveTodayDate={
-                                                   effectiveTodayDate
-                                                }
-                                                dayOptions={dayOptions}
-                                                onMoveCategoryToDay={(
-                                                   targetDateKey
-                                                ) =>
-                                                   moveCategoryToDayAction(
-                                                      catIdx,
-                                                      targetDateKey,
-                                                      "daily"
-                                                   )
-                                                }
-                                                onRenameCategory={() => {
-                                                   setEditCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "daily",
-                                                   });
-                                                   setEditCategoryInputName(
-                                                      cat.name
-                                                   );
-                                                }}
-                                                onDeleteCategory={() => {
-                                                   setDeleteCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "daily",
-                                                   });
-                                                }}
-                                                Item={ContextMenuItem}
-                                                Separator={ContextMenuSeparator}
-                                                Label={ContextMenuLabel}
-                                             />
-                                          </ContextMenuContent>
-                                       )}
+                                       <ContextMenuContent className="min-w-dropdown-min">
+                                          <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
+                                             cat={cat}
+                                             catType="daily"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
+                                                   "daily"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
+                                                );
+                                             }}
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
                                     </ContextMenu>
 
                                     {!isCollapsed && (
@@ -4615,10 +4814,12 @@ export function CockpitTasksSection({
                                                    >
                                                       <ContextMenuTrigger
                                                          asChild
-                                                         disabled={!isLoggedIn}
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -4688,10 +4889,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() => {
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
                                                                            toggleDailyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            );
                                                                         }}
                                                                         className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
@@ -4845,7 +5049,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "daily",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"
@@ -4875,6 +5080,27 @@ export function CockpitTasksSection({
                                                                         >
                                                                            Crossed
                                                                            Out
+                                                                        </button>
+                                                                     )}
+                                                                     {status ===
+                                                                        "TODO" && (
+                                                                        <button
+                                                                           type="button"
+                                                                           onClick={(
+                                                                              e
+                                                                           ) => {
+                                                                              e.stopPropagation();
+                                                                              setTaskStatus(
+                                                                                 catIdx,
+                                                                                 task.id,
+                                                                                 "daily",
+                                                                                 "IN_PROGRESS"
+                                                                              );
+                                                                           }}
+                                                                           title="Status: To-Do. Click to set In Progress"
+                                                                           className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-all border mt-0.5 bg-surface-nested text-text-tertiary hover:text-amber-400 border-border-subtle hover:border-amber-500/30 hover:bg-amber-500/10"
+                                                                        >
+                                                                           To-Do
                                                                         </button>
                                                                      )}
                                                                   </>
@@ -4912,249 +5138,260 @@ export function CockpitTasksSection({
                                                                      <RotateCcw className="h-3.5 w-3.5" />
                                                                   </button>
                                                                )}
-                                                            {isLoggedIn && (
-                                                               <DropdownMenu
-                                                                  modal={false}
-                                                               >
-                                                                  <DropdownMenuTrigger
-                                                                     asChild
-                                                                  >
-                                                                     <button
-                                                                        type="button"
-                                                                        className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
-                                                                        title="Task options"
-                                                                        aria-label={`Options for task ${task.text}`}
-                                                                     >
-                                                                        <MoreVertical className="h-3.5 w-3.5" />
-                                                                     </button>
-                                                                  </DropdownMenuTrigger>
-                                                                  <DropdownMenuContent
-                                                                     align="end"
-                                                                     className="min-w-dropdown-min"
-                                                                  >
-                                                                     <TaskMenuItems
-                                                                        isChallengeActive={
-                                                                           hasChallengeContext
-                                                                        }
-                                                                        task={
-                                                                           task
-                                                                        }
-                                                                        catIdx={
-                                                                           catIdx
-                                                                        }
-                                                                        taskType="daily"
-                                                                        effectiveTodayDate={
-                                                                           effectiveTodayDate
-                                                                        }
-                                                                        dayOptions={
-                                                                           dayOptions
-                                                                        }
-                                                                        selectedDateKey={
-                                                                           selectedDateKey
-                                                                        }
-                                                                        linkableChallengeId={
-                                                                           linkableChallengeId
-                                                                        }
-                                                                        onToggleChallengeScope={(
-                                                                           newScope
-                                                                        ) =>
-                                                                           toggleTaskChallengeScope(
-                                                                              task.id,
-                                                                              newScope
-                                                                           )
-                                                                        }
-                                                                        onSetStatus={(
-                                                                           status
-                                                                        ) =>
-                                                                           setTaskStatus(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "daily",
-                                                                              status
-                                                                           )
-                                                                        }
-                                                                        onMoveToDay={(
-                                                                           targetDateKey
-                                                                        ) =>
-                                                                           moveTaskToDay(
-                                                                              task.id,
-                                                                              targetDateKey,
-                                                                              catIdx,
-                                                                              "daily"
-                                                                           )
-                                                                        }
-                                                                        onEditTask={() => {
-                                                                           setEditTaskModal(
-                                                                              {
-                                                                                 id: task.id,
-                                                                                 text: task.text,
-                                                                                 completed:
-                                                                                    task.completed,
-                                                                                 status:
-                                                                                    getTaskStatus(
-                                                                                       task
-                                                                                    ),
-                                                                                 dueDate:
-                                                                                    task.dueDate ??
-                                                                                    null,
-                                                                                 createdAt:
-                                                                                    task.createdAt,
-                                                                                 challengeId:
-                                                                                    task.challengeId ??
-                                                                                    null,
-                                                                                 catIdx,
-                                                                                 taskType:
-                                                                                    "daily",
-                                                                              }
-                                                                           );
-                                                                           setEditTaskInputChallengeId(
-                                                                              task.challengeId ??
-                                                                                 null
-                                                                           );
-                                                                           setEditTaskInputText(
-                                                                              task.text
-                                                                           );
-                                                                           setEditTaskInputStatus(
-                                                                              getTaskStatus(
-                                                                                 task
-                                                                              )
-                                                                           );
-                                                                           setEditTaskInputDueDate(
-                                                                              task.dueDate ||
-                                                                                 selectedDateKey
-                                                                           );
-                                                                        }}
-                                                                        onDeleteTask={() =>
-                                                                           handleDeleteTask(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "daily"
-                                                                           )
-                                                                        }
-                                                                        Item={
-                                                                           DropdownMenuItem
-                                                                        }
-                                                                        Separator={
-                                                                           DropdownMenuSeparator
-                                                                        }
-                                                                        Label={
-                                                                           DropdownMenuLabel
-                                                                        }
-                                                                     />
-                                                                  </DropdownMenuContent>
-                                                               </DropdownMenu>
-                                                            )}
-                                                         </div>
-                                                      </ContextMenuTrigger>
-                                                      {isLoggedIn && (
-                                                         <ContextMenuContent className="min-w-dropdown-min">
-                                                            <TaskMenuItems
-                                                               isChallengeActive={
-                                                                  hasChallengeContext
-                                                               }
-                                                               task={task}
-                                                               catIdx={catIdx}
-                                                               taskType="daily"
-                                                               effectiveTodayDate={
-                                                                  effectiveTodayDate
-                                                               }
-                                                               dayOptions={
-                                                                  dayOptions
-                                                               }
-                                                               selectedDateKey={
-                                                                  selectedDateKey
-                                                               }
-                                                               linkableChallengeId={
-                                                                  linkableChallengeId
-                                                               }
-                                                               onToggleChallengeScope={(
-                                                                  newScope
-                                                               ) =>
-                                                                  toggleTaskChallengeScope(
-                                                                     task.id,
-                                                                     newScope
-                                                                  )
-                                                               }
-                                                               onSetStatus={(
-                                                                  status
-                                                               ) =>
-                                                                  setTaskStatus(
-                                                                     catIdx,
-                                                                     task.id,
-                                                                     "daily",
-                                                                     status
-                                                                  )
-                                                               }
-                                                               onMoveToDay={(
-                                                                  targetDateKey
-                                                               ) =>
-                                                                  moveTaskToDay(
-                                                                     task.id,
-                                                                     targetDateKey,
-                                                                     catIdx,
-                                                                     "daily"
-                                                                  )
-                                                               }
-                                                               onEditTask={() => {
-                                                                  setEditTaskModal(
-                                                                     {
-                                                                        id: task.id,
-                                                                        text: task.text,
-                                                                        completed:
-                                                                           task.completed,
-                                                                        status:
-                                                                           getTaskStatus(
-                                                                              task
-                                                                           ),
-                                                                        dueDate:
-                                                                           task.dueDate ??
-                                                                           null,
-                                                                        createdAt:
-                                                                           task.createdAt,
-                                                                        challengeId:
-                                                                           task.challengeId ??
-                                                                           null,
-                                                                        catIdx,
-                                                                        taskType:
-                                                                           "daily",
-                                                                     }
-                                                                  );
-                                                                  setEditTaskInputChallengeId(
-                                                                     task.challengeId ??
-                                                                        null
-                                                                  );
-                                                                  setEditTaskInputText(
-                                                                     task.text
-                                                                  );
-                                                                  setEditTaskInputStatus(
-                                                                     getTaskStatus(
-                                                                        task
-                                                                     )
-                                                                  );
-                                                                  setEditTaskInputDueDate(
-                                                                     task.dueDate ||
-                                                                        selectedDateKey
-                                                                  );
-                                                               }}
-                                                               onDeleteTask={() =>
+                                                            <button
+                                                               type="button"
+                                                               onClick={(e) => {
+                                                                  e.preventDefault();
+                                                                  e.stopPropagation();
                                                                   handleDeleteTask(
                                                                      catIdx,
                                                                      task.id,
                                                                      "daily"
+                                                                  );
+                                                               }}
+                                                               className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-text-tertiary hover:text-feedback-error rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                               title="Delete task"
+                                                               aria-label={`Delete task ${task.text}`}
+                                                            >
+                                                               <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-dropdown-min"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="daily"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     linkableChallengeId={
+                                                                        linkableChallengeId
+                                                                     }
+                                                                     onToggleChallengeScope={(
+                                                                        newScope
+                                                                     ) =>
+                                                                        toggleTaskChallengeScope(
+                                                                           task.id,
+                                                                           newScope
+                                                                        )
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              challengeId:
+                                                                                 task.challengeId ??
+                                                                                 null,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "daily",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputChallengeId(
+                                                                           task.challengeId ??
+                                                                              null
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         </div>
+                                                      </ContextMenuTrigger>
+                                                      <ContextMenuContent className="min-w-dropdown-min">
+                                                         <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="daily"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            linkableChallengeId={
+                                                               linkableChallengeId
+                                                            }
+                                                            onToggleChallengeScope={(
+                                                               newScope
+                                                            ) =>
+                                                               toggleTaskChallengeScope(
+                                                                  task.id,
+                                                                  newScope
+                                                               )
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     challengeId:
+                                                                        task.challengeId ??
+                                                                        null,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "daily",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputChallengeId(
+                                                                  task.challengeId ??
+                                                                     null
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
                                                                   )
-                                                               }
-                                                               Item={
-                                                                  ContextMenuItem
-                                                               }
-                                                               Separator={
-                                                                  ContextMenuSeparator
-                                                               }
-                                                               Label={
-                                                                  ContextMenuLabel
-                                                               }
-                                                            />
-                                                         </ContextMenuContent>
-                                                      )}
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    </ContextMenu>
                                                 );
                                              })
@@ -5307,10 +5544,7 @@ export function CockpitTasksSection({
                                     }`}
                                  >
                                     <ContextMenu modal={false}>
-                                       <ContextMenuTrigger
-                                          asChild
-                                          disabled={!isLoggedIn}
-                                       >
+                                       <ContextMenuTrigger asChild>
                                           <div
                                              draggable
                                              onDragStart={(e) =>
@@ -5345,90 +5579,82 @@ export function CockpitTasksSection({
                                                    e.stopPropagation()
                                                 }
                                              >
-                                                {isLoggedIn && (
-                                                   <DropdownMenu modal={false}>
-                                                      <DropdownMenuTrigger
-                                                         asChild
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
                                                       >
-                                                         <button
-                                                            type="button"
-                                                            className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
-                                                            title="Category options"
-                                                            aria-label={`Options for category ${cat.name}`}
-                                                         >
-                                                            <MoreVertical className="h-4 w-4" />
-                                                         </button>
-                                                      </DropdownMenuTrigger>
-                                                      <DropdownMenuContent
-                                                         align="end"
-                                                         className="min-w-dropdown-min"
-                                                      >
-                                                         <CategoryMenuItems
-                                                            isChallengeActive={
-                                                               hasChallengeContext
-                                                            }
-                                                            cat={cat}
-                                                            catType="weekly"
-                                                            dailyCategories={
-                                                               dailyCategories
-                                                            }
-                                                            weeklyCategories={
-                                                               weeklyCategories
-                                                            }
-                                                            selectedDateKey={
-                                                               selectedDateKey
-                                                            }
-                                                            effectiveTodayDate={
-                                                               effectiveTodayDate
-                                                            }
-                                                            dayOptions={
-                                                               dayOptions
-                                                            }
-                                                            onMoveCategoryToDay={(
-                                                               targetDateKey
-                                                            ) =>
-                                                               moveCategoryToDayAction(
-                                                                  catIdx,
-                                                                  targetDateKey,
-                                                                  "weekly"
-                                                               )
-                                                            }
-                                                            onRenameCategory={() => {
-                                                               setEditCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "weekly",
-                                                                  }
-                                                               );
-                                                               setEditCategoryInputName(
-                                                                  cat.name
-                                                               );
-                                                            }}
-                                                            onDeleteCategory={() => {
-                                                               setDeleteCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "weekly",
-                                                                  }
-                                                               );
-                                                            }}
-                                                            Item={
-                                                               DropdownMenuItem
-                                                            }
-                                                            Separator={
-                                                               DropdownMenuSeparator
-                                                            }
-                                                            Label={
-                                                               DropdownMenuLabel
-                                                            }
-                                                         />
-                                                      </DropdownMenuContent>
-                                                   </DropdownMenu>
-                                                )}
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-dropdown-min"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
+                                                         cat={cat}
+                                                         catType="weekly"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "weekly"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
                                                 {isCollapsed ? (
                                                    <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                                 ) : (
@@ -5437,59 +5663,51 @@ export function CockpitTasksSection({
                                              </div>
                                           </div>
                                        </ContextMenuTrigger>
-                                       {isLoggedIn && (
-                                          <ContextMenuContent className="min-w-dropdown-min">
-                                             <CategoryMenuItems
-                                                isChallengeActive={
-                                                   hasChallengeContext
-                                                }
-                                                cat={cat}
-                                                catType="weekly"
-                                                dailyCategories={
-                                                   dailyCategories
-                                                }
-                                                weeklyCategories={
-                                                   weeklyCategories
-                                                }
-                                                selectedDateKey={
-                                                   selectedDateKey
-                                                }
-                                                effectiveTodayDate={
-                                                   effectiveTodayDate
-                                                }
-                                                dayOptions={dayOptions}
-                                                onMoveCategoryToDay={(
-                                                   targetDateKey
-                                                ) =>
-                                                   moveCategoryToDayAction(
-                                                      catIdx,
-                                                      targetDateKey,
-                                                      "weekly"
-                                                   )
-                                                }
-                                                onRenameCategory={() => {
-                                                   setEditCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "weekly",
-                                                   });
-                                                   setEditCategoryInputName(
-                                                      cat.name
-                                                   );
-                                                }}
-                                                onDeleteCategory={() => {
-                                                   setDeleteCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "weekly",
-                                                   });
-                                                }}
-                                                Item={ContextMenuItem}
-                                                Separator={ContextMenuSeparator}
-                                                Label={ContextMenuLabel}
-                                             />
-                                          </ContextMenuContent>
-                                       )}
+                                       <ContextMenuContent className="min-w-dropdown-min">
+                                          <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
+                                             cat={cat}
+                                             catType="weekly"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
+                                                   "weekly"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
+                                                );
+                                             }}
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
                                     </ContextMenu>
 
                                     {!isCollapsed && (
@@ -5518,10 +5736,12 @@ export function CockpitTasksSection({
                                                    >
                                                       <ContextMenuTrigger
                                                          asChild
-                                                         disabled={!isLoggedIn}
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -5591,10 +5811,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() =>
+                                                                        onClick={(
+                                                                           e
+                                                                        ) =>
                                                                            toggleWeeklyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            )
                                                                         }
                                                                         className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
@@ -5727,7 +5950,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "weekly",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"
@@ -5759,6 +5983,27 @@ export function CockpitTasksSection({
                                                                            Out
                                                                         </button>
                                                                      )}
+                                                                     {status ===
+                                                                        "TODO" && (
+                                                                        <button
+                                                                           type="button"
+                                                                           onClick={(
+                                                                              e
+                                                                           ) => {
+                                                                              e.stopPropagation();
+                                                                              setTaskStatus(
+                                                                                 catIdx,
+                                                                                 task.id,
+                                                                                 "weekly",
+                                                                                 "IN_PROGRESS"
+                                                                              );
+                                                                           }}
+                                                                           title="Status: To-Do. Click to set In Progress"
+                                                                           className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-all border mt-0.5 bg-surface-nested text-text-tertiary hover:text-amber-400 border-border-subtle hover:border-amber-500/30 hover:bg-amber-500/10"
+                                                                        >
+                                                                           To-Do
+                                                                        </button>
+                                                                     )}
                                                                   </>
                                                                );
                                                             })()}
@@ -5785,249 +6030,260 @@ export function CockpitTasksSection({
                                                                      <User className="h-3 w-3" />
                                                                   </span>
                                                                ) : null)}
-                                                            {isLoggedIn && (
-                                                               <DropdownMenu
-                                                                  modal={false}
-                                                               >
-                                                                  <DropdownMenuTrigger
-                                                                     asChild
-                                                                  >
-                                                                     <button
-                                                                        type="button"
-                                                                        className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
-                                                                        title="Task options"
-                                                                        aria-label={`Options for task ${task.text}`}
-                                                                     >
-                                                                        <MoreVertical className="h-3.5 w-3.5" />
-                                                                     </button>
-                                                                  </DropdownMenuTrigger>
-                                                                  <DropdownMenuContent
-                                                                     align="end"
-                                                                     className="min-w-dropdown-min"
-                                                                  >
-                                                                     <TaskMenuItems
-                                                                        isChallengeActive={
-                                                                           hasChallengeContext
-                                                                        }
-                                                                        task={
-                                                                           task
-                                                                        }
-                                                                        catIdx={
-                                                                           catIdx
-                                                                        }
-                                                                        taskType="weekly"
-                                                                        effectiveTodayDate={
-                                                                           effectiveTodayDate
-                                                                        }
-                                                                        dayOptions={
-                                                                           dayOptions
-                                                                        }
-                                                                        linkableChallengeId={
-                                                                           linkableChallengeId
-                                                                        }
-                                                                        onToggleChallengeScope={(
-                                                                           newScope
-                                                                        ) =>
-                                                                           toggleTaskChallengeScope(
-                                                                              task.id,
-                                                                              newScope
-                                                                           )
-                                                                        }
-                                                                        selectedDateKey={
-                                                                           selectedDateKey
-                                                                        }
-                                                                        onSetStatus={(
-                                                                           status
-                                                                        ) =>
-                                                                           setTaskStatus(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "weekly",
-                                                                              status
-                                                                           )
-                                                                        }
-                                                                        onMoveToDay={(
-                                                                           targetDateKey
-                                                                        ) =>
-                                                                           moveTaskToDay(
-                                                                              task.id,
-                                                                              targetDateKey,
-                                                                              catIdx,
-                                                                              "weekly"
-                                                                           )
-                                                                        }
-                                                                        onEditTask={() => {
-                                                                           setEditTaskModal(
-                                                                              {
-                                                                                 id: task.id,
-                                                                                 text: task.text,
-                                                                                 completed:
-                                                                                    task.completed,
-                                                                                 status:
-                                                                                    getTaskStatus(
-                                                                                       task
-                                                                                    ),
-                                                                                 dueDate:
-                                                                                    task.dueDate ??
-                                                                                    null,
-                                                                                 createdAt:
-                                                                                    task.createdAt,
-                                                                                 challengeId:
-                                                                                    task.challengeId ??
-                                                                                    null,
-                                                                                 catIdx,
-                                                                                 taskType:
-                                                                                    "weekly",
-                                                                              }
-                                                                           );
-                                                                           setEditTaskInputChallengeId(
-                                                                              task.challengeId ??
-                                                                                 null
-                                                                           );
-                                                                           setEditTaskInputText(
-                                                                              task.text
-                                                                           );
-                                                                           setEditTaskInputStatus(
-                                                                              getTaskStatus(
-                                                                                 task
-                                                                              )
-                                                                           );
-                                                                           setEditTaskInputDueDate(
-                                                                              task.dueDate ||
-                                                                                 selectedDateKey
-                                                                           );
-                                                                        }}
-                                                                        onDeleteTask={() =>
-                                                                           handleDeleteTask(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "weekly"
-                                                                           )
-                                                                        }
-                                                                        Item={
-                                                                           DropdownMenuItem
-                                                                        }
-                                                                        Separator={
-                                                                           DropdownMenuSeparator
-                                                                        }
-                                                                        Label={
-                                                                           DropdownMenuLabel
-                                                                        }
-                                                                     />
-                                                                  </DropdownMenuContent>
-                                                               </DropdownMenu>
-                                                            )}
-                                                         </div>
-                                                      </ContextMenuTrigger>
-                                                      {isLoggedIn && (
-                                                         <ContextMenuContent className="min-w-dropdown-min">
-                                                            <TaskMenuItems
-                                                               isChallengeActive={
-                                                                  hasChallengeContext
-                                                               }
-                                                               task={task}
-                                                               catIdx={catIdx}
-                                                               taskType="weekly"
-                                                               effectiveTodayDate={
-                                                                  effectiveTodayDate
-                                                               }
-                                                               dayOptions={
-                                                                  dayOptions
-                                                               }
-                                                               linkableChallengeId={
-                                                                  linkableChallengeId
-                                                               }
-                                                               onToggleChallengeScope={(
-                                                                  newScope
-                                                               ) =>
-                                                                  toggleTaskChallengeScope(
-                                                                     task.id,
-                                                                     newScope
-                                                                  )
-                                                               }
-                                                               selectedDateKey={
-                                                                  selectedDateKey
-                                                               }
-                                                               onSetStatus={(
-                                                                  status
-                                                               ) =>
-                                                                  setTaskStatus(
-                                                                     catIdx,
-                                                                     task.id,
-                                                                     "weekly",
-                                                                     status
-                                                                  )
-                                                               }
-                                                               onMoveToDay={(
-                                                                  targetDateKey
-                                                               ) =>
-                                                                  moveTaskToDay(
-                                                                     task.id,
-                                                                     targetDateKey,
-                                                                     catIdx,
-                                                                     "weekly"
-                                                                  )
-                                                               }
-                                                               onEditTask={() => {
-                                                                  setEditTaskModal(
-                                                                     {
-                                                                        id: task.id,
-                                                                        text: task.text,
-                                                                        completed:
-                                                                           task.completed,
-                                                                        status:
-                                                                           getTaskStatus(
-                                                                              task
-                                                                           ),
-                                                                        dueDate:
-                                                                           task.dueDate ??
-                                                                           null,
-                                                                        createdAt:
-                                                                           task.createdAt,
-                                                                        challengeId:
-                                                                           task.challengeId ??
-                                                                           null,
-                                                                        catIdx,
-                                                                        taskType:
-                                                                           "weekly",
-                                                                     }
-                                                                  );
-                                                                  setEditTaskInputChallengeId(
-                                                                     task.challengeId ??
-                                                                        null
-                                                                  );
-                                                                  setEditTaskInputText(
-                                                                     task.text
-                                                                  );
-                                                                  setEditTaskInputStatus(
-                                                                     getTaskStatus(
-                                                                        task
-                                                                     )
-                                                                  );
-                                                                  setEditTaskInputDueDate(
-                                                                     task.dueDate ||
-                                                                        selectedDateKey
-                                                                  );
-                                                               }}
-                                                               onDeleteTask={() =>
+                                                            <button
+                                                               type="button"
+                                                               onClick={(e) => {
+                                                                  e.preventDefault();
+                                                                  e.stopPropagation();
                                                                   handleDeleteTask(
                                                                      catIdx,
                                                                      task.id,
                                                                      "weekly"
+                                                                  );
+                                                               }}
+                                                               className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-text-tertiary hover:text-feedback-error rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                               title="Delete task"
+                                                               aria-label={`Delete task ${task.text}`}
+                                                            >
+                                                               <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-dropdown-min"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="weekly"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     linkableChallengeId={
+                                                                        linkableChallengeId
+                                                                     }
+                                                                     onToggleChallengeScope={(
+                                                                        newScope
+                                                                     ) =>
+                                                                        toggleTaskChallengeScope(
+                                                                           task.id,
+                                                                           newScope
+                                                                        )
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              challengeId:
+                                                                                 task.challengeId ??
+                                                                                 null,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "weekly",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputChallengeId(
+                                                                           task.challengeId ??
+                                                                              null
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         </div>
+                                                      </ContextMenuTrigger>
+                                                      <ContextMenuContent className="min-w-dropdown-min">
+                                                         <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="weekly"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            linkableChallengeId={
+                                                               linkableChallengeId
+                                                            }
+                                                            onToggleChallengeScope={(
+                                                               newScope
+                                                            ) =>
+                                                               toggleTaskChallengeScope(
+                                                                  task.id,
+                                                                  newScope
+                                                               )
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     challengeId:
+                                                                        task.challengeId ??
+                                                                        null,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "weekly",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputChallengeId(
+                                                                  task.challengeId ??
+                                                                     null
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
                                                                   )
-                                                               }
-                                                               Item={
-                                                                  ContextMenuItem
-                                                               }
-                                                               Separator={
-                                                                  ContextMenuSeparator
-                                                               }
-                                                               Label={
-                                                                  ContextMenuLabel
-                                                               }
-                                                            />
-                                                         </ContextMenuContent>
-                                                      )}
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    </ContextMenu>
                                                 );
                                              })

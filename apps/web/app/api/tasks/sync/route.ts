@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
    AuthError,
    requireSessionUser,
@@ -36,8 +37,16 @@ export async function POST(request: Request) {
       }
 
       const result = await processBatchSync(user.id, parsed.data.mutations);
+      const conflictCount =
+         result.mutationResults?.filter((r) => r.status === "conflict")
+            .length ?? 0;
+      const errorCount =
+         result.mutationResults?.filter((r) => r.status === "error").length ??
+         0;
+
       if (result.success && result.processedMutationIds.length > 0) {
          invalidateTags([cacheTags.userTasks(user.id)]);
+         revalidatePath("/");
       }
 
       if (result.success) {
@@ -45,6 +54,8 @@ export async function POST(request: Request) {
             context: {
                userId: user.id,
                processedCount: result.processedMutationIds.length,
+               conflictCount,
+               errorCount,
             },
          });
       } else {
@@ -52,6 +63,8 @@ export async function POST(request: Request) {
             context: {
                userId: user.id,
                processedCount: result.processedMutationIds.length,
+               conflictCount,
+               errorCount,
             },
          });
       }

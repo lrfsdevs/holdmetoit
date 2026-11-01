@@ -1,4 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const discord = vi.hoisted(() => ({
+   sendChannelMessage: vi.fn(),
+}));
+
+vi.mock("@holdmetoit/discord", () => ({
+   MISSING_TOKEN_ERROR: "DISCORD_BOT_TOKEN is not configured in environment.",
+   sendChannelMessage: discord.sendChannelMessage,
+}));
+
 import {
    buildDiscordFeedbackEmbed,
    resolveDiscordFeedbackChannelId,
@@ -6,7 +16,7 @@ import {
 } from "./discord-feedback.service";
 
 describe("buildDiscordFeedbackEmbed", () => {
-   it("builds bug report embed with red accent and LogRocket link", () => {
+   it("builds a bug report embed with red accent and LogRocket link", () => {
       const embed = buildDiscordFeedbackEmbed({
          feedbackNumber: 42,
          type: "bug",
@@ -23,10 +33,10 @@ describe("buildDiscordFeedbackEmbed", () => {
       });
 
       expect(embed.color).toBe(0xef4444);
-      expect(embed.author.name).toBe("🐛 NEW BUG REPORT • FB-42");
+      expect(embed.author?.name).toBe("🐛 NEW BUG REPORT • FB-42");
       expect(embed.title).toBe("Submit button unresponsive");
       expect(embed.description).toBe("Clicking submit on mobile does nothing.");
-      expect(embed.footer.text).toBe("HoldMeToIt Feedback Engine • ID: FB-42");
+      expect(embed.footer?.text).toBe("HoldMeToIt Feedback Engine • ID: FB-42");
       expect(embed.fields).toEqual(
          expect.arrayContaining([
             { name: "📍 Page", value: "/challenge/demo", inline: true },
@@ -41,7 +51,7 @@ describe("buildDiscordFeedbackEmbed", () => {
       );
    });
 
-   it("builds enhancement embed with purple accent and guest reporter", () => {
+   it("builds an enhancement embed with purple accent and guest reporter", () => {
       const embed = buildDiscordFeedbackEmbed({
          feedbackNumber: 15,
          type: "enhancement",
@@ -52,13 +62,13 @@ describe("buildDiscordFeedbackEmbed", () => {
       });
 
       expect(embed.color).toBe(0x8b5cf6);
-      expect(embed.author.name).toBe("✨ NEW ENHANCEMENT • FB-15");
-      expect(embed.fields.some((f) => f.name === "🎥 LogRocket Session")).toBe(
-         false
-      );
-      expect(embed.fields.find((f) => f.name === "👤 Reported by")?.value).toBe(
-         "Guest / Anonymous"
-      );
+      expect(embed.author?.name).toBe("✨ NEW ENHANCEMENT • FB-15");
+      expect(
+         (embed.fields ?? []).some((f) => f.name === "🎥 LogRocket Session")
+      ).toBe(false);
+      expect(
+         (embed.fields ?? []).find((f) => f.name === "👤 Reported by")?.value
+      ).toBe("Guest / Anonymous");
    });
 
    it("embeds the first image and links every attachment", () => {
@@ -87,17 +97,17 @@ describe("buildDiscordFeedbackEmbed", () => {
       expect(embed.image).toEqual({
          url: "https://cdn.example.com/attachments/one.png",
       });
-      expect(embed.fields.find((f) => f.name === "📎 Attachments (3)")).toEqual(
-         {
-            name: "📎 Attachments (3)",
-            value: [
-               "• [Image 1](https://cdn.example.com/attachments/one.png)",
-               "• [Video 2](https://cdn.example.com/attachments/clip.mp4)",
-               "• [Image 3](https://cdn.example.com/attachments/two.png)",
-            ].join("\n"),
-            inline: false,
-         }
-      );
+      expect(
+         (embed.fields ?? []).find((f) => f.name === "📎 Attachments (3)")
+      ).toEqual({
+         name: "📎 Attachments (3)",
+         value: [
+            "• [Image 1](https://cdn.example.com/attachments/one.png)",
+            "• [Video 2](https://cdn.example.com/attachments/clip.mp4)",
+            "• [Image 3](https://cdn.example.com/attachments/two.png)",
+         ].join("\n"),
+         inline: false,
+      });
    });
 
    it("omits attachment fields when there are none", () => {
@@ -110,7 +120,9 @@ describe("buildDiscordFeedbackEmbed", () => {
       });
 
       expect(embed.image).toBeUndefined();
-      expect(embed.fields.some((f) => f.name.startsWith("📎"))).toBe(false);
+      expect((embed.fields ?? []).some((f) => f.name.startsWith("📎"))).toBe(
+         false
+      );
    });
 });
 
@@ -128,7 +140,7 @@ describe("resolveDiscordFeedbackChannelId", () => {
       process.env = origEnv;
    });
 
-   it("prioritizes specific bug channel for bug type", () => {
+   it("prioritizes the specific channel for each feedback type", () => {
       process.env.DISCORD_FEEDBACK_BUG_CHANNEL_ID = "bug-123";
       process.env.DISCORD_FEEDBACK_SUGGESTIONS_CHANNEL_ID = "sug-456";
 
@@ -136,7 +148,7 @@ describe("resolveDiscordFeedbackChannelId", () => {
       expect(resolveDiscordFeedbackChannelId("enhancement")).toBe("sug-456");
    });
 
-   it("falls back to general feedback channel if specific channel is missing", () => {
+   it("falls back to the general feedback channel", () => {
       process.env.DISCORD_FEEDBACK_CHANNEL_ID = "general-789";
 
       expect(resolveDiscordFeedbackChannelId("bug")).toBe("general-789");
@@ -145,11 +157,8 @@ describe("resolveDiscordFeedbackChannelId", () => {
       );
    });
 
-   it("falls back to DEFAULT_FEEDBACK_CHANNEL_ID if no environment variables are set", () => {
+   it("falls back to the default channel id", () => {
       expect(resolveDiscordFeedbackChannelId("bug")).toBe(
-         "1556790638593319063"
-      );
-      expect(resolveDiscordFeedbackChannelId("enhancement")).toBe(
          "1556790638593319063"
       );
    });
@@ -162,15 +171,16 @@ describe("sendFeedbackToDiscord", () => {
       process.env = { ...origEnv };
       process.env.DISCORD_BOT_TOKEN = "test-token";
       process.env.DISCORD_FEEDBACK_BUG_CHANNEL_ID = "chan-999";
+      discord.sendChannelMessage.mockReset();
    });
 
    afterEach(() => {
       process.env = origEnv;
-      vi.restoreAllMocks();
    });
 
-   it("returns error if bot token is missing", async () => {
+   it("returns an error when the bot token is missing", async () => {
       delete process.env.DISCORD_BOT_TOKEN;
+
       const result = await sendFeedbackToDiscord({
          feedbackNumber: 1,
          type: "bug",
@@ -181,14 +191,15 @@ describe("sendFeedbackToDiscord", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("DISCORD_BOT_TOKEN");
+      expect(discord.sendChannelMessage).not.toHaveBeenCalled();
    });
 
-   it("sends message successfully via fetch", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-         ok: true,
-         json: async () => ({ id: "msg-12345" }),
+   it("delegates dispatch to the shared Discord client", async () => {
+      discord.sendChannelMessage.mockResolvedValue({
+         success: true,
+         messageId: "msg-12345",
+         channelId: "chan-999",
       });
-      vi.stubGlobal("fetch", mockFetch);
 
       const result = await sendFeedbackToDiscord({
          feedbackNumber: 1,
@@ -198,28 +209,23 @@ describe("sendFeedbackToDiscord", () => {
          url: "/dashboard",
       });
 
-      expect(result.success).toBe(true);
-      expect(result.messageId).toBe("msg-12345");
-      expect(result.channelId).toBe("chan-999");
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-         "https://discord.com/api/v10/channels/chan-999/messages",
-         expect.objectContaining({
-            method: "POST",
-            headers: expect.objectContaining({
-               Authorization: "Bot test-token",
-            }),
-         })
-      );
+      expect(result).toEqual({
+         success: true,
+         messageId: "msg-12345",
+         channelId: "chan-999",
+      });
+      expect(discord.sendChannelMessage).toHaveBeenCalledWith({
+         channelId: "chan-999",
+         embeds: [expect.objectContaining({ title: "Test Bug" })],
+      });
    });
 
-   it("handles Discord API failure without throwing", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-         ok: false,
-         status: 403,
-         text: async () => "Missing Permissions",
+   it("passes through Discord API failures without throwing", async () => {
+      discord.sendChannelMessage.mockResolvedValue({
+         success: false,
+         channelId: "chan-999",
+         error: "Discord API error (403): Missing Permissions",
       });
-      vi.stubGlobal("fetch", mockFetch);
 
       const result = await sendFeedbackToDiscord({
          feedbackNumber: 1,

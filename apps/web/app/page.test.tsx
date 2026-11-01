@@ -151,4 +151,29 @@ describe("HomePage data loading", () => {
       };
       expect(viewProps.wrappedChallenge).toEqual({ id: "chal-wrapped" });
    });
+
+   it("loads public upcoming challenge for unauthenticated visitors and passes to HomeCockpitView", async () => {
+      mocks.auth.mockResolvedValue(null);
+      mocks.findLatestAvailableChallenge.mockResolvedValue({
+         id: "chal-public",
+         title: "Public Challenge",
+         format: "TEAM_VS_TEAM",
+      });
+
+      renderToStaticMarkup(await HomePage({}));
+
+      expect(mocks.findLatestAvailableChallenge).toHaveBeenCalledOnce();
+      expect(mocks.getParticipantCockpit).not.toHaveBeenCalled();
+      expect(mocks.getUserCategorizedTasks).not.toHaveBeenCalled();
+      const viewProps = mocks.homeCockpitView.mock.calls[0]?.[0] as {
+         upcomingChallenge: unknown;
+         user: unknown;
+      };
+      expect(viewProps.upcomingChallenge).toEqual({
+         id: "chal-public",
+         title: "Public Challenge",
+         format: "TEAM_VS_TEAM",
+      });
+      expect(viewProps.user).toBeUndefined();
+   });
 });

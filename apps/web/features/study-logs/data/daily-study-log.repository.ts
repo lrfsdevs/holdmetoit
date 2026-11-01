@@ -1,6 +1,7 @@
 import { prisma } from "@/core/db";
 import { Prisma } from "@prisma/client";
 import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
 import { assertLeaveAllowance } from "@/features/study-logs/domain/leave-allowance";
 
@@ -62,6 +63,7 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
             where: { id: params.participantId },
             select: {
                id: true,
+               challengeId: true,
                plannedLeaveDays: true,
                usedLeaveDays: true,
             },
@@ -69,6 +71,17 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
 
          if (!participant) {
             throw new Error("Participant not found.");
+         }
+
+         // Freeze the accountability input once results are locked.
+         const [challenge] = await tx.$queryRaw<
+            { resultsLockedAt: Date | null }[]
+         >`SELECT "resultsLockedAt" FROM "Challenge" WHERE "id" = ${participant.challengeId} FOR SHARE`;
+
+         if (!challenge || challenge.resultsLockedAt != null) {
+            throw new ChallengeStateError(
+               "Challenge results are locked. Study logging is closed."
+            );
          }
 
          const existingLog = await tx.dailyStudyLog.findUnique({
@@ -130,39 +143,42 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
 
          if (params.actor && params.challengeId) {
             const dateKey = formatUtcDateKey(updatedLog.logDate);
-            await recordAuditEvent({
-               actorId: params.actor.id,
-               actorUsername: params.actor.username,
-               actorDisplayName: params.actor.displayName ?? null,
-               actorImage: params.actor.image ?? null,
-               actionType: "STUDY_LOG_ADDED",
-               targetEntityId: updatedLog.id,
-               targetEntityType: "DAILY_STUDY_LOG",
-               targetEntityName:
-                  params.actor.displayName || params.actor.username,
-               challengeId: params.challengeId,
-               previousValue: existingLog
-                  ? {
-                       durationSeconds: existingLog.durationSeconds,
-                       durationClock: formatSecondsToClock(
-                          existingLog.durationSeconds
-                       ),
-                       logDate: dateKey,
-                    }
-                  : null,
-               newValue: {
-                  durationSeconds: updatedLog.durationSeconds,
-                  durationClock: formatSecondsToClock(
-                     updatedLog.durationSeconds
-                  ),
-                  logDate: dateKey,
+            await recordAuditEvent(
+               {
+                  actorId: params.actor.id,
+                  actorUsername: params.actor.username,
+                  actorDisplayName: params.actor.displayName ?? null,
+                  actorImage: params.actor.image ?? null,
+                  actionType: "STUDY_LOG_ADDED",
+                  targetEntityId: updatedLog.id,
+                  targetEntityType: "DAILY_STUDY_LOG",
+                  targetEntityName:
+                     params.actor.displayName || params.actor.username,
+                  challengeId: params.challengeId,
+                  previousValue: existingLog
+                     ? {
+                          durationSeconds: existingLog.durationSeconds,
+                          durationClock: formatSecondsToClock(
+                             existingLog.durationSeconds
+                          ),
+                          logDate: dateKey,
+                       }
+                     : null,
+                  newValue: {
+                     durationSeconds: updatedLog.durationSeconds,
+                     durationClock: formatSecondsToClock(
+                        updatedLog.durationSeconds
+                     ),
+                     logDate: dateKey,
+                  },
+                  auditReason: isLeave
+                     ? `Marked as leave (${formatSecondsToClock(updatedLog.durationSeconds)})`
+                     : existingLog
+                       ? `Updated study time from ${formatSecondsToClock(existingLog.durationSeconds)} to ${formatSecondsToClock(updatedLog.durationSeconds)}`
+                       : `Logged ${formatSecondsToClock(updatedLog.durationSeconds)} of study time`,
                },
-               auditReason: isLeave
-                  ? `Marked as leave (${formatSecondsToClock(updatedLog.durationSeconds)})`
-                  : existingLog
-                    ? `Updated study time from ${formatSecondsToClock(existingLog.durationSeconds)} to ${formatSecondsToClock(updatedLog.durationSeconds)}`
-                    : `Logged ${formatSecondsToClock(updatedLog.durationSeconds)} of study time`,
-            });
+               { transactionClient: tx }
+            );
          }
 
          return updatedLog;

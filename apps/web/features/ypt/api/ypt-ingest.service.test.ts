@@ -173,6 +173,43 @@ describe("ingestYptActivity", () => {
       );
    });
 
+   it("clamps ingested duration to the 20-hour daily log limit", async () => {
+      vi.mocked(yptRepo.findUserByYptOrDiscordId).mockResolvedValue(
+         mockUser as any
+      );
+      vi.mocked(yptRepo.findActiveParticipantForUserOnDate).mockResolvedValue(
+         mockParticipant as any
+      );
+      vi.mocked(yptRepo.findExistingLogByExternalId).mockResolvedValue(null);
+      vi.mocked(studyLogRepo.upsertDailyStudyLog).mockResolvedValue({
+         id: "log_capped",
+         durationSeconds: 72_000,
+      } as any);
+      vi.mocked(studyRewardService.processStudyReward).mockResolvedValue({
+         ok: true,
+         coinsCredited: 1_200,
+         fractionalSecondsRemaining: 0,
+         isDuplicate: false,
+         eligibleSeconds: 43_200,
+      });
+
+      const result = await ingestYptActivity({
+         discordId: "disc_100",
+         date: "2026-10-14",
+         durationSeconds: 21 * 3_600,
+         externalActivityId: "act_capped",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.durationSeconds).toBe(72_000);
+      expect(studyLogRepo.upsertDailyStudyLog).toHaveBeenCalledWith(
+         expect.objectContaining({
+            participantId: "part_100",
+            durationSeconds: 72_000,
+         })
+      );
+   });
+
    it("rejects ingest if user does not have a verified YPT ID", async () => {
       vi.mocked(yptRepo.findUserByYptOrDiscordId).mockResolvedValue({
          ...mockUser,

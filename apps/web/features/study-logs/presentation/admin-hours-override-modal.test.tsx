@@ -218,7 +218,7 @@ describe("AdminHoursOverrideModal", () => {
       expect(submitBtnMatch).not.toBeNull();
       expect(submitBtnMatch?.[0]).toContain("disabled");
    });
-   it("renders 14-hour daily cap notice in admin override modal when hours exceed 14", () => {
+   it("renders 12-hour daily cap notice in admin override modal when hours exceed 12", () => {
       const html = renderToHtml(
          createElement(AdminHoursOverrideModal, {
             isOpen: true,
@@ -236,9 +236,9 @@ describe("AdminHoursOverrideModal", () => {
          })
       );
 
-      expect(html).toContain("14-Hour Scoring Cap Enforced");
+      expect(html).toContain("12-Hour Scoring Cap Enforced");
       expect(html).toContain(
-         "challenge scoring and deficit calculations will strictly count a maximum of 14:00:00"
+         "challenge scoring and deficit calculations will strictly count a maximum of 12:00:00"
       );
    });
 });

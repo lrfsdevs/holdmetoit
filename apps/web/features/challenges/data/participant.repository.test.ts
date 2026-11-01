@@ -11,6 +11,7 @@ import {
 } from "@/features/challenges/data/participant.repository";
 
 const transactionMock = {
+   $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_1" }]),
    challengeParticipant: {
       updateMany: vi.fn(),
    },
@@ -568,6 +569,21 @@ describe("participant repository", () => {
          } as never);
       });
 
+      it("takes FOR UPDATE on the challenge before withdrawing", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            participantRecord as never
+         );
+         transactionMock.challengeParticipant.updateMany.mockResolvedValue({
+            count: 1,
+         } as never);
+
+         await withdrawParticipant({ challengeId: "c_1", userId: "u_1" });
+
+         expect(transactionMock.$queryRaw).toHaveBeenCalled();
+         const [strings] = transactionMock.$queryRaw.mock.calls[0];
+         expect(String(strings)).toContain("FOR UPDATE");
+      });
+
       it("flags the participant and records an audit event", async () => {
          vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
             participantRecord as never
@@ -585,7 +601,7 @@ describe("participant repository", () => {
             where: {
                id: "part_1",
                isWithdrawn: false,
-               challenge: { resultsLockedAt: null },
+               challenge: { resultsLockedAt: null, isDeleted: false },
             },
             data: { isWithdrawn: true, withdrawalAt: expect.any(Date) },
          });
@@ -594,6 +610,9 @@ describe("participant repository", () => {
                actionType: "PARTICIPANT_WITHDRAWN",
                targetEntityId: "part_1",
                challengeId: "c_1",
+            }),
+            expect.objectContaining({
+               transactionClient: expect.anything(),
             })
          );
       });

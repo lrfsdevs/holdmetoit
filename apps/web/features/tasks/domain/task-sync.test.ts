@@ -4,6 +4,8 @@ import {
    compactMutationQueue,
    queuedMutationSchema,
    sortMutationsChronologically,
+   taskRolloverPayloadSchema,
+   taskUpdatePayloadSchema,
 } from "./task-sync.schema";
 import type { QueuedMutation } from "./task-sync.types";
 
@@ -20,6 +22,37 @@ describe("task-sync pure domain logic", () => {
 
       const parsed = queuedMutationSchema.safeParse(validMutation);
       expect(parsed.success).toBe(true);
+   });
+
+   it("accepts a ROLLOVER mutation and validates its payload", () => {
+      const mutation = {
+         id: "b1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+         entityType: "TASK",
+         action: "ROLLOVER",
+         payload: { taskIds: ["t_1"], targetDateKey: "2026-10-30" },
+         createdAt: 1728189600000,
+         retryCount: 0,
+      };
+
+      expect(queuedMutationSchema.safeParse(mutation).success).toBe(true);
+      expect(
+         taskRolloverPayloadSchema.safeParse(mutation.payload).success
+      ).toBe(true);
+      expect(
+         taskRolloverPayloadSchema.safeParse({
+            ...mutation.payload,
+            targetDateKey: "not-a-date",
+         }).success
+      ).toBe(false);
+   });
+
+   it("rejects an overlong task update title", () => {
+      expect(
+         taskUpdatePayloadSchema.safeParse({
+            taskId: "t_1",
+            title: "x".repeat(256),
+         }).success
+      ).toBe(false);
    });
 
    it("fails validation for invalid mutation UUID", () => {

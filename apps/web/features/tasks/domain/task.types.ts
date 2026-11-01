@@ -18,6 +18,7 @@ export interface TaskItem {
    createdAt: Date;
    updatedAt: Date;
    completedAt: Date | null;
+   revision?: number;
 }
 
 export interface CategoryItem {
@@ -30,6 +31,7 @@ export interface CategoryItem {
    deletionTime?: Date | string | null;
    createdAt: Date;
    updatedAt: Date;
+   revision?: number;
 }
 
 export interface CategoryGroup {

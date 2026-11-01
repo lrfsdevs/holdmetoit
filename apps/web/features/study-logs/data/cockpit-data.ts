@@ -10,7 +10,10 @@ import {
    calculateInclusiveDaysRemaining,
    sumLoggedSeconds,
 } from "@/features/leaderboard/domain/catch-up-presentation";
-import { formatSecondsToClock } from "@/features/study-logs/domain/duration";
+import {
+   formatSecondsToClock,
+   MAX_DAILY_LOG_SECONDS,
+} from "@/features/study-logs/domain/duration";
 import {
    calculateChallengeTotalDays,
    getChallengeDayBuckets,
@@ -120,7 +123,7 @@ export async function getParticipantCockpit(
    const todayLoggedSeconds = todayLog?.durationSeconds ?? 0;
    const remainingDailyAllowanceSeconds = Math.max(
       0,
-      86_400 - todayLoggedSeconds
+      MAX_DAILY_LOG_SECONDS - todayLoggedSeconds
    );
 
    const yesterdayLog = challengeDayBuckets.previous

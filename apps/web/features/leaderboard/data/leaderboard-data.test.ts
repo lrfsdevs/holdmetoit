@@ -280,6 +280,67 @@ describe("buildScoreboardViewModel", () => {
       expect(result.matchHeader.leaderTeamId).toBe("team-bees");
       expect(result.matchHeader.ratioPercentageA).toBe(83); // 35100 / (35100+7200) = 82.978% -> 83%
       expect(result.matchHeader.ratioPercentageB).toBe(17);
+      expect(result.matchHeader.leadMarginDelta).toBe("+7h 45m ahead");
+   });
+
+   it("anchors Head-to-Head cards to fixed slots by sortOrder and reflects leaderSide 'b' without flipping card positions", () => {
+      // Invert participant scores: Butterflies (sortOrder: 1) logs more than Bees (sortOrder: 0)
+      const butterfliesLeadingChallenge: RawChallengePayload = {
+         ...mockChallenge,
+         participants: [
+            {
+               id: "part-1",
+               userId: "user-1",
+               teamId: "team-bees",
+               targetSeconds: 126_000,
+               status: "NORMAL",
+               user: {
+                  id: "user-1",
+                  displayName: "BeeMember",
+                  username: "bee",
+                  name: null,
+                  image: null,
+               },
+               dailyStudyLogs: [{ durationSeconds: 7_200 }], // 2h
+            },
+            {
+               id: "part-2",
+               userId: "user-2",
+               teamId: "team-butterflies",
+               targetSeconds: 126_000,
+               status: "NORMAL",
+               user: {
+                  id: "user-2",
+                  displayName: "ButterflyMember",
+                  username: "butterfly",
+                  name: null,
+                  image: null,
+               },
+               dailyStudyLogs: [
+                  { durationSeconds: 16_200 },
+                  { durationSeconds: 18_900 },
+               ], // 35,100s (9h45m)
+            },
+         ],
+      };
+
+      const result = buildScoreboardViewModel(
+         butterfliesLeadingChallenge,
+         undefined,
+         fixedNow
+      );
+
+      // Card slots must remain anchored to creation order (sortOrder asc)
+      expect(result.matchHeader.teamA?.id).toBe("team-bees");
+      expect(result.matchHeader.teamB?.id).toBe("team-butterflies");
+
+      // Dynamic leader metrics correctly point to team B
+      expect(result.matchHeader.leaderSide).toBe("b");
+      expect(result.matchHeader.leaderTeamId).toBe("team-butterflies");
+      expect(result.matchHeader.leadMarginSeconds).toBe(27_900);
+      expect(result.matchHeader.leadMarginDelta).toBe("+7h 45m ahead");
+      expect(result.matchHeader.ratioPercentageA).toBe(17);
+      expect(result.matchHeader.ratioPercentageB).toBe(83);
    });
 
    it("sorts participant standings descending by logged seconds", () => {
@@ -548,6 +609,46 @@ describe("buildScoreboardViewModel", () => {
          expect(result.standings[0].todayLoggedClock).toBe("04:00:00");
          expect(result.standings[0].totalLoggedSeconds).toBe(21_600);
          expect(result.standings[0].totalLoggedClock).toBe("06:00:00");
+      });
+
+      it("caps todayLoggedSeconds at 12h while preserving raw dailyLogs for admin override", () => {
+         const today = new Date("2026-10-05T14:30:00.000Z");
+         const challengeWithLongLog: RawChallengePayload = {
+            ...mockChallenge,
+            participants: [
+               {
+                  id: "part-1",
+                  userId: "user-1",
+                  teamId: "team-bees",
+                  targetSeconds: 126_000,
+                  status: "NORMAL",
+                  user: {
+                     id: "user-1",
+                     displayName: "AuraStudier",
+                     username: "aura",
+                     name: null,
+                     image: null,
+                  },
+                  dailyStudyLogs: [
+                     {
+                        durationSeconds: 16 * 3_600,
+                        logDate: new Date("2026-10-05T09:00:00.000Z"),
+                     },
+                  ],
+               },
+            ],
+         };
+
+         const result = buildScoreboardViewModel(
+            challengeWithLongLog,
+            "user-1",
+            today
+         );
+
+         expect(result.standings[0].todayLoggedSeconds).toBe(43_200);
+         expect(result.standings[0].todayLoggedClock).toBe("12:00:00");
+         expect(result.standings[0].totalLoggedSeconds).toBe(43_200);
+         expect(result.standings[0].dailyLogs?.["2026-10-05"]).toBe(57_600);
       });
    });
 });

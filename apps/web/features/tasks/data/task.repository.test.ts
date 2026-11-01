@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/core/db";
 import {
    createCategory,
@@ -36,6 +37,9 @@ vi.mock("@/core/db", () => {
          findMany: vi.fn(),
          findFirst: vi.fn(),
       },
+      $queryRaw: vi
+         .fn()
+         .mockResolvedValue([{ resultsLockedAt: null, isDeleted: false }]),
       $transaction: vi.fn((cb) => cb(mockPrisma)),
    };
    return { prisma: mockPrisma };
@@ -325,6 +329,9 @@ describe("task.repository", () => {
       });
 
       it("uses an explicit challengeId without resolving the current challenge", async () => {
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_explicit",
+         } as never);
          vi.mocked(prisma.task.create).mockResolvedValue({
             id: "task_explicit",
          } as never);
@@ -343,6 +350,27 @@ describe("task.repository", () => {
                data: expect.objectContaining({ challengeId: "c_explicit" }),
             })
          );
+      });
+
+      it("rejects a locked challenge when creating a task", async () => {
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            createTask({
+               userId: "user_1",
+               title: "Locked goal",
+               taskType: "WEEKLY",
+               categoryId: "cat_1",
+               challengeId: "c_locked",
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
+         expect(prisma.task.create).not.toHaveBeenCalled();
       });
 
       it("creates new category if newCategoryName is specified", async () => {
@@ -493,6 +521,7 @@ describe("task.repository", () => {
             data: {
                isDeleted: true,
                deletionTime: expect.any(Date),
+               revision: { increment: 1 },
             },
          });
       });
@@ -517,6 +546,31 @@ describe("task.repository", () => {
 
          expect(result).toEqual(existing);
          expect(prisma.category.create).not.toHaveBeenCalled();
+      });
+
+      it("returns the live category when create hits the unique index", async () => {
+         const winner = {
+            id: "cat_live",
+            name: "Work",
+            taskType: "DAILY",
+         };
+         vi.mocked(prisma.category.findFirst)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(winner as never);
+         vi.mocked(prisma.category.create).mockRejectedValueOnce(
+            new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+               code: "P2002",
+               clientVersion: "test",
+            })
+         );
+
+         const result = await createCategory({
+            userId: "user_1",
+            name: "work",
+            taskType: "DAILY",
+         });
+
+         expect(result).toEqual(winner);
       });
 
       it("creates a new category with given taskType if not existing", async () => {
@@ -566,7 +620,7 @@ describe("task.repository", () => {
          expect(result).toEqual({ id: "task_1", title: "New title" });
          expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_1" },
-            data: { title: "New title" },
+            data: { title: "New title", revision: { increment: 1 } },
             include: { category: true },
          });
       });
@@ -592,7 +646,7 @@ describe("task.repository", () => {
          expect(result).toBeDefined();
          expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_1" },
-            data: { dueDate: expect.any(Date) },
+            data: { dueDate: expect.any(Date), revision: { increment: 1 } },
             include: { category: true },
          });
       });
@@ -624,6 +678,7 @@ describe("task.repository", () => {
                isComplete: true,
                status: "COMPLETED",
                completedAt: expect.any(Date),
+               revision: { increment: 1 },
             },
             include: { category: true },
          });
@@ -657,6 +712,7 @@ describe("task.repository", () => {
                isComplete: false,
                status: "TODO",
                completedAt: null,
+               revision: { increment: 1 },
             },
             include: { category: true },
          });
@@ -691,6 +747,7 @@ describe("task.repository", () => {
                isComplete: false,
                status: "IN_PROGRESS",
                completedAt: null,
+               revision: { increment: 1 },
             },
             include: { category: true },
          });
@@ -725,6 +782,7 @@ describe("task.repository", () => {
                isComplete: false,
                status: "CROSSED_OUT",
                completedAt: null,
+               revision: { increment: 1 },
             },
             include: { category: true },
          });
@@ -740,6 +798,51 @@ describe("task.repository", () => {
          });
 
          expect(result).toBeNull();
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects linking a task after the challenge is locked", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            taskType: "WEEKLY",
+            challengeId: null,
+         } as never);
+         vi.mocked(prisma.challengeParticipant.findFirst).mockResolvedValue({
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: "c_locked",
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects unlinking a task from a locked challenge", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue({
+            id: "task_1",
+            taskType: "WEEKLY",
+            challengeId: "c_locked",
+         } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValueOnce([
+            { resultsLockedAt: new Date(), isDeleted: false },
+         ] as never);
+
+         await expect(
+            updateTask({
+               taskId: "task_1",
+               userId: "user_1",
+               challengeId: null,
+            })
+         ).rejects.toThrow("task goals can no longer be changed");
+
          expect(prisma.task.update).not.toHaveBeenCalled();
       });
 
@@ -766,7 +869,7 @@ describe("task.repository", () => {
          expect(result).toBeDefined();
          expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_1" },
-            data: { challengeId: "chal_valid" },
+            data: { challengeId: "chal_valid", revision: { increment: 1 } },
             include: { category: true },
          });
 
@@ -779,7 +882,7 @@ describe("task.repository", () => {
          expect(toPersonal).toBeDefined();
          expect(prisma.task.update).toHaveBeenCalledWith({
             where: { id: "task_1" },
-            data: { challengeId: null },
+            data: { challengeId: null, revision: { increment: 1 } },
             include: { category: true },
          });
       });
@@ -844,6 +947,7 @@ describe("task.repository", () => {
             },
             data: {
                dueDate: expect.any(Date),
+               revision: { increment: 1 },
             },
          });
       });
@@ -874,7 +978,7 @@ describe("task.repository", () => {
          expect(result).toEqual({ id: "cat_1", name: "New Name" });
          expect(prisma.category.update).toHaveBeenCalledWith({
             where: { id: "cat_1" },
-            data: { name: "New Name" },
+            data: { name: "New Name", revision: { increment: 1 } },
          });
       });
 
@@ -946,6 +1050,7 @@ describe("task.repository", () => {
             data: {
                isDeleted: true,
                deletionTime: expect.any(Date),
+               revision: { increment: 1 },
             },
          });
          expect(prisma.category.update).toHaveBeenCalledWith({
@@ -954,6 +1059,7 @@ describe("task.repository", () => {
                isDeleted: true,
                deletionTime: expect.any(Date),
                name: expect.stringContaining("Chemistry ·deleted·cat_del"),
+               revision: { increment: 1 },
             },
          });
          expect(result).toEqual(expect.objectContaining({ id: "cat_del" }));

@@ -14,6 +14,7 @@ import {
 import { logStudyTimeAction } from "@/features/study-logs/api/log-study-time.actions";
 import {
    decomposeSecondsToParts,
+   formatSecondsToClock,
    MAX_COUNTED_DAILY_STUDY_SECONDS,
    MAX_DAILY_LOG_SECONDS,
 } from "@/features/study-logs/domain/duration";
@@ -206,7 +207,7 @@ export function DailyHoursModal({
       }
       const val = parseInt(clean, 10);
       if (isNaN(val)) return;
-      const clamped = Math.max(0, Math.min(24, val));
+      const clamped = Math.max(0, Math.min(MAX_DAILY_LOG_SECONDS / 3_600, val));
       setHours(String(clamped));
       if (clamped > 0) {
          setIsLeaveMode(false);
@@ -521,7 +522,9 @@ export function DailyHoursModal({
 
       const totalSeconds = h * 3600 + m * 60 + s;
       if (totalSeconds > MAX_DAILY_LOG_SECONDS) {
-         setFeedback("A single day cannot exceed 24:00:00 of study time.");
+         setFeedback(
+            `A single day cannot exceed ${formatSecondsToClock(MAX_DAILY_LOG_SECONDS)} of study time.`
+         );
          return;
       }
 
@@ -847,7 +850,7 @@ export function DailyHoursModal({
                         id="daily-hours-hours"
                         type="number"
                         min="0"
-                        max="24"
+                        max="20"
                         placeholder="0"
                         value={hours}
                         onChange={(e) => handleHoursChange(e.target.value)}
@@ -914,13 +917,16 @@ export function DailyHoursModal({
                                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
                                  <div className="text-left">
                                     <p className="font-semibold text-amber-300">
-                                       14-Hour Scoring Cap Active
+                                       {`${MAX_COUNTED_DAILY_STUDY_SECONDS / 3_600}-Hour Scoring Cap Active`}
                                     </p>
                                     <p className="text-amber-200/80 mt-0.5 leading-relaxed">
-                                       To support healthy habits, a maximum of
-                                       14:00:00 counts toward challenge scoring
-                                       and coin rewards. Your actual logged
-                                       hours remain preserved in your history.
+                                       To support healthy habits, a maximum of{" "}
+                                       {formatSecondsToClock(
+                                          MAX_COUNTED_DAILY_STUDY_SECONDS
+                                       )}{" "}
+                                       counts toward challenge scoring and coin
+                                       rewards. Your actual logged hours remain
+                                       preserved in your history.
                                     </p>
                                  </div>
                               </div>

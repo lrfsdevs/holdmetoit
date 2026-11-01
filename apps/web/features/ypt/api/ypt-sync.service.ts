@@ -4,6 +4,10 @@ import { findYptServiceMember } from "../data/ypt-service-account";
 import { ingestYptActivity } from "./ypt-ingest.service";
 import { updateYptConnectionStatus } from "../data/ypt-connection.repository";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import {
+   capDailyStudySeconds,
+   clampDailyLogSeconds,
+} from "@/features/study-logs/domain/duration";
 
 const logger = createLogger("ypt.sync-service");
 
@@ -128,7 +132,7 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
    }
 
    const studyDate = member.studyDate || new Date().toISOString().slice(0, 10);
-   const durationSeconds = member.todayStudySeconds;
+   const durationSeconds = clampDailyLogSeconds(member.todayStudySeconds);
 
    // 5. Ingest study activity into the daily log and economy reward ledger
    const ingestResult = await ingestYptActivity(
@@ -152,7 +156,7 @@ export async function syncUserYptStudy(userId: string): Promise<YptSyncResult> {
          completedAt: new Date(),
          importedDurationSeconds: durationSeconds,
          eligibleDurationSeconds: ingestResult.ok
-            ? ingestResult.durationSeconds
+            ? capDailyStudySeconds(ingestResult.durationSeconds)
             : 0,
          coinsCredited: ingestResult.coinsCredited || 0,
          errorCode: ingestResult.ok

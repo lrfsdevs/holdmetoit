@@ -1,8 +1,16 @@
 import { prisma } from "@/core/db";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
-import type { TaskType } from "@prisma/client";
-import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import {
+   Prisma,
+   type Category,
+   type Task,
+   type TaskType,
+} from "@prisma/client";
+import {
+   calculateChallengeStatus,
+   ChallengeStateError,
+} from "@/features/challenges/domain/challenge-lifecycle";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
 import type {
    CategoryGroup,
@@ -19,6 +27,13 @@ function formatUtcDateKey(date: Date | string): string {
 
 export const DEFAULT_CATEGORY_NAME = "General";
 
+function isUniqueConstraintError(error: unknown): boolean {
+   return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+   );
+}
+
 /**
  * Resolves the challenge a newly created task should be linked to (FEAT-TASK-01).
  * Linked while the user is enrolled in a challenge that is not locked/ended
@@ -26,13 +41,18 @@ export const DEFAULT_CATEGORY_NAME = "General";
  * returns null for a standalone task.
  */
 export async function resolveTaskChallengeId(
-   userId: string
+   userId: string,
+   client: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<string | null> {
    const now = new Date();
-   const participations = await prisma.challengeParticipant.findMany({
+   const participations = await client.challengeParticipant.findMany({
       where: {
          userId,
-         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+         challenge: {
+            isDeleted: false,
+            resultsLockedAt: null,
+            endAt: { gt: now },
+         },
       },
       select: {
          challenge: { select: { id: true, startAt: true, endAt: true } },
@@ -64,14 +84,19 @@ export async function resolveTaskChallengeId(
  */
 export async function validateTaskChallengeId(
    userId: string,
-   requestedChallengeId: string
+   requestedChallengeId: string,
+   client: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<string | null> {
    const now = new Date();
-   const participation = await prisma.challengeParticipant.findFirst({
+   const participation = await client.challengeParticipant.findFirst({
       where: {
          userId,
          challengeId: requestedChallengeId,
-         challenge: { resultsLockedAt: null, endAt: { gt: now } },
+         challenge: {
+            isDeleted: false,
+            resultsLockedAt: null,
+            endAt: { gt: now },
+         },
       },
       select: { challengeId: true },
    });
@@ -80,7 +105,71 @@ export async function validateTaskChallengeId(
       return participation.challengeId;
    }
 
-   return resolveTaskChallengeId(userId);
+   return resolveTaskChallengeId(userId, client);
+}
+
+/**
+ * Rejects task goal changes once the challenge results are locked.
+ * Takes FOR SHARE so a concurrent lock (FOR UPDATE) serialises with this write.
+ */
+export async function assertChallengeWritable(
+   client: Prisma.TransactionClient | typeof prisma,
+   challengeId: string | null | undefined
+): Promise<void> {
+   if (!challengeId) return;
+
+   const rows = await client.$queryRaw<
+      { resultsLockedAt: Date | null; isDeleted: boolean }[]
+   >`SELECT "resultsLockedAt", "isDeleted" FROM "Challenge" WHERE "id" = ${challengeId} FOR SHARE`;
+
+   const row = rows[0];
+   if (!row || row.isDeleted || row.resultsLockedAt != null) {
+      throw new ChallengeStateError(
+         "Challenge results are locked; task goals can no longer be changed."
+      );
+   }
+}
+
+export function toCategoryItem(category: Category): CategoryItem {
+   return {
+      id: category.id,
+      userId: category.userId,
+      name: category.name,
+      taskType: category.taskType,
+      sortOrder: category.sortOrder,
+      isDeleted: category.isDeleted,
+      deletionTime: category.deletionTime,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+      revision: category.revision,
+   };
+}
+
+export function toTaskItem(task: Task, taskType: TaskType): TaskItem {
+   return {
+      id: task.id,
+      userId: task.userId,
+      categoryId: task.categoryId,
+      challengeId: task.challengeId,
+      title: task.title,
+      taskType: taskType as TaskItem["taskType"],
+      sortOrder: task.sortOrder,
+      isComplete: task.isComplete,
+      status:
+         (task.status as TaskStatus) ??
+         (task.isComplete ? "COMPLETED" : "TODO"),
+      dueDate: task.dueDate
+         ? formatUtcDateKey(task.dueDate)
+         : taskType === "DAILY"
+           ? formatUtcDateKey(task.createdAt)
+           : null,
+      isDeleted: task.isDeleted,
+      deletionTime: task.deletionTime,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      completedAt: task.completedAt,
+      revision: task.revision,
+   };
 }
 
 export async function getUserCategorizedTasks(
@@ -116,17 +205,7 @@ export async function getUserCategorizedTasksFromDatabase(
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
    });
 
-   const categoryItems: CategoryItem[] = categories.map((c) => ({
-      id: c.id,
-      userId: c.userId,
-      name: c.name,
-      taskType: c.taskType,
-      sortOrder: c.sortOrder,
-      isDeleted: c.isDeleted,
-      deletionTime: c.deletionTime,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-   }));
+   const categoryItems: CategoryItem[] = categories.map(toCategoryItem);
 
    const dailyCategories: CategoryGroup[] = categories
       .filter(
@@ -137,27 +216,7 @@ export async function getUserCategorizedTasksFromDatabase(
       .map((c) => {
          const dailyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "DAILY")
-            .map((t) => ({
-               id: t.id,
-               userId: t.userId,
-               categoryId: t.categoryId,
-               challengeId: t.challengeId,
-               title: t.title,
-               taskType: "DAILY" as const,
-               sortOrder: t.sortOrder,
-               isComplete: t.isComplete,
-               status:
-                  (t.status as TaskStatus) ??
-                  (t.isComplete ? "COMPLETED" : "TODO"),
-               dueDate: t.dueDate
-                  ? formatUtcDateKey(t.dueDate)
-                  : formatUtcDateKey(t.createdAt),
-               isDeleted: t.isDeleted,
-               deletionTime: t.deletionTime,
-               createdAt: t.createdAt,
-               updatedAt: t.updatedAt,
-               completedAt: t.completedAt,
-            }));
+            .map((t) => toTaskItem(t, "DAILY"));
 
          return {
             id: c.id,
@@ -178,25 +237,7 @@ export async function getUserCategorizedTasksFromDatabase(
       .map((c) => {
          const weeklyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "WEEKLY")
-            .map((t) => ({
-               id: t.id,
-               userId: t.userId,
-               categoryId: t.categoryId,
-               challengeId: t.challengeId,
-               title: t.title,
-               taskType: "WEEKLY" as const,
-               sortOrder: t.sortOrder,
-               isComplete: t.isComplete,
-               status:
-                  (t.status as TaskStatus) ??
-                  (t.isComplete ? "COMPLETED" : "TODO"),
-               dueDate: t.dueDate ? formatUtcDateKey(t.dueDate) : null,
-               isDeleted: t.isDeleted,
-               deletionTime: t.deletionTime,
-               createdAt: t.createdAt,
-               updatedAt: t.updatedAt,
-               completedAt: t.completedAt,
-            }));
+            .map((t) => toTaskItem(t, "WEEKLY"));
 
          return {
             id: c.id,
@@ -238,99 +279,119 @@ export async function createTask(params: {
    dueDate?: string | Date | null;
    challengeId?: string | null;
 }) {
-   let resolvedCategoryId = params.categoryId;
+   return prisma.$transaction(async (tx) => {
+      let resolvedCategoryId = params.categoryId;
 
-   if (params.newCategoryName && params.newCategoryName.trim()) {
-      const trimmedName = params.newCategoryName.trim();
-      let existing = await prisma.category.findFirst({
-         where: {
-            userId: params.userId,
-            taskType: params.taskType,
-            name: { equals: trimmedName, mode: "insensitive" },
-         },
-      });
-
-      if (!existing && params.taskType === "DAILY") {
-         existing = await prisma.category.findFirst({
+      if (params.newCategoryName && params.newCategoryName.trim()) {
+         const trimmedName = params.newCategoryName.trim();
+         let existing = await tx.category.findFirst({
             where: {
                userId: params.userId,
-               taskType: "WEEKLY",
+               taskType: params.taskType,
+               isDeleted: false,
                name: { equals: trimmedName, mode: "insensitive" },
             },
          });
+
+         if (!existing && params.taskType === "DAILY") {
+            existing = await tx.category.findFirst({
+               where: {
+                  userId: params.userId,
+                  taskType: "WEEKLY",
+                  isDeleted: false,
+                  name: { equals: trimmedName, mode: "insensitive" },
+               },
+            });
+         }
+
+         if (existing) {
+            resolvedCategoryId = existing.id;
+         } else {
+            const created = await tx.category.create({
+               data: {
+                  userId: params.userId,
+                  name: trimmedName,
+                  taskType: params.taskType,
+               },
+            });
+            resolvedCategoryId = created.id;
+         }
       }
 
-      if (existing) {
-         resolvedCategoryId = existing.id;
-      } else {
-         const created = await prisma.category.create({
-            data: {
-               userId: params.userId,
-               name: trimmedName,
-               taskType: params.taskType,
-            },
-         });
-         resolvedCategoryId = created.id;
-      }
-   }
-
-   if (!resolvedCategoryId) {
-      let fallback = await prisma.category.findFirst({
-         where: {
-            userId: params.userId,
-            taskType: params.taskType,
-         },
-         orderBy: { createdAt: "asc" },
-      });
-
-      if (!fallback && params.taskType === "DAILY") {
-         fallback = await prisma.category.findFirst({
+      if (!resolvedCategoryId) {
+         let fallback = await tx.category.findFirst({
             where: {
                userId: params.userId,
-               taskType: "WEEKLY",
+               taskType: params.taskType,
+               isDeleted: false,
             },
             orderBy: { createdAt: "asc" },
          });
+
+         if (!fallback && params.taskType === "DAILY") {
+            fallback = await tx.category.findFirst({
+               where: {
+                  userId: params.userId,
+                  taskType: "WEEKLY",
+                  isDeleted: false,
+               },
+               orderBy: { createdAt: "asc" },
+            });
+         }
+
+         if (fallback) {
+            resolvedCategoryId = fallback.id;
+         } else {
+            const created = await tx.category.create({
+               data: {
+                  userId: params.userId,
+                  name: DEFAULT_CATEGORY_NAME,
+                  taskType: params.taskType,
+               },
+            });
+            resolvedCategoryId = created.id;
+         }
       }
 
-      if (fallback) {
-         resolvedCategoryId = fallback.id;
-      } else {
-         const created = await prisma.category.create({
-            data: {
-               userId: params.userId,
-               name: DEFAULT_CATEGORY_NAME,
-               taskType: params.taskType,
-            },
-         });
-         resolvedCategoryId = created.id;
+      const status: TaskStatus =
+         params.status ?? (params.isComplete ? "COMPLETED" : "TODO");
+      const isComplete = status === "COMPLETED";
+      const dueDate = params.dueDate ? new Date(params.dueDate) : null;
+      const challengeId =
+         params.challengeId !== undefined
+            ? params.challengeId
+            : await resolveTaskChallengeId(params.userId, tx);
+
+      if (challengeId !== null && challengeId !== undefined) {
+         await assertChallengeWritable(tx, challengeId);
+         const validated = await validateTaskChallengeId(
+            params.userId,
+            challengeId,
+            tx
+         );
+         if (!validated || validated !== challengeId) {
+            throw new ChallengeStateError(
+               "You are not an active participant in this challenge."
+            );
+         }
       }
-   }
 
-   const status: TaskStatus =
-      params.status ?? (params.isComplete ? "COMPLETED" : "TODO");
-   const isComplete = status === "COMPLETED";
-   const dueDate = params.dueDate ? new Date(params.dueDate) : null;
-   const challengeId =
-      params.challengeId !== undefined
-         ? params.challengeId
-         : await resolveTaskChallengeId(params.userId);
-
-   return prisma.task.create({
-      data: {
-         userId: params.userId,
-         categoryId: resolvedCategoryId,
-         challengeId,
-         title: params.title.trim(),
-         taskType: params.taskType,
-         isComplete,
-         status,
-         dueDate,
-         completedAt: isComplete ? new Date() : null,
-      },
-      include: {
-         category: true,
-      },
+      return tx.task.create({
+         data: {
+            userId: params.userId,
+            categoryId: resolvedCategoryId,
+            challengeId,
+            title: params.title.trim(),
+            taskType: params.taskType,
+            isComplete,
+            status,
+            dueDate,
+            completedAt: isComplete ? new Date() : null,
+         },
+         include: {
+            category: true,
+         },
+      });
    });
 }
 
@@ -369,6 +430,7 @@ export async function toggleTask(params: {
          isComplete: nextIsComplete,
          status: nextStatus,
          completedAt: nextIsComplete ? new Date() : null,
+         revision: { increment: 1 },
       },
       include: {
          category: true,
@@ -394,6 +456,7 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       data: {
          isDeleted: true,
          deletionTime: new Date(),
+         revision: { increment: 1 },
       },
    });
 }
@@ -418,13 +481,28 @@ export async function createCategory(params: {
       return existing;
    }
 
-   return prisma.category.create({
-      data: {
-         userId: params.userId,
-         name: trimmedName,
-         taskType,
-      },
-   });
+   try {
+      return await prisma.category.create({
+         data: {
+            userId: params.userId,
+            name: trimmedName,
+            taskType,
+         },
+      });
+   } catch (error) {
+      if (isUniqueConstraintError(error)) {
+         const winner = await prisma.category.findFirst({
+            where: {
+               userId: params.userId,
+               taskType,
+               isDeleted: false,
+               name: { equals: trimmedName, mode: "insensitive" },
+            },
+         });
+         if (winner) return winner;
+      }
+      throw error;
+   }
 }
 
 export async function updateTask(params: {
@@ -436,82 +514,101 @@ export async function updateTask(params: {
    dueDate?: string | Date | null;
    challengeId?: string | null;
 }) {
-   const existing = await prisma.task.findFirst({
-      where: {
-         id: params.taskId,
-         userId: params.userId,
-         isDeleted: false,
-      },
-   });
+   return prisma.$transaction(async (tx) => {
+      const existing = await tx.task.findFirst({
+         where: {
+            id: params.taskId,
+            userId: params.userId,
+            isDeleted: false,
+         },
+         select: {
+            id: true,
+            taskType: true,
+            challengeId: true,
+         },
+      });
 
-   if (!existing) {
-      return null;
-   }
-
-   const dataToUpdate: {
-      title?: string;
-      isComplete?: boolean;
-      status?: TaskStatus;
-      dueDate?: Date | null;
-      completedAt?: Date | null;
-      challengeId?: string | null;
-   } = {};
-
-   if (params.title !== undefined) {
-      dataToUpdate.title = params.title.trim();
-   }
-   if (params.status !== undefined) {
-      dataToUpdate.status = params.status;
-      dataToUpdate.isComplete = params.status === "COMPLETED";
-      dataToUpdate.completedAt =
-         params.status === "COMPLETED" ? new Date() : null;
-   } else if (params.isComplete !== undefined) {
-      dataToUpdate.isComplete = params.isComplete;
-      dataToUpdate.status = params.isComplete ? "COMPLETED" : "TODO";
-      dataToUpdate.completedAt = params.isComplete ? new Date() : null;
-   }
-   if (params.dueDate !== undefined) {
-      dataToUpdate.dueDate = params.dueDate ? new Date(params.dueDate) : null;
-   }
-   if (params.challengeId !== undefined) {
-      if (params.challengeId !== null) {
-         if (existing.taskType !== "WEEKLY") {
-            throw new Error("Only weekly tasks can be scoped to a challenge");
-         }
-         const validatedChallengeId = await validateTaskChallengeId(
-            params.userId,
-            params.challengeId
-         );
-         if (
-            !validatedChallengeId ||
-            validatedChallengeId !== params.challengeId
-         ) {
-            throw new Error(
-               "Invalid challenge ID: user is not an active participant in this challenge"
-            );
-         }
-         dataToUpdate.challengeId = validatedChallengeId;
-      } else {
-         dataToUpdate.challengeId = null;
+      if (!existing) {
+         return null;
       }
-   }
 
-   return prisma.task.update({
-      where: { id: params.taskId },
-      data: dataToUpdate,
-      include: {
-         category: true,
-      },
+      const dataToUpdate: {
+         title?: string;
+         isComplete?: boolean;
+         status?: TaskStatus;
+         dueDate?: Date | null;
+         completedAt?: Date | null;
+         challengeId?: string | null;
+         revision?: { increment: number };
+      } = {};
+
+      if (params.title !== undefined) {
+         dataToUpdate.title = params.title.trim();
+      }
+      if (params.status !== undefined) {
+         dataToUpdate.status = params.status;
+         dataToUpdate.isComplete = params.status === "COMPLETED";
+         dataToUpdate.completedAt =
+            params.status === "COMPLETED" ? new Date() : null;
+      } else if (params.isComplete !== undefined) {
+         dataToUpdate.isComplete = params.isComplete;
+         dataToUpdate.status = params.isComplete ? "COMPLETED" : "TODO";
+         dataToUpdate.completedAt = params.isComplete ? new Date() : null;
+      }
+      if (params.dueDate !== undefined) {
+         dataToUpdate.dueDate = params.dueDate
+            ? new Date(params.dueDate)
+            : null;
+      }
+      if (params.challengeId !== undefined) {
+         if (params.challengeId !== null) {
+            if (existing.taskType !== "WEEKLY") {
+               throw new Error(
+                  "Only weekly tasks can be scoped to a challenge"
+               );
+            }
+            const validatedChallengeId = await validateTaskChallengeId(
+               params.userId,
+               params.challengeId,
+               tx
+            );
+            if (
+               !validatedChallengeId ||
+               validatedChallengeId !== params.challengeId
+            ) {
+               throw new ChallengeStateError(
+                  "Invalid challenge ID: user is not an active participant in this challenge"
+               );
+            }
+            await assertChallengeWritable(tx, validatedChallengeId);
+            dataToUpdate.challengeId = validatedChallengeId;
+         } else {
+            // Unlinking is also a goal change: the current challenge must be unlocked.
+            await assertChallengeWritable(tx, existing.challengeId);
+            dataToUpdate.challengeId = null;
+         }
+      }
+
+      return tx.task.update({
+         where: { id: params.taskId },
+         data: { ...dataToUpdate, revision: { increment: 1 } },
+         include: {
+            category: true,
+         },
+      });
    });
 }
 
-export async function rolloverIncompleteTasks(params: {
-   userId: string;
-   taskIds: string[];
-   targetDateKey: string;
-}) {
+export async function rolloverIncompleteTasks(
+   params: {
+      userId: string;
+      taskIds: string[];
+      targetDateKey: string;
+   },
+   client: Prisma.TransactionClient | typeof prisma = prisma
+) {
    const targetDate = new Date(params.targetDateKey);
-   return prisma.task.updateMany({
+   return client.task.updateMany({
       where: {
          id: { in: params.taskIds },
          userId: params.userId,
@@ -524,6 +621,7 @@ export async function rolloverIncompleteTasks(params: {
       },
       data: {
          dueDate: targetDate,
+         revision: { increment: 1 },
       },
    });
 }
@@ -552,7 +650,10 @@ export async function updateCategory(params: {
       if (existing.name !== trimmedName) {
          return prisma.category.update({
             where: { id: params.categoryId },
-            data: { name: trimmedName },
+            data: {
+               name: trimmedName,
+               revision: { increment: 1 },
+            },
          });
       }
       return existing;
@@ -573,12 +674,20 @@ export async function updateCategory(params: {
       throw new Error(`Category "${trimmedName}" already exists.`);
    }
 
-   return prisma.category.update({
-      where: { id: params.categoryId },
-      data: {
-         name: trimmedName,
-      },
-   });
+   try {
+      return await prisma.category.update({
+         where: { id: params.categoryId },
+         data: {
+            name: trimmedName,
+            revision: { increment: 1 },
+         },
+      });
+   } catch (error) {
+      if (isUniqueConstraintError(error)) {
+         throw new Error(`Category "${trimmedName}" already exists.`);
+      }
+      throw error;
+   }
 }
 
 export async function deleteCategory(params: {
@@ -609,6 +718,7 @@ export async function deleteCategory(params: {
          data: {
             isDeleted: true,
             deletionTime: now,
+            revision: { increment: 1 },
          },
       });
 
@@ -618,6 +728,7 @@ export async function deleteCategory(params: {
             isDeleted: true,
             deletionTime: now,
             name: buildCategoryTombstoneName(existing.name, existing.id),
+            revision: { increment: 1 },
          },
       });
    });

@@ -46,8 +46,10 @@ vi.mock("@/core/db", () => ({
    prisma: {
       challenge: {
          findUnique: vi.fn(),
+         findUniqueOrThrow: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
+         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       challengeParticipant: {
          findUnique: vi.fn(),
@@ -71,6 +73,10 @@ vi.mock("@/core/db", () => ({
          count: vi.fn(),
          update: vi.fn(),
       },
+      auditLog: {
+         create: vi.fn().mockResolvedValue({}),
+      },
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "chal_complete" }]),
       $transaction: vi.fn((cb) => cb(prisma)),
    },
 }));
@@ -438,10 +444,12 @@ describe("HoldMeToIt E2E Quality Matrix Verification (Journeys J1–J6)", () => 
             { userId: "user_1", status: "IN_PROGRESS" },
          ] as never);
 
-         vi.mocked(prisma.challenge.update).mockResolvedValue({
+         vi.mocked(prisma.challenge.findUniqueOrThrow).mockResolvedValue({
             id: "chal_complete",
             startAt: new Date(Date.now() - 7 * 86400000),
             endAt: new Date(Date.now() - 3600000),
+            resultsLockedAt: new Date(),
+            status: "COMPLETED",
          } as never);
 
          const completed = await lockChallengeResults("chal_complete", {

@@ -1,4 +1,5 @@
 import type {
+   DeadLetterMutation,
    LocalCategoryRecord,
    LocalTaskRecord,
    QueuedMutation,
@@ -8,13 +9,25 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 const logger = createLogger("tasks.sync.local");
 
 const DB_NAME = "holdmetoit_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+const MAX_MUTATION_RETRIES = 5;
 
 export const STORES = {
    TASKS: "tasks",
    CATEGORIES: "categories",
    MUTATIONS: "queued_mutations",
+   DEAD_LETTER: "dead_letter_mutations",
 } as const;
+
+let activeQueueUserId: string | null = null;
+
+export function setActiveQueueUser(userId: string | null): void {
+   activeQueueUserId = userId;
+}
+
+export function getActiveQueueUser(): string | null {
+   return activeQueueUserId;
+}
 
 export function logTaskSync(message: string, data?: unknown): void {
    if (data instanceof Error) {
@@ -72,6 +85,23 @@ function openDatabase(): Promise<IDBDatabase | null> {
             });
             mutStore.createIndex("createdAt", "createdAt", { unique: false });
             mutStore.createIndex("entityType", "entityType", { unique: false });
+            mutStore.createIndex("userId", "userId", { unique: false });
+         } else {
+            const upgradeTx = (event.target as IDBOpenDBRequest).transaction;
+            const mutStore = upgradeTx?.objectStore(STORES.MUTATIONS);
+            if (mutStore && !mutStore.indexNames.contains("userId")) {
+               mutStore.createIndex("userId", "userId", { unique: false });
+            }
+         }
+
+         // Dead-letter mutations store
+         if (!db.objectStoreNames.contains(STORES.DEAD_LETTER)) {
+            const deadStore = db.createObjectStore(STORES.DEAD_LETTER, {
+               keyPath: "id",
+            });
+            deadStore.createIndex("userId", "userId", { unique: false });
+            deadStore.createIndex("failedAt", "failedAt", { unique: false });
+            deadStore.createIndex("createdAt", "createdAt", { unique: false });
          }
       };
 
@@ -122,10 +152,18 @@ export async function putLocalTask(task: LocalTaskRecord): Promise<void> {
    return new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.TASKS, "readwrite");
       const store = tx.objectStore(STORES.TASKS);
-      const request = store.put(task);
+      const getRequest = store.get(task.id);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      getRequest.onsuccess = () => {
+         const existing = getRequest.result as LocalTaskRecord | undefined;
+         store.put({
+            ...task,
+            revision: task.revision ?? existing?.revision,
+         });
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
    });
 }
 
@@ -137,7 +175,14 @@ export async function putLocalTasks(tasks: LocalTaskRecord[]): Promise<void> {
       const tx = db.transaction(STORES.TASKS, "readwrite");
       const store = tx.objectStore(STORES.TASKS);
       for (const task of tasks) {
-         store.put(task);
+         const getRequest = store.get(task.id);
+         getRequest.onsuccess = () => {
+            const existing = getRequest.result as LocalTaskRecord | undefined;
+            store.put({
+               ...task,
+               revision: task.revision ?? existing?.revision,
+            });
+         };
       }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -194,10 +239,18 @@ export async function putLocalCategory(
    return new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.CATEGORIES, "readwrite");
       const store = tx.objectStore(STORES.CATEGORIES);
-      const request = store.put(category);
+      const getRequest = store.get(category.id);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      getRequest.onsuccess = () => {
+         const existing = getRequest.result as LocalCategoryRecord | undefined;
+         store.put({
+            ...category,
+            revision: category.revision ?? existing?.revision,
+         });
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
    });
 }
 
@@ -211,7 +264,15 @@ export async function putLocalCategories(
       const tx = db.transaction(STORES.CATEGORIES, "readwrite");
       const store = tx.objectStore(STORES.CATEGORIES);
       for (const cat of categories) {
-         store.put(cat);
+         const getRequest = store.get(cat.id);
+         getRequest.onsuccess = () => {
+            const existing = getRequest.result as
+               LocalCategoryRecord | undefined;
+            store.put({
+               ...cat,
+               revision: cat.revision ?? existing?.revision,
+            });
+         };
       }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
@@ -240,16 +301,21 @@ export async function enqueueMutation(mutation: QueuedMutation): Promise<void> {
    const db = await openDatabase();
    if (!db) return;
 
+   const record: QueuedMutation = {
+      ...mutation,
+      userId: mutation.userId ?? activeQueueUserId ?? undefined,
+   };
+
    return new Promise((resolve, reject) => {
       const tx = db.transaction(STORES.MUTATIONS, "readwrite");
       const store = tx.objectStore(STORES.MUTATIONS);
-      const request = store.put(mutation);
+      const request = store.put(record);
 
       request.onsuccess = () => {
          logTaskSync("Mutation enqueued locally", {
-            id: mutation.id,
-            entityType: mutation.entityType,
-            action: mutation.action,
+            id: record.id,
+            entityType: record.entityType,
+            action: record.action,
          });
          resolve();
       };
@@ -273,6 +339,150 @@ export async function getAllQueuedMutations(): Promise<QueuedMutation[]> {
    });
 }
 
+/**
+ * Returns the current user's queue. Legacy entries without an owner are
+ * claimed by this user once and then remain partitioned to them.
+ */
+export async function getQueuedMutationsForUser(
+   userId: string
+): Promise<QueuedMutation[]> {
+   const all = await getAllQueuedMutations();
+   const owned = all.filter((m) => m.userId === userId);
+   const legacy = all.filter((m) => m.userId === undefined);
+
+   if (legacy.length === 0) {
+      return owned.sort((a, b) => a.createdAt - b.createdAt);
+   }
+
+   const db = await openDatabase();
+   if (db) {
+      await new Promise<void>((resolve, reject) => {
+         const tx = db.transaction(STORES.MUTATIONS, "readwrite");
+         const store = tx.objectStore(STORES.MUTATIONS);
+         for (const mutation of legacy) {
+            store.put({ ...mutation, userId });
+         }
+         tx.oncomplete = () => resolve();
+         tx.onerror = () => reject(tx.error);
+      });
+   }
+
+   return [...owned, ...legacy.map((m) => ({ ...m, userId }))].sort(
+      (a, b) => a.createdAt - b.createdAt
+   );
+}
+
+export interface LocalCommit {
+   tasks?: LocalTaskRecord[];
+   deleteTaskIds?: string[];
+   categories?: LocalCategoryRecord[];
+   deleteCategoryIds?: string[];
+   mutations: QueuedMutation[];
+}
+
+/**
+ * Commits local entity changes and their queued mutations in one IndexedDB
+ * transaction. The revision merge matches putLocalTask/putLocalCategory.
+ */
+export async function commitLocalBatch(input: LocalCommit): Promise<void> {
+   const db = await openDatabase();
+   if (!db) return;
+
+   const ownerFallback =
+      input.tasks?.find((task) => task.userId)?.userId ??
+      input.categories?.find((category) => category.userId)?.userId ??
+      activeQueueUserId ??
+      undefined;
+
+   await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(
+         [STORES.TASKS, STORES.CATEGORIES, STORES.MUTATIONS],
+         "readwrite"
+      );
+      const taskStore = tx.objectStore(STORES.TASKS);
+      const categoryStore = tx.objectStore(STORES.CATEGORIES);
+      const mutationStore = tx.objectStore(STORES.MUTATIONS);
+
+      for (const task of input.tasks ?? []) {
+         const getRequest = taskStore.get(task.id);
+         getRequest.onsuccess = () => {
+            const existing = getRequest.result as LocalTaskRecord | undefined;
+            taskStore.put({
+               ...task,
+               revision: task.revision ?? existing?.revision,
+            });
+         };
+      }
+      for (const id of input.deleteTaskIds ?? []) {
+         taskStore.delete(id);
+      }
+
+      for (const category of input.categories ?? []) {
+         const getRequest = categoryStore.get(category.id);
+         getRequest.onsuccess = () => {
+            const existing = getRequest.result as
+               LocalCategoryRecord | undefined;
+            categoryStore.put({
+               ...category,
+               revision: category.revision ?? existing?.revision,
+            });
+         };
+      }
+      for (const id of input.deleteCategoryIds ?? []) {
+         categoryStore.delete(id);
+      }
+
+      for (const mutation of input.mutations) {
+         mutationStore.put({
+            ...mutation,
+            userId: mutation.userId ?? ownerFallback,
+         });
+      }
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+   });
+}
+
+export function commitTaskMutation(
+   task: LocalTaskRecord | null,
+   mutation: QueuedMutation,
+   options?: { deleteTaskId?: string }
+): Promise<void> {
+   return commitLocalBatch({
+      tasks: task ? [task] : [],
+      deleteTaskIds: options?.deleteTaskId ? [options.deleteTaskId] : [],
+      mutations: [mutation],
+   });
+}
+
+export function commitTaskBatch(
+   tasks: LocalTaskRecord[],
+   mutation: QueuedMutation,
+   options?: { deleteTaskIds?: string[] }
+): Promise<void> {
+   return commitLocalBatch({
+      tasks,
+      deleteTaskIds: options?.deleteTaskIds,
+      mutations: [mutation],
+   });
+}
+
+export function commitCategoryMutation(
+   category: LocalCategoryRecord | null,
+   mutation: QueuedMutation,
+   options?: { deleteCategoryId?: string }
+): Promise<void> {
+   return commitLocalBatch({
+      categories: category ? [category] : [],
+      deleteCategoryIds: options?.deleteCategoryId
+         ? [options.deleteCategoryId]
+         : [],
+      mutations: [mutation],
+   });
+}
+
 export async function removeQueuedMutations(ids: string[]): Promise<void> {
    const db = await openDatabase();
    if (!db || ids.length === 0) return;
@@ -283,6 +493,177 @@ export async function removeQueuedMutations(ids: string[]): Promise<void> {
       for (const id of ids) {
          store.delete(id);
       }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+   });
+}
+
+/**
+ * Records one failed attempt for a mutation. At the cap the mutation moves to
+ * the dead-letter store instead of retrying forever.
+ */
+export async function recordMutationFailure(
+   mutation: QueuedMutation,
+   reason?: string
+): Promise<"retry" | "dead-letter"> {
+   const db = await openDatabase();
+   if (!db) return "retry";
+
+   return new Promise((resolve, reject) => {
+      const tx = db.transaction(
+         [STORES.MUTATIONS, STORES.DEAD_LETTER],
+         "readwrite"
+      );
+      const mutationStore = tx.objectStore(STORES.MUTATIONS);
+      const deadStore = tx.objectStore(STORES.DEAD_LETTER);
+      const getRequest = mutationStore.get(mutation.id);
+      let outcome: "retry" | "dead-letter" = "retry";
+
+      getRequest.onsuccess = () => {
+         const current =
+            (getRequest.result as QueuedMutation | undefined) ?? mutation;
+         const retryCount = current.retryCount + 1;
+
+         if (retryCount >= MAX_MUTATION_RETRIES) {
+            outcome = "dead-letter";
+            mutationStore.delete(current.id);
+            deadStore.put({
+               ...current,
+               retryCount,
+               userId: current.userId ?? activeQueueUserId ?? "",
+               failedAt: Date.now(),
+               lastError: reason,
+            } satisfies DeadLetterMutation);
+         } else {
+            mutationStore.put({ ...current, retryCount });
+         }
+      };
+
+      tx.oncomplete = () => resolve(outcome);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+   });
+}
+
+export async function getDeadLetterMutations(
+   userId: string
+): Promise<DeadLetterMutation[]> {
+   const db = await openDatabase();
+   if (!db) return [];
+
+   return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORES.DEAD_LETTER, "readonly");
+      const store = tx.objectStore(STORES.DEAD_LETTER);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+         const all = (request.result || []) as DeadLetterMutation[];
+         resolve(
+            all
+               .filter((mutation) => mutation.userId === userId)
+               .sort((a, b) => a.failedAt - b.failedAt)
+         );
+      };
+      request.onerror = () => reject(request.error);
+   });
+}
+
+export async function retryDeadLetterMutation(id: string): Promise<void> {
+   const db = await openDatabase();
+   if (!db) return;
+
+   await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(
+         [STORES.MUTATIONS, STORES.DEAD_LETTER],
+         "readwrite"
+      );
+      const deadStore = tx.objectStore(STORES.DEAD_LETTER);
+      const mutationStore = tx.objectStore(STORES.MUTATIONS);
+      const getRequest = deadStore.get(id);
+
+      getRequest.onsuccess = () => {
+         const dead = getRequest.result as DeadLetterMutation | undefined;
+         if (!dead) return;
+
+         const mutation: QueuedMutation = {
+            id: dead.id,
+            entityType: dead.entityType,
+            action: dead.action,
+            payload: dead.payload,
+            createdAt: dead.createdAt,
+            retryCount: 0,
+            baseRevision: dead.baseRevision,
+            userId: dead.userId,
+         };
+
+         deadStore.delete(id);
+         mutationStore.put(mutation);
+      };
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+   });
+}
+
+export async function discardDeadLetterMutation(id: string): Promise<void> {
+   const db = await openDatabase();
+   if (!db) return;
+
+   await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORES.DEAD_LETTER, "readwrite");
+      tx.objectStore(STORES.DEAD_LETTER).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+   });
+}
+
+/**
+ * Moves every local task and queued mutation from a client-generated category id
+ * to the server's winning category id after a create conflict.
+ */
+export async function remapLocalCategoryId(
+   fromId: string,
+   toId: string
+): Promise<void> {
+   if (fromId === toId) return;
+   const db = await openDatabase();
+   if (!db) return;
+
+   await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(
+         [STORES.TASKS, STORES.CATEGORIES, STORES.MUTATIONS],
+         "readwrite"
+      );
+
+      const taskIndex = tx.objectStore(STORES.TASKS).index("categoryId");
+      const cursorRequest = taskIndex.openCursor(IDBKeyRange.only(fromId));
+      cursorRequest.onsuccess = () => {
+         const cursor = cursorRequest.result;
+         if (!cursor) return;
+         cursor.update({
+            ...(cursor.value as LocalTaskRecord),
+            categoryId: toId,
+         });
+         cursor.continue();
+      };
+
+      const mutationStore = tx.objectStore(STORES.MUTATIONS);
+      const allRequest = mutationStore.getAll();
+      allRequest.onsuccess = () => {
+         const mutations = (allRequest.result || []) as QueuedMutation[];
+         for (const mutation of mutations) {
+            const payload = mutation.payload as Record<string, unknown>;
+            if (payload?.categoryId === fromId) {
+               mutationStore.put({
+                  ...mutation,
+                  payload: { ...payload, categoryId: toId },
+               });
+            }
+         }
+      };
+
+      tx.objectStore(STORES.CATEGORIES).delete(fromId);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
    });
@@ -339,6 +720,7 @@ export async function migrateGuestDataToUser(
          },
          createdAt: Date.now(),
          retryCount: 0,
+         userId,
       });
    }
 
@@ -360,6 +742,7 @@ export async function migrateGuestDataToUser(
          },
          createdAt: Date.now(),
          retryCount: 0,
+         userId,
       });
    }
 

@@ -332,11 +332,13 @@ export async function applyParticipantWithdrawal(params: {
    );
 
    await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Challenge" WHERE "id" = ${participant.challengeId} FOR UPDATE`;
+
       const { count } = await tx.challengeParticipant.updateMany({
          where: {
             id: participant.id,
             isWithdrawn: false,
-            challenge: { resultsLockedAt: null },
+            challenge: { resultsLockedAt: null, isDeleted: false },
          },
          data: {
             isWithdrawn: true,
@@ -347,28 +349,31 @@ export async function applyParticipantWithdrawal(params: {
          throw new Error("Withdrawal is no longer possible.");
       }
 
-      await recordAuditEvent({
-         actorId: actor.id,
-         actorUsername: actor.username,
-         actorDisplayName: actor.displayName ?? null,
-         actionType,
-         targetEntityId: participant.id,
-         targetEntityType: "PARTICIPANT",
-         targetEntityName: params.participantName,
-         challengeId: participant.challengeId,
-         previousValue: {
-            teamId: participant.teamId,
-            teamName: params.teamName ?? undefined,
-            targetSeconds: participant.targetSeconds,
-            totalLoggedSeconds,
-            status: participant.status,
+      await recordAuditEvent(
+         {
+            actorId: actor.id,
+            actorUsername: actor.username,
+            actorDisplayName: actor.displayName ?? null,
+            actionType,
+            targetEntityId: participant.id,
+            targetEntityType: "PARTICIPANT",
+            targetEntityName: params.participantName,
+            challengeId: participant.challengeId,
+            previousValue: {
+               teamId: participant.teamId,
+               teamName: params.teamName ?? undefined,
+               targetSeconds: participant.targetSeconds,
+               totalLoggedSeconds,
+               status: participant.status,
+            },
+            newValue: {
+               isWithdrawn: true,
+               withdrawalAt: now.toISOString(),
+            },
+            auditReason: reason,
          },
-         newValue: {
-            isWithdrawn: true,
-            withdrawalAt: now.toISOString(),
-         },
-         auditReason: reason,
-      });
+         { transactionClient: tx }
+      );
    });
 
    return { participantId: participant.id, withdrawalAt: now };

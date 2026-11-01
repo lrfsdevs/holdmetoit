@@ -81,9 +81,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       userId
          ? getUserCategorizedTasks(userId).catch(() => null)
          : Promise.resolve(null),
-      userId
-         ? findLatestAvailableChallenge().catch(() => null)
-         : Promise.resolve(null),
+      findLatestAvailableChallenge().catch(() => null),
       userId
          ? findLatestCompletedChallengeForWrapped(userId).catch(() => null)
          : Promise.resolve(null),
@@ -94,7 +92,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
    const userTasks = cockpit?.userTasks ?? fetchedUserTasks;
    const upcomingChallenge =
-      userId && (!cockpit || cockpit.challengeStatus !== "ACTIVE")
+      !cockpit || cockpit.challengeStatus !== "ACTIVE"
          ? fetchedUpcomingChallenge
          : null;
 
@@ -116,10 +114,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ? { ...session.user, role: effectiveRole ?? session.user.role }
       : session?.user;
 
-   const profileUrl =
-      cockpit?.challengeId && cockpit?.participant?.id
-         ? `/challenge/${cockpit.challengeId}/participant/${cockpit.participant.id}`
-         : "/profile";
+   const profileUrl = cockpit?.challengeId
+      ? `/profile?challengeId=${cockpit.challengeId}`
+      : "/profile";
 
    const rawSnoozeCookie = cookieStore.get(ROLLOVER_SNOOZE_COOKIE)?.value;
    let initialIsRolloverSnoozed = false;
@@ -133,13 +130,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
          if (cockpit?.todayDate) validDates.add(cockpit.todayDate);
 
          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            if (
-               (parsed[scope] && validDates.has(parsed[scope])) ||
-               (parsed["guest"] && validDates.has(parsed["guest"]))
-            ) {
+            if (parsed[scope] && validDates.has(parsed[scope])) {
                initialIsRolloverSnoozed = true;
             }
-         } else if (typeof parsed === "string" && validDates.has(parsed)) {
+         } else if (
+            scope === "guest" &&
+            typeof parsed === "string" &&
+            validDates.has(parsed)
+         ) {
             initialIsRolloverSnoozed = true;
          }
       } catch {

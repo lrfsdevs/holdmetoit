@@ -4,15 +4,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CockpitTasksSection } from "./cockpit-tasks-section";
 import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 
-vi.mock("@/features/tasks/api/task.actions", () => ({
-   createTaskAction: vi.fn(),
-   deleteTaskAction: vi.fn(),
-   toggleTaskAction: vi.fn(),
-   updateTaskAction: vi.fn(),
-   updateCategoryAction: vi.fn(),
-   deleteCategoryAction: vi.fn(),
-}));
-
 describe("CockpitTasksSection", () => {
    const mockTasks: UserCategorizedTasks = {
       categories: [
@@ -106,7 +97,7 @@ describe("CockpitTasksSection", () => {
       );
    });
 
-   it("does not render options trigger buttons when user is not logged in", () => {
+   it("renders options trigger buttons and delete actions when user is not logged in", () => {
       const html = renderToStaticMarkup(
          createElement(CockpitTasksSection, {
             isLoggedIn: false,
@@ -116,14 +107,17 @@ describe("CockpitTasksSection", () => {
 
       expect(html).toContain("Daily Routines");
       expect(html).toContain("Sprint Deliverables");
-      expect(html).not.toContain(
+      expect(html).toContain(
          'aria-label="Options for category Daily Routines"'
       );
-      expect(html).not.toContain(
+      expect(html).toContain(
          'aria-label="Options for category Sprint Deliverables"'
       );
-      expect(html).not.toContain(
+      expect(html).toContain(
          'aria-label="Options for task Study Chemistry Chapter 2"'
+      );
+      expect(html).toContain(
+         'aria-label="Delete task Study Chemistry Chapter 2"'
       );
    });
 
