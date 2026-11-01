@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-01 (Session 182 on `krish` · Session 176 on `afnan-jr`)
+> **Last Updated:** 2026-11-01 (Session 183 on `krish` · Session 176 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2124,3 +2124,32 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design tokens and anti-slop rules).
 - **Jira Status:** `KAN-67` transitioned to `In Progress` (ID 21).
 - **NEXT STEP:** Submit/update Pull Request and transition `KAN-67` to `In Review`.
+
+### Session 183 — 2026-11-01 (Jira "In Review" Lifecycle Auditing & Transitions to Done on `krish`)
+
+- **Context & Objectives:** Audited all Jira Cloud issues in the `In Review` state against GitHub issue states and `dev` branch merge history per `AGENTS.md` §4.4. Closed and transitioned all verified items to `Done`.
+- **Issues Audited & Closed:**
+   1. **`KAN-66`** (`feat(participant): sick mode status badge with 3-day reminder and leaderboard visibility (#205)`):
+      - GitHub Issue: [#205](https://github.com/lrfsdevs/holdmetoit/issues/205) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   2. **`KAN-65`** (`[GH-#196] fix(tasks): calendar navigation & rollover visibility during challenges and daily reminder snooze`):
+      - GitHub Issue: [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) (Closed).
+      - PR: [#201](https://github.com/lrfsdevs/holdmetoit/pull/201) merged into `dev`, release PR [#202](https://github.com/lrfsdevs/holdmetoit/pull/202) merged into `main`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   3. **`KAN-49`** (`feat(profile): global career stats, off-season logs, and reusable challenge snapshot (#164)`):
+      - GitHub Issue: [#164](https://github.com/lrfsdevs/holdmetoit/issues/164) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   4. **`KAN-48`** (`feat(admin): global user directory and participant roster for hosts/admins (#163)`):
+      - GitHub Issue: [#163](https://github.com/lrfsdevs/holdmetoit/issues/163) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   5. **`KAN-9`** (`[GH-#91] [UI/UX] Public spectator landing view and dashboard when unauthenticated`):
+      - GitHub Issue: [#91](https://github.com/lrfsdevs/holdmetoit/issues/91) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+- **Verification:**
+   - Remaining issues in Jira `In Review` state: **0**.
+   - Project KAN status breakdown: `To Do`: 21, `In Progress`: 1 (`KAN-67`), `In Review`: 0, `Done`: 39.
+- **NEXT STEP:** Submit PR for `KAN-67` (`feat(leaderboard): anchor Head-to-Head banner cards and show dynamic leader badge`) and transition `KAN-67` to `In Review`.
