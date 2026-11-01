@@ -194,7 +194,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Freshness:** jittered 30s visible-tab `forcePull`, plus a `BroadcastChannel` `tasks-synced` signal so other tabs re-hydrate from shared IndexedDB. The 15s pending ticker remains.
 - **Tests:** web `214 files / 2,127 tests` (new IDB, lock, ownership, dead-letter, idle-pull, and banner coverage); tasker `4 files / 81 tests`; `typecheck:web` 0; `lint:web` 0; `build:web` clean.
 - **Dependency:** `fake-indexeddb` (dev-only, web workspace) for real IDB tests.
-- **Uncommitted:** no Prisma migration. Manual tests still pending.
+- **Committed as `5c98153`**; no Prisma migration.
 - **NEXT:** two-tab/account-switch/dead-letter/idle-pull manual checks, then the `afnan-jr` → `dev` PR.
 
 ### Session 185 — 2026-10-31 (Server revision on `afnan-jr`)
@@ -202,11 +202,10 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Schema:** `Task` and `Category` gained `revision Int @default(0)`. Migration `20261031010000_task_category_revision` (additive, no backfill) + migrations README.
 - **Protocol:** queued mutations carry an optional top-level `baseRevision`; `syncNow` computes it centrally from the local records (sequential per entity, creates start at 0, legacy records omit it). The server updates with `WHERE revision = baseRevision` and `revision: { increment: 1 }`.
 - **Conflicts:** `zero_rows` with a current row is rebased onto the current revision and re-enqueued (max 2 attempts); `currentTask: null` deletes the local row; `challenge_locked` adopts the server row. The wall-clock `updatedAt` reconciliation guard was removed; pending entities are identified by their queued mutation.
-- **Local state:** `putLocalTask` / `putLocalCategory` merge-preserve `revision`; the cockpit's enqueue sites are unchanged.
+- **Local state:** `putLocalTask` / `putLocalCategory` merge-preserve `revision`; the cockpit's enqueue sites were unchanged at this layer (queue hygiene later replaced them with atomic commit helpers).
 - **Server writers:** every non-create write increments `revision` — sync repository, direct task repository helpers, challenge soft-delete, dedupe script, Tasker bot, backfill script. The weekly challenge lock guard is restored at the sync path (`challenge_locked`).
 - **Tests:** web `212 files / 2,111 tests`; tasker `4 files / 81 tests`; `typecheck:web` / `typecheck:tasker` 0; `lint:web` 0 (one pre-existing warning); `build:web` clean.
-- **Uncommitted:** independent of the one-write-path and Zod layers.
-- **NEXT:** queue hygiene (Step 5) — per-mutation `userId`, Web Locks tab serialisation, atomic IDB record+enqueue, retry cap/dead-letter banner, idle pull.
+- **Committed as `80fdc72`.**
 
 ### Session 184 — 2026-10-30 (Zod 4.6.6 security upgrade on `afnan-jr`)
 
@@ -215,8 +214,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Tasker Zod 3 → 4:** no schema changes required. Env parsing, `booleanString`, and the summary schema typecheck and pass all 79 tests. Updated the stale "zod 3 here" comment in `summarizer.ts`.
 - **Audit:** `npm audit` no longer reports the oversized-constrained-collections advisory; no zod entries remain in the audit output.
 - **Verification:** `typecheck:web` / `typecheck:tasker` 0, `lint:web` 0, web suite green, tasker 4 files / 79 tests, `build:web` clean.
-- **Uncommitted:** dependency-only change, independent of the one-write-path layer.
-- **NEXT:** server revision (Step 4), then queue hygiene (Step 5).
+- **Committed as `841bd84`.**
 
 ### Session 183 — 2026-10-30 (One web write path on `afnan-jr`)
 
@@ -226,8 +224,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Revalidation moved:** the sync route calls `revalidatePath("/")` plus the cache-tag invalidation.
 - **Dead code deleted:** `features/tasks/api/task.actions.ts` and its test; removed the action mocks from eight cockpit tests and the `useTransition` usage.
 - **Tests:** ROLLOVER applied/invalid, overlong title, empty toggle, rejected-CREATE cleanup, route revalidation; web suite 212 files / 2101 tests; typecheck/lint/build clean.
-- **Uncommitted:** changes sit in the working tree on top of the staged quick-wins merge.
-- **NEXT:** server revision (Step 4), then queue hygiene (Step 5).
+- **Committed as `205fb8c`.**
 
 ### Session 182 — 2026-10-30 (Task sync quick wins on `afnan-jr`)
 
@@ -237,8 +234,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Category index:** removed the exact-case `@@unique`; added `20261031000000_category_active_name_ci_unique` (partial `LOWER(name)` where active). Pre-check + `scripts/dedupe-categories.ts` (dry-run default).
 - **Tests:** edit-patch diff, mutation-result/conflict cases, client reconcile/remap, bot model predicates, category P2002. `typecheck:web` and `typecheck:tasker` clean; targeted suites green.
 - **Docs:** `docs/tasks/README.md`; `docs/tasker/README.md` §2.2-2.4.
-- **Uncommitted:** the working tree holds the four slices; no commits were made.
-- **NEXT:** run the category duplicate pre-check on the local copy; apply the migration; manual two-profile edit/toggle test; bot delete/recreate category test; then split into the four commits.
+- **Committed in the quick-wins merge (`db7ebe0`).**
 
 ### Session 176 — 2026-10-30 (Results lock hardening on `afnan-jr`)
 

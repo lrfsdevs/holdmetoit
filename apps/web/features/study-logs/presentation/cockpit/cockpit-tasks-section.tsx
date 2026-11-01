@@ -893,6 +893,7 @@ export function CockpitTasksSection({
                         name: c.name,
                         taskType: c.taskType,
                         sortOrder: c.sortOrder ?? 0,
+                        revision: c.revision,
                         createdAt: new Date(c.createdAt).toISOString(),
                         updatedAt: new Date(c.updatedAt).toISOString(),
                         syncState: "synced",
@@ -923,6 +924,7 @@ export function CockpitTasksSection({
                      completedAt: t.completedAt
                         ? new Date(t.completedAt).toISOString()
                         : null,
+                     revision: t.revision,
                      syncState: "synced",
                   }));
 
@@ -1175,6 +1177,7 @@ export function CockpitTasksSection({
                      name: c.name,
                      taskType: c.taskType,
                      sortOrder: c.sortOrder ?? 0,
+                     revision: c.revision,
                      createdAt: new Date(c.createdAt).toISOString(),
                      updatedAt: new Date(c.updatedAt).toISOString(),
                      syncState: "synced",
@@ -1205,6 +1208,7 @@ export function CockpitTasksSection({
                   completedAt: t.completedAt
                      ? new Date(t.completedAt).toISOString()
                      : null,
+                  revision: t.revision,
                   syncState: "synced",
                }));
 

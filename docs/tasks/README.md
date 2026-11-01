@@ -2,7 +2,7 @@
 
 > **Authority:** `AGENTS.md` Law L6/L7/L9, `docs/accountability/README.md`
 > **Owner slice:** `features/tasks` (`data/`, `domain/`, `api/`), `features/study-logs/presentation/cockpit/`
-> **Migration:** `20261031000000_category_active_name_ci_unique`
+> **Migrations:** `20261031000000_category_active_name_ci_unique`, `20261031010000_task_category_revision`
 
 ---
 
@@ -18,12 +18,13 @@ server reports the outcome, and how the client reconciles without silently losin
 - Per-mutation results: `applied | conflict | error`.
 - Client conflict handling and category-id remapping.
 - Category identity: live/revive/create and the partial case-insensitive index.
+- Revision tokens and conditional writes (`baseRevision`).
+- Queue ownership, cross-tab locking, and dead-letter handling.
 
 ### Non-goals
 
-- Revision tokens and conditional writes (a later slice).
-- Queue ownership, cross-tab locking, dead-letter UI.
-- A conflict toast; the client applies the server row and logs the conflict.
+- A conflict toast; the client rebases the user's fields and only logs when the rebase
+  cap is reached.
 
 ---
 
@@ -241,5 +242,5 @@ npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts --apply
 - The task mutation server actions were deleted; every new task/category mutation goes
   through the sync repository. The partial category index is the database backstop. If the
   category model is replaced, remove the index together with the create/revive logic.
-- Follow-ups: revision tokens (Step 4), queue ownership/cross-tab locking (Step 5), conflict
-  UI, default-category naming alignment (`General` vs `Default`).
+- Follow-ups: conflict UI, default-category naming alignment (`General` vs `Default`),
+  and extending the `FOR SHARE` guard to the remaining admin writers.

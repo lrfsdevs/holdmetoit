@@ -230,35 +230,16 @@ async function applyCategoryMutation(
       const initialSortOrder =
          typeof payload.sortOrder === "number" ? payload.sortOrder : 0;
 
-      try {
-         await tx.category.create({
-            data: {
-               id: catId,
-               userId,
-               name: explicitName,
-               taskType,
-               sortOrder: initialSortOrder,
-            },
-         });
-         return APPLIED;
-      } catch (error) {
-         if (isP2002(error)) {
-            const winner = await tx.category.findFirst({
-               where: {
-                  userId,
-                  taskType,
-                  isDeleted: false,
-                  name: { equals: explicitName, mode: "insensitive" },
-               },
-            });
-            return {
-               status: "conflict",
-               reason: "category_name_taken",
-               currentCategory: winner ? toCategoryItem(winner) : undefined,
-            };
-         }
-         throw error;
-      }
+      await tx.category.create({
+         data: {
+            id: catId,
+            userId,
+            name: explicitName,
+            taskType,
+            sortOrder: initialSortOrder,
+         },
+      });
+      return APPLIED;
    }
 
    if (m.action === "UPDATE" || m.action === "MOVE") {
@@ -271,14 +252,15 @@ async function applyCategoryMutation(
       }
 
       if (catId) {
-         if (payload.taskType) {
-            const currentCat = await tx.category.findUnique({
-               where: { id: catId },
-            });
+         const currentCategory = await tx.category.findUnique({
+            where: { id: catId },
+         });
+         let taskTypeChanged = false;
 
-            if (currentCat && currentCat.userId === userId) {
-               const targetName = explicitName || currentCat.name;
-               if (currentCat.taskType !== taskType) {
+         if (payload.taskType) {
+            if (currentCategory && currentCategory.userId === userId) {
+               const targetName = explicitName || currentCategory.name;
+               if (currentCategory.taskType !== taskType) {
                   const nameCollision = await tx.category.findFirst({
                      where: {
                         userId,
@@ -295,67 +277,65 @@ async function applyCategoryMutation(
                      dataToUpdate.name = explicitName;
                   }
                   dataToUpdate.taskType = taskType;
+                  taskTypeChanged = true;
                }
             }
          }
 
-         if (Object.keys(dataToUpdate).length > 0) {
-            try {
-               const { count } = await tx.category.updateMany({
-                  where: {
-                     id: catId,
-                     userId,
-                     isDeleted: false,
-                     ...(baseRevision !== undefined
-                        ? { revision: baseRevision }
-                        : {}),
+         if (typeof dataToUpdate.name === "string") {
+            const collisionTaskType =
+               (dataToUpdate.taskType as TaskType | undefined) ??
+               currentCategory?.taskType ??
+               taskType;
+            const collision = await tx.category.findFirst({
+               where: {
+                  userId,
+                  taskType: collisionTaskType,
+                  isDeleted: false,
+                  name: {
+                     equals: dataToUpdate.name,
+                     mode: "insensitive",
                   },
-                  data: { ...dataToUpdate, revision: { increment: 1 } },
-               });
+                  id: { not: catId },
+               },
+            });
 
-               if (count === 0) {
-                  const current = await tx.category.findFirst({
-                     where: { id: catId, userId, isDeleted: false },
-                  });
-                  return {
-                     status: "conflict",
-                     reason: "zero_rows",
-                     currentCategory: current ? toCategoryItem(current) : null,
-                  };
-               }
-            } catch (error) {
-               if (isP2002(error)) {
-                  const collidingName =
-                     typeof dataToUpdate.name === "string"
-                        ? dataToUpdate.name
-                        : explicitName;
-                  const winner = collidingName
-                     ? await tx.category.findFirst({
-                          where: {
-                             userId,
-                             taskType,
-                             isDeleted: false,
-                             name: {
-                                equals: collidingName,
-                                mode: "insensitive",
-                             },
-                          },
-                       })
-                     : null;
-                  return {
-                     status: "conflict",
-                     reason: "category_name_taken",
-                     currentCategory: winner
-                        ? toCategoryItem(winner)
-                        : undefined,
-                  };
-               }
-               throw error;
+            if (collision) {
+               return {
+                  status: "conflict",
+                  reason: "category_name_taken",
+                  currentCategory: toCategoryItem(collision),
+               };
+            }
+         }
+
+         if (Object.keys(dataToUpdate).length > 0) {
+            const { count } = await tx.category.updateMany({
+               where: {
+                  id: catId,
+                  userId,
+                  isDeleted: false,
+                  ...(baseRevision !== undefined
+                     ? { revision: baseRevision }
+                     : {}),
+               },
+               data: { ...dataToUpdate, revision: { increment: 1 } },
+            });
+
+            if (count === 0) {
+               const current = await tx.category.findFirst({
+                  where: { id: catId, userId, isDeleted: false },
+               });
+               return {
+                  status: "conflict",
+                  reason: "zero_rows",
+                  currentCategory: current ? toCategoryItem(current) : null,
+               };
             }
 
-            if (payload.taskType) {
+            if (taskTypeChanged) {
                await tx.task.updateMany({
-                  where: { categoryId: catId, userId },
+                  where: { categoryId: catId, userId, isDeleted: false },
                   data: { taskType, revision: { increment: 1 } },
                });
             }
@@ -513,40 +493,24 @@ async function applyTaskMutation(
             : APPLIED;
       }
 
-      try {
-         await tx.task.create({
-            data: {
-               id: taskId,
-               userId,
-               categoryId,
-               challengeId,
-               title,
-               taskType,
-               sortOrder,
-               isComplete: finalIsComplete,
-               status,
-               dueDate,
-               completedAt: finalIsComplete ? new Date() : null,
-            },
-         });
-         return categoryMissing
-            ? { status: "applied", reason: "category_missing" }
-            : APPLIED;
-      } catch (error) {
-         if (isP2002(error)) {
-            const winner = await tx.task.findUnique({
-               where: { id: taskId },
-               select: { userId: true },
-            });
-            if (winner?.userId === userId) return APPLIED;
-            return {
-               status: "conflict",
-               reason: "foreign_row",
-               currentTask: null,
-            };
-         }
-         throw error;
-      }
+      await tx.task.create({
+         data: {
+            id: taskId,
+            userId,
+            categoryId,
+            challengeId,
+            title,
+            taskType,
+            sortOrder,
+            isComplete: finalIsComplete,
+            status,
+            dueDate,
+            completedAt: finalIsComplete ? new Date() : null,
+         },
+      });
+      return categoryMissing
+         ? { status: "applied", reason: "category_missing" }
+         : APPLIED;
    }
 
    if (
@@ -629,12 +593,6 @@ async function applyTaskMutation(
          dataToUpdate.isComplete = payload.isComplete;
          dataToUpdate.status = payload.isComplete ? "COMPLETED" : "TODO";
          dataToUpdate.completedAt = payload.isComplete ? new Date() : null;
-      }
-
-      if (Object.keys(dataToUpdate).length === 0) {
-         return categoryMissing
-            ? { status: "applied", reason: "category_missing" }
-            : APPLIED;
       }
 
       const { count } = await tx.task.updateMany({
@@ -753,6 +711,64 @@ async function applyTaskMutation(
  * @param rawMutations - Array of pending offline mutations to apply.
  * @returns BatchSyncResponse with per-mutation results, the authenticated user ID, and latest server changes.
  */
+async function recoverP2002(
+   userId: string,
+   mutation: QueuedMutation
+): Promise<Outcome | null> {
+   const payload = mutation.payload as Record<string, unknown>;
+
+   if (mutation.entityType === "CATEGORY") {
+      const categoryId = String(payload.categoryId || payload.id || "");
+      const current = categoryId
+         ? await prisma.category.findUnique({
+              where: { id: categoryId },
+              select: { taskType: true },
+           })
+         : null;
+      const taskType: TaskType =
+         payload.taskType === "WEEKLY"
+            ? "WEEKLY"
+            : payload.taskType === "DAILY"
+              ? "DAILY"
+              : (current?.taskType ?? "DAILY");
+      const name = typeof payload.name === "string" ? payload.name.trim() : "";
+      if (!name) return null;
+
+      const winner = await prisma.category.findFirst({
+         where: {
+            userId,
+            taskType,
+            isDeleted: false,
+            name: { equals: name, mode: "insensitive" },
+         },
+      });
+
+      return {
+         status: "conflict",
+         reason: "category_name_taken",
+         currentCategory: winner ? toCategoryItem(winner) : undefined,
+      };
+   }
+
+   if (mutation.entityType === "TASK") {
+      const taskId = String(payload.id || payload.taskId || "");
+      if (!taskId) return null;
+
+      const winner = await prisma.task.findUnique({
+         where: { id: taskId },
+         select: { userId: true },
+      });
+      if (winner?.userId === userId) return APPLIED;
+      return {
+         status: "conflict",
+         reason: "foreign_row",
+         currentTask: null,
+      };
+   }
+
+   return null;
+}
+
 export async function processBatchSync(
    userId: string,
    rawMutations: QueuedMutation[]
@@ -770,6 +786,26 @@ export async function processBatchSync(
 
          mutationResults.push({ id: m.id, ...outcome });
       } catch (err) {
+         if (isP2002(err)) {
+            try {
+               const recovery = await recoverP2002(userId, m);
+               if (recovery) {
+                  mutationResults.push({ id: m.id, ...recovery });
+                  continue;
+               }
+            } catch (recoveryError) {
+               logger.error(logEvents.tasksSyncFailed, {
+                  context: {
+                     userId,
+                     mutationId: m.id,
+                     action: m.action,
+                     reason: "p2002_recovery_failed",
+                  },
+                  error: recoveryError,
+               });
+            }
+         }
+
          logger.error(logEvents.tasksSyncFailed, {
             context: { userId, mutationId: m.id, action: m.action },
             error: err,

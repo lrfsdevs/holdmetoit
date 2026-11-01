@@ -6,14 +6,20 @@ import {
    commitTaskMutation,
    discardDeadLetterMutation,
    enqueueMutation,
+   getAllLocalCategories,
    getAllLocalTasks,
    getDeadLetterMutations,
    getQueuedMutationsForUser,
+   putLocalCategories,
+   putLocalCategory,
+   putLocalTask,
+   putLocalTasks,
    recordMutationFailure,
    retryDeadLetterMutation,
    setActiveQueueUser,
 } from "./task-idb";
 import type {
+   LocalCategoryRecord,
    LocalTaskRecord,
    QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
@@ -33,6 +39,22 @@ function makeTask(overrides: Partial<LocalTaskRecord> = {}): LocalTaskRecord {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       completedAt: null,
+      syncState: "pending",
+      ...overrides,
+   };
+}
+
+function makeCategory(
+   overrides: Partial<LocalCategoryRecord> = {}
+): LocalCategoryRecord {
+   return {
+      id: "cat_1",
+      userId: "user_a",
+      name: "Category",
+      taskType: "DAILY",
+      sortOrder: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       syncState: "pending",
       ...overrides,
    };
@@ -206,5 +228,26 @@ describe("task-idb queue hygiene", () => {
 
       await discardDeadLetterMutation("mut_dead");
       expect(await getDeadLetterMutations("user_a")).toHaveLength(0);
+   });
+
+   it("bulk task puts preserve an existing revision", async () => {
+      await putLocalTask(makeTask({ revision: 7 }));
+
+      await putLocalTasks([makeTask({ title: "Updated" })]);
+
+      const tasks = await getAllLocalTasks("user_a");
+      expect(tasks[0]).toMatchObject({ title: "Updated", revision: 7 });
+   });
+
+   it("bulk category puts preserve an existing revision", async () => {
+      await putLocalCategory(makeCategory({ revision: 4 }));
+
+      await putLocalCategories([makeCategory({ name: "Renamed" })]);
+
+      const categories = await getAllLocalCategories("user_a");
+      expect(categories[0]).toMatchObject({
+         name: "Renamed",
+         revision: 4,
+      });
    });
 });
