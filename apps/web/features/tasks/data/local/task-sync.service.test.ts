@@ -4,7 +4,9 @@ import {
    initTaskSync,
    scheduleSync,
    syncNow,
+   TASKS_DEAD_LETTER_EVENT,
    TASKS_SYNCED_EVENT,
+   TASK_SYNC_LOCK_NAME,
 } from "./task-sync.service";
 import * as taskIdb from "./task-idb";
 
@@ -14,15 +16,17 @@ vi.mock("./task-idb", () => ({
    enqueueMutation: vi.fn(),
    getAllLocalCategories: vi.fn(),
    getAllLocalTasks: vi.fn(),
-   getAllQueuedMutations: vi.fn(),
+   getQueuedMutationsForUser: vi.fn(),
    logTaskSync: vi.fn(),
    migrateGuestDataToUser: vi.fn(),
    putLocalCategories: vi.fn(),
    putLocalCategory: vi.fn(),
    putLocalTask: vi.fn(),
    putLocalTasks: vi.fn(),
+   recordMutationFailure: vi.fn(),
    remapLocalCategoryId: vi.fn(),
    removeQueuedMutations: vi.fn(),
+   setActiveQueueUser: vi.fn(),
 }));
 
 describe("task-sync.service", () => {
@@ -42,6 +46,9 @@ describe("task-sync.service", () => {
          tasks: [],
          categories: [],
       });
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([]);
+      vi.mocked(taskIdb.recordMutationFailure).mockResolvedValue("retry");
+      vi.mocked(taskIdb.setActiveQueueUser).mockReturnValue(undefined);
       vi.mocked(taskIdb.removeQueuedMutations).mockResolvedValue();
       vi.mocked(taskIdb.enqueueMutation).mockResolvedValue();
       vi.mocked(taskIdb.putLocalCategories).mockResolvedValue();
@@ -56,13 +63,19 @@ describe("task-sync.service", () => {
    });
 
    afterEach(() => {
+      vi.clearAllTimers();
       vi.useRealTimers();
+      vi.unstubAllGlobals();
+      Object.defineProperty(navigator, "locks", {
+         value: undefined,
+         configurable: true,
+      });
    });
 
    it("returns null early if userId is null or undefined", async () => {
       const res = await syncNow(null);
       expect(res).toBeNull();
-      expect(taskIdb.getAllQueuedMutations).not.toHaveBeenCalled();
+      expect(taskIdb.getQueuedMutationsForUser).not.toHaveBeenCalled();
    });
 
    it("returns null if network is offline", async () => {
@@ -79,7 +92,7 @@ describe("task-sync.service", () => {
    });
 
    it("returns null without fetching if mutations queue is empty and forcePull is not requested", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([]);
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([]);
       const fetchSpy = vi.spyOn(global, "fetch");
 
       const res = await syncNow(userId);
@@ -88,7 +101,7 @@ describe("task-sync.service", () => {
    });
 
    it("fetches /api/tasks/sync with forcePull even if mutations queue is empty", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([]);
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([]);
 
       const mockResponse = {
          success: true,
@@ -143,7 +156,7 @@ describe("task-sync.service", () => {
          },
       ];
 
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue(
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue(
          mockMutations as never
       );
 
@@ -190,7 +203,7 @@ describe("task-sync.service", () => {
    });
 
    it("keeps only error mutations and removes applied and conflict ids", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_ok",
             entityType: "TASK" as const,
@@ -248,7 +261,7 @@ describe("task-sync.service", () => {
    });
 
    it("applies the current server task on a conflict", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_conflict",
             entityType: "TASK" as const,
@@ -337,7 +350,7 @@ describe("task-sync.service", () => {
    });
 
    it("remaps a local category id when the server returns a create conflict", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_cat",
             entityType: "CATEGORY" as const,
@@ -388,7 +401,7 @@ describe("task-sync.service", () => {
    });
 
    it("removes a local task when a CREATE is rejected without a server entity", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_create",
             entityType: "TASK" as const,
@@ -422,7 +435,7 @@ describe("task-sync.service", () => {
    });
 
    it("keeps a local task when an UPDATE is rejected without a server entity", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_update",
             entityType: "TASK" as const,
@@ -457,7 +470,7 @@ describe("task-sync.service", () => {
 
    it("does not overwrite pending local entities with stale server changes", async () => {
       // Local mutation is still in-flight/pending for t_pending
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_pending",
             entityType: "TASK" as const,
@@ -497,7 +510,7 @@ describe("task-sync.service", () => {
    });
 
    it("prunes synced local entities that are absent from server changes while keeping pending entities", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_pending_local",
             entityType: "TASK" as const,
@@ -562,7 +575,7 @@ describe("task-sync.service", () => {
    });
 
    it("aborts local persistence when authenticatedUserId mismatches client userId", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([]);
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([]);
 
       vi.spyOn(global, "fetch").mockResolvedValue({
          ok: true,
@@ -596,7 +609,7 @@ describe("task-sync.service", () => {
    });
 
    it("schedules an exponential retry preserving forcePull on fetch network error", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([]);
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([]);
 
       vi.spyOn(global, "fetch").mockRejectedValue(new Error("Network failed"));
 
@@ -631,7 +644,7 @@ describe("task-sync.service", () => {
    });
 
    it("computes sequential baseRevision values from the local records", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_update",
             entityType: "TASK" as const,
@@ -693,7 +706,7 @@ describe("task-sync.service", () => {
    });
 
    it("omits baseRevision for a legacy local record without a revision", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_legacy",
             entityType: "TASK" as const,
@@ -740,7 +753,7 @@ describe("task-sync.service", () => {
    });
 
    it("accepts the server row after the rebase limit", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_capped",
             entityType: "TASK" as const,
@@ -798,7 +811,7 @@ describe("task-sync.service", () => {
    });
 
    it("adopts the server row on a challenge_locked conflict without rebasing", async () => {
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_locked",
             entityType: "TASK" as const,
@@ -853,5 +866,195 @@ describe("task-sync.service", () => {
             revision: 2,
          })
       );
+   });
+
+   it("runs the flush under the Web Lock", async () => {
+      const request = vi.fn(
+         async (
+            _name: string,
+            _options: unknown,
+            callback: (lock: unknown) => Promise<unknown>
+         ) => callback({})
+      );
+      Object.defineProperty(navigator, "locks", {
+         value: { request },
+         configurable: true,
+      });
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: [],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId, { forcePull: true });
+
+      expect(request).toHaveBeenCalledWith(
+         TASK_SYNC_LOCK_NAME,
+         expect.objectContaining({ mode: "exclusive", ifAvailable: true }),
+         expect.any(Function)
+      );
+      expect(fetchSpy).toHaveBeenCalled();
+   });
+
+   it("skips the flush and reschedules when the lock is busy", async () => {
+      const request = vi.fn(
+         async (
+            _name: string,
+            _options: unknown,
+            callback: (lock: unknown) => Promise<unknown>
+         ) => callback(null)
+      );
+      Object.defineProperty(navigator, "locks", {
+         value: { request },
+         configurable: true,
+      });
+      const fetchSpy = vi.spyOn(global, "fetch");
+
+      await syncNow(userId);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+   });
+
+   it("sends only the current user's queued mutations", async () => {
+      const mutation = {
+         id: "mut_owned",
+         entityType: "TASK" as const,
+         action: "TOGGLE" as const,
+         payload: { taskId: "t_1", isComplete: true },
+         createdAt: 1,
+         retryCount: 0,
+         userId,
+      };
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
+         mutation,
+      ] as never);
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: ["mut_owned"],
+            mutationResults: [{ id: "mut_owned", status: "applied" }],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.getQueuedMutationsForUser).toHaveBeenCalledWith(userId);
+      const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+      const body = JSON.parse(String(requestInit.body)) as {
+         mutations: Array<{ id: string; userId?: string }>;
+      };
+      expect(body.mutations).toEqual([
+         expect.objectContaining({ id: "mut_owned", userId }),
+      ]);
+   });
+
+   it("dead-letters a mutation at the retry cap and emits the event", async () => {
+      const mutation = {
+         id: "mut_dead",
+         entityType: "TASK" as const,
+         action: "UPDATE" as const,
+         payload: { taskId: "t_1", title: "x" },
+         createdAt: 1,
+         retryCount: 4,
+         userId,
+      };
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
+         mutation,
+      ] as never);
+      vi.mocked(taskIdb.recordMutationFailure).mockResolvedValueOnce(
+         "dead-letter"
+      );
+      const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: [],
+            mutationResults: [
+               { id: "mut_dead", status: "error", reason: "invalid_payload" },
+            ],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      await syncNow(userId);
+
+      expect(taskIdb.recordMutationFailure).toHaveBeenCalledWith(
+         mutation,
+         "invalid_payload"
+      );
+      expect(dispatchSpy).toHaveBeenCalledWith(
+         expect.objectContaining({ type: TASKS_DEAD_LETTER_EVENT })
+      );
+   });
+
+   it("pulls on a visible idle tab", async () => {
+      Object.defineProperty(document, "visibilityState", {
+         value: "visible",
+         configurable: true,
+      });
+      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: [],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      const cleanup = initTaskSync(userId);
+      await vi.advanceTimersByTimeAsync(1000);
+      const initialCalls = fetchSpy.mock.calls.length;
+
+      await vi.advanceTimersByTimeAsync(36000);
+
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(initialCalls);
+      cleanup();
+   });
+
+   it("notifies other tabs over BroadcastChannel", async () => {
+      const postMessage = vi.fn();
+      class FakeBroadcastChannel {
+         name: string;
+         onmessage: ((event: MessageEvent) => void) | null = null;
+         postMessage = postMessage;
+         close = vi.fn();
+         constructor(name: string) {
+            this.name = name;
+         }
+      }
+      vi.stubGlobal(
+         "BroadcastChannel",
+         FakeBroadcastChannel as unknown as typeof BroadcastChannel
+      );
+      vi.spyOn(global, "fetch").mockResolvedValue({
+         ok: true,
+         json: async () => ({
+            success: true,
+            processedMutationIds: [],
+            authenticatedUserId: userId,
+            serverChanges: { categories: [], tasks: [] },
+         }),
+      } as Response);
+
+      const cleanup = initTaskSync(userId);
+      await vi.advanceTimersByTimeAsync(1000);
+      await syncNow(userId, { forcePull: true });
+
+      expect(postMessage).toHaveBeenCalledWith({
+         type: "tasks-synced",
+         userId,
+      });
+      cleanup();
    });
 });

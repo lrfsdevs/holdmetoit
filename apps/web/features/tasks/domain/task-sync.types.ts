@@ -55,6 +55,14 @@ export interface QueuedMutation<TPayload = Record<string, unknown>> {
    retryCount: number;
    /** Revision the client's copy was based on. Absent for legacy queues. */
    baseRevision?: number;
+   /** Owner captured at enqueue time. */
+   userId?: string;
+}
+
+export interface DeadLetterMutation extends QueuedMutation {
+   userId: string;
+   failedAt: number;
+   lastError?: string;
 }
 
 /** Batch synchronization request payload sent from offline client. */

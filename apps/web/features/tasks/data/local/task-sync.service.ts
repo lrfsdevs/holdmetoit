@@ -4,15 +4,17 @@ import {
    enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
-   getAllQueuedMutations,
+   getQueuedMutationsForUser,
    logTaskSync,
    migrateGuestDataToUser,
    putLocalCategories,
    putLocalCategory,
    putLocalTask,
    putLocalTasks,
+   recordMutationFailure,
    remapLocalCategoryId,
    removeQueuedMutations,
+   setActiveQueueUser,
 } from "./task-idb";
 import type {
    BatchSyncResponse,
@@ -37,8 +39,17 @@ export interface SyncOptions {
 /** Custom DOM event dispatched when task synchronization reconciles server changes. */
 export const TASKS_SYNCED_EVENT = "holdmetoit:task-synced";
 
+/** Custom DOM event dispatched when a mutation moves to the dead-letter store. */
+export const TASKS_DEAD_LETTER_EVENT = "holdmetoit:task-sync-dead-letter";
+
+export const TASK_SYNC_LOCK_NAME = "holdmetoit-task-sync";
+const TASKS_SYNC_CHANNEL = "holdmetoit-task-sync";
+const LOCK_BUSY = Symbol("task-sync-lock-busy");
+
 let isSyncing = false;
 let syncTimeout: NodeJS.Timeout | null = null;
+let syncChannel: BroadcastChannel | null = null;
+let warnedNoLocks = false;
 let retryAttempts = 0;
 const INITIAL_RETRY_DELAY_MS = 2000;
 const MAX_RETRY_DELAY_MS = 30000;
@@ -213,12 +224,51 @@ export async function syncNow(
    }
 
    isSyncing = true;
+
+   try {
+      if (
+         typeof navigator === "undefined" ||
+         typeof navigator.locks?.request !== "function"
+      ) {
+         if (!warnedNoLocks) {
+            warnedNoLocks = true;
+            logTaskSync(
+               "Web Locks unavailable; running sync without cross-tab coordination."
+            );
+         }
+         return await runSync(userId, options);
+      }
+
+      const result = await navigator.locks.request(
+         TASK_SYNC_LOCK_NAME,
+         { mode: "exclusive", ifAvailable: true },
+         async (lock) => (lock ? runSync(userId, options) : LOCK_BUSY)
+      );
+
+      if (result === LOCK_BUSY) {
+         // The leader drains the shared queue. Retry shortly in case it read
+         // the queue before this edit was enqueued.
+         if (!options?.forcePull) {
+            scheduleSync(userId, 300);
+         }
+         return null;
+      }
+
+      return result;
+   } finally {
+      isSyncing = false;
+   }
+}
+
+async function runSync(
+   userId: string,
+   options?: SyncOptions
+): Promise<BatchSyncResponse | null> {
    const startTime = Date.now();
 
    try {
-      const mutations = await getAllQueuedMutations();
+      const mutations = await getQueuedMutationsForUser(userId);
       if (mutations.length === 0 && !options?.forcePull) {
-         isSyncing = false;
          return null;
       }
 
@@ -483,6 +533,30 @@ export async function syncNow(
             }
          }
 
+         let deadLettered = 0;
+         for (const result of results) {
+            if (result.status !== "error") continue;
+            const mutation = mutationById.get(result.id);
+            if (!mutation) continue;
+            try {
+               const outcome = await recordMutationFailure(
+                  mutation,
+                  result.reason
+               );
+               if (outcome === "dead-letter") deadLettered++;
+            } catch (error) {
+               logTaskSync("Failed to record mutation failure:", error);
+            }
+         }
+
+         if (deadLettered > 0 && typeof window !== "undefined") {
+            window.dispatchEvent(
+               new CustomEvent(TASKS_DEAD_LETTER_EVENT, {
+                  detail: { count: deadLettered, userId },
+               })
+            );
+         }
+
          if (rebasedEntityIds.size > 0) {
             scheduleSync(userId, 100);
          }
@@ -549,6 +623,8 @@ export async function syncNow(
             }
          }
 
+         syncChannel?.postMessage({ type: "tasks-synced", userId });
+
          logTaskSync(
             `Batch sync completed in ${durationMs}ms: ${acknowledged.length} mutations processed.`
          );
@@ -562,8 +638,6 @@ export async function syncNow(
       logTaskSync("Network error during sync flush:", err);
       scheduleRetry(userId, options);
       return null;
-   } finally {
-      isSyncing = false;
    }
 }
 
@@ -575,7 +649,7 @@ export async function syncNow(
  * @param options - Optional sync configuration flags such as forcePull.
  */
 export function scheduleSync(
-   userId: string | null,
+   userId: string | null | undefined,
    delayMs = 1500,
    options?: SyncOptions
 ): void {
@@ -600,6 +674,21 @@ export function scheduleSync(
 export function initTaskSync(userId?: string | null): () => void {
    if (typeof window === "undefined") {
       return () => {};
+   }
+
+   setActiveQueueUser(userId ?? null);
+
+   if (typeof BroadcastChannel !== "undefined") {
+      syncChannel = new BroadcastChannel(TASKS_SYNC_CHANNEL);
+      syncChannel.onmessage = (event) => {
+         const data = event.data as { type?: string; userId?: string };
+         if (
+            data?.type === "tasks-synced" &&
+            (!userId || data.userId === userId)
+         ) {
+            window.dispatchEvent(new CustomEvent(TASKS_SYNCED_EVENT));
+         }
+      };
    }
 
    const handleOnline = () => {
@@ -643,7 +732,7 @@ export function initTaskSync(userId?: string | null): () => void {
          navigator.onLine &&
          !isSyncing
       ) {
-         getAllQueuedMutations()
+         getQueuedMutationsForUser(userId)
             .then((mutations) => {
                if (mutations.length > 0) {
                   logTaskSync(
@@ -656,6 +745,40 @@ export function initTaskSync(userId?: string | null): () => void {
       }
    }, SYNC_INTERVAL_MS);
 
+   // Visible-tab idle pull: keeps an otherwise idle tab fresh without waiting
+   // for a click. Jitter avoids every tab firing at the same moment.
+   const IDLE_PULL_MS = 30000;
+   const IDLE_PULL_JITTER_MS = 5000;
+   let idleTimeout: ReturnType<typeof setTimeout> | null = null;
+   let isActive = true;
+
+   const scheduleIdlePull = () => {
+      if (!userId || !isActive) return;
+      const jitter =
+         Math.floor(Math.random() * (IDLE_PULL_JITTER_MS * 2 + 1)) -
+         IDLE_PULL_JITTER_MS;
+      idleTimeout = setTimeout(() => {
+         const run = async () => {
+            if (
+               !isActive ||
+               document.visibilityState !== "visible" ||
+               !navigator.onLine ||
+               isSyncing
+            ) {
+               return;
+            }
+            const pending = await getQueuedMutationsForUser(userId);
+            if (pending.length > 0) return;
+            await syncNow(userId, { forcePull: true });
+         };
+         run()
+            .catch(() => {})
+            .finally(() => scheduleIdlePull());
+      }, IDLE_PULL_MS + jitter);
+   };
+
+   scheduleIdlePull();
+
    // Initial trigger & guest data migration check
    if (userId) {
       migrateGuestDataToUser(userId)
@@ -666,12 +789,22 @@ export function initTaskSync(userId?: string | null): () => void {
    }
 
    return () => {
+      isActive = false;
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       document.removeEventListener("visibilitychange", handleVisibility);
       clearInterval(intervalId);
+      if (idleTimeout) {
+         clearTimeout(idleTimeout);
+         idleTimeout = null;
+      }
       if (syncTimeout) {
          clearTimeout(syncTimeout);
+      }
+      setActiveQueueUser(null);
+      if (syncChannel) {
+         syncChannel.close();
+         syncChannel = null;
       }
    };
 }

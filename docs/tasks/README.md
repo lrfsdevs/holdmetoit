@@ -123,6 +123,41 @@ Every writer must increment the token. The Tasker bot increments on its direct w
 not send a base because it reads immediately before writing). A missed writer breaks the
 contract.
 
+### 2.6 Queue hygiene (client)
+
+The offline queue is partitioned, cross-tab coordinated, atomic, bounded, and refreshed while
+idle.
+
+- **Ownership.** Each `QueuedMutation` carries `userId`. `getQueuedMutationsForUser(userId)`
+  returns only the active user's queue and claims legacy unowned entries once. `syncNow` reads
+  only that partition, so a second account cannot send the first account's edits.
+- **One leader.** `syncNow` acquires `navigator.locks` (`holdmetoit-task-sync`) with
+  `ifAvailable` around the whole read → POST → apply → remove cycle. A tab that loses the lock
+  skips; the leader drains the shared IndexedDB queue. The local `isSyncing` flag remains only
+  as a same-tab fast guard.
+- **Atomic local commit.** `commitTaskMutation`, `commitTaskBatch`, `commitCategoryMutation`,
+  and `commitLocalBatch` write the local records and the mutation in one IndexedDB transaction.
+  The cockpit no longer calls `putLocal*` + `enqueueMutation` as separate writes. `putLocal*`
+  remains for snapshot/hydration writes that have no mutation.
+- **Bounded retries.** A per-mutation `error` increments `retryCount`. At 5 the mutation moves
+  to `dead_letter_mutations`; the cockpit banner offers **Retry** (reset to 0 and re-enqueue)
+  or **Discard**. Network/HTTP failures do not increment; the whole batch retries.
+- **Freshness.** A jittered 30s visible-tab pull, plus the existing visibility/online triggers,
+  refreshes an idle tab. After a successful sync the leader posts a `tasks-synced` message on a
+  `BroadcastChannel`; other tabs re-hydrate from the shared IndexedDB. The 15s pending-mutation
+  ticker remains.
+
+IndexedDB (`holdmetoit_db`) is now version 2:
+
+| Store                   | Key  | Indexes                                         |
+| :---------------------- | :--- | :---------------------------------------------- |
+| `tasks`                 | `id` | `userId`, `categoryId`, `taskType`, `syncState` |
+| `categories`            | `id` | `userId`, `taskType`, `syncState`               |
+| `queued_mutations`      | `id` | `createdAt`, `entityType`, `userId`             |
+| `dead_letter_mutations` | `id` | `userId`, `failedAt`, `createdAt`               |
+
+The upgrade only adds the new index/store; existing rows are preserved.
+
 ---
 
 ## 3. Persistence
@@ -133,6 +168,8 @@ contract.
 - `Task` and `Category` carry `revision Int @default(0)` (migration
   `20261031010000_task_category_revision`). Creates start at 0; every non-create writer
   increments.
+- IndexedDB is version 2 with `queued_mutations.userId` and the `dead_letter_mutations` store
+  (§2.6). No Prisma migration is needed for queue hygiene.
 - The operator pre-check is in the migration file. Use `apps/web/scripts/dedupe-categories.ts`
   (dry-run by default) before applying it if duplicates exist.
 
@@ -164,6 +201,10 @@ conflict with `currentCategory.id !== requestedId` means a concurrent create won
   entity or `null`), or `error`.
 - Do not throw for a permanent condition; throw only for unexpected failures.
 - Do not add a second writer (server action) for the same intent.
+- Do not call `enqueueMutation` directly from a handler; use the atomic commit helpers in
+  `task-idb.ts` so the local write and the mutation share one transaction.
+- Every queued mutation carries the owner's `userId`; `syncNow` only reads the current user's
+  partition.
 - Increment `revision` on every non-create write. A missed writer makes the token lie.
 - Category name comparisons are case-insensitive (`mode: "insensitive"`).
 

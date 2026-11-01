@@ -18,10 +18,15 @@ vi.mock("@/features/tasks/data/local/task-idb", async (importOriginal) => {
       getAllLocalCategories: vi.fn().mockResolvedValue([]),
       getAllLocalTasks: vi.fn().mockResolvedValue([]),
       getAllQueuedMutations: vi.fn().mockResolvedValue([]),
+      getQueuedMutationsForUser: vi.fn().mockResolvedValue([]),
       putLocalCategories: vi.fn().mockResolvedValue(undefined),
       putLocalTasks: vi.fn().mockResolvedValue(undefined),
       putLocalTask: vi.fn().mockResolvedValue(undefined),
       enqueueMutation: vi.fn().mockResolvedValue(undefined),
+      commitTaskMutation: vi.fn().mockResolvedValue(undefined),
+      commitTaskBatch: vi.fn().mockResolvedValue(undefined),
+      commitCategoryMutation: vi.fn().mockResolvedValue(undefined),
+      commitLocalBatch: vi.fn().mockResolvedValue(undefined),
       logTaskSync: vi.fn(),
    };
 });
@@ -137,8 +142,9 @@ describe("CockpitTasksSection - Task Status Transition Stability & Anti-Flash", 
          400
       );
 
-      // Verify enqueueMutation was dispatched with TOGGLE to COMPLETED
-      expect(taskIdb.enqueueMutation).toHaveBeenCalledWith(
+      // Verify the atomic task mutation was dispatched with TOGGLE to COMPLETED
+      expect(taskIdb.commitTaskMutation).toHaveBeenCalledWith(
+         expect.objectContaining({ id: "t_in_progress" }),
          expect.objectContaining({
             entityType: "TASK",
             action: "TOGGLE",
@@ -153,7 +159,7 @@ describe("CockpitTasksSection - Task Status Transition Stability & Anti-Flash", 
 
    it("does not revert optimistic status when a live sync event arrives while mutation is pending", async () => {
       // Mock that the mutation is still queued in IDB
-      vi.mocked(taskIdb.getAllQueuedMutations).mockResolvedValue([
+      vi.mocked(taskIdb.getQueuedMutationsForUser).mockResolvedValue([
          {
             id: "mut_toggle_1",
             entityType: "TASK",

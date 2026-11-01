@@ -107,12 +107,15 @@ import type {
    UserCategorizedTasks,
 } from "@/features/tasks/domain/task.types";
 import {
+   commitCategoryMutation,
+   commitLocalBatch,
+   commitTaskBatch,
+   commitTaskMutation,
    deleteLocalCategory,
    deleteLocalTask,
-   enqueueMutation,
    getAllLocalCategories,
    getAllLocalTasks,
-   getAllQueuedMutations,
+   getQueuedMutationsForUser,
    logTaskSync,
    putLocalCategories,
    putLocalCategory,
@@ -124,9 +127,11 @@ import {
    scheduleSync,
    TASKS_SYNCED_EVENT,
 } from "@/features/tasks/data/local/task-sync.service";
+import { TaskSyncIssueBanner } from "@/features/tasks/presentation/task-sync-issue-banner";
 import type {
    LocalCategoryRecord,
    LocalTaskRecord,
+   QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
 
 export interface TaskItem {
@@ -191,6 +196,73 @@ export function CockpitTasksSection({
    initialCollapsedCategoryIds,
    initialIsRolloverSnoozed,
 }: CockpitTasksSectionProps) {
+   const persistTask = useCallback(
+      (
+         task: LocalTaskRecord,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskMutation(task, { ...mutation, userId })
+            : putLocalTask(task),
+      [isLoggedIn, userId]
+   );
+
+   const persistTasks = useCallback(
+      (
+         tasks: LocalTaskRecord[],
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskBatch(tasks, { ...mutation, userId })
+            : putLocalTasks(tasks),
+      [isLoggedIn, userId]
+   );
+
+   const persistCategory = useCallback(
+      (
+         category: LocalCategoryRecord,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitCategoryMutation(category, { ...mutation, userId })
+            : putLocalCategory(category),
+      [isLoggedIn, userId]
+   );
+
+   const deleteTaskWithMutation = useCallback(
+      (
+         taskId: string,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitTaskMutation(
+                 null,
+                 { ...mutation, userId },
+                 {
+                    deleteTaskId: taskId,
+                 }
+              )
+            : deleteLocalTask(taskId),
+      [isLoggedIn, userId]
+   );
+
+   const deleteCategoryWithMutation = useCallback(
+      (
+         categoryId: string,
+         mutation: Omit<QueuedMutation, "userId">
+      ): Promise<void> =>
+         isLoggedIn && userId
+            ? commitCategoryMutation(
+                 null,
+                 { ...mutation, userId },
+                 {
+                    deleteCategoryId: categoryId,
+                 }
+              )
+            : deleteLocalCategory(categoryId),
+      [isLoggedIn, userId]
+   );
+
    const linkableChallengeId =
       challengeId && challengeStatus !== "COMPLETED" ? challengeId : null;
    const isChallengeActive = challengeStatus
@@ -775,7 +847,9 @@ export function CockpitTasksSection({
       async function hydrateFromIndexedDB(options?: { isSyncEvent?: boolean }) {
          try {
             const isSyncEvent = options?.isSyncEvent ?? false;
-            const pendingMutations = await getAllQueuedMutations();
+            const pendingMutations = userId
+               ? await getQueuedMutationsForUser(userId)
+               : [];
             const pendingTaskIds = new Set(
                pendingMutations.map((m) => {
                   const p = m.payload as Record<string, unknown>;
@@ -1232,7 +1306,7 @@ export function CockpitTasksSection({
             dailyCategories[resolvedCatIdx] ||
             dailyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
@@ -1246,11 +1320,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: nextCompleted ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "TOGGLE",
@@ -1262,11 +1334,11 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => {
-                  scheduleSync(userId, 400);
-               })
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
+         }
 
+         if (isLoggedIn && userId) {
             trackLogRocketEvent("TaskStatusChanged", {
                taskId,
                taskType: "daily",
@@ -1323,7 +1395,7 @@ export function CockpitTasksSection({
             weeklyCategories[resolvedCatIdx] ||
             weeklyCategories.find((c) => c.tasks.some((t) => t.id === taskId));
          if (cat?.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: cat.id,
@@ -1337,11 +1409,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: nextCompleted ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "TOGGLE",
@@ -1353,11 +1423,11 @@ export function CockpitTasksSection({
                createdAt: Date.now(),
                retryCount: 0,
             })
-               .then(() => {
-                  scheduleSync(userId, 400);
-               })
+               .then(() => scheduleSync(userId, 400))
                .catch(() => {});
+         }
 
+         if (isLoggedIn && userId) {
             trackLogRocketEvent("TaskStatusChanged", {
                taskId,
                taskType: "weekly",
@@ -1444,22 +1514,16 @@ export function CockpitTasksSection({
          );
       }
 
-      deleteLocalTask(taskId).catch(() => {});
-
-      if (isLoggedIn && userId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "TASK",
-            action: "DELETE",
-            payload: { taskId },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
-      }
+      deleteTaskWithMutation(taskId, {
+         id: crypto.randomUUID(),
+         entityType: "TASK",
+         action: "DELETE",
+         payload: { taskId },
+         createdAt: Date.now(),
+         retryCount: 0,
+      })
+         .then(() => scheduleSync(userId))
+         .catch(() => {});
 
       logTaskSync("Task deleted", { taskId });
    };
@@ -1581,7 +1645,7 @@ export function CockpitTasksSection({
             ? dailyCategories[catIdx]
             : weeklyCategories[catIdx];
       if (cat?.id) {
-         putLocalTask({
+         const localTask: LocalTaskRecord = {
             id,
             userId: userId ?? null,
             categoryId: cat.id,
@@ -1598,11 +1662,9 @@ export function CockpitTasksSection({
             updatedAt: nowIso,
             completedAt: nextCompleted ? nowIso : null,
             syncState: "pending",
-         }).catch(() => {});
-      }
+         };
 
-      if (isLoggedIn && userId) {
-         enqueueMutation({
+         persistTask(localTask, {
             id: crypto.randomUUID(),
             entityType: "TASK",
             action: "UPDATE",
@@ -1610,9 +1672,7 @@ export function CockpitTasksSection({
             createdAt: Date.now(),
             retryCount: 0,
          })
-            .then(() => {
-               scheduleSync(userId, 400);
-            })
+            .then(() => scheduleSync(userId, 400))
             .catch(() => {});
       }
 
@@ -1663,18 +1723,18 @@ export function CockpitTasksSection({
             };
             currentDailyCats = [...dailyCategories, newDailyCat];
             targetDailyIdx = currentDailyCats.length - 1;
-            putLocalCategory({
-               id: newCatId,
-               userId: userId ?? null,
-               name: sourceCat.name,
-               taskType: "DAILY",
-               sortOrder: targetDailyIdx,
-               createdAt: new Date().toISOString(),
-               updatedAt: new Date().toISOString(),
-               syncState: "pending",
-            }).catch(() => {});
-            if (isLoggedIn && userId) {
-               enqueueMutation({
+            persistCategory(
+               {
+                  id: newCatId,
+                  userId: userId ?? null,
+                  name: sourceCat.name,
+                  taskType: "DAILY",
+                  sortOrder: targetDailyIdx,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  syncState: "pending",
+               },
+               {
                   id: crypto.randomUUID(),
                   entityType: "CATEGORY",
                   action: "CREATE",
@@ -1686,8 +1746,8 @@ export function CockpitTasksSection({
                   },
                   createdAt: Date.now(),
                   retryCount: 0,
-               }).catch(() => {});
-            }
+               }
+            ).catch(() => {});
          }
 
          const res = moveTaskBetweenCategories({
@@ -1713,7 +1773,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -1729,26 +1789,24 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: res.movedTask.id,
-                     categoryId: res.targetCategoryId,
-                     taskType: "DAILY",
-                     sortOrder: currentDailyCats[targetDailyIdx].tasks.length,
-                     dueDate: targetDateKey,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => scheduleSync(userId))
-                  .catch(() => {});
-            }
+            persistTask(movedLocalTask, {
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "MOVE",
+               payload: {
+                  taskId: res.movedTask.id,
+                  categoryId: res.targetCategoryId,
+                  taskType: "DAILY",
+                  sortOrder: currentDailyCats[targetDailyIdx].tasks.length,
+                  dueDate: targetDateKey,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
          return;
       }
@@ -1806,7 +1864,7 @@ export function CockpitTasksSection({
 
       if (targetCat?.id) {
          const isComplete = Boolean(foundTask.completed);
-         putLocalTask({
+         const localTask: LocalTaskRecord = {
             id: foundTask.id,
             userId: userId ?? null,
             categoryId: targetCat.id,
@@ -1821,11 +1879,9 @@ export function CockpitTasksSection({
             updatedAt: nowIso,
             completedAt: isComplete ? nowIso : null,
             syncState: "pending",
-         }).catch(() => {});
-      }
+         };
 
-      if (isLoggedIn && userId) {
-         enqueueMutation({
+         persistTask(localTask, {
             id: crypto.randomUUID(),
             entityType: "TASK",
             action: "UPDATE",
@@ -1836,9 +1892,7 @@ export function CockpitTasksSection({
             createdAt: Date.now(),
             retryCount: 0,
          })
-            .then(() => {
-               scheduleSync(userId, 400);
-            })
+            .then(() => scheduleSync(userId, 400))
             .catch(() => {});
       }
 
@@ -1875,7 +1929,7 @@ export function CockpitTasksSection({
 
          const nowIso = new Date().toISOString();
          if (foundCat.id) {
-            putLocalTask({
+            const localTask: LocalTaskRecord = {
                id: taskId,
                userId: userId ?? null,
                categoryId: foundCat.id,
@@ -1889,11 +1943,9 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: foundTask.completed ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
-         }
+            };
 
-         if (isLoggedIn && userId) {
-            enqueueMutation({
+            persistTask(localTask, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "UPDATE",
@@ -1908,7 +1960,7 @@ export function CockpitTasksSection({
                .catch(() => {});
          }
       },
-      [weeklyCategories, userId, isLoggedIn]
+      [weeklyCategories, userId, persistTask]
    );
 
    const rolloverSummary = useMemo(() => {
@@ -1959,9 +2011,10 @@ export function CockpitTasksSection({
          setDailyCategories(updatedCategories);
 
          const nowIso = new Date().toISOString();
+         const localTasks: LocalTaskRecord[] = [];
          candidates.forEach((candidate) => {
             if (candidate.categoryId) {
-               putLocalTask({
+               localTasks.push({
                   id: candidate.taskId,
                   userId: userId ?? null,
                   categoryId: candidate.categoryId,
@@ -1975,12 +2028,12 @@ export function CockpitTasksSection({
                   updatedAt: nowIso,
                   completedAt: null,
                   syncState: "pending",
-               }).catch(() => {});
+               });
             }
          });
 
          if (isLoggedIn && userId && candidateIds.length > 0) {
-            enqueueMutation({
+            persistTasks(localTasks, {
                id: crypto.randomUUID(),
                entityType: "TASK",
                action: "ROLLOVER",
@@ -1993,6 +2046,8 @@ export function CockpitTasksSection({
             })
                .then(() => scheduleSync(userId, 400))
                .catch(() => {});
+         } else if (localTasks.length > 0) {
+            putLocalTasks(localTasks).catch(() => {});
          }
 
          logTaskSync("Incomplete tasks rolled over to Today", {
@@ -2000,7 +2055,7 @@ export function CockpitTasksSection({
             targetDateKey: effectiveTodayDate,
          });
       },
-      [dailyCategories, effectiveTodayDate, userId, isLoggedIn]
+      [dailyCategories, effectiveTodayDate, userId, isLoggedIn, persistTasks]
    );
 
    const moveCategoryToDayAction = (
@@ -2033,7 +2088,7 @@ export function CockpitTasksSection({
             const nowIso = new Date().toISOString();
             const catId = res.movedCategory.id;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -2042,28 +2097,25 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (res.movedTasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] = res.movedTasks.map(
-                  (t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text || "",
-                     taskType: "DAILY",
-                     sortOrder: idx,
-                     isComplete: Boolean(t.completed),
-                     status: getTaskStatus(t),
-                     dueDate: targetDateKey,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  })
-               );
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            const tasksToUpdate: LocalTaskRecord[] = res.movedTasks.map(
+               (t, idx) => ({
+                  id: t.id,
+                  userId: userId ?? null,
+                  categoryId: catId,
+                  title: t.text || "",
+                  taskType: "DAILY",
+                  sortOrder: idx,
+                  isComplete: Boolean(t.completed),
+                  status: getTaskStatus(t),
+                  dueDate: targetDateKey,
+                  createdAt: t.createdAt || nowIso,
+                  updatedAt: nowIso,
+                  completedAt: t.completed ? nowIso : null,
+                  syncState: "pending",
+               })
+            );
 
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
@@ -2091,10 +2143,9 @@ export function CockpitTasksSection({
                      syncState: "pending" as const,
                   })),
             ];
-            putLocalCategories(allCatsToUpdate).catch(() => {});
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [
+               {
                   id: crypto.randomUUID(),
                   entityType: "CATEGORY",
                   action: "MOVE",
@@ -2105,27 +2156,34 @@ export function CockpitTasksSection({
                   },
                   createdAt: Date.now(),
                   retryCount: 0,
-               })
-                  .then(() => scheduleSync(userId))
-                  .catch(() => {});
+               },
+               ...res.movedTasks.map((t) => ({
+                  id: crypto.randomUUID(),
+                  entityType: "TASK" as const,
+                  action: "MOVE" as const,
+                  payload: {
+                     taskId: t.id,
+                     categoryId: catId,
+                     taskType: "DAILY",
+                     dueDate: targetDateKey,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })),
+            ];
 
-               for (const t of res.movedTasks) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "MOVE",
-                     payload: {
-                        taskId: t.id,
-                        categoryId: catId,
-                        taskType: "DAILY",
-                        dueDate: targetDateKey,
-                     },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-               scheduleSync(userId);
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
 
+            if (isLoggedIn && userId) {
                trackLogRocketEvent("WeeklyCategoryMovedToDay", {
                   categoryId: res.movedCategory.id,
                   targetDateKey,
@@ -2192,26 +2250,33 @@ export function CockpitTasksSection({
                syncState: "pending",
             })
          );
-         putLocalTasks(tasksToUpdate).catch(() => {});
+
+         const mutations: Array<Omit<QueuedMutation, "userId">> =
+            res.movedTasks.map((t) => ({
+               id: crypto.randomUUID(),
+               entityType: "TASK" as const,
+               action: "MOVE" as const,
+               payload: {
+                  taskId: t.id,
+                  categoryId: catId,
+                  taskType: "DAILY",
+                  dueDate: targetDateKey,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            }));
+
+         commitLocalBatch({
+            tasks: tasksToUpdate,
+            mutations:
+               isLoggedIn && userId
+                  ? mutations.map((mutation) => ({ ...mutation, userId }))
+                  : [],
+         })
+            .then(() => scheduleSync(userId))
+            .catch(() => {});
 
          if (isLoggedIn && userId) {
-            for (const t of res.movedTasks) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: t.id,
-                     categoryId: catId,
-                     taskType: "DAILY",
-                     dueDate: targetDateKey,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               }).catch(() => {});
-            }
-            scheduleSync(userId);
-
             trackLogRocketEvent("DailyCategoryMovedToDay", {
                categoryId: catId,
                targetDateKey,
@@ -2261,29 +2326,26 @@ export function CockpitTasksSection({
       );
 
       if (catId) {
-         putLocalCategory({
-            id: catId,
-            userId: userId ?? null,
-            name: trimmed,
-            taskType: catType === "daily" ? "DAILY" : "WEEKLY",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            syncState: "pending",
-         }).catch(() => {});
-      }
-
-      if (isLoggedIn && userId && catId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "CATEGORY",
-            action: "UPDATE",
-            payload: { categoryId: catId, name: trimmed },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
+         persistCategory(
+            {
+               id: catId,
+               userId: userId ?? null,
+               name: trimmed,
+               taskType: catType === "daily" ? "DAILY" : "WEEKLY",
+               createdAt: new Date().toISOString(),
+               updatedAt: new Date().toISOString(),
+               syncState: "pending",
+            },
+            {
+               id: crypto.randomUUID(),
+               entityType: "CATEGORY",
+               action: "UPDATE",
+               payload: { categoryId: catId, name: trimmed },
+               createdAt: Date.now(),
+               retryCount: 0,
+            }
+         )
+            .then(() => scheduleSync(userId))
             .catch(() => {});
       }
 
@@ -2337,7 +2399,16 @@ export function CockpitTasksSection({
       }
 
       if (catId) {
-         deleteLocalCategory(catId).catch(() => {});
+         deleteCategoryWithMutation(catId, {
+            id: crypto.randomUUID(),
+            entityType: "CATEGORY",
+            action: "DELETE",
+            payload: { categoryId: catId },
+            createdAt: Date.now(),
+            retryCount: 0,
+         })
+            .then(() => scheduleSync(userId))
+            .catch(() => {});
       }
 
       if (catId || targetName) {
@@ -2357,21 +2428,6 @@ export function CockpitTasksSection({
             collapsedCategoryIdsRef.current = next;
             return next;
          });
-      }
-
-      if (isLoggedIn && userId && catId) {
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "CATEGORY",
-            action: "DELETE",
-            payload: { categoryId: catId },
-            createdAt: Date.now(),
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
       }
 
       logTaskSync("Category deleted", { categoryId: catId, name: targetName });
@@ -2585,23 +2641,67 @@ export function CockpitTasksSection({
             -1
          );
          initialSortOrder = highestOrder + 1;
-
-         putLocalCategory({
-            id: targetCatId,
-            userId: userId ?? null,
-            name: targetCategoryName,
-            taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
-            sortOrder: initialSortOrder,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-            syncState: "pending",
-         }).catch(() => {});
       }
 
-      if (targetCatId) {
-         putLocalTask({
+      const localCategories: LocalCategoryRecord[] =
+         isNew && targetCatId
+            ? [
+                 {
+                    id: targetCatId,
+                    userId: userId ?? null,
+                    name: targetCategoryName,
+                    taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+                    sortOrder: initialSortOrder,
+                    createdAt: nowIso,
+                    updatedAt: nowIso,
+                    syncState: "pending",
+                 },
+              ]
+            : [];
+
+      const localTasks: LocalTaskRecord[] = targetCatId
+         ? [
+              {
+                 id: newTaskId,
+                 userId: userId ?? null,
+                 categoryId: targetCatId,
+                 challengeId: targetChallengeId,
+                 title: newTodoText.trim(),
+                 taskType,
+                 isComplete: nextCompleted,
+                 status: newTodoStatus,
+                 dueDate: resolvedDueDate,
+                 createdAt: nowIso,
+                 updatedAt: nowIso,
+                 completedAt: nextCompleted ? nowIso : null,
+                 syncState: "pending",
+              },
+           ]
+         : [];
+
+      const mutations: Array<Omit<QueuedMutation, "userId">> = [];
+      if (isNew && targetCatId) {
+         mutations.push({
+            id: crypto.randomUUID(),
+            entityType: "CATEGORY",
+            action: "CREATE",
+            payload: {
+               id: targetCatId,
+               name: targetCategoryName,
+               taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
+               sortOrder: initialSortOrder,
+            },
+            createdAt: Date.now(),
+            retryCount: 0,
+         });
+      }
+
+      mutations.push({
+         id: crypto.randomUUID(),
+         entityType: "TASK",
+         action: "CREATE",
+         payload: {
             id: newTaskId,
-            userId: userId ?? null,
             categoryId: targetCatId,
             challengeId: targetChallengeId,
             title: newTodoText.trim(),
@@ -2609,52 +2709,23 @@ export function CockpitTasksSection({
             isComplete: nextCompleted,
             status: newTodoStatus,
             dueDate: resolvedDueDate,
-            createdAt: nowIso,
-            updatedAt: nowIso,
-            completedAt: nextCompleted ? nowIso : null,
-            syncState: "pending",
-         }).catch(() => {});
-      }
+         },
+         createdAt: Date.now() + 1,
+         retryCount: 0,
+      });
+
+      commitLocalBatch({
+         categories: localCategories,
+         tasks: localTasks,
+         mutations:
+            isLoggedIn && userId
+               ? mutations.map((mutation) => ({ ...mutation, userId }))
+               : [],
+      })
+         .then(() => scheduleSync(userId))
+         .catch(() => {});
 
       if (isLoggedIn && userId) {
-         if (isNew && targetCatId) {
-            enqueueMutation({
-               id: crypto.randomUUID(),
-               entityType: "CATEGORY",
-               action: "CREATE",
-               payload: {
-                  id: targetCatId,
-                  name: targetCategoryName,
-                  taskType: addModalType === "daily" ? "DAILY" : "WEEKLY",
-                  sortOrder: initialSortOrder,
-               },
-               createdAt: Date.now(),
-               retryCount: 0,
-            }).catch(() => {});
-         }
-
-         enqueueMutation({
-            id: crypto.randomUUID(),
-            entityType: "TASK",
-            action: "CREATE",
-            payload: {
-               id: newTaskId,
-               categoryId: targetCatId,
-               challengeId: targetChallengeId,
-               title: newTodoText.trim(),
-               taskType,
-               isComplete: nextCompleted,
-               status: newTodoStatus,
-               dueDate: resolvedDueDate,
-            },
-            createdAt: Date.now() + 1,
-            retryCount: 0,
-         })
-            .then(() => {
-               scheduleSync(userId);
-            })
-            .catch(() => {});
-
          trackLogRocketEvent("TaskCreated", {
             taskType,
             isNewCategory: isNew,
@@ -3115,22 +3186,24 @@ export function CockpitTasksSection({
                   syncState: "pending",
                })
             );
-            putLocalTasks(tasksToUpdate).catch(() => {});
 
-            if (isLoggedIn && userId) {
-               const taskIds = targetCatGroup.tasks
-                  .map((t) => t.id)
-                  .filter((id) => Boolean(id));
-               if (taskIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "REORDER",
-                     payload: { taskIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const taskIds = targetCatGroup.tasks
+               .map((t) => t.id)
+               .filter((id) => Boolean(id));
+
+            if (isLoggedIn && userId && taskIds.length > 0) {
+               persistTasks(tasksToUpdate, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "REORDER",
+                  payload: { taskIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
+            } else {
+               putLocalTasks(tasksToUpdate).catch(() => {});
             }
          } else {
             const isMovedComplete = Boolean(
@@ -3139,7 +3212,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -3155,29 +3228,31 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
+
+            if (isLoggedIn && userId) {
+               persistTask(movedLocalTask, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "MOVE",
+                  payload: {
+                     taskId: res.movedTask.id,
+                     categoryId: res.targetCategoryId,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIdx,
+                     dueDate: res.movedTask.dueDate ?? null,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
+            } else {
+               putLocalTask(movedLocalTask).catch(() => {});
+            }
          }
 
          if (isLoggedIn && userId) {
-            enqueueMutation({
-               id: crypto.randomUUID(),
-               entityType: "TASK",
-               action: "MOVE",
-               payload: {
-                  taskId: res.movedTask.id,
-                  categoryId: res.targetCategoryId,
-                  taskType: res.targetTaskType,
-                  sortOrder: destIdx,
-                  dueDate: res.movedTask.dueDate ?? null,
-               },
-               createdAt: Date.now(),
-               retryCount: 0,
-            })
-               .then(() => {
-                  scheduleSync(userId);
-               })
-               .catch(() => {});
-
             trackLogRocketEvent("TaskMoved", {
                taskId: res.movedTask.id,
                targetTaskType: res.targetTaskType,
@@ -3262,7 +3337,7 @@ export function CockpitTasksSection({
             const catId = res.movedCategory.id;
             const targetType = res.targetTaskType;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -3271,30 +3346,28 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            // Cascade taskType and dueDate to all tasks inside this category in IndexedDB
-            if (res.movedCategory.tasks && res.movedCategory.tasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] =
-                  res.movedCategory.tasks.map((t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text,
-                     taskType: targetType,
-                     sortOrder: idx,
-                     isComplete: t.completed,
-                     status: getTaskStatus(t),
-                     dueDate: t.dueDate ?? null,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  }));
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            // Cascade taskType and dueDate to all tasks inside this category.
+            const tasksToUpdate: LocalTaskRecord[] = (
+               res.movedCategory.tasks ?? []
+            ).map((t, idx) => ({
+               id: t.id,
+               userId: userId ?? null,
+               categoryId: catId,
+               title: t.text,
+               taskType: targetType,
+               sortOrder: idx,
+               isComplete: t.completed,
+               status: getTaskStatus(t),
+               dueDate: t.dueDate ?? null,
+               createdAt: t.createdAt || nowIso,
+               updatedAt: nowIso,
+               completedAt: t.completed ? nowIso : null,
+               syncState: "pending",
+            }));
 
-            // Persist updated sortOrder for all categories in both columns
+            // Persist updated sortOrder for all categories in both columns.
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
                   .filter((c): c is typeof c & { id: string } => Boolean(c.id))
@@ -3330,81 +3403,81 @@ export function CockpitTasksSection({
                   })),
             ];
 
-            putLocalCategories(allCatsToUpdate).catch(() => {});
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [];
 
-            if (isLoggedIn && userId) {
-               const dailyCatIds = res.dailyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (dailyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: dailyCatIds },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const dailyCatIds = res.dailyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (dailyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: dailyCatIds },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               });
+            }
 
-               const weeklyCatIds = res.weeklyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (weeklyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: weeklyCatIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
+            const weeklyCatIds = res.weeklyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (weeklyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: weeklyCatIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               });
+            }
 
-               if (draggedItem.sourceColumn !== targetColumn) {
-                  enqueueMutation({
+            if (draggedItem.sourceColumn !== targetColumn) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "MOVE",
+                  payload: {
+                     categoryId: res.movedCategory.id,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIndex,
+                  },
+                  createdAt: Date.now() + 2,
+                  retryCount: 0,
+               });
+            }
+
+            if (isMovingWeeklyToDaily) {
+               for (const t of res.movedCategory.tasks ?? []) {
+                  mutations.push({
                      id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
+                     entityType: "TASK",
                      action: "MOVE",
                      payload: {
-                        categoryId: res.movedCategory.id,
-                        taskType: res.targetTaskType,
-                        sortOrder: destIndex,
+                        taskId: t.id,
+                        categoryId: catId,
+                        taskType: "DAILY",
+                        dueDate: selectedDateKey,
                      },
-                     createdAt: Date.now() + 2,
+                     createdAt: Date.now(),
                      retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               } else {
-                  scheduleSync(userId);
+                  });
                }
+            }
 
-               if (
-                  isMovingWeeklyToDaily &&
-                  res.movedCategory.tasks &&
-                  res.movedCategory.tasks.length > 0
-               ) {
-                  for (const t of res.movedCategory.tasks) {
-                     enqueueMutation({
-                        id: crypto.randomUUID(),
-                        entityType: "TASK",
-                        action: "MOVE",
-                        payload: {
-                           taskId: t.id,
-                           categoryId: catId,
-                           taskType: "DAILY",
-                           dueDate: selectedDateKey,
-                        },
-                        createdAt: Date.now(),
-                        retryCount: 0,
-                     }).catch(() => {});
-                  }
-                  scheduleSync(userId);
-               }
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
 
+            if (isLoggedIn && userId) {
                trackLogRocketEvent("CategoryMoved", {
                   categoryId: res.movedCategory.id,
                   targetTaskType: res.targetTaskType,
@@ -3451,7 +3524,7 @@ export function CockpitTasksSection({
             const movedStatus =
                (res.movedTask.status as TaskStatus) ||
                (isMovedComplete ? "COMPLETED" : "TODO");
-            putLocalTask({
+            const movedLocalTask: LocalTaskRecord = {
                id: res.movedTask.id,
                userId: userId ?? null,
                categoryId: res.targetCategoryId,
@@ -3467,28 +3540,24 @@ export function CockpitTasksSection({
                updatedAt: nowIso,
                completedAt: isMovedComplete ? nowIso : null,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (isLoggedIn && userId) {
-               enqueueMutation({
-                  id: crypto.randomUUID(),
-                  entityType: "TASK",
-                  action: "MOVE",
-                  payload: {
-                     taskId: res.movedTask.id,
-                     categoryId: res.targetCategoryId,
-                     taskType: res.targetTaskType,
-                     sortOrder: 0,
-                     dueDate: res.movedTask.dueDate ?? null,
-                  },
-                  createdAt: Date.now(),
-                  retryCount: 0,
-               })
-                  .then(() => {
-                     scheduleSync(userId);
-                  })
-                  .catch(() => {});
-            }
+            persistTask(movedLocalTask, {
+               id: crypto.randomUUID(),
+               entityType: "TASK",
+               action: "MOVE",
+               payload: {
+                  taskId: res.movedTask.id,
+                  categoryId: res.targetCategoryId,
+                  taskType: res.targetTaskType,
+                  sortOrder: 0,
+                  dueDate: res.movedTask.dueDate ?? null,
+               },
+               createdAt: Date.now(),
+               retryCount: 0,
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
       }
 
@@ -3548,7 +3617,7 @@ export function CockpitTasksSection({
             const catId = res.movedCategory.id;
             const targetType = res.targetTaskType;
 
-            putLocalCategory({
+            const localCategory: LocalCategoryRecord = {
                id: catId,
                userId: userId ?? null,
                name: res.movedCategory.name,
@@ -3557,27 +3626,25 @@ export function CockpitTasksSection({
                createdAt: nowIso,
                updatedAt: nowIso,
                syncState: "pending",
-            }).catch(() => {});
+            };
 
-            if (res.movedCategory.tasks && res.movedCategory.tasks.length > 0) {
-               const tasksToUpdate: LocalTaskRecord[] =
-                  res.movedCategory.tasks.map((t, idx) => ({
-                     id: t.id,
-                     userId: userId ?? null,
-                     categoryId: catId,
-                     title: t.text,
-                     taskType: targetType,
-                     sortOrder: idx,
-                     isComplete: t.completed,
-                     status: getTaskStatus(t),
-                     dueDate: t.dueDate ?? null,
-                     createdAt: t.createdAt || nowIso,
-                     updatedAt: nowIso,
-                     completedAt: t.completed ? nowIso : null,
-                     syncState: "pending",
-                  }));
-               putLocalTasks(tasksToUpdate).catch(() => {});
-            }
+            const tasksToUpdate: LocalTaskRecord[] = (
+               res.movedCategory.tasks ?? []
+            ).map((t, idx) => ({
+               id: t.id,
+               userId: userId ?? null,
+               categoryId: catId,
+               title: t.text,
+               taskType: targetType,
+               sortOrder: idx,
+               isComplete: t.completed,
+               status: getTaskStatus(t),
+               dueDate: t.dueDate ?? null,
+               createdAt: t.createdAt || nowIso,
+               updatedAt: nowIso,
+               completedAt: t.completed ? nowIso : null,
+               syncState: "pending",
+            }));
 
             const allCatsToUpdate: LocalCategoryRecord[] = [
                ...res.dailyCategories
@@ -3614,58 +3681,61 @@ export function CockpitTasksSection({
                   })),
             ];
 
-            putLocalCategories(allCatsToUpdate).catch(() => {});
+            const mutations: Array<Omit<QueuedMutation, "userId">> = [];
 
-            if (isLoggedIn && userId) {
-               const dailyCatIds = res.dailyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (dailyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: dailyCatIds },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-
-               const weeklyCatIds = res.weeklyCategories
-                  .map((c) => c.id)
-                  .filter((id): id is string => Boolean(id));
-               if (weeklyCatIds.length > 0) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "REORDER",
-                     payload: { categoryIds: weeklyCatIds },
-                     createdAt: Date.now() + 1,
-                     retryCount: 0,
-                  }).catch(() => {});
-               }
-
-               if (draggedItem.sourceColumn !== targetColumn) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "CATEGORY",
-                     action: "MOVE",
-                     payload: {
-                        categoryId: res.movedCategory.id,
-                        taskType: res.targetTaskType,
-                        sortOrder: destIndex,
-                     },
-                     createdAt: Date.now() + 2,
-                     retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               } else {
-                  scheduleSync(userId);
-               }
+            const dailyCatIds = res.dailyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (dailyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: dailyCatIds },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               });
             }
+
+            const weeklyCatIds = res.weeklyCategories
+               .map((c) => c.id)
+               .filter((id): id is string => Boolean(id));
+            if (weeklyCatIds.length > 0) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "REORDER",
+                  payload: { categoryIds: weeklyCatIds },
+                  createdAt: Date.now() + 1,
+                  retryCount: 0,
+               });
+            }
+
+            if (draggedItem.sourceColumn !== targetColumn) {
+               mutations.push({
+                  id: crypto.randomUUID(),
+                  entityType: "CATEGORY",
+                  action: "MOVE",
+                  payload: {
+                     categoryId: res.movedCategory.id,
+                     taskType: res.targetTaskType,
+                     sortOrder: destIndex,
+                  },
+                  createdAt: Date.now() + 2,
+                  retryCount: 0,
+               });
+            }
+
+            commitLocalBatch({
+               categories: [localCategory, ...allCatsToUpdate],
+               tasks: tasksToUpdate,
+               mutations:
+                  isLoggedIn && userId
+                     ? mutations.map((mutation) => ({ ...mutation, userId }))
+                     : [],
+            })
+               .then(() => scheduleSync(userId))
+               .catch(() => {});
          }
       } else if (draggedItem.type === "task" && draggedItem.id) {
          if (
@@ -3691,19 +3761,18 @@ export function CockpitTasksSection({
                   currentDailyCats = [...dailyCategories, newDailyCat];
                   targetDailyIdx = currentDailyCats.length - 1;
 
-                  putLocalCategory({
-                     id: newCatId,
-                     userId: userId ?? null,
-                     name: sourceCat.name,
-                     taskType: "DAILY",
-                     sortOrder: targetDailyIdx,
-                     createdAt: new Date().toISOString(),
-                     updatedAt: new Date().toISOString(),
-                     syncState: "pending",
-                  }).catch(() => {});
-
-                  if (isLoggedIn && userId) {
-                     enqueueMutation({
+                  persistCategory(
+                     {
+                        id: newCatId,
+                        userId: userId ?? null,
+                        name: sourceCat.name,
+                        taskType: "DAILY",
+                        sortOrder: targetDailyIdx,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        syncState: "pending",
+                     },
+                     {
                         id: crypto.randomUUID(),
                         entityType: "CATEGORY",
                         action: "CREATE",
@@ -3715,8 +3784,8 @@ export function CockpitTasksSection({
                         },
                         createdAt: Date.now(),
                         retryCount: 0,
-                     }).catch(() => {});
-                  }
+                     }
+                  ).catch(() => {});
                }
 
                const res = moveTaskBetweenCategories({
@@ -3743,7 +3812,7 @@ export function CockpitTasksSection({
                   const movedStatus =
                      (res.movedTask.status as TaskStatus) ||
                      (isMovedComplete ? "COMPLETED" : "TODO");
-                  putLocalTask({
+                  const movedLocalTask: LocalTaskRecord = {
                      id: res.movedTask.id,
                      userId: userId ?? null,
                      categoryId: res.targetCategoryId,
@@ -3759,29 +3828,25 @@ export function CockpitTasksSection({
                      updatedAt: nowIso,
                      completedAt: isMovedComplete ? nowIso : null,
                      syncState: "pending",
-                  }).catch(() => {});
+                  };
 
-                  if (isLoggedIn && userId) {
-                     enqueueMutation({
-                        id: crypto.randomUUID(),
-                        entityType: "TASK",
-                        action: "MOVE",
-                        payload: {
-                           taskId: res.movedTask.id,
-                           categoryId: res.targetCategoryId,
-                           taskType: res.targetTaskType,
-                           sortOrder:
-                              currentDailyCats[targetDailyIdx].tasks.length,
-                           dueDate: selectedDateKey,
-                        },
-                        createdAt: Date.now(),
-                        retryCount: 0,
-                     })
-                        .then(() => {
-                           scheduleSync(userId);
-                        })
-                        .catch(() => {});
-                  }
+                  persistTask(movedLocalTask, {
+                     id: crypto.randomUUID(),
+                     entityType: "TASK",
+                     action: "MOVE",
+                     payload: {
+                        taskId: res.movedTask.id,
+                        categoryId: res.targetCategoryId,
+                        taskType: res.targetTaskType,
+                        sortOrder:
+                           currentDailyCats[targetDailyIdx].tasks.length,
+                        dueDate: selectedDateKey,
+                     },
+                     createdAt: Date.now(),
+                     retryCount: 0,
+                  })
+                     .then(() => scheduleSync(userId))
+                     .catch(() => {});
                }
             }
          } else if (targetCategories.length > 0) {
@@ -3821,7 +3886,7 @@ export function CockpitTasksSection({
                const movedStatus =
                   (res.movedTask.status as TaskStatus) ||
                   (isMovedComplete ? "COMPLETED" : "TODO");
-               putLocalTask({
+               const movedLocalTask: LocalTaskRecord = {
                   id: res.movedTask.id,
                   userId: userId ?? null,
                   categoryId: res.targetCategoryId,
@@ -3837,28 +3902,24 @@ export function CockpitTasksSection({
                   updatedAt: nowIso,
                   completedAt: isMovedComplete ? nowIso : null,
                   syncState: "pending",
-               }).catch(() => {});
+               };
 
-               if (isLoggedIn && userId) {
-                  enqueueMutation({
-                     id: crypto.randomUUID(),
-                     entityType: "TASK",
-                     action: "MOVE",
-                     payload: {
-                        taskId: res.movedTask.id,
-                        categoryId: res.targetCategoryId,
-                        taskType: res.targetTaskType,
-                        sortOrder: targetCategories[lastCatIdx].tasks.length,
-                        dueDate: res.movedTask.dueDate ?? null,
-                     },
-                     createdAt: Date.now(),
-                     retryCount: 0,
-                  })
-                     .then(() => {
-                        scheduleSync(userId);
-                     })
-                     .catch(() => {});
-               }
+               persistTask(movedLocalTask, {
+                  id: crypto.randomUUID(),
+                  entityType: "TASK",
+                  action: "MOVE",
+                  payload: {
+                     taskId: res.movedTask.id,
+                     categoryId: res.targetCategoryId,
+                     taskType: res.targetTaskType,
+                     sortOrder: targetCategories[lastCatIdx].tasks.length,
+                     dueDate: res.movedTask.dueDate ?? null,
+                  },
+                  createdAt: Date.now(),
+                  retryCount: 0,
+               })
+                  .then(() => scheduleSync(userId))
+                  .catch(() => {});
             }
          }
       }
@@ -3868,6 +3929,7 @@ export function CockpitTasksSection({
 
    return (
       <>
+         <TaskSyncIssueBanner userId={userId} />
          {/* Mobile Segmented Switcher (< sm: 360px–639px) */}
          <div
             role="tablist"

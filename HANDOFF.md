@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-31 (Session 180 on `afnan-jr` · Session 179 on `afnan-jr` · Session 178 on `afnan-jr`)
+> **Last Updated:** 2026-10-31 (Session 181 on `afnan-jr` · Session 180 on `afnan-jr` · Session 179 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -181,6 +181,19 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 181 — 2026-10-31 (Queue hygiene on `afnan-jr`)
+
+- **IndexedDB v2:** `queued_mutations.userId` index and the new `dead_letter_mutations` store (`userId`, `failedAt`, `createdAt`). Upgrade is additive.
+- **Ownership:** every mutation carries `userId`; `getQueuedMutationsForUser(userId)` reads only the current user's partition and claims legacy unowned entries once. `syncNow` and cockpit hydration use it.
+- **Cross-tab leader:** `navigator.locks` (`holdmetoit-task-sync`, `ifAvailable`) wraps the entire read → POST → apply → remove cycle. A losing tab skips and reschedules fresh edits; `isSyncing` remains a per-tab fast guard.
+- **Atomic local commits:** `commitTaskMutation` / `commitTaskBatch` / `commitCategoryMutation` / `commitLocalBatch` write the local records and the mutation in one IndexedDB transaction. The cockpit put+enqueue pairs were replaced; `putLocal*` remains for snapshot/hydration writes.
+- **Bounded retries:** per-mutation `error` increments `retryCount`; at 5 the mutation moves to `dead_letter_mutations`. `TaskSyncIssueBanner` offers Retry (reset to 0) / Discard. Network failures do not increment.
+- **Freshness:** jittered 30s visible-tab `forcePull`, plus a `BroadcastChannel` `tasks-synced` signal so other tabs re-hydrate from shared IndexedDB. The 15s pending ticker remains.
+- **Tests:** web `214 files / 2,127 tests` (new IDB, lock, ownership, dead-letter, idle-pull, and banner coverage); tasker `4 files / 81 tests`; `typecheck:web` 0; `lint:web` 0; `build:web` clean.
+- **Dependency:** `fake-indexeddb` (dev-only, web workspace) for real IDB tests.
+- **Uncommitted:** no Prisma migration. Manual tests still pending.
+- **NEXT:** two-tab/account-switch/dead-letter/idle-pull manual checks, then the `afnan-jr` → `dev` PR.
 
 ### Session 180 — 2026-10-31 (Server revision on `afnan-jr`)
 
