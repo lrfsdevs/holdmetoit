@@ -224,6 +224,16 @@ export function ChallengeLeaderboardTab({
    const teamA = matchHeader.teamA ?? teams[0];
    const teamB = matchHeader.teamB ?? teams[1];
 
+   const isLeadingA =
+      matchHeader.leaderSide === "a" && matchHeader.leadMarginSeconds > 0;
+   const isLeadingB =
+      matchHeader.leaderSide === "b" && matchHeader.leadMarginSeconds > 0;
+   const leadMarginDeltaText =
+      matchHeader.leadMarginDelta ??
+      (matchHeader.leadMarginSeconds > 0
+         ? `+${matchHeader.leadMarginHuman} ahead`
+         : "Tied");
+
    const paletteA = getTeamColorPalette(teamA?.color, 0);
    const paletteB = getTeamColorPalette(teamB?.color, 1);
 
@@ -328,14 +338,26 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
-                              {teamA.iconEmoji && (
-                                 <span className="shrink-0">
-                                    {teamA.iconEmoji}
+                           <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+                                 {teamA.iconEmoji && (
+                                    <span className="shrink-0">
+                                       {teamA.iconEmoji}
+                                    </span>
+                                 )}
+                                 <span className="truncate">{teamA.name}</span>
+                              </h3>
+                              {isLeadingA && (
+                                 <span
+                                    data-testid="team-a-leading-badge"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-bold border shrink-0 bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text shadow-sm"
+                                    title="Currently Leading"
+                                 >
+                                    <Crown className="h-3 w-3 fill-current text-feedback-warning" />
+                                    <span>Leading</span>
                                  </span>
                               )}
-                              <span className="truncate">{teamA.name}</span>
-                           </h3>
+                           </div>
                            <p className="text-xs text-text-secondary mt-0.5">
                               {teamA.companionCount} Participants
                            </p>
@@ -347,9 +369,19 @@ export function ChallengeLeaderboardTab({
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
-                              {teamA.totalLoggedClock}
-                           </span>
+                           <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
+                                 {teamA.totalLoggedClock}
+                              </span>
+                              {isLeadingA && (
+                                 <span
+                                    data-testid="team-a-lead-margin"
+                                    className="text-xs sm:text-sm font-bold text-feedback-warning-text flex items-center gap-0.5 font-sans font-sans-tabular"
+                                 >
+                                    {leadMarginDeltaText}
+                                 </span>
+                              )}
+                           </div>
                            <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursA} hrs / Person
                            </span>
@@ -388,14 +420,26 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
-                              {teamB.iconEmoji && (
-                                 <span className="shrink-0">
-                                    {teamB.iconEmoji}
+                           <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+                                 {teamB.iconEmoji && (
+                                    <span className="shrink-0">
+                                       {teamB.iconEmoji}
+                                    </span>
+                                 )}
+                                 <span className="truncate">{teamB.name}</span>
+                              </h3>
+                              {isLeadingB && (
+                                 <span
+                                    data-testid="team-b-leading-badge"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-bold border shrink-0 bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text shadow-sm"
+                                    title="Currently Leading"
+                                 >
+                                    <Crown className="h-3 w-3 fill-current text-feedback-warning" />
+                                    <span>Leading</span>
                                  </span>
                               )}
-                              <span className="truncate">{teamB.name}</span>
-                           </h3>
+                           </div>
                            <p className="text-xs text-text-secondary mt-0.5">
                               {teamB.companionCount} Participants
                            </p>
@@ -407,9 +451,19 @@ export function ChallengeLeaderboardTab({
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
-                              {teamB.totalLoggedClock}
-                           </span>
+                           <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
+                                 {teamB.totalLoggedClock}
+                              </span>
+                              {isLeadingB && (
+                                 <span
+                                    data-testid="team-b-lead-margin"
+                                    className="text-xs sm:text-sm font-bold text-feedback-warning-text flex items-center gap-0.5 font-sans font-sans-tabular"
+                                 >
+                                    {leadMarginDeltaText}
+                                 </span>
+                              )}
+                           </div>
                            <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursB} hrs / Person
                            </span>

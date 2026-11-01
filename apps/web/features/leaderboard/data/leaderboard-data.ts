@@ -7,6 +7,7 @@ import {
    aggregateTeamScores,
    calculateLeadMargin,
    calculateSharePercentages,
+   formatLeadMarginDelta,
    type TeamRef,
 } from "@/features/leaderboard/domain/leaderboard";
 import {
@@ -234,14 +235,14 @@ export function buildScoreboardViewModel(
    });
 
    // 3. Head-to-Head Banner (FEAT-LEAD-01)
-   const sortedTeams = [...teams].sort(
-      (a, b) =>
-         b.totalLoggedSeconds - a.totalLoggedSeconds ||
-         a.sortOrder - b.sortOrder
-   );
+   // Anchor matchup cards to fixed slots by creation order (sortOrder asc)
+   // instead of dynamically flipping card positions when hours lead changes.
+   const matchupTeams = [...teams]
+      .filter((team) => !team.isDeleted)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
 
-   const teamA = sortedTeams[0] ?? null;
-   const teamB = sortedTeams[1] ?? null;
+   const teamA = matchupTeams[0] ?? null;
+   const teamB = matchupTeams[1] ?? null;
 
    let leadMarginResult = {
       marginSeconds: 0,
@@ -272,6 +273,7 @@ export function buildScoreboardViewModel(
       leadMarginSeconds: leadMarginResult.marginSeconds,
       leadMarginClock: formatSecondsToClock(leadMarginResult.marginSeconds),
       leadMarginHuman: formatSecondsToHuman(leadMarginResult.marginSeconds),
+      leadMarginDelta: formatLeadMarginDelta(leadMarginResult.marginSeconds),
       leaderTeamId:
          leadMarginResult.leader === "a" && teamA
             ? teamA.id

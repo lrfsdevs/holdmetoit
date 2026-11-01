@@ -483,6 +483,90 @@ describe("ChallengeLeaderboardTab", () => {
       expect(html).toMatch(/>\s*VS\s*</);
    });
 
+   it("renders dynamic Leading crown badge and margin delta on Team A when Team A leads", () => {
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: mockChallenge,
+         })
+      );
+
+      // Team A (Serpents) leads
+      expect(html).toContain('data-testid="team-a-leading-badge"');
+      expect(html).toContain('data-testid="team-a-lead-margin"');
+      expect(html).toContain("+7 hours ahead");
+
+      // Team B (Raven) does not have leading badge or margin delta
+      expect(html).not.toContain('data-testid="team-b-leading-badge"');
+      expect(html).not.toContain('data-testid="team-b-lead-margin"');
+   });
+
+   it("renders dynamic Leading crown badge and margin delta on Team B when Team B leads while keeping slots anchored", () => {
+      const teamBLeadingChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         matchHeader: {
+            ...mockChallenge.matchHeader,
+            leaderSide: "b",
+            leaderTeamId: "team-raven",
+            leadMarginSeconds: 10_800,
+            leadMarginClock: "03:00:00",
+            leadMarginHuman: "3 hours",
+            leadMarginDelta: "+3h ahead",
+            ratioPercentageA: 40,
+            ratioPercentageB: 60,
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: teamBLeadingChallenge,
+         })
+      );
+
+      // Team B (Raven) leads
+      expect(html).toContain('data-testid="team-b-leading-badge"');
+      expect(html).toContain('data-testid="team-b-lead-margin"');
+      expect(html).toContain("+3h ahead");
+
+      // Team A (Serpents) remains in Slot 1 without leading indicators
+      expect(html).not.toContain('data-testid="team-a-leading-badge"');
+      expect(html).not.toContain('data-testid="team-a-lead-margin"');
+
+      // Slot 1 is still Serpents and Slot 2 is still Raven (anchored)
+      const serpentsIndex = html.indexOf("Serpents");
+      const vsIndex = html.indexOf("VS");
+      const ravenIndex = html.indexOf("Raven");
+      expect(serpentsIndex).toBeLessThan(vsIndex);
+      expect(vsIndex).toBeLessThan(ravenIndex);
+   });
+
+   it("does not render Leading crown badge on either card when teams are tied", () => {
+      const tiedChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         matchHeader: {
+            ...mockChallenge.matchHeader,
+            leaderSide: "tie",
+            leaderTeamId: null,
+            leadMarginSeconds: 0,
+            leadMarginClock: "00:00:00",
+            leadMarginHuman: "0s",
+            leadMarginDelta: "Tied",
+            ratioPercentageA: 50,
+            ratioPercentageB: 50,
+         },
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: tiedChallenge,
+         })
+      );
+
+      expect(html).not.toContain('data-testid="team-a-leading-badge"');
+      expect(html).not.toContain('data-testid="team-b-leading-badge"');
+      expect(html).not.toContain('data-testid="team-a-lead-margin"');
+      expect(html).not.toContain('data-testid="team-b-lead-margin"');
+   });
+
    it("removes the head-to-head VS panel for DUOS challenges", () => {
       const html = renderToStaticMarkup(
          createElement(ChallengeLeaderboardTab, {

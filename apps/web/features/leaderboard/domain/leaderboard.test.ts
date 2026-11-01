@@ -5,6 +5,7 @@ import {
    aggregateTeamScores,
    calculateLeadMargin,
    calculateSharePercentages,
+   formatLeadMarginDelta,
    rankByTodaySeconds,
    resolveLeaderboardViewMode,
    supportsTeamView,
@@ -124,6 +125,24 @@ describe("calculateLeadMargin", () => {
    it("rejects negative totals", () => {
       expect(() => calculateLeadMargin(-1, 0)).toThrow(DurationRangeError);
       expect(() => calculateLeadMargin(0, -1)).toThrow(DurationRangeError);
+   });
+});
+
+describe("formatLeadMarginDelta", () => {
+   it("returns 'Tied' when margin is zero", () => {
+      expect(formatLeadMarginDelta(0)).toBe("Tied");
+   });
+
+   it("formats positive margin seconds with + prefix and ahead suffix", () => {
+      expect(formatLeadMarginDelta(3_600)).toBe("+1h ahead");
+      expect(formatLeadMarginDelta(16_200)).toBe("+4h 30m ahead");
+      expect(formatLeadMarginDelta(27_900)).toBe("+7h 45m ahead");
+      expect(formatLeadMarginDelta(3_661)).toBe("+1h 1m 1s ahead");
+   });
+
+   it("rejects negative or fractional values", () => {
+      expect(() => formatLeadMarginDelta(-1)).toThrow(DurationRangeError);
+      expect(() => formatLeadMarginDelta(2.5)).toThrow(DurationRangeError);
    });
 });
 
