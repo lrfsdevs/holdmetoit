@@ -96,6 +96,7 @@ import {
 import { TaskMenuItems, CategoryMenuItems } from "./cockpit-task-menu";
 import { CockpitWeekNavigator } from "./cockpit-date-picker-popover";
 import { cn } from "@/lib/utils";
+import { triggerTaskConfetti } from "@/lib/confetti";
 import { trackLogRocketEvent } from "@/core/observability/logrocket";
 import {
    createTaskAction,
@@ -161,6 +162,14 @@ export function getTaskStatus(task: TaskItem): TaskStatus {
 }
 
 export { formatDayDate };
+
+export const SAMPLE_STUDY_TASKS = [
+   "Complete 2h Deep Work block",
+   "Link YPT account",
+   "Join an active Study Challenge",
+] as const;
+
+export const LOAD_SAMPLE_TASK_EVENT = "holdmetoit:load-sample-task";
 
 export interface CategoryGroup {
    id?: string;
@@ -568,12 +577,9 @@ export function CockpitTasksSection({
 
    const isPastDayLocked = checkIsDayLocked(selectedDateKey);
 
-   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(() => {
-      if (initialIsRolloverSnoozed) {
-         return true;
-      }
-      return isRolloverSnoozedForDate(userId, effectiveTodayDate);
-   });
+   const [isRolloverSnoozed, setIsRolloverSnoozed] = useState<boolean>(
+      Boolean(initialIsRolloverSnoozed)
+   );
 
    useEffect(() => {
       cleanupExpiredRolloverSnooze(userId, effectiveTodayDate);
@@ -1195,7 +1201,13 @@ export function CockpitTasksSection({
       catIndex: number,
       taskId: string,
       taskType: "daily" | "weekly",
-      nextStatusOrCompleted: TaskStatus | boolean
+      nextStatusOrCompleted: TaskStatus | boolean,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
    ) => {
       const nextStatus: TaskStatus =
          typeof nextStatusOrCompleted === "boolean"
@@ -1223,6 +1235,14 @@ export function CockpitTasksSection({
          if (!targetTask) return;
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
+
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
 
          setDailyCategories((prev) =>
             prev.map((cat, i) =>
@@ -1315,6 +1335,14 @@ export function CockpitTasksSection({
          const currentStatus = getTaskStatus(targetTask);
          if (currentStatus === nextStatus) return;
 
+         if (nextStatus === "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${taskId}"]`)
+                  : null;
+            triggerTaskConfetti(clickOrigin ?? targetEl);
+         }
+
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
                i === resolvedCatIdx || cat.tasks.some((t) => t.id === taskId)
@@ -1390,7 +1418,16 @@ export function CockpitTasksSection({
       }
    };
 
-   const toggleDailyTask = (catIndex: number, taskId: string) => {
+   const toggleDailyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = dailyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1403,10 +1440,19 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "daily", nextStatus);
+      setTaskStatus(catIndex, taskId, "daily", nextStatus, clickOrigin);
    };
 
-   const toggleWeeklyTask = (catIndex: number, taskId: string) => {
+   const toggleWeeklyTask = (
+      catIndex: number,
+      taskId: string,
+      clickOrigin?:
+         | React.MouseEvent
+         | MouseEvent
+         | { clientX: number; clientY: number }
+         | Element
+         | null
+   ) => {
       let targetTask = weeklyCategories[catIndex]?.tasks.find(
          (t) => t.id === taskId
       );
@@ -1419,7 +1465,7 @@ export function CockpitTasksSection({
       const currentStatus = getTaskStatus(targetTask);
       const nextStatus: TaskStatus =
          currentStatus === "COMPLETED" ? "TODO" : "COMPLETED";
-      setTaskStatus(catIndex, taskId, "weekly", nextStatus);
+      setTaskStatus(catIndex, taskId, "weekly", nextStatus, clickOrigin);
    };
 
    const handleDeleteTask = (
@@ -1521,6 +1567,20 @@ export function CockpitTasksSection({
          );
          if (!check.ok) {
             return;
+         }
+      }
+
+      if (nextCompleted) {
+         const prevTask =
+            taskType === "daily"
+               ? dailyCategories[catIdx]?.tasks.find((t) => t.id === id)
+               : weeklyCategories[catIdx]?.tasks.find((t) => t.id === id);
+         if (prevTask && getTaskStatus(prevTask) !== "COMPLETED") {
+            const targetEl =
+               typeof document !== "undefined"
+                  ? document.querySelector(`[data-task-id="${id}"]`)
+                  : null;
+            triggerTaskConfetti(targetEl);
          }
       }
 
@@ -2726,6 +2786,104 @@ export function CockpitTasksSection({
       setIsCreatingCategory(false);
       setAddModalType(null);
    };
+
+   const handleAddSampleTask = useCallback(
+      (taskText: string) => {
+         const trimmed = taskText.trim();
+         if (!trimmed) return;
+         const targetCategoryName = "Study Commitments";
+         const targetDateKey = selectedDateKey || effectiveTodayDate;
+         const newTaskId = crypto.randomUUID();
+         const newTask: TaskItem = {
+            id: newTaskId,
+            text: trimmed,
+            completed: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            challengeId: null,
+         };
+
+         const existingCat = dailyCategories.find(
+            (c) => c.name === targetCategoryName
+         );
+         const targetCatId = existingCat?.id || crypto.randomUUID();
+
+         setDailyCategories((prev) => {
+            const existingIdx = prev.findIndex(
+               (c) => c.name === targetCategoryName
+            );
+            if (existingIdx >= 0) {
+               return prev.map((cat, i) =>
+                  i === existingIdx
+                     ? {
+                          ...cat,
+                          id: cat.id || targetCatId,
+                          tasks: [...cat.tasks, newTask],
+                       }
+                     : cat
+               );
+            }
+            return [
+               ...prev,
+               {
+                  id: targetCatId,
+                  name: targetCategoryName,
+                  isCollapsed: false,
+                  sortOrder: 0,
+                  tasks: [newTask],
+               },
+            ];
+         });
+
+         const nowIso = new Date().toISOString();
+         if (!existingCat) {
+            putLocalCategory({
+               id: targetCatId,
+               userId: userId ?? null,
+               name: targetCategoryName,
+               taskType: "DAILY",
+               sortOrder: 0,
+               createdAt: nowIso,
+               updatedAt: nowIso,
+               syncState: "pending",
+            }).catch(() => {});
+         }
+
+         putLocalTask({
+            id: newTaskId,
+            userId: userId ?? null,
+            categoryId: targetCatId,
+            challengeId: null,
+            title: trimmed,
+            taskType: "DAILY",
+            isComplete: false,
+            status: "TODO",
+            dueDate: targetDateKey,
+            createdAt: nowIso,
+            updatedAt: nowIso,
+            completedAt: null,
+            syncState: "pending",
+         }).catch(() => {});
+      },
+      [selectedDateKey, effectiveTodayDate, dailyCategories, userId]
+   );
+
+   useEffect(() => {
+      if (typeof window === "undefined") return;
+      const handleSampleTaskEvent = (e: Event) => {
+         const customEvent = e as CustomEvent<{ title?: string }>;
+         if (customEvent.detail?.title) {
+            handleAddSampleTask(customEvent.detail.title);
+         }
+      };
+      window.addEventListener(LOAD_SAMPLE_TASK_EVENT, handleSampleTaskEvent);
+      return () => {
+         window.removeEventListener(
+            LOAD_SAMPLE_TASK_EVENT,
+            handleSampleTaskEvent
+         );
+      };
+   }, [handleAddSampleTask]);
 
    // ---------------------------------------------------------------------------
    // Drag and Drop Event Handlers
@@ -4208,7 +4366,29 @@ export function CockpitTasksSection({
                            >
                               <script
                                  dangerouslySetInnerHTML={{
-                                    __html: `(function(){try{var k='${ROLLOVER_SNOOZE_STORAGE_PREFIX}';var u='${userId || "guest"}';var d='${effectiveTodayDate}';if(localStorage.getItem(k+u+'_'+d)==='true'||localStorage.getItem(k+'guest_'+d)==='true'||localStorage.getItem(k+'all_'+d)==='true'||document.cookie.indexOf('${ROLLOVER_SNOOZE_COOKIE}')!==-1){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
+                                    __html: `(function(){try{var k=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_STORAGE_PREFIX
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var u=${JSON.stringify(
+                                       userId && userId.trim().length > 0
+                                          ? userId.trim()
+                                          : "guest"
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var d=${JSON.stringify(
+                                       effectiveTodayDate
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var c=${JSON.stringify(
+                                       ROLLOVER_SNOOZE_COOKIE
+                                    ).replace(
+                                       /</g,
+                                       "\\u003c"
+                                    )};var s=false;if(typeof localStorage!=='undefined'&&localStorage.getItem(k+u+'_'+d)==='true'){s=true;}if(!s&&typeof document!=='undefined'&&document.cookie){var m=document.cookie.match(new RegExp('(?:^|;\\\\s*)'+c+'=([^;]*)'));if(m&&m[1]){var p=JSON.parse(decodeURIComponent(m[1]));if(p&&typeof p==='object'&&p[u]===d){s=true;}}}if(s){var el=document.getElementById('rollover-today-banner');if(el)el.style.setProperty('display','none','important');}}catch(e){}})();`,
                                  }}
                               />
                               <div className="flex items-start justify-between gap-2.5">
@@ -4346,6 +4526,31 @@ export function CockpitTasksSection({
                                  </Button>
                               </div>
                            )}
+
+                           {!isLoggedIn && (
+                              <div className="pt-3 border-t border-border-strong/50 mt-3 space-y-2">
+                                 <p className="text-xs font-medium text-text-secondary">
+                                    💡 Or load sample study commitments:
+                                 </p>
+                                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                                    {SAMPLE_STUDY_TASKS.map((sample) => (
+                                       <button
+                                          key={sample}
+                                          type="button"
+                                          onClick={() =>
+                                             handleAddSampleTask(sample)
+                                          }
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-nested hover:bg-surface-elevated text-text-primary text-xs font-medium border border-border-default hover:border-brand-1/40 transition-colors"
+                                       >
+                                          <span className="text-brand-1-light font-bold">
+                                             +
+                                          </span>
+                                          <span>{sample}</span>
+                                       </button>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
                         </div>
                      ) : (
                         <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian">
@@ -4403,10 +4608,7 @@ export function CockpitTasksSection({
                                     }`}
                                  >
                                     <ContextMenu modal={false}>
-                                       <ContextMenuTrigger
-                                          asChild
-                                          disabled={!isLoggedIn}
-                                       >
+                                       <ContextMenuTrigger asChild>
                                           <div
                                              draggable
                                              onDragStart={(e) =>
@@ -4441,90 +4643,82 @@ export function CockpitTasksSection({
                                                    e.stopPropagation()
                                                 }
                                              >
-                                                {isLoggedIn && (
-                                                   <DropdownMenu modal={false}>
-                                                      <DropdownMenuTrigger
-                                                         asChild
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
                                                       >
-                                                         <button
-                                                            type="button"
-                                                            className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
-                                                            title="Category options"
-                                                            aria-label={`Options for category ${cat.name}`}
-                                                         >
-                                                            <MoreVertical className="h-4 w-4" />
-                                                         </button>
-                                                      </DropdownMenuTrigger>
-                                                      <DropdownMenuContent
-                                                         align="end"
-                                                         className="min-w-dropdown-min"
-                                                      >
-                                                         <CategoryMenuItems
-                                                            isChallengeActive={
-                                                               hasChallengeContext
-                                                            }
-                                                            cat={cat}
-                                                            catType="daily"
-                                                            dailyCategories={
-                                                               dailyCategories
-                                                            }
-                                                            weeklyCategories={
-                                                               weeklyCategories
-                                                            }
-                                                            selectedDateKey={
-                                                               selectedDateKey
-                                                            }
-                                                            effectiveTodayDate={
-                                                               effectiveTodayDate
-                                                            }
-                                                            dayOptions={
-                                                               dayOptions
-                                                            }
-                                                            onMoveCategoryToDay={(
-                                                               targetDateKey
-                                                            ) =>
-                                                               moveCategoryToDayAction(
-                                                                  catIdx,
-                                                                  targetDateKey,
-                                                                  "daily"
-                                                               )
-                                                            }
-                                                            onRenameCategory={() => {
-                                                               setEditCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "daily",
-                                                                  }
-                                                               );
-                                                               setEditCategoryInputName(
-                                                                  cat.name
-                                                               );
-                                                            }}
-                                                            onDeleteCategory={() => {
-                                                               setDeleteCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "daily",
-                                                                  }
-                                                               );
-                                                            }}
-                                                            Item={
-                                                               DropdownMenuItem
-                                                            }
-                                                            Separator={
-                                                               DropdownMenuSeparator
-                                                            }
-                                                            Label={
-                                                               DropdownMenuLabel
-                                                            }
-                                                         />
-                                                      </DropdownMenuContent>
-                                                   </DropdownMenu>
-                                                )}
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-dropdown-min"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
+                                                         cat={cat}
+                                                         catType="daily"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "daily"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "daily",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
                                                 {isCollapsed ? (
                                                    <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                                 ) : (
@@ -4533,59 +4727,51 @@ export function CockpitTasksSection({
                                              </div>
                                           </div>
                                        </ContextMenuTrigger>
-                                       {isLoggedIn && (
-                                          <ContextMenuContent className="min-w-dropdown-min">
-                                             <CategoryMenuItems
-                                                isChallengeActive={
-                                                   hasChallengeContext
-                                                }
-                                                cat={cat}
-                                                catType="daily"
-                                                dailyCategories={
-                                                   dailyCategories
-                                                }
-                                                weeklyCategories={
-                                                   weeklyCategories
-                                                }
-                                                selectedDateKey={
-                                                   selectedDateKey
-                                                }
-                                                effectiveTodayDate={
-                                                   effectiveTodayDate
-                                                }
-                                                dayOptions={dayOptions}
-                                                onMoveCategoryToDay={(
-                                                   targetDateKey
-                                                ) =>
-                                                   moveCategoryToDayAction(
-                                                      catIdx,
-                                                      targetDateKey,
-                                                      "daily"
-                                                   )
-                                                }
-                                                onRenameCategory={() => {
-                                                   setEditCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "daily",
-                                                   });
-                                                   setEditCategoryInputName(
-                                                      cat.name
-                                                   );
-                                                }}
-                                                onDeleteCategory={() => {
-                                                   setDeleteCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "daily",
-                                                   });
-                                                }}
-                                                Item={ContextMenuItem}
-                                                Separator={ContextMenuSeparator}
-                                                Label={ContextMenuLabel}
-                                             />
-                                          </ContextMenuContent>
-                                       )}
+                                       <ContextMenuContent className="min-w-dropdown-min">
+                                          <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
+                                             cat={cat}
+                                             catType="daily"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
+                                                   "daily"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
+                                                );
+                                             }}
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "daily",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
                                     </ContextMenu>
 
                                     {!isCollapsed && (
@@ -4615,10 +4801,12 @@ export function CockpitTasksSection({
                                                    >
                                                       <ContextMenuTrigger
                                                          asChild
-                                                         disabled={!isLoggedIn}
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -4688,10 +4876,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() => {
+                                                                        onClick={(
+                                                                           e
+                                                                        ) => {
                                                                            toggleDailyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            );
                                                                         }}
                                                                         className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
@@ -4845,7 +5036,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "daily",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"
@@ -4875,6 +5067,27 @@ export function CockpitTasksSection({
                                                                         >
                                                                            Crossed
                                                                            Out
+                                                                        </button>
+                                                                     )}
+                                                                     {status ===
+                                                                        "TODO" && (
+                                                                        <button
+                                                                           type="button"
+                                                                           onClick={(
+                                                                              e
+                                                                           ) => {
+                                                                              e.stopPropagation();
+                                                                              setTaskStatus(
+                                                                                 catIdx,
+                                                                                 task.id,
+                                                                                 "daily",
+                                                                                 "IN_PROGRESS"
+                                                                              );
+                                                                           }}
+                                                                           title="Status: To-Do. Click to set In Progress"
+                                                                           className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-all border mt-0.5 bg-surface-nested text-text-tertiary hover:text-amber-400 border-border-subtle hover:border-amber-500/30 hover:bg-amber-500/10"
+                                                                        >
+                                                                           To-Do
                                                                         </button>
                                                                      )}
                                                                   </>
@@ -4912,249 +5125,260 @@ export function CockpitTasksSection({
                                                                      <RotateCcw className="h-3.5 w-3.5" />
                                                                   </button>
                                                                )}
-                                                            {isLoggedIn && (
-                                                               <DropdownMenu
-                                                                  modal={false}
-                                                               >
-                                                                  <DropdownMenuTrigger
-                                                                     asChild
-                                                                  >
-                                                                     <button
-                                                                        type="button"
-                                                                        className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
-                                                                        title="Task options"
-                                                                        aria-label={`Options for task ${task.text}`}
-                                                                     >
-                                                                        <MoreVertical className="h-3.5 w-3.5" />
-                                                                     </button>
-                                                                  </DropdownMenuTrigger>
-                                                                  <DropdownMenuContent
-                                                                     align="end"
-                                                                     className="min-w-dropdown-min"
-                                                                  >
-                                                                     <TaskMenuItems
-                                                                        isChallengeActive={
-                                                                           hasChallengeContext
-                                                                        }
-                                                                        task={
-                                                                           task
-                                                                        }
-                                                                        catIdx={
-                                                                           catIdx
-                                                                        }
-                                                                        taskType="daily"
-                                                                        effectiveTodayDate={
-                                                                           effectiveTodayDate
-                                                                        }
-                                                                        dayOptions={
-                                                                           dayOptions
-                                                                        }
-                                                                        selectedDateKey={
-                                                                           selectedDateKey
-                                                                        }
-                                                                        linkableChallengeId={
-                                                                           linkableChallengeId
-                                                                        }
-                                                                        onToggleChallengeScope={(
-                                                                           newScope
-                                                                        ) =>
-                                                                           toggleTaskChallengeScope(
-                                                                              task.id,
-                                                                              newScope
-                                                                           )
-                                                                        }
-                                                                        onSetStatus={(
-                                                                           status
-                                                                        ) =>
-                                                                           setTaskStatus(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "daily",
-                                                                              status
-                                                                           )
-                                                                        }
-                                                                        onMoveToDay={(
-                                                                           targetDateKey
-                                                                        ) =>
-                                                                           moveTaskToDay(
-                                                                              task.id,
-                                                                              targetDateKey,
-                                                                              catIdx,
-                                                                              "daily"
-                                                                           )
-                                                                        }
-                                                                        onEditTask={() => {
-                                                                           setEditTaskModal(
-                                                                              {
-                                                                                 id: task.id,
-                                                                                 text: task.text,
-                                                                                 completed:
-                                                                                    task.completed,
-                                                                                 status:
-                                                                                    getTaskStatus(
-                                                                                       task
-                                                                                    ),
-                                                                                 dueDate:
-                                                                                    task.dueDate ??
-                                                                                    null,
-                                                                                 createdAt:
-                                                                                    task.createdAt,
-                                                                                 challengeId:
-                                                                                    task.challengeId ??
-                                                                                    null,
-                                                                                 catIdx,
-                                                                                 taskType:
-                                                                                    "daily",
-                                                                              }
-                                                                           );
-                                                                           setEditTaskInputChallengeId(
-                                                                              task.challengeId ??
-                                                                                 null
-                                                                           );
-                                                                           setEditTaskInputText(
-                                                                              task.text
-                                                                           );
-                                                                           setEditTaskInputStatus(
-                                                                              getTaskStatus(
-                                                                                 task
-                                                                              )
-                                                                           );
-                                                                           setEditTaskInputDueDate(
-                                                                              task.dueDate ||
-                                                                                 selectedDateKey
-                                                                           );
-                                                                        }}
-                                                                        onDeleteTask={() =>
-                                                                           handleDeleteTask(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "daily"
-                                                                           )
-                                                                        }
-                                                                        Item={
-                                                                           DropdownMenuItem
-                                                                        }
-                                                                        Separator={
-                                                                           DropdownMenuSeparator
-                                                                        }
-                                                                        Label={
-                                                                           DropdownMenuLabel
-                                                                        }
-                                                                     />
-                                                                  </DropdownMenuContent>
-                                                               </DropdownMenu>
-                                                            )}
-                                                         </div>
-                                                      </ContextMenuTrigger>
-                                                      {isLoggedIn && (
-                                                         <ContextMenuContent className="min-w-dropdown-min">
-                                                            <TaskMenuItems
-                                                               isChallengeActive={
-                                                                  hasChallengeContext
-                                                               }
-                                                               task={task}
-                                                               catIdx={catIdx}
-                                                               taskType="daily"
-                                                               effectiveTodayDate={
-                                                                  effectiveTodayDate
-                                                               }
-                                                               dayOptions={
-                                                                  dayOptions
-                                                               }
-                                                               selectedDateKey={
-                                                                  selectedDateKey
-                                                               }
-                                                               linkableChallengeId={
-                                                                  linkableChallengeId
-                                                               }
-                                                               onToggleChallengeScope={(
-                                                                  newScope
-                                                               ) =>
-                                                                  toggleTaskChallengeScope(
-                                                                     task.id,
-                                                                     newScope
-                                                                  )
-                                                               }
-                                                               onSetStatus={(
-                                                                  status
-                                                               ) =>
-                                                                  setTaskStatus(
-                                                                     catIdx,
-                                                                     task.id,
-                                                                     "daily",
-                                                                     status
-                                                                  )
-                                                               }
-                                                               onMoveToDay={(
-                                                                  targetDateKey
-                                                               ) =>
-                                                                  moveTaskToDay(
-                                                                     task.id,
-                                                                     targetDateKey,
-                                                                     catIdx,
-                                                                     "daily"
-                                                                  )
-                                                               }
-                                                               onEditTask={() => {
-                                                                  setEditTaskModal(
-                                                                     {
-                                                                        id: task.id,
-                                                                        text: task.text,
-                                                                        completed:
-                                                                           task.completed,
-                                                                        status:
-                                                                           getTaskStatus(
-                                                                              task
-                                                                           ),
-                                                                        dueDate:
-                                                                           task.dueDate ??
-                                                                           null,
-                                                                        createdAt:
-                                                                           task.createdAt,
-                                                                        challengeId:
-                                                                           task.challengeId ??
-                                                                           null,
-                                                                        catIdx,
-                                                                        taskType:
-                                                                           "daily",
-                                                                     }
-                                                                  );
-                                                                  setEditTaskInputChallengeId(
-                                                                     task.challengeId ??
-                                                                        null
-                                                                  );
-                                                                  setEditTaskInputText(
-                                                                     task.text
-                                                                  );
-                                                                  setEditTaskInputStatus(
-                                                                     getTaskStatus(
-                                                                        task
-                                                                     )
-                                                                  );
-                                                                  setEditTaskInputDueDate(
-                                                                     task.dueDate ||
-                                                                        selectedDateKey
-                                                                  );
-                                                               }}
-                                                               onDeleteTask={() =>
+                                                            <button
+                                                               type="button"
+                                                               onClick={(e) => {
+                                                                  e.preventDefault();
+                                                                  e.stopPropagation();
                                                                   handleDeleteTask(
                                                                      catIdx,
                                                                      task.id,
                                                                      "daily"
+                                                                  );
+                                                               }}
+                                                               className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-text-tertiary hover:text-feedback-error rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                               title="Delete task"
+                                                               aria-label={`Delete task ${task.text}`}
+                                                            >
+                                                               <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-dropdown-min"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="daily"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     linkableChallengeId={
+                                                                        linkableChallengeId
+                                                                     }
+                                                                     onToggleChallengeScope={(
+                                                                        newScope
+                                                                     ) =>
+                                                                        toggleTaskChallengeScope(
+                                                                           task.id,
+                                                                           newScope
+                                                                        )
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              challengeId:
+                                                                                 task.challengeId ??
+                                                                                 null,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "daily",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputChallengeId(
+                                                                           task.challengeId ??
+                                                                              null
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "daily"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         </div>
+                                                      </ContextMenuTrigger>
+                                                      <ContextMenuContent className="min-w-dropdown-min">
+                                                         <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="daily"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            linkableChallengeId={
+                                                               linkableChallengeId
+                                                            }
+                                                            onToggleChallengeScope={(
+                                                               newScope
+                                                            ) =>
+                                                               toggleTaskChallengeScope(
+                                                                  task.id,
+                                                                  newScope
+                                                               )
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     challengeId:
+                                                                        task.challengeId ??
+                                                                        null,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "daily",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputChallengeId(
+                                                                  task.challengeId ??
+                                                                     null
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
                                                                   )
-                                                               }
-                                                               Item={
-                                                                  ContextMenuItem
-                                                               }
-                                                               Separator={
-                                                                  ContextMenuSeparator
-                                                               }
-                                                               Label={
-                                                                  ContextMenuLabel
-                                                               }
-                                                            />
-                                                         </ContextMenuContent>
-                                                      )}
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "daily"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    </ContextMenu>
                                                 );
                                              })
@@ -5307,10 +5531,7 @@ export function CockpitTasksSection({
                                     }`}
                                  >
                                     <ContextMenu modal={false}>
-                                       <ContextMenuTrigger
-                                          asChild
-                                          disabled={!isLoggedIn}
-                                       >
+                                       <ContextMenuTrigger asChild>
                                           <div
                                              draggable
                                              onDragStart={(e) =>
@@ -5345,90 +5566,82 @@ export function CockpitTasksSection({
                                                    e.stopPropagation()
                                                 }
                                              >
-                                                {isLoggedIn && (
-                                                   <DropdownMenu modal={false}>
-                                                      <DropdownMenuTrigger
-                                                         asChild
+                                                <DropdownMenu modal={false}>
+                                                   <DropdownMenuTrigger asChild>
+                                                      <button
+                                                         type="button"
+                                                         className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
+                                                         title="Category options"
+                                                         aria-label={`Options for category ${cat.name}`}
                                                       >
-                                                         <button
-                                                            type="button"
-                                                            className="p-1 rounded-md text-text-tertiary hover:text-white hover:bg-input-bg data-[state=open]:text-white data-[state=open]:bg-input-bg transition-colors"
-                                                            title="Category options"
-                                                            aria-label={`Options for category ${cat.name}`}
-                                                         >
-                                                            <MoreVertical className="h-4 w-4" />
-                                                         </button>
-                                                      </DropdownMenuTrigger>
-                                                      <DropdownMenuContent
-                                                         align="end"
-                                                         className="min-w-dropdown-min"
-                                                      >
-                                                         <CategoryMenuItems
-                                                            isChallengeActive={
-                                                               hasChallengeContext
-                                                            }
-                                                            cat={cat}
-                                                            catType="weekly"
-                                                            dailyCategories={
-                                                               dailyCategories
-                                                            }
-                                                            weeklyCategories={
-                                                               weeklyCategories
-                                                            }
-                                                            selectedDateKey={
-                                                               selectedDateKey
-                                                            }
-                                                            effectiveTodayDate={
-                                                               effectiveTodayDate
-                                                            }
-                                                            dayOptions={
-                                                               dayOptions
-                                                            }
-                                                            onMoveCategoryToDay={(
-                                                               targetDateKey
-                                                            ) =>
-                                                               moveCategoryToDayAction(
-                                                                  catIdx,
-                                                                  targetDateKey,
-                                                                  "weekly"
-                                                               )
-                                                            }
-                                                            onRenameCategory={() => {
-                                                               setEditCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "weekly",
-                                                                  }
-                                                               );
-                                                               setEditCategoryInputName(
-                                                                  cat.name
-                                                               );
-                                                            }}
-                                                            onDeleteCategory={() => {
-                                                               setDeleteCategoryModal(
-                                                                  {
-                                                                     id: cat.id,
-                                                                     name: cat.name,
-                                                                     taskType:
-                                                                        "weekly",
-                                                                  }
-                                                               );
-                                                            }}
-                                                            Item={
-                                                               DropdownMenuItem
-                                                            }
-                                                            Separator={
-                                                               DropdownMenuSeparator
-                                                            }
-                                                            Label={
-                                                               DropdownMenuLabel
-                                                            }
-                                                         />
-                                                      </DropdownMenuContent>
-                                                   </DropdownMenu>
-                                                )}
+                                                         <MoreVertical className="h-4 w-4" />
+                                                      </button>
+                                                   </DropdownMenuTrigger>
+                                                   <DropdownMenuContent
+                                                      align="end"
+                                                      className="min-w-dropdown-min"
+                                                   >
+                                                      <CategoryMenuItems
+                                                         isChallengeActive={
+                                                            hasChallengeContext
+                                                         }
+                                                         cat={cat}
+                                                         catType="weekly"
+                                                         dailyCategories={
+                                                            dailyCategories
+                                                         }
+                                                         weeklyCategories={
+                                                            weeklyCategories
+                                                         }
+                                                         selectedDateKey={
+                                                            selectedDateKey
+                                                         }
+                                                         effectiveTodayDate={
+                                                            effectiveTodayDate
+                                                         }
+                                                         dayOptions={dayOptions}
+                                                         onMoveCategoryToDay={(
+                                                            targetDateKey
+                                                         ) =>
+                                                            moveCategoryToDayAction(
+                                                               catIdx,
+                                                               targetDateKey,
+                                                               "weekly"
+                                                            )
+                                                         }
+                                                         onRenameCategory={() => {
+                                                            setEditCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                            setEditCategoryInputName(
+                                                               cat.name
+                                                            );
+                                                         }}
+                                                         onDeleteCategory={() => {
+                                                            setDeleteCategoryModal(
+                                                               {
+                                                                  id: cat.id,
+                                                                  name: cat.name,
+                                                                  taskType:
+                                                                     "weekly",
+                                                               }
+                                                            );
+                                                         }}
+                                                         Item={DropdownMenuItem}
+                                                         Separator={
+                                                            DropdownMenuSeparator
+                                                         }
+                                                         Label={
+                                                            DropdownMenuLabel
+                                                         }
+                                                      />
+                                                   </DropdownMenuContent>
+                                                </DropdownMenu>
                                                 {isCollapsed ? (
                                                    <ChevronDown className="h-4 w-4 text-text-tertiary" />
                                                 ) : (
@@ -5437,59 +5650,51 @@ export function CockpitTasksSection({
                                              </div>
                                           </div>
                                        </ContextMenuTrigger>
-                                       {isLoggedIn && (
-                                          <ContextMenuContent className="min-w-dropdown-min">
-                                             <CategoryMenuItems
-                                                isChallengeActive={
-                                                   hasChallengeContext
-                                                }
-                                                cat={cat}
-                                                catType="weekly"
-                                                dailyCategories={
-                                                   dailyCategories
-                                                }
-                                                weeklyCategories={
-                                                   weeklyCategories
-                                                }
-                                                selectedDateKey={
-                                                   selectedDateKey
-                                                }
-                                                effectiveTodayDate={
-                                                   effectiveTodayDate
-                                                }
-                                                dayOptions={dayOptions}
-                                                onMoveCategoryToDay={(
-                                                   targetDateKey
-                                                ) =>
-                                                   moveCategoryToDayAction(
-                                                      catIdx,
-                                                      targetDateKey,
-                                                      "weekly"
-                                                   )
-                                                }
-                                                onRenameCategory={() => {
-                                                   setEditCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "weekly",
-                                                   });
-                                                   setEditCategoryInputName(
-                                                      cat.name
-                                                   );
-                                                }}
-                                                onDeleteCategory={() => {
-                                                   setDeleteCategoryModal({
-                                                      id: cat.id,
-                                                      name: cat.name,
-                                                      taskType: "weekly",
-                                                   });
-                                                }}
-                                                Item={ContextMenuItem}
-                                                Separator={ContextMenuSeparator}
-                                                Label={ContextMenuLabel}
-                                             />
-                                          </ContextMenuContent>
-                                       )}
+                                       <ContextMenuContent className="min-w-dropdown-min">
+                                          <CategoryMenuItems
+                                             isChallengeActive={
+                                                hasChallengeContext
+                                             }
+                                             cat={cat}
+                                             catType="weekly"
+                                             dailyCategories={dailyCategories}
+                                             weeklyCategories={weeklyCategories}
+                                             selectedDateKey={selectedDateKey}
+                                             effectiveTodayDate={
+                                                effectiveTodayDate
+                                             }
+                                             dayOptions={dayOptions}
+                                             onMoveCategoryToDay={(
+                                                targetDateKey
+                                             ) =>
+                                                moveCategoryToDayAction(
+                                                   catIdx,
+                                                   targetDateKey,
+                                                   "weekly"
+                                                )
+                                             }
+                                             onRenameCategory={() => {
+                                                setEditCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                                setEditCategoryInputName(
+                                                   cat.name
+                                                );
+                                             }}
+                                             onDeleteCategory={() => {
+                                                setDeleteCategoryModal({
+                                                   id: cat.id,
+                                                   name: cat.name,
+                                                   taskType: "weekly",
+                                                });
+                                             }}
+                                             Item={ContextMenuItem}
+                                             Separator={ContextMenuSeparator}
+                                             Label={ContextMenuLabel}
+                                          />
+                                       </ContextMenuContent>
                                     </ContextMenu>
 
                                     {!isCollapsed && (
@@ -5518,10 +5723,12 @@ export function CockpitTasksSection({
                                                    >
                                                       <ContextMenuTrigger
                                                          asChild
-                                                         disabled={!isLoggedIn}
                                                       >
                                                          <div
                                                             data-drag-card="task"
+                                                            data-task-id={
+                                                               task.id
+                                                            }
                                                             onDragOver={(e) =>
                                                                handleTaskDragOver(
                                                                   e,
@@ -5591,10 +5798,13 @@ export function CockpitTasksSection({
                                                                            status ===
                                                                            "COMPLETED"
                                                                         }
-                                                                        onClick={() =>
+                                                                        onClick={(
+                                                                           e
+                                                                        ) =>
                                                                            toggleWeeklyTask(
                                                                               catIdx,
-                                                                              task.id
+                                                                              task.id,
+                                                                              e
                                                                            )
                                                                         }
                                                                         className="flex items-start gap-3 cursor-pointer flex-1 min-w-0"
@@ -5727,7 +5937,8 @@ export function CockpitTasksSection({
                                                                                  catIdx,
                                                                                  task.id,
                                                                                  "weekly",
-                                                                                 "COMPLETED"
+                                                                                 "COMPLETED",
+                                                                                 e
                                                                               );
                                                                            }}
                                                                            title="Status: In Progress. Click to mark Completed"
@@ -5759,6 +5970,27 @@ export function CockpitTasksSection({
                                                                            Out
                                                                         </button>
                                                                      )}
+                                                                     {status ===
+                                                                        "TODO" && (
+                                                                        <button
+                                                                           type="button"
+                                                                           onClick={(
+                                                                              e
+                                                                           ) => {
+                                                                              e.stopPropagation();
+                                                                              setTaskStatus(
+                                                                                 catIdx,
+                                                                                 task.id,
+                                                                                 "weekly",
+                                                                                 "IN_PROGRESS"
+                                                                              );
+                                                                           }}
+                                                                           title="Status: To-Do. Click to set In Progress"
+                                                                           className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 shrink-0 px-2 py-0.5 rounded-md text-label font-semibold tracking-wide uppercase transition-all border mt-0.5 bg-surface-nested text-text-tertiary hover:text-amber-400 border-border-subtle hover:border-amber-500/30 hover:bg-amber-500/10"
+                                                                        >
+                                                                           To-Do
+                                                                        </button>
+                                                                     )}
                                                                   </>
                                                                );
                                                             })()}
@@ -5785,249 +6017,260 @@ export function CockpitTasksSection({
                                                                      <User className="h-3 w-3" />
                                                                   </span>
                                                                ) : null)}
-                                                            {isLoggedIn && (
-                                                               <DropdownMenu
-                                                                  modal={false}
-                                                               >
-                                                                  <DropdownMenuTrigger
-                                                                     asChild
-                                                                  >
-                                                                     <button
-                                                                        type="button"
-                                                                        className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
-                                                                        title="Task options"
-                                                                        aria-label={`Options for task ${task.text}`}
-                                                                     >
-                                                                        <MoreVertical className="h-3.5 w-3.5" />
-                                                                     </button>
-                                                                  </DropdownMenuTrigger>
-                                                                  <DropdownMenuContent
-                                                                     align="end"
-                                                                     className="min-w-dropdown-min"
-                                                                  >
-                                                                     <TaskMenuItems
-                                                                        isChallengeActive={
-                                                                           hasChallengeContext
-                                                                        }
-                                                                        task={
-                                                                           task
-                                                                        }
-                                                                        catIdx={
-                                                                           catIdx
-                                                                        }
-                                                                        taskType="weekly"
-                                                                        effectiveTodayDate={
-                                                                           effectiveTodayDate
-                                                                        }
-                                                                        dayOptions={
-                                                                           dayOptions
-                                                                        }
-                                                                        linkableChallengeId={
-                                                                           linkableChallengeId
-                                                                        }
-                                                                        onToggleChallengeScope={(
-                                                                           newScope
-                                                                        ) =>
-                                                                           toggleTaskChallengeScope(
-                                                                              task.id,
-                                                                              newScope
-                                                                           )
-                                                                        }
-                                                                        selectedDateKey={
-                                                                           selectedDateKey
-                                                                        }
-                                                                        onSetStatus={(
-                                                                           status
-                                                                        ) =>
-                                                                           setTaskStatus(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "weekly",
-                                                                              status
-                                                                           )
-                                                                        }
-                                                                        onMoveToDay={(
-                                                                           targetDateKey
-                                                                        ) =>
-                                                                           moveTaskToDay(
-                                                                              task.id,
-                                                                              targetDateKey,
-                                                                              catIdx,
-                                                                              "weekly"
-                                                                           )
-                                                                        }
-                                                                        onEditTask={() => {
-                                                                           setEditTaskModal(
-                                                                              {
-                                                                                 id: task.id,
-                                                                                 text: task.text,
-                                                                                 completed:
-                                                                                    task.completed,
-                                                                                 status:
-                                                                                    getTaskStatus(
-                                                                                       task
-                                                                                    ),
-                                                                                 dueDate:
-                                                                                    task.dueDate ??
-                                                                                    null,
-                                                                                 createdAt:
-                                                                                    task.createdAt,
-                                                                                 challengeId:
-                                                                                    task.challengeId ??
-                                                                                    null,
-                                                                                 catIdx,
-                                                                                 taskType:
-                                                                                    "weekly",
-                                                                              }
-                                                                           );
-                                                                           setEditTaskInputChallengeId(
-                                                                              task.challengeId ??
-                                                                                 null
-                                                                           );
-                                                                           setEditTaskInputText(
-                                                                              task.text
-                                                                           );
-                                                                           setEditTaskInputStatus(
-                                                                              getTaskStatus(
-                                                                                 task
-                                                                              )
-                                                                           );
-                                                                           setEditTaskInputDueDate(
-                                                                              task.dueDate ||
-                                                                                 selectedDateKey
-                                                                           );
-                                                                        }}
-                                                                        onDeleteTask={() =>
-                                                                           handleDeleteTask(
-                                                                              catIdx,
-                                                                              task.id,
-                                                                              "weekly"
-                                                                           )
-                                                                        }
-                                                                        Item={
-                                                                           DropdownMenuItem
-                                                                        }
-                                                                        Separator={
-                                                                           DropdownMenuSeparator
-                                                                        }
-                                                                        Label={
-                                                                           DropdownMenuLabel
-                                                                        }
-                                                                     />
-                                                                  </DropdownMenuContent>
-                                                               </DropdownMenu>
-                                                            )}
-                                                         </div>
-                                                      </ContextMenuTrigger>
-                                                      {isLoggedIn && (
-                                                         <ContextMenuContent className="min-w-dropdown-min">
-                                                            <TaskMenuItems
-                                                               isChallengeActive={
-                                                                  hasChallengeContext
-                                                               }
-                                                               task={task}
-                                                               catIdx={catIdx}
-                                                               taskType="weekly"
-                                                               effectiveTodayDate={
-                                                                  effectiveTodayDate
-                                                               }
-                                                               dayOptions={
-                                                                  dayOptions
-                                                               }
-                                                               linkableChallengeId={
-                                                                  linkableChallengeId
-                                                               }
-                                                               onToggleChallengeScope={(
-                                                                  newScope
-                                                               ) =>
-                                                                  toggleTaskChallengeScope(
-                                                                     task.id,
-                                                                     newScope
-                                                                  )
-                                                               }
-                                                               selectedDateKey={
-                                                                  selectedDateKey
-                                                               }
-                                                               onSetStatus={(
-                                                                  status
-                                                               ) =>
-                                                                  setTaskStatus(
-                                                                     catIdx,
-                                                                     task.id,
-                                                                     "weekly",
-                                                                     status
-                                                                  )
-                                                               }
-                                                               onMoveToDay={(
-                                                                  targetDateKey
-                                                               ) =>
-                                                                  moveTaskToDay(
-                                                                     task.id,
-                                                                     targetDateKey,
-                                                                     catIdx,
-                                                                     "weekly"
-                                                                  )
-                                                               }
-                                                               onEditTask={() => {
-                                                                  setEditTaskModal(
-                                                                     {
-                                                                        id: task.id,
-                                                                        text: task.text,
-                                                                        completed:
-                                                                           task.completed,
-                                                                        status:
-                                                                           getTaskStatus(
-                                                                              task
-                                                                           ),
-                                                                        dueDate:
-                                                                           task.dueDate ??
-                                                                           null,
-                                                                        createdAt:
-                                                                           task.createdAt,
-                                                                        challengeId:
-                                                                           task.challengeId ??
-                                                                           null,
-                                                                        catIdx,
-                                                                        taskType:
-                                                                           "weekly",
-                                                                     }
-                                                                  );
-                                                                  setEditTaskInputChallengeId(
-                                                                     task.challengeId ??
-                                                                        null
-                                                                  );
-                                                                  setEditTaskInputText(
-                                                                     task.text
-                                                                  );
-                                                                  setEditTaskInputStatus(
-                                                                     getTaskStatus(
-                                                                        task
-                                                                     )
-                                                                  );
-                                                                  setEditTaskInputDueDate(
-                                                                     task.dueDate ||
-                                                                        selectedDateKey
-                                                                  );
-                                                               }}
-                                                               onDeleteTask={() =>
+                                                            <button
+                                                               type="button"
+                                                               onClick={(e) => {
+                                                                  e.preventDefault();
+                                                                  e.stopPropagation();
                                                                   handleDeleteTask(
                                                                      catIdx,
                                                                      task.id,
                                                                      "weekly"
+                                                                  );
+                                                               }}
+                                                               className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 p-1 text-text-tertiary hover:text-feedback-error rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                               title="Delete task"
+                                                               aria-label={`Delete task ${task.text}`}
+                                                            >
+                                                               <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <DropdownMenu
+                                                               modal={false}
+                                                            >
+                                                               <DropdownMenuTrigger
+                                                                  asChild
+                                                               >
+                                                                  <button
+                                                                     type="button"
+                                                                     className="opacity-0 group-hover:opacity-100 sm:opacity-0 max-sm:opacity-100 data-[state=open]:opacity-100 p-1 text-text-tertiary hover:text-white rounded hover:bg-input-bg transition-opacity shrink-0 mt-0.5"
+                                                                     title="Task options"
+                                                                     aria-label={`Options for task ${task.text}`}
+                                                                  >
+                                                                     <MoreVertical className="h-3.5 w-3.5" />
+                                                                  </button>
+                                                               </DropdownMenuTrigger>
+                                                               <DropdownMenuContent
+                                                                  align="end"
+                                                                  className="min-w-dropdown-min"
+                                                               >
+                                                                  <TaskMenuItems
+                                                                     isChallengeActive={
+                                                                        hasChallengeContext
+                                                                     }
+                                                                     task={task}
+                                                                     catIdx={
+                                                                        catIdx
+                                                                     }
+                                                                     taskType="weekly"
+                                                                     effectiveTodayDate={
+                                                                        effectiveTodayDate
+                                                                     }
+                                                                     dayOptions={
+                                                                        dayOptions
+                                                                     }
+                                                                     linkableChallengeId={
+                                                                        linkableChallengeId
+                                                                     }
+                                                                     onToggleChallengeScope={(
+                                                                        newScope
+                                                                     ) =>
+                                                                        toggleTaskChallengeScope(
+                                                                           task.id,
+                                                                           newScope
+                                                                        )
+                                                                     }
+                                                                     selectedDateKey={
+                                                                        selectedDateKey
+                                                                     }
+                                                                     onSetStatus={(
+                                                                        status
+                                                                     ) =>
+                                                                        setTaskStatus(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly",
+                                                                           status
+                                                                        )
+                                                                     }
+                                                                     onMoveToDay={(
+                                                                        targetDateKey
+                                                                     ) =>
+                                                                        moveTaskToDay(
+                                                                           task.id,
+                                                                           targetDateKey,
+                                                                           catIdx,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     onEditTask={() => {
+                                                                        setEditTaskModal(
+                                                                           {
+                                                                              id: task.id,
+                                                                              text: task.text,
+                                                                              completed:
+                                                                                 task.completed,
+                                                                              status:
+                                                                                 getTaskStatus(
+                                                                                    task
+                                                                                 ),
+                                                                              dueDate:
+                                                                                 task.dueDate ??
+                                                                                 null,
+                                                                              createdAt:
+                                                                                 task.createdAt,
+                                                                              challengeId:
+                                                                                 task.challengeId ??
+                                                                                 null,
+                                                                              catIdx,
+                                                                              taskType:
+                                                                                 "weekly",
+                                                                           }
+                                                                        );
+                                                                        setEditTaskInputChallengeId(
+                                                                           task.challengeId ??
+                                                                              null
+                                                                        );
+                                                                        setEditTaskInputText(
+                                                                           task.text
+                                                                        );
+                                                                        setEditTaskInputStatus(
+                                                                           getTaskStatus(
+                                                                              task
+                                                                           )
+                                                                        );
+                                                                        setEditTaskInputDueDate(
+                                                                           task.dueDate ||
+                                                                              selectedDateKey
+                                                                        );
+                                                                     }}
+                                                                     onDeleteTask={() =>
+                                                                        handleDeleteTask(
+                                                                           catIdx,
+                                                                           task.id,
+                                                                           "weekly"
+                                                                        )
+                                                                     }
+                                                                     Item={
+                                                                        DropdownMenuItem
+                                                                     }
+                                                                     Separator={
+                                                                        DropdownMenuSeparator
+                                                                     }
+                                                                     Label={
+                                                                        DropdownMenuLabel
+                                                                     }
+                                                                  />
+                                                               </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                         </div>
+                                                      </ContextMenuTrigger>
+                                                      <ContextMenuContent className="min-w-dropdown-min">
+                                                         <TaskMenuItems
+                                                            isChallengeActive={
+                                                               hasChallengeContext
+                                                            }
+                                                            task={task}
+                                                            catIdx={catIdx}
+                                                            taskType="weekly"
+                                                            effectiveTodayDate={
+                                                               effectiveTodayDate
+                                                            }
+                                                            dayOptions={
+                                                               dayOptions
+                                                            }
+                                                            linkableChallengeId={
+                                                               linkableChallengeId
+                                                            }
+                                                            onToggleChallengeScope={(
+                                                               newScope
+                                                            ) =>
+                                                               toggleTaskChallengeScope(
+                                                                  task.id,
+                                                                  newScope
+                                                               )
+                                                            }
+                                                            selectedDateKey={
+                                                               selectedDateKey
+                                                            }
+                                                            onSetStatus={(
+                                                               status
+                                                            ) =>
+                                                               setTaskStatus(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly",
+                                                                  status
+                                                               )
+                                                            }
+                                                            onMoveToDay={(
+                                                               targetDateKey
+                                                            ) =>
+                                                               moveTaskToDay(
+                                                                  task.id,
+                                                                  targetDateKey,
+                                                                  catIdx,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            onEditTask={() => {
+                                                               setEditTaskModal(
+                                                                  {
+                                                                     id: task.id,
+                                                                     text: task.text,
+                                                                     completed:
+                                                                        task.completed,
+                                                                     status:
+                                                                        getTaskStatus(
+                                                                           task
+                                                                        ),
+                                                                     dueDate:
+                                                                        task.dueDate ??
+                                                                        null,
+                                                                     createdAt:
+                                                                        task.createdAt,
+                                                                     challengeId:
+                                                                        task.challengeId ??
+                                                                        null,
+                                                                     catIdx,
+                                                                     taskType:
+                                                                        "weekly",
+                                                                  }
+                                                               );
+                                                               setEditTaskInputChallengeId(
+                                                                  task.challengeId ??
+                                                                     null
+                                                               );
+                                                               setEditTaskInputText(
+                                                                  task.text
+                                                               );
+                                                               setEditTaskInputStatus(
+                                                                  getTaskStatus(
+                                                                     task
                                                                   )
-                                                               }
-                                                               Item={
-                                                                  ContextMenuItem
-                                                               }
-                                                               Separator={
-                                                                  ContextMenuSeparator
-                                                               }
-                                                               Label={
-                                                                  ContextMenuLabel
-                                                               }
-                                                            />
-                                                         </ContextMenuContent>
-                                                      )}
+                                                               );
+                                                               setEditTaskInputDueDate(
+                                                                  task.dueDate ||
+                                                                     selectedDateKey
+                                                               );
+                                                            }}
+                                                            onDeleteTask={() =>
+                                                               handleDeleteTask(
+                                                                  catIdx,
+                                                                  task.id,
+                                                                  "weekly"
+                                                               )
+                                                            }
+                                                            Item={
+                                                               ContextMenuItem
+                                                            }
+                                                            Separator={
+                                                               ContextMenuSeparator
+                                                            }
+                                                            Label={
+                                                               ContextMenuLabel
+                                                            }
+                                                         />
+                                                      </ContextMenuContent>
                                                    </ContextMenu>
                                                 );
                                              })

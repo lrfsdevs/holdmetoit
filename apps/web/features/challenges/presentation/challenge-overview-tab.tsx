@@ -33,6 +33,7 @@ import type {
    ScoreboardStandingEntry,
 } from "@/features/leaderboard/domain/leaderboard.types";
 import { getTeamColorPalette } from "@/features/challenges/domain/team-colors";
+import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import { PunishmentWall } from "@/features/accountability/presentation/punishment-wall";
 import { ChallengeBettingCard } from "./challenge-betting-card";
 import { ChallengeDescriptionContent } from "./challenge-description-content";
@@ -316,12 +317,20 @@ export function ChallengeOverviewTab({
                                     )}
                                  </Link>
                                  <div className="min-w-0">
-                                    <Link
-                                       href={`/challenge/${challenge.id}/participant/${p.participantId}`}
-                                       className="text-sm font-semibold text-white hover:underline truncate block"
-                                    >
-                                       {p.displayName}
-                                    </Link>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                       <Link
+                                          href={`/challenge/${challenge.id}/participant/${p.participantId}`}
+                                          className="text-sm font-semibold text-white hover:underline truncate block"
+                                       >
+                                          {p.displayName}
+                                       </Link>
+                                       <SickStatusBadge
+                                          isSick={p.isSick}
+                                          activatedAt={p.sickModeActivatedAt}
+                                          note={p.sickModeNote}
+                                          variant="compact"
+                                       />
+                                    </div>
                                     <span
                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 mt-0.5"
                                        style={{

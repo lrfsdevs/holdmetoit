@@ -79,6 +79,9 @@ export interface RawChallengePayload {
          username: string | null;
          name: string | null;
          image: string | null;
+         isSick?: boolean;
+         sickModeActivatedAt?: Date | string | null;
+         sickModeNote?: string | null;
       };
       dailyStudyLogs: Array<{
          durationSeconds: number;
@@ -394,6 +397,11 @@ export function buildScoreboardViewModel(
          deficitSeconds,
          dailyLogs,
          trophies: (p.user as any)?.trophyBalance ?? 0,
+         isSick: Boolean(p.user.isSick),
+         sickModeActivatedAt: p.user.sickModeActivatedAt
+            ? new Date(p.user.sickModeActivatedAt).toISOString()
+            : null,
+         sickModeNote: p.user.sickModeNote ?? null,
       };
    });
 
@@ -518,6 +526,9 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                            name: true,
                            image: true,
                            trophyBalance: true,
+                           isSick: true,
+                           sickModeActivatedAt: true,
+                           sickModeNote: true,
                         },
                      },
                      dailyStudyLogs: {

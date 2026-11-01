@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-10-30 (Session 176 on `afnan-jr` · Session 175 on `krish`)
+> **Last Updated:** 2026-11-01 (Session 181 on `krish` · Session 176 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -29,22 +29,24 @@
 
 ### 1.1 Live Routes
 
-| Route                                         | Purpose                                                                                                                                                    | Access                                 |
-| :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------- |
-| `/`                                           | Home cockpit: banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board; wrapped popup + Shy Card when `challenge_wrapped_v1` is on | Guest (local tasks only) / Participant |
-| `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)                                                               | Public spectator / Participant / Admin |
-| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                    | Public spectator                       |
-| `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit | Public spectator                       |
-| `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                      | Public spectator / Participant / Admin |
-| `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                             | `ADMIN` / `DEV`                        |
-| `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                  | `ADMIN` / `DEV`                        |
-| `/profile`                                    | Dynamic resolver & redirect to active/enrolled participant profile page                                                                                    | Authenticated                          |
-| `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                           | `DEV` only                             |
-| `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                              | Authenticated / Participant            |
-| `/pokemon`                                    | Pokédex catalogue, personal study-backed companion collection, species detail modal, progress metrics                                                      | Public spectator / Participant         |
-| `/pokedex`                                    | Public alias and permanent redirect to `/pokemon`                                                                                                          | Public spectator / Participant         |
-| `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                                                 | Anyone                                 |
-| `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                                              | Authenticated                          |
+| Route                                         | Purpose                                                                                                                                                                                                              | Access                                                   |
+| :-------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
+| `/`                                           | Home cockpit: Guest Cockpit (unauthenticated) · Authenticated cockpit (banner variants, progress/deficit card, Log Hours modal, Daily/Weekly task board; wrapped popup + Shy Card when `challenge_wrapped_v1` is on) | Guest (rich guest landing & local sandbox) / Participant |
+| `/challenges`                                 | Dedicated public challenges directory (Events card grid, role-gated Create Challenge button)                                                                                                                         | Public spectator / Participant / Admin                   |
+| `/changelog`                                  | Public date-grouped product changelog (unlinked; reachable by URL only)                                                                                                                                              | Public spectator                                         |
+| `/challenge/[id]`                             | Tabs: Overview (includes Timetable & Forfeit Avatar) · Leaderboard · Summary (post-lock, `challenge_wrapped_v1`-gated) · Manage (admin only) · Event Audit                                                           | Public spectator                                         |
+| `/challenge/[id]/participant/[participantId]` | Challenge-specific participant statistics, targets, daily history & read-only profile                                                                                                                                | Public spectator / Participant / Admin                   |
+| `/admin`                                      | Host management console for audited trophy adjustments and challenge operations (YPT verification is DEV-only in the DevBoard)                                                                                       | `ADMIN` / `DEV`                                          |
+| `/admin/users`                                | Global user directory and participant roster with role assignment, cross-challenge tracking, and audit trail                                                                                                         | `ADMIN` / `DEV`                                          |
+| `/admin/challenges/new`                       | Challenge creator wizard (event header required, punishment PFP optional)                                                                                                                                            | `ADMIN` / `DEV`                                          |
+| `/profile`                                    | Global user profile & career stats view for current session user                                                                                                                                                     | Authenticated                                            |
+| `/profile/[userId]`                           | Public global profile, career stats, and historical challenge archive snapshot                                                                                                                                       | Public spectator / Authenticated                         |
+| `/devboard`                                   | DevBoard runtime feature flag console, instant kill switches, tester assignments                                                                                                                                     | `DEV` only                                               |
+| `/wallet`                                     | Virtual currency wallet, ledger history, reconciliation audit & coin balances                                                                                                                                        | Authenticated / Participant                              |
+| `/pokemon`                                    | Pokédex catalogue, personal study-backed companion collection, species detail modal, progress metrics                                                                                                                | Public spectator / Participant                           |
+| `/pokedex`                                    | Public alias and permanent redirect to `/pokemon`                                                                                                                                                                    | Public spectator / Participant                           |
+| `POST /api/feedback`                          | Bug/suggestion intake → DB + Discord embed                                                                                                                                                                           | Anyone                                                   |
+| `POST /api/tasks/sync`                        | Offline task queue batch sync                                                                                                                                                                                        | Authenticated                                            |
 
 > **Removed routes:** `/dashboard` (replaced by `/`), `/admin/challenges/[id]/roster` (replaced by the Manage tab), and `/challenge/[id]/manual` (deprecated and removed; superseded by challenge scoreboard + admin hours override grid). Several `revalidatePath("/dashboard")` calls remain and do nothing; they're harmless but should be cleaned up.
 
@@ -233,7 +235,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Added unit test in `cockpit-tasks-rollover-and-scoping.test.tsx` verifying interactive task completion toggling for past-day daily tasks.
    - 0 TypeScript compiler errors (`npm run typecheck:web`).
    - 0 ESLint errors (`npm run lint:web`).
-   - 89/89 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
+   - 93/93 tests passing across cockpit-tasks suites (`npm run test -w @holdmetoit/web -- cockpit-tasks`).
 - **Jira Status:** `KAN-65` transitioned to `In Review` (id: 10006).
 - **PR Status:** PR creation withheld per user request.
 
@@ -1905,3 +1907,187 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 lint errors.
 - **Jira Status:** `KAN-65` is in **`In Review`** (`id: 10006`).
 - **NEXT STEP:** Await user instruction before creating a Pull Request.
+
+### Session 177 — 2026-10-31 (feat(profile): Global User Profile & Career Stats View with Historical Challenge Archive Snapshot — GH-#164 / Jira KAN-49 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#164](https://github.com/lrfsdevs/holdmetoit/issues/164) / Jira Ticket `KAN-49` ("feat(profile): historical challenge stats archive and reusable mini-dashboard snapshot"). Deliver a comprehensive Global User Profile & Career Stats view (`/profile/[userId]` and `/profile`) following strict feature-sliced architecture under `apps/web/features/participant-stats/` across 4 vertical slices with atomic commits.
+- **Architectural Enhancements Implemented:**
+   1. **Step 1: Reusable `<ChallengeSnapshot />` Component & Participant Stats View Refactoring (`24648d2`):**
+      - Created `apps/web/features/participant-stats/presentation/challenge-snapshot.tsx`.
+      - Extracted the complete challenge performance body from `participant-stats-view.tsx` into a reusable snapshot component containing:
+         - Performance Summary Cards (declared target vs hours met, deficit/surplus, daily average, leave days usage).
+         - Progress Chart (daily and cumulative trajectory).
+         - Team Stats (if DUO/TEAM mode, detailing team outcome and contributions).
+         - Accountability card (punishments, pardons, trophy balance delta for that challenge).
+         - Daily History (day-by-day study logs and completed tasks).
+         - Snapshot Header Bar displaying challenge title, mode badge, UTC date range, participant status badge (`ACTIVE`, `COMPLETED`, `WITHDRAWN`), and a conditional "View Full Challenge Cockpit" link to `/challenge/[challengeId]/participant/[participantId]`.
+      - Refactored `participant-stats-view.tsx` to delegate directly to `<ChallengeSnapshot showCockpitLink={false} />`, completely eliminating duplicate performance rendering code.
+      - Added 9 unit tests in `challenge-snapshot.test.tsx`.
+   2. **Step 2: Global Career Stats & Challenge History Data Layer (`ddcd4be`):**
+      - In `global-profile.types.ts`, defined TypeScript domain contracts: `GlobalCareerStats` (lifetime study hours, total active study days, current & longest streak, total challenges entered, challenges completed, total tasks completed, trophy total & rank, Pokédex count) and `ParticipatedChallengeItem` (`challengeId`, `participantId`, `title`, `mode`, `status`, `startDate`, `endDate`, `targetHours`, `loggedHours`, `trophyDelta`).
+      - In `global-profile.ts`, created pure domain calculation math: `calculateStudyStreaks` (active study days, longest streak, current streak with yesterday-preservation logic) and `formatLifetimeStudyStats` with 11 unit tests in `global-profile.test.ts`.
+      - In `global-profile.repository.ts`, implemented `getGlobalUserProfile(userId)` (fetches user identity, aggregates lifetime study logs, completed tasks, Pokédex count, trophy delta mapping, and chronologically ordered challenge history) and `getChallengeSnapshotForUser(userId, challengeId)` with 4 unit tests in `global-profile.repository.test.ts`.
+   3. **Step 3: Privacy Boundary Domain Logic & Server Action (`b445018`):**
+      - In `profile-privacy.ts`, created pure domain function `canViewFullProfileHistory({ viewerId, viewerRole, targetUserId, isAcceptedFriend })`: grants full access if viewer is self, holds an elevated role (`ADMIN`, `DEV`, `HOST`), or is an accepted friend with 7 unit tests in `profile-privacy.test.ts`.
+      - In `profile-privacy.repository.ts`, created stub repository `checkAreAcceptedFriends(userId1, userId2)` cleanly structured for connection to Friend Request system #145.
+      - In `global-profile.actions.ts`, created type-safe Next.js Server Action `getChallengeSnapshotAction(targetUserId, challengeId)` enforcing session authentication, privacy check, and returning the snapshot payload or typed errors with 7 unit tests in `global-profile.actions.test.ts`.
+   4. **Step 4: Global Profile Routes, GlobalProfileView, and Leaderboard Integration (`b56cf45`):**
+      - Built `apps/web/features/participant-stats/presentation/global-profile-view.tsx`:
+         - Profile Header: Avatar (`UserAvatar`), Discord username, Trophy Rank badge, join date, and quick avatar sync (`RefreshAvatarButton`) if `isOwnProfile`.
+         - Global Career Overview Cards: 6 lifetime statistics cards (Lifetime Hours, Active Days, Current Streak, Longest Streak, Tasks Done, Pokédex Count) always rendered even with 0 challenge enrollments.
+         - Tabs (`Overview` | `Challenge History` | `Settings` [own profile only]):
+            - `Overview`: Quick summary with career stats and active/recent challenge snapshot.
+            - `Challenge History`: Privacy-protected archive. Renders `<EmptyState />` if unauthorized; chronological `<Select />` dropdown (newest first, URL synced to `?challengeId=`) with transition-backed loading and `<CockpitSkeleton />` when switching challenges; or `<EmptyState />` if user has 0 challenges.
+            - `Settings`: Own-profile-only tab rendering `YptSettingsCard`.
+      - Built dynamic route `apps/web/app/profile/[userId]/page.tsx` with SEO/social metadata, session resolution, privacy checking, and initial snapshot fetching.
+      - Created Law L9 route boundaries: `loading.tsx` (`<CockpitSkeleton />`), `error.tsx` (recovery screen with retry button), and `not-found.tsx` (user not found card).
+      - Updated `apps/web/app/profile/page.tsx` to render current session user's global profile.
+      - Updated `challenge-leaderboard-tab.tsx` so top-3 podium and table member links point to `/profile/${userId}?challengeId=${challenge.id}`.
+      - Added 5 unit tests in `global-profile-view.test.tsx`, 5 in `app/profile/[userId]/page.test.tsx`, 3 in `app/profile/page.test.tsx`, and updated 19 in `challenge-leaderboard-tab.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 20 test files passed (211/211 tests green across participant-stats, profile, and leaderboard).
+- **Jira Status:** `KAN-49` transitioned from `In Progress` to `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#164](https://github.com/lrfsdevs/holdmetoit/issues/164).
+- **NEXT STEP:** Peer review and merge PR from `krish` to `dev`.
+
+### Session 178 — 2026-11-01 (feat(admin): Global User Directory and Participant Roster — GH-#163 / Jira KAN-48 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#163](https://github.com/lrfsdevs/holdmetoit/issues/163) / Jira Ticket `KAN-48` ("feat(admin): global user directory and participant roster for hosts/admins"). Deliver an administrative platform directory at `/admin/users` listing all registered users with career lifetime hours, cross-challenge roster enrollments, YPT sync status, role assignment, and audit history.
+- **Architectural Enhancements Implemented:**
+   1. **Step 1: Domain & Repository Layer:**
+      - In `user-directory.types.ts`, defined domain contracts: `AdminUserRosterItem` (`id`, `discordId`, `name`, `discordTag`, `image`, `role`, `createdAt`, `lifetimeStudyHours`, `trophies`, `trophyRank`, `walletBalance`, `yptStatus`, `activeChallenges`, `totalChallengesCount`), `UserDirectoryQuery`, `UserDirectorySummary`, and `AdminUserRosterResult`.
+      - In `user-directory.repository.ts`, implemented `getAdminUserRoster(query, options)` computing lifetime study hours from daily study logs, active challenges, competitive trophy rank, wallet coin balances, and YPT connectivity status.
+      - Implemented role resolution (`resolveRosterRole`) and YPT status normalization (`resolveYptStatus`).
+      - Handled search filtering across display name, tag, and Discord snowflake ID, plus filters for `roleFilter` (`USER`, `HOST`, `ADMIN`), `enrollmentFilter` (`ACTIVE`, `IDLE`, `NEVER_ENROLLED`), `yptFilter`, and dynamic sorting/pagination.
+      - Extended `audit-log.ts` with `"USER_ROLE_UPDATED"`.
+      - Added 15 Vitest unit tests in `user-directory.repository.test.ts`.
+   2. **Step 2: Server Actions & Security Gating:**
+      - In `user-directory.actions.ts`, created type-safe Server Actions:
+         - `fetchAdminUserRosterAction(query)`: Protected by `requireAdminUser()`, fetches filtered & paginated user roster results.
+         - `updateUserRoleAction({ targetUserId, newRole, reason })`: Strictly protected by `requireAdminUser()`, validated with Zod, enforces self-demotion protection (`actor.id === targetUserId && newRole !== "ADMIN"` returns `SELF_DEMOTION_FORBIDDEN`), updates database `role` (`PARTICIPANT` for `"USER"`, `ADMIN` for `"HOST"` and `"ADMIN"`), writes an immutable audit record (`USER_ROLE_UPDATED`) with before/after diffs and audit reason, and revalidates `/admin/users`, `/admin`, and `/profile/[userId]`.
+         - `getUserAuditLogsAction({ targetUserId, limit })`: Protected by `requireAdminUser()`, queries user-specific activity and targeting history.
+      - In `audit-log.repository.ts`, added `getUserAuditTrail(targetUserId, limit)` querying audit logs matching either `actorId` or `targetEntityId`.
+      - Added 11 unit tests in `user-directory.actions.test.ts`.
+   3. **Step 3: Presentation, Route & Integration:**
+      - Created `/admin/users/page.tsx` (protected Server Component with `requireAdminUser` and initial data prefetch).
+      - Created Law L9 boundaries: `/admin/users/loading.tsx` (card and table skeletons) and `/admin/users/error.tsx` (recovery view).
+      - Created `user-directory-view.tsx`: Top summary stat cards (Total Registered Users, Active in Battles, Unenrolled/Idle, YPT Connected), debounced search input, filter selects (`Role`, `Enrollment Status`, `YPT Status`, `Sort By`), Roster Table with avatar, display name, tag, copyable Discord Snowflake ID badge, role badge, lifetime hours, trophy rank, YPT connection badge, active challenge pills, profile link, and inspect button, plus `<DataPagination />`.
+      - Created `user-inspector-sheet.tsx`: Radix side-sheet inspector with member profile overview, role assignment dropdown with mandatory audit reason, self-demotion alert banner, quick actions (`AdminAdjustmentDialog` for coins, `AdminTrophyAdjustmentDialog` for trophies, Discord avatar sync), and chronological activity audit trail.
+      - Updated `admin-console-view.tsx` with header link and quick navigation card to `/admin/users`.
+      - Added unit tests in `user-directory-view.test.tsx` and `app/admin/users/page.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 6 test files passed (36/36 tests green across admin domain, data, api, and presentation).
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and sizing rules).
+- **Jira Status:** `KAN-48` assigned to `Krish Jaiswal` and transitioned from `To Do` $\rightarrow$ `In Progress` $\rightarrow$ `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#163](https://github.com/lrfsdevs/holdmetoit/issues/163).
+
+### Session 179 — 2026-11-01 (feat(tasks): Lightweight Obsidian Confetti on Daily & Weekly Task Completion)
+
+- **Context & Objectives:** User requested a lightweight yet visible confetti animation whenever completing a task in the to-do list (Daily as well as Weekly) on the website.
+- **Architectural Enhancements Implemented:**
+   1. **Confetti Engine (`apps/web/lib/confetti.ts`):**
+      - Built a custom, zero-dependency HTML5 canvas confetti simulation engine tailored to HoldMeToIt's Obsidian Dark palette (`OBSIDIAN_CONFETTI_COLORS`: Emerald Green `#10b981`, Mint `#34d399`, Brand Gold `#fbbf24`, Amber `#f59e0b`, Sky `#38bdf8`, Azure `#60a5fa`, Purple `#c084fc`, Rose `#f43f5e`, and Crisp Silver `#ffffff`).
+      - Full High-DPI / Retina display support via `devicePixelRatio` scaling.
+      - Fixed viewport overlay with `pointer-events: none`, `z-index: 99999`, and automatic DOM creation and cleanup: canvas element and `requestAnimationFrame` loops are fully destroyed once all particles fall off-screen.
+      - 3D tumbling physics with rotation around X, Y, and Z axes, gravity, aerodynamic drag, horizontal flutter wobble, and smooth fade-out.
+      - Accessibility compliant: skips animation if `window.matchMedia('(prefers-reduced-motion: reduce)')` is active.
+      - Fail-soft in SSR and jsdom testing environments.
+      - Added `triggerTaskConfetti(target)` supporting click coordinates (`clientX`, `clientY`), `Element` bounding rects, or fallback center viewport.
+   2. **Cockpit Tasks Integration (`cockpit-tasks-section.tsx`):**
+      - Wired `triggerTaskConfetti` into `setTaskStatus`: triggers celebration burst whenever a task transitions to `COMPLETED` for both **Daily** and **Weekly** tasks.
+      - Attached `data-task-id={task.id}` to both Daily and Weekly task card elements for accurate spatial origin detection.
+      - Passed click pointer events from Daily checkbox (`toggleDailyTask`), Weekly checkbox (`toggleWeeklyTask`), and In-Progress status pills into the status updater so confetti bursts directly from the checked checkbox.
+      - Handled task editing modal (`handleSaveEditTask`) when transitioning an existing task to `COMPLETED`.
+      - Unchecking a completed task (resetting to `TODO`) intentionally does NOT trigger confetti.
+   3. **Verification & Testing:**
+      - Added unit test suite in `apps/web/lib/confetti.test.ts` (7 tests: token exports, headless jsdom execution, mouse coordinate targets, bounding rect targets, reduced motion compliance, 2D context simulation).
+      - Added integration test suite in `apps/web/features/study-logs/presentation/cockpit/cockpit-tasks-confetti.test.tsx` (3 tests: daily task completion trigger, weekly task completion trigger, completed uncheck suppression).
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 225 test files passed (2184/2184 tests green across the web application).
+   - `npm run lint:web`: ✅ 0 errors.
+
+### Session 180 — 2026-11-01 (feat(participant): sick mode status badge with 3-day reminder and leaderboard visibility — GH-#205 / KAN-66)
+
+- **Context & Objectives:** Implemented Participant Sick Mode (Under the Weather status) (#205, KAN-66) providing an empathetic status indicator across leaderboards, matchup rosters, profile, and admin views, with a 3-day non-blocking recovery check-in prompt and 7-day auto-expiry safeguard.
+- **Law Invariants Preserved:**
+   - **Law L3 (Catch-Up Deficit Model / Zero Grace Passes):** Sick Mode is strictly an informational social indicator. It does NOT pause timers, freeze deficit accrual, grant grace passes, or reduce required study hours. Remaining deficit and required pace calculations in `features/leaderboard/domain/deficit.ts` remain 100% pure and untouched.
+   - **Law L6 (Three-Condition Accountability Invariant):** Activating Sick Mode does NOT grant automated immunity from results-lock consequences or punishments.
+   - **Law L5 (Admin Override Absolute):** Hosts retain full visibility of participant Sick Mode history in `/admin/users` and can issue an administrative pardon under `FEAT-PUN-04` if warranted.
+- **Architectural Enhancements Implemented:**
+   1. **Prisma Schema & Migration (`packages/database`):**
+      - Added `isSick` (Boolean `@default(false)`), `sickModeActivatedAt` (DateTime?), `sickModeNote` (String? `@db.VarChar(120)`), `sickModeReminderSnoozedUntil` (DateTime?), `sickModeLastDeactivatedAt` (DateTime?) to `User` model.
+      - Generated migration `20261101000000_add_user_sick_mode/migration.sql` and deployed cleanly to PostgreSQL database.
+   2. **Pure Domain Layer (`features/participant-status/domain`):**
+      - `sick-mode.types.ts`: Status summary, duration, check-in, and badge prop contracts.
+      - `sick-mode.ts`: `sanitizeSickModeNote` (enforces $\le 80$ characters, collapses newlines/whitespace), `calculateSickDuration` (returns elapsed hours/days and formatted string), `isSickModeAutoExpired` ($\ge 168$ hours safeguard), `isSickReminderDue` ($\ge 72$ hours reminder with snooze evaluation), `getSickModeTooltipText` (empathetic copy with date and optional note).
+      - Added 19 Vitest unit tests in `sick-mode.test.ts` covering note sanitization, duration formatting, reminder due logic, auto-expiry, and Law L3 invariant preservation.
+   3. **Data Layer (`features/participant-status/data`):**
+      - `sick-mode.repository.ts`: `getUserSickStatus` (with auto-expiry DB synchronization), `activateSickMode`, `deactivateSickMode`, and `snoozeSickReminder`.
+      - Added 6 Vitest unit tests in `sick-mode.repository.test.ts`.
+   4. **API / Server Actions Layer (`features/participant-status/api`):**
+      - `sick-mode.actions.ts`: `toggleSickModeAction`, `respondSickReminderAction` (turn_off or extend), and `getMySickStatusAction` with session authentication and path revalidations.
+      - Added 8 Vitest unit tests in `sick-mode.actions.test.ts`.
+   5. **Presentation Layer (`features/participant-status/presentation`):**
+      - `sick-status-badge.tsx`: Empathetic soft amber pill (`bg-amber-500/15 text-amber-300 border border-amber-500/30`) with icon 🤒 and accessible Radix Tooltip explaining duration and optional note.
+      - `sick-mode-quick-toggle.tsx`: Cockpit Header chip button with accessible Dialog modal for 1-click activation/deactivation, optional note input (80 char countdown), and Sonner toast feedback.
+      - `sick-reminder-banner.tsx`: Non-blocking 3-day recovery prompt banner on `/` with _"I'm Better (Turn Off)"_ and _"Still Recovering (+2 Days)"_ actions.
+      - `sick-mode-settings-card.tsx`: Settings card under Participant Preferences in `/profile` (`tab="settings"`).
+      - Added 12 Vitest presentation tests in `sick-status-badge.test.tsx`, `sick-reminder-banner.test.tsx`, and `sick-mode-quick-toggle.test.tsx`.
+   6. **Cross-Surface Integrations:**
+      - **Home Cockpit (`apps/web/features/study-logs/presentation/home-cockpit-view.tsx`):** Added `SickModeQuickToggle` to Cockpit Header and `SickReminderBanner` above cockpit cards.
+      - **Global Profile (`apps/web/features/participant-stats/presentation/global-profile-view.tsx`):** Added `SickStatusBadge` to profile header and `SickModeSettingsCard` to Settings tab.
+      - **Challenge Leaderboard (`apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):** Added `SickStatusBadge` beside participant display names in desktop table, compact table, and mobile card views.
+      - **Matchup Rosters (`apps/web/features/challenges/presentation/challenge-overview-tab.tsx`):** Added `SickStatusBadge` beside participant names in Head-to-Head team member cards.
+      - **Admin User Directory & Inspector (`apps/web/features/admin/presentation`):** Added `SickStatusBadge` to user directory table and member card badge stacks (`user-directory-view.tsx`), and rendered active Sick Mode alert with note in `UserInspectorSheet`.
+   7. **Documentation (`docs/participant-status/README.md`):** Complete architectural documentation, stack law invariants, and developer guide.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 45/45 feature tests passing + 79/79 regression tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **Jira Status:** `KAN-66` transitioned from `In Progress` to `In Review` (transition ID `31`).
+- **GitHub PR & Issue Status:** Updated PR [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) (`krish` $\rightarrow$ `dev`) closing GitHub Issue [#205](https://github.com/lrfsdevs/holdmetoit/issues/205) (`Closes #205`).
+- **NEXT STEP:** Peer review and merge PR #204 into `dev`, then proceed to next roadmap milestone.
+
+### Session 181 — 2026-11-01 (feat(cockpit): Unauthenticated Guest Cockpit & Public Spectator Landing — GH-#91 / Jira KAN-9 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#91](https://github.com/lrfsdevs/holdmetoit/issues/91) / Jira Ticket `KAN-9` ("Redesign and implement the unauthenticated (logged-out) home dashboard experience on `/` (`apps/web/app/page.tsx` and `apps/web/features/study-logs/presentation/home-cockpit-view.tsx`) so logged-out visitors see a rich, on-theme Guest Cockpit instead of a barebones screen with an empty todo list").
+- **Assignments Completed:**
+   - Assigned GitHub Issue #91 to `KrishJdev`.
+   - Assigned Jira Issue `KAN-9` to `Krish Jaiswal` and transitioned from `To Do` $\rightarrow$ `In Progress` per `AGENTS.md` §4.4.
+- **Law Invariants Preserved:**
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Unauthenticated visitors have access to a rich landing experience without authentication friction or registration barriers. Sign in is driven solely by Discord OAuth 2.0.
+   - **Law L8 (Second-Level Precision):** Simulated telemetry progress bars and daily targets render strict `HH:MM:SS` duration formats (`24:30:00 / 35:00:00`, `05:00:00`).
+   - **Law L9 (Zero-State & Error Resilience):** Fallback cards for active challenges provide on-theme static arena copy when no challenges exist. Empty local tasks display one-click sample chips preventing bare state collapse.
+- **Architectural Enhancements Implemented:**
+   1. **Guest Cockpit Presentation (`apps/web/features/study-logs/presentation/cockpit/guest-cockpit-view.tsx`):**
+      - **Hero Banner:** Full-width hero banner with battle artwork (`/assets/challenge_hero_battle.jpg`), value proposition headline (_"Competitive Study Accountability & Challenge Cockpit"_), primary Discord sign-in CTA button (`loginWithDiscordAction`), and secondary quick navigation links to `/challenges` and `/leaderboard`.
+      - **Simulated Progress & YPT Telemetry Card (Bento Left):** Mirrors the layout of `CockpitProgressCard` in preview mode with simulated weekly progress (`24:30:00 / 35:00:00`, 70%, on target), daily pace target (`05:00:00`), streak counter (🔥 5 days), leave balance (🌴 1/2), YPT auto-sync ready badge, and lock CTA footer.
+      - **Active Challenges & Accountability Pulse Card (Bento Right):** Live event summary from `upcomingChallenge` (or arena overview fallback), format badge (`SOLO`, `DUOS`, `TEAM_VS_TEAM`), Three-Condition Accountability Law callout, and link to `/challenges`.
+      - **Interactive Local Guest Sandbox:** Explains browser IndexedDB storage and seamless cloud + Discord Tasker sync upon login, with 3 one-click starter chips: _"Complete 2h Deep Work block"_, _"Link YPT account"_, _"Join an active Study Challenge"_.
+      - **Planned Features & Ecosystem Strip (Bottom of Page):** Moved to the bottom of the dashboard beneath the task sandbox, with a dedicated "Planned Features" section header badge and individual "Planned" badges on Economy & Wagers (`/wallet`), Pokémon Gacha & Pokédex (`/pokemon`), and Trophy Ranks & Wrapped (`/leaderboard`).
+   2. **Cockpit Tasks Section Updates (`cockpit-tasks-section.tsx`):**
+      - Exported `LOAD_SAMPLE_TASK_EVENT` and `SAMPLE_STUDY_TASKS`.
+      - Added event listener for `LOAD_SAMPLE_TASK_EVENT` to automatically create and persist sample tasks into local IndexedDB (`putLocalCategory`, `putLocalTask`).
+      - Rendered starter chips in the empty state when `!isLoggedIn && totalDailyTasksForDay === 0`.
+      - **Guest Task Actions Unlocked:** Removed `!isLoggedIn` restrictions from task and category dropdowns and context menus.
+      - **1-Click Quick Delete:** Added explicit `Trash2` icon button on hover/mobile to immediately remove tasks locally (or enqueue deletion on cloud).
+      - **Status Modification:** Added `To-Do` status hover button that sets `IN_PROGRESS` on click, and unlocked full 3-dots dropdown status changer (`TaskMenuItems`) for guests.
+   3. **Home Page & Cockpit Wiring (`apps/web/app/page.tsx` & `home-cockpit-view.tsx`):**
+      - Extended `app/page.tsx` so unauthenticated visitors also receive `upcomingChallenge` via `findLatestAvailableChallenge()`.
+      - Updated `home-cockpit-view.tsx` to conditionally render `<GuestCockpitView />` when `!isLoggedIn` after hook initializations.
+   4. **Documentation (`docs/cockpit/README.md`):** Comprehensive architecture and developer usage documentation created per Rule §9.4.
+   5. **Testing & Verification:**
+      - Added `guest-cockpit-view.test.tsx` (8 unit tests covering all visual elements, CTAs, telemetry, fallback state, planned features ordering, and custom sample task dispatches).
+      - Updated `home-cockpit-view.test.tsx` and `app/page.test.tsx` with unauthenticated assertions.
+      - Updated `cockpit-tasks-section.test.tsx` verifying options trigger buttons and delete actions for unauthenticated guests.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 232/232 test files passing (2,238/2,238 tests green across `@holdmetoit/web`).
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and no hex tokens).
+   - `npm run build:web`: ✅ Production build successful (all routes compiled cleanly).
+- **Jira Status:** `KAN-9` transitioned to `In Review` (`id: 31`).
+- **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#91](https://github.com/lrfsdevs/holdmetoit/issues/91), PR [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) updated.
+- **NEXT STEP:** Peer review and merge PR #204 into `dev`, then proceed to next roadmap milestone.
