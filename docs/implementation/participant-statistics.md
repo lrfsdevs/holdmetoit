@@ -48,8 +48,8 @@ The feature provides deep visibility into an enrolled scholar's study performanc
    - `ParticipantDailyHistory`: Full chronological table (desktop) and card list (mobile) with override indicators.
    - `ParticipantTeamStats`: Team standing, team total, and member contribution meter (omitted for `SOLOS`).
    - `ParticipantAccountability`: Target deficit, required catch-up pace per day, and pardon/forfeit badges.
-   - `ParticipantWeeklyGoalsCard`: Renders declared challenge-linked weekly goals with completion ratio pill (`X/Y Goals Completed`), emerald checkmarks (`CheckCircle2`) for done items, neutral circles for pending, and an on-theme empty state when no goals were committed.
-   - Test suites in `participant-stats-view.test.tsx` (12 tests) and `participant-weekly-goals-card.test.tsx` (5 tests, 100% green).
+   - `ParticipantWeeklyGoalsCard`: Renders declared challenge-linked weekly goals with completion ratio pill (`X/Y Goals Completed`), emerald checkmarks (`CheckCircle2`) for done items, neutral circles for pending, on-theme empty state when no goals were committed, and responsive pagination via `DataPagination` (default 5 goals per page) to prevent long pages when participants declare many goals.
+   - Test suites in `participant-stats-view.test.tsx` (12 tests) and `participant-weekly-goals-card.test.tsx` (10 tests, 100% green).
 
 5. **Navigation Entry Points:**
    - `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`: Top 3 podium cards, mobile cards, desktop table rows.
