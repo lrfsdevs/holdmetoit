@@ -58,6 +58,12 @@ import {
    getTeamBadgeStyle,
 } from "@/features/challenges/domain/team-colors";
 import { TrophyRoleBadge } from "@/features/trophies/presentation/trophy-role-badge";
+import {
+   Tooltip,
+   TooltipContent,
+   TooltipProvider,
+   TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import {
    rankByTodaySeconds,
@@ -190,6 +196,111 @@ function PaceStatusBadge({
       >
          {badge.label}
       </span>
+   );
+}
+
+function AdminRowActions({
+   entry,
+   canPardon,
+   onOpenOverride,
+   onOpenTargetOverride,
+   onOpenPardon,
+   showTargetOverride = true,
+   size = "default",
+}: {
+   entry: ScoreboardStandingEntry;
+   canPardon: boolean;
+   onOpenOverride: (entry: ScoreboardStandingEntry) => void;
+   onOpenTargetOverride: (entry: ScoreboardStandingEntry) => void;
+   onOpenPardon: (entry: ScoreboardStandingEntry) => void;
+   showTargetOverride?: boolean;
+   size?: "default" | "sm";
+}) {
+   const [mounted, setMounted] = useState(false);
+   useEffect(() => {
+      setMounted(true);
+   }, []);
+
+   const isPunished = isPunishedScholar(entry);
+   const btnSizeClass = size === "sm" ? "h-6 w-6" : "h-7 w-7";
+   const iconSizeClass = size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+
+   const editHrBtn = (
+      <button
+         type="button"
+         onClick={() => onOpenOverride(entry)}
+         className={`${btnSizeClass} rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong hover:border-feedback-info/50 hover:text-feedback-info transition-colors inline-flex items-center justify-center shrink-0`}
+         title="Edit Study Hours"
+         aria-label="Edit Study Hours"
+      >
+         <Clock className={`${iconSizeClass} text-feedback-info`} />
+         <span className="sr-only">Edit hr</span>
+      </button>
+   );
+
+   const editTargetBtn = showTargetOverride ? (
+      <button
+         type="button"
+         onClick={() => onOpenTargetOverride(entry)}
+         className={`${btnSizeClass} rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong hover:border-accent/50 hover:text-accent transition-colors inline-flex items-center justify-center shrink-0`}
+         title="Edit Weekly Target Hours"
+         aria-label="Edit Weekly Target Hours"
+      >
+         <Target className={`${iconSizeClass} text-accent`} />
+         <span className="sr-only">Edit target</span>
+      </button>
+   ) : null;
+
+   const pardonBtn =
+      canPardon && isPunished ? (
+         <button
+            type="button"
+            data-testid="admin-pardon-button"
+            onClick={() => onOpenPardon(entry)}
+            className={`${btnSizeClass} rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors inline-flex items-center justify-center shrink-0 hover:border-feedback-success/50 hover:text-feedback-success`}
+            title="Grant Pardon / Excuse Member"
+            aria-label="Grant Pardon"
+         >
+            <HeartHandshake
+               className={`${iconSizeClass} text-feedback-success`}
+            />
+            <span className="sr-only">Pardon</span>
+         </button>
+      ) : null;
+
+   if (!mounted) {
+      return (
+         <div className="flex items-center gap-1 shrink-0">
+            {editHrBtn}
+            {editTargetBtn}
+            {pardonBtn}
+         </div>
+      );
+   }
+
+   return (
+      <TooltipProvider delayDuration={150}>
+         <div className="flex items-center gap-1 shrink-0">
+            <Tooltip>
+               <TooltipTrigger asChild>{editHrBtn}</TooltipTrigger>
+               <TooltipContent side="top">Edit Study Hours</TooltipContent>
+            </Tooltip>
+
+            {editTargetBtn && (
+               <Tooltip>
+                  <TooltipTrigger asChild>{editTargetBtn}</TooltipTrigger>
+                  <TooltipContent side="top">Edit Weekly Target</TooltipContent>
+               </Tooltip>
+            )}
+
+            {pardonBtn && (
+               <Tooltip>
+                  <TooltipTrigger asChild>{pardonBtn}</TooltipTrigger>
+                  <TooltipContent side="top">Grant Pardon</TooltipContent>
+               </Tooltip>
+            )}
+         </div>
+      </TooltipProvider>
    );
 }
 
@@ -1052,17 +1163,21 @@ export function ChallengeLeaderboardTab({
                            return (
                               <div
                                  key={t.id}
-                                 className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 space-y-4 shadow-sm"
+                                 className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-sm h-full"
                               >
-                                 {/* Team Header Summary Card */}
-                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-default">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                       <span className="text-2xl shrink-0">
-                                          {t.iconEmoji || "🛡️"}
-                                       </span>
-                                       <div className="min-w-0">
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                             <h4 className="text-base font-bold text-white truncate">
+                                 {/* Team Header Summary Card (Normalized 2-Row Layout) */}
+                                 <div className="pb-3 border-b border-border-default space-y-2.5">
+                                    {/* Row 1: Team Name + Total & Progress */}
+                                    <div className="flex items-center justify-between gap-3 min-w-0">
+                                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                          <span className="text-xl sm:text-2xl shrink-0">
+                                             {t.iconEmoji || "🛡️"}
+                                          </span>
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                             <h4
+                                                className="text-base font-bold text-white truncate"
+                                                title={t.name}
+                                             >
                                                 {t.name}
                                              </h4>
                                              {t.id === currentUser.teamId &&
@@ -1080,43 +1195,48 @@ export function ChallengeLeaderboardTab({
                                                       <Pencil className="h-3.5 w-3.5" />
                                                    </button>
                                                 )}
-                                             <span
-                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badgeTint}`}
-                                             >
-                                                {teamScholars.length} /{" "}
-                                                {t.companionCount} scholars
-                                             </span>
-                                             {t.isLeader && (
-                                                <span className="px-2 py-0.5 rounded-full text-label font-bold bg-feedback-success/20 text-feedback-success-text border border-feedback-success/30 shrink-0">
-                                                   Leading House
-                                                </span>
-                                             )}
                                           </div>
-                                          <p className="text-xs text-text-tertiary mt-0.5 truncate">
-                                             Weekly Target: {t.targetHours}h •
-                                             Completed: {t.completionPercentage}
-                                             %
-                                          </p>
+                                       </div>
+
+                                       <div className="flex items-center gap-2.5 sm:gap-3 text-xs font-sans font-sans-tabular shrink-0">
+                                          <div className="text-right">
+                                             <span className="text-text-tertiary">
+                                                Total:{" "}
+                                             </span>
+                                             <span className="font-bold text-white whitespace-nowrap">
+                                                {t.totalLoggedClock}
+                                             </span>
+                                          </div>
+                                          <div className="w-16 sm:w-24 h-2 rounded-full bg-surface-elevated overflow-hidden border border-border-strong shrink-0">
+                                             <div
+                                                className="h-full bg-feedback-success transition-all duration-500"
+                                                style={{
+                                                   width: `${Math.min(100, t.completionPercentage)}%`,
+                                                }}
+                                             />
+                                          </div>
                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 text-xs font-sans font-sans-tabular shrink-0">
-                                       <div>
-                                          <span className="text-text-tertiary">
-                                             Total:{" "}
+                                    {/* Row 2: Badges & Weekly Target Summary */}
+                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                       <div className="flex items-center gap-1.5 shrink-0">
+                                          <span
+                                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 ${badgeTint}`}
+                                          >
+                                             {teamScholars.length} /{" "}
+                                             {t.companionCount} scholars
                                           </span>
-                                          <span className="font-bold text-white">
-                                             {t.totalLoggedClock}
-                                          </span>
+                                          {t.isLeader && (
+                                             <span className="px-2 py-0.5 rounded-full text-label font-bold bg-feedback-success/20 text-feedback-success-text border border-feedback-success/30 shrink-0">
+                                                Leading House
+                                             </span>
+                                          )}
                                        </div>
-                                       <div className="w-20 sm:w-28 h-2 rounded-full bg-surface-elevated overflow-hidden border border-border-strong">
-                                          <div
-                                             className="h-full bg-feedback-success transition-all duration-500"
-                                             style={{
-                                                width: `${Math.min(100, t.completionPercentage)}%`,
-                                             }}
-                                          />
-                                       </div>
+                                       <p className="text-xs text-text-tertiary truncate text-right">
+                                          Weekly Target: {t.targetHours}h •
+                                          Completed: {t.completionPercentage}%
+                                       </p>
                                     </div>
                                  </div>
 
@@ -1127,14 +1247,14 @@ export function ChallengeLeaderboardTab({
                                        filters.
                                     </p>
                                  ) : (
-                                    <div className="space-y-2.5">
+                                    <div className="space-y-2.5 flex-1">
                                        {teamScholars.map((entry, idx) => (
                                           <div
                                              key={entry.participantId}
-                                             className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors"
+                                             className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors min-h-[68px]"
                                           >
-                                             {/* Intra-team Rank & Overall Rank */}
-                                             <div className="flex items-center gap-2.5 min-w-0">
+                                             {/* Intra-team Rank & Overall Rank + Avatar + Name Details */}
+                                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                                 <div className="flex flex-col items-center justify-center w-7 shrink-0 text-center">
                                                    <span className="text-xs font-bold text-white font-sans">
                                                       #{idx + 1}
@@ -1161,15 +1281,19 @@ export function ChallengeLeaderboardTab({
                                                    />
                                                 </Link>
 
-                                                {/* Name & Pace */}
-                                                <div className="min-w-0">
-                                                   <div className="flex items-center gap-1.5 flex-wrap">
+                                                {/* Name, Handle & Status Badges (Strict 2-Line Normalized Layout) */}
+                                                <div className="min-w-0 flex-1 space-y-1">
+                                                   {/* Line 1: Display Name + Trophy + Status Pill */}
+                                                   <div className="flex items-center gap-1.5 min-w-0">
                                                       <Link
                                                          href={getParticipantProfileUrl(
                                                             entry.userId ||
                                                                entry.participantId
                                                          )}
-                                                         className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
+                                                         className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate block"
+                                                         title={
+                                                            entry.displayName
+                                                         }
                                                       >
                                                          {entry.displayName}
                                                       </Link>
@@ -1186,6 +1310,18 @@ export function ChallengeLeaderboardTab({
                                                       <YptStatusPill
                                                          status={entry.status}
                                                       />
+                                                   </div>
+
+                                                   {/* Line 2: Handle + Sick Badge + Pace Badge */}
+                                                   <div className="flex items-center gap-1.5 min-w-0">
+                                                      <p
+                                                         className="text-label text-text-tertiary truncate max-w-[90px] sm:max-w-[130px]"
+                                                         title={`@${entry.username || "scholar"}`}
+                                                      >
+                                                         @
+                                                         {entry.username ||
+                                                            "scholar"}
+                                                      </p>
                                                       <SickStatusBadge
                                                          isSick={entry.isSick}
                                                          activatedAt={
@@ -1198,7 +1334,7 @@ export function ChallengeLeaderboardTab({
                                                       />
                                                       {entry.paceLabel && (
                                                          <span
-                                                            className={`px-1.5 py-0.2 rounded text-caption font-semibold shrink-0 ${
+                                                            className={`px-1.5 py-0.5 rounded text-caption font-semibold shrink-0 ${
                                                                entry.paceStatus ===
                                                                   "on-track" ||
                                                                entry.paceStatus ===
@@ -1211,79 +1347,37 @@ export function ChallengeLeaderboardTab({
                                                          </span>
                                                       )}
                                                    </div>
-                                                   <p className="text-label text-text-tertiary truncate">
-                                                      @
-                                                      {entry.username ||
-                                                         "scholar"}
-                                                   </p>
                                                 </div>
                                              </div>
 
                                              {/* Clock & Admin edit */}
                                              <div className="shrink-0 text-right font-sans font-sans-tabular flex items-center gap-2">
-                                                <div>
-                                                   <p className="text-xs font-bold text-white">
+                                                <div className="space-y-0.5">
+                                                   <p className="text-xs font-bold text-white whitespace-nowrap">
                                                       {entry.totalLoggedClock}
                                                       <span className="text-label font-normal text-text-tertiary">
                                                          /{entry.targetClock}
                                                       </span>
                                                    </p>
-                                                   <p className="text-meta font-semibold text-feedback-success">
+                                                   <p className="text-meta font-semibold text-feedback-success whitespace-nowrap">
                                                       +{entry.todayLoggedClock}
                                                    </p>
                                                 </div>
                                                 {isAdmin && (
-                                                   <div className="flex items-center gap-1 shrink-0">
-                                                      <button
-                                                         type="button"
-                                                         onClick={() =>
-                                                            handleOpenOverride(
-                                                               entry
-                                                            )
-                                                         }
-                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                                         title="Admin: Edit Study Hours"
-                                                      >
-                                                         <Clock className="h-3 w-3 text-feedback-info" />
-                                                         <span>Edit hr</span>
-                                                      </button>
-                                                      <button
-                                                         type="button"
-                                                         onClick={() =>
-                                                            handleOpenTargetOverride(
-                                                               entry
-                                                            )
-                                                         }
-                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                                         title="Admin: Edit Weekly Target Hours"
-                                                      >
-                                                         <Target className="h-3 w-3 text-accent" />
-                                                         <span>
-                                                            Edit target
-                                                         </span>
-                                                      </button>
-                                                      {canPardon &&
-                                                         isPunishedScholar(
-                                                            entry
-                                                         ) && (
-                                                            <button
-                                                               type="button"
-                                                               data-testid="admin-pardon-button"
-                                                               onClick={() =>
-                                                                  handleOpenPardon(
-                                                                     entry
-                                                                  )
-                                                               }
-                                                               className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
-                                                               title="Admin: Grant Pardon / Excuse Member"
-                                                            >
-                                                               <HeartHandshake className="h-3 w-3 text-feedback-success" />
-                                                               <span>
-                                                                  Pardon
-                                                               </span>
-                                                            </button>
-                                                         )}
-                                                   </div>
+                                                   <AdminRowActions
+                                                      entry={entry}
+                                                      canPardon={canPardon}
+                                                      onOpenOverride={
+                                                         handleOpenOverride
+                                                      }
+                                                      onOpenTargetOverride={
+                                                         handleOpenTargetOverride
+                                                      }
+                                                      onOpenPardon={
+                                                         handleOpenPardon
+                                                      }
+                                                      size="sm"
+                                                   />
                                                 )}
                                              </div>
                                           </div>
@@ -1299,62 +1393,64 @@ export function ChallengeLeaderboardTab({
                            <div
                               key="unassigned-scholars"
                               data-testid="unassigned-scholars-card"
-                              className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 space-y-4 shadow-sm"
+                              className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-sm h-full"
                            >
-                              {/* Unassigned Header Summary Card */}
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-default">
-                                 <div className="flex items-center gap-3 min-w-0">
-                                    <span className="text-2xl shrink-0">
-                                       ⏳
-                                    </span>
-                                    <div className="min-w-0">
-                                       <div className="flex items-center gap-1.5 flex-wrap">
-                                          <h4 className="text-base font-bold text-white truncate">
-                                             Unassigned Scholars
-                                          </h4>
-                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text">
+                              {/* Unassigned Header Summary Card (Normalized 2-Row Layout) */}
+                              <div className="pb-3 border-b border-border-default space-y-2.5">
+                                 {/* Row 1: Icon + Title vs Shortcut Link / count */}
+                                 <div className="flex items-center justify-between gap-3 min-w-0">
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                       <span className="text-xl sm:text-2xl shrink-0">
+                                          ⏳
+                                       </span>
+                                       <h4 className="text-base font-bold text-white truncate">
+                                          Unassigned Scholars
+                                       </h4>
+                                    </div>
+
+                                    {/* Admin shortcut link / summary count */}
+                                    {isAdmin ? (
+                                       <Link
+                                          href={`/challenge/${challenge.id}?tab=manage&team=UNASSIGNED`}
+                                          data-testid="assign-unassigned-scholars-btn"
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated hover:bg-surface-nested text-xs font-semibold text-accent hover:text-white border border-border-strong transition-colors shrink-0"
+                                          title="Assign unassigned scholars in Manage tab"
+                                       >
+                                          <Users className="h-3.5 w-3.5" />
+                                          <span>Assign in Roster</span>
+                                       </Link>
+                                    ) : (
+                                       <div className="flex items-center gap-2 text-xs font-sans shrink-0 text-text-tertiary">
+                                          <span>
                                              {unassignedScholars.length}{" "}
-                                             unassigned
+                                             {unassignedScholars.length === 1
+                                                ? "scholar"
+                                                : "scholars"}
                                           </span>
                                        </div>
-                                       <p className="text-xs text-text-tertiary mt-0.5 truncate">
-                                          Awaiting house assignment
-                                       </p>
-                                    </div>
+                                    )}
                                  </div>
 
-                                 {/* Admin shortcut link / summary count */}
-                                 {isAdmin ? (
-                                    <Link
-                                       href={`/challenge/${challenge.id}?tab=manage&team=UNASSIGNED`}
-                                       data-testid="assign-unassigned-scholars-btn"
-                                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated hover:bg-surface-nested text-xs font-semibold text-accent hover:text-white border border-border-strong transition-colors shrink-0"
-                                       title="Assign unassigned scholars in Manage tab"
-                                    >
-                                       <Users className="h-3.5 w-3.5" />
-                                       <span>Assign in Roster</span>
-                                    </Link>
-                                 ) : (
-                                    <div className="flex items-center gap-2 text-xs font-sans shrink-0 text-text-tertiary">
-                                       <span>
-                                          {unassignedScholars.length}{" "}
-                                          {unassignedScholars.length === 1
-                                             ? "scholar"
-                                             : "scholars"}
-                                       </span>
-                                    </div>
-                                 )}
+                                 {/* Row 2: Badge vs subtitle */}
+                                 <div className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text">
+                                       {unassignedScholars.length} unassigned
+                                    </span>
+                                    <p className="text-xs text-text-tertiary truncate text-right">
+                                       Awaiting house assignment
+                                    </p>
+                                 </div>
                               </div>
 
                               {/* Unassigned Scholars List */}
-                              <div className="space-y-2.5">
+                              <div className="space-y-2.5 flex-1">
                                  {unassignedScholars.map((entry, idx) => (
                                     <div
                                        key={entry.participantId}
-                                       className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors"
+                                       className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors min-h-[68px]"
                                     >
-                                       {/* Intra-team Rank & Overall Rank */}
-                                       <div className="flex items-center gap-2.5 min-w-0">
+                                       {/* Intra-team Rank & Overall Rank + Avatar + Name Details */}
+                                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                           <div className="flex flex-col items-center justify-center w-7 shrink-0 text-center">
                                              <span className="text-xs font-bold text-white font-sans">
                                                 #{idx + 1}
@@ -1381,15 +1477,17 @@ export function ChallengeLeaderboardTab({
                                              />
                                           </Link>
 
-                                          {/* Name, Status, Unassigned Status Pill */}
-                                          <div className="min-w-0">
-                                             <div className="flex items-center gap-1.5 flex-wrap">
+                                          {/* Name, Handle & Status Badges (Strict 2-Line Normalized Layout) */}
+                                          <div className="min-w-0 flex-1 space-y-1">
+                                             {/* Line 1: Display Name + Unassigned Pill + Trophy + Status Pill */}
+                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <Link
                                                    href={getParticipantProfileUrl(
                                                       entry.userId ||
                                                          entry.participantId
                                                    )}
-                                                   className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
+                                                   className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate block"
+                                                   title={entry.displayName}
                                                 >
                                                    {entry.displayName}
                                                 </Link>
@@ -1412,6 +1510,17 @@ export function ChallengeLeaderboardTab({
                                                 <YptStatusPill
                                                    status={entry.status}
                                                 />
+                                             </div>
+
+                                             {/* Line 2: Handle + Sick Badge */}
+                                             <div className="flex items-center gap-1.5 min-w-0">
+                                                <p
+                                                   className="text-label text-text-tertiary truncate max-w-[90px] sm:max-w-[130px]"
+                                                   title={`@${entry.username || "scholar"}`}
+                                                >
+                                                   @
+                                                   {entry.username || "scholar"}
+                                                </p>
                                                 <SickStatusBadge
                                                    isSick={entry.isSick}
                                                    activatedAt={
@@ -1420,84 +1529,36 @@ export function ChallengeLeaderboardTab({
                                                    note={entry.sickModeNote}
                                                    variant="compact"
                                                 />
-                                                {entry.paceLabel && (
-                                                   <span
-                                                      className={`px-1.5 py-0.2 rounded text-caption font-semibold shrink-0 ${
-                                                         entry.paceStatus ===
-                                                            "on-track" ||
-                                                         entry.paceStatus ===
-                                                            "serene"
-                                                            ? "bg-feedback-success-bg text-feedback-success-text"
-                                                            : "bg-feedback-error-bg text-feedback-error-text"
-                                                      }`}
-                                                   >
-                                                      {entry.paceLabel}
-                                                   </span>
-                                                )}
                                              </div>
-                                             <p className="text-label text-text-tertiary truncate">
-                                                @{entry.username || "scholar"}
-                                             </p>
                                           </div>
                                        </div>
 
                                        {/* Clock & Admin edit */}
                                        <div className="shrink-0 text-right font-sans font-sans-tabular flex items-center gap-2">
-                                          <div>
-                                             <p className="text-xs font-bold text-white">
+                                          <div className="space-y-0.5">
+                                             <p className="text-xs font-bold text-white whitespace-nowrap">
                                                 {entry.totalLoggedClock}
                                                 <span className="text-label font-normal text-text-tertiary">
                                                    /{entry.targetClock}
                                                 </span>
                                              </p>
-                                             <p className="text-meta font-semibold text-feedback-success">
+                                             <p className="text-meta font-semibold text-feedback-success whitespace-nowrap">
                                                 +{entry.todayLoggedClock}
                                              </p>
                                           </div>
                                           {isAdmin && (
-                                             <div className="flex items-center gap-1 shrink-0">
-                                                <button
-                                                   type="button"
-                                                   onClick={() =>
-                                                      handleOpenOverride(entry)
-                                                   }
-                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                                   title="Admin: Edit Study Hours"
-                                                >
-                                                   <Clock className="h-3 w-3 text-feedback-info" />
-                                                   <span>Edit hr</span>
-                                                </button>
-                                                <button
-                                                   type="button"
-                                                   onClick={() =>
-                                                      handleOpenTargetOverride(
-                                                         entry
-                                                      )
-                                                   }
-                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                                   title="Admin: Edit Weekly Target Hours"
-                                                >
-                                                   <Target className="h-3 w-3 text-accent" />
-                                                   <span>Edit target</span>
-                                                </button>
-                                                {canPardon &&
-                                                   isPunishedScholar(entry) && (
-                                                      <button
-                                                         type="button"
-                                                         data-testid="admin-pardon-button"
-                                                         onClick={() =>
-                                                            handleOpenPardon(
-                                                               entry
-                                                            )
-                                                         }
-                                                         className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
-                                                         title="Admin: Grant Pardon / Excuse Member"
-                                                      >
-                                                         <HeartHandshake className="h-3 w-3 text-feedback-success" />
-                                                         <span>Pardon</span>
-                                                      </button>
-                                                   )}
-                                             </div>
+                                             <AdminRowActions
+                                                entry={entry}
+                                                canPardon={canPardon}
+                                                onOpenOverride={
+                                                   handleOpenOverride
+                                                }
+                                                onOpenTargetOverride={
+                                                   handleOpenTargetOverride
+                                                }
+                                                onOpenPardon={handleOpenPardon}
+                                                size="sm"
+                                             />
                                           )}
                                        </div>
                                     </div>
@@ -1635,45 +1696,19 @@ export function ChallengeLeaderboardTab({
                                        </div>
                                     )}
                                     {isAdmin && (
-                                       <div className="flex items-center gap-1 shrink-0">
-                                          <button
-                                             type="button"
-                                             onClick={() =>
-                                                handleOpenOverride(entry)
-                                             }
-                                             className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                             title="Admin: Edit Study Hours"
-                                          >
-                                             <Clock className="h-3 w-3 text-feedback-info" />
-                                             <span>Edit hr</span>
-                                          </button>
-                                          <button
-                                             type="button"
-                                             onClick={() =>
-                                                handleOpenTargetOverride(entry)
-                                             }
-                                             className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
-                                             title="Admin: Edit Weekly Target Hours"
-                                          >
-                                             <Target className="h-3 w-3 text-accent" />
-                                             <span>Edit target</span>
-                                          </button>
-                                          {canPardon &&
-                                             isPunishedScholar(entry) && (
-                                                <button
-                                                   type="button"
-                                                   data-testid="admin-pardon-button"
-                                                   onClick={() =>
-                                                      handleOpenPardon(entry)
-                                                   }
-                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
-                                                   title="Admin: Grant Pardon / Excuse Member"
-                                                >
-                                                   <HeartHandshake className="h-3 w-3 text-feedback-success" />
-                                                   <span>Pardon</span>
-                                                </button>
-                                             )}
-                                       </div>
+                                       <AdminRowActions
+                                          entry={entry}
+                                          canPardon={canPardon}
+                                          onOpenOverride={handleOpenOverride}
+                                          onOpenTargetOverride={
+                                             handleOpenTargetOverride
+                                          }
+                                          onOpenPardon={handleOpenPardon}
+                                          showTargetOverride={
+                                             viewMode !== "today"
+                                          }
+                                          size="sm"
+                                       />
                                     )}
                                  </div>
                               </div>
@@ -1711,6 +1746,11 @@ export function ChallengeLeaderboardTab({
                                        Total hours
                                     </TableHead>
                                  </>
+                              )}
+                              {isAdmin && (
+                                 <TableHead className="px-3 py-3 text-center w-[100px]">
+                                    Actions
+                                 </TableHead>
                               )}
                            </TableRow>
                         </TableHeader>
@@ -1828,52 +1868,14 @@ export function ChallengeLeaderboardTab({
                                        }`}
                                     >
                                        {viewMode === "today" ? (
-                                          <div className="inline-flex items-center gap-2 justify-end">
-                                             <div className="inline-flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5 text-text-tertiary" />
-                                                <span>
-                                                   {entry.todayLoggedClock}
-                                                </span>
-                                             </div>
-                                             {isAdmin && (
-                                                <div className="flex items-center gap-1.5 shrink-0">
-                                                   <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                         handleOpenOverride(
-                                                            entry
-                                                         )
-                                                      }
-                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
-                                                      title="Admin: Edit Participant Study Hours"
-                                                   >
-                                                      <Clock className="h-3.5 w-3.5 text-feedback-info" />
-                                                      <span>Edit hr</span>
-                                                   </button>
-                                                   {canPardon &&
-                                                      isPunishedScholar(
-                                                         entry
-                                                      ) && (
-                                                         <button
-                                                            type="button"
-                                                            data-testid="admin-pardon-button"
-                                                            onClick={() =>
-                                                               handleOpenPardon(
-                                                                  entry
-                                                               )
-                                                            }
-                                                            className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold hover:border-feedback-success/50 hover:text-feedback-success shrink-0"
-                                                            title="Admin: Grant Pardon / Excuse Member"
-                                                         >
-                                                            <HeartHandshake className="h-3.5 w-3.5 text-feedback-success" />
-                                                            <span>Pardon</span>
-                                                         </button>
-                                                      )}
-                                                </div>
-                                             )}
+                                          <div className="inline-flex items-center gap-1.5 justify-end whitespace-nowrap">
+                                             <Clock className="h-3.5 w-3.5 text-text-tertiary" />
+                                             <span>
+                                                {entry.todayLoggedClock}
+                                             </span>
                                           </div>
                                        ) : (
-                                          <span className="flex items-center gap-1.5">
+                                          <span className="flex items-center gap-1.5 whitespace-nowrap">
                                              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
                                              <span>
                                                 {entry.todayLoggedClock}
@@ -1929,66 +1931,37 @@ export function ChallengeLeaderboardTab({
 
                                     {/* Total Hours */}
                                     {viewMode !== "today" && (
-                                       <TableCell className="px-4 py-3 text-right font-sans font-sans-tabular text-sm font-bold text-white">
-                                          <div className="inline-flex items-center gap-2 justify-end">
-                                             <div className="inline-flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5 text-feedback-success" />
-                                                <span>
-                                                   {entry.totalLoggedClock}
-                                                </span>
-                                                <span className="text-xs text-text-tertiary font-normal">
-                                                   / {entry.targetClock}
-                                                </span>
-                                             </div>
-                                             {isAdmin && (
-                                                <div className="flex items-center gap-1.5 shrink-0">
-                                                   <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                         handleOpenOverride(
-                                                            entry
-                                                         )
-                                                      }
-                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                                                      title="Admin: Edit Participant Study Hours"
-                                                   >
-                                                      <Clock className="h-3.5 w-3.5 text-feedback-info" />
-                                                      <span>Edit hr</span>
-                                                   </button>
-                                                   <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                         handleOpenTargetOverride(
-                                                            entry
-                                                         )
-                                                      }
-                                                      className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold"
-                                                      title="Admin: Edit Weekly Target Hours"
-                                                   >
-                                                      <Target className="h-3.5 w-3.5 text-accent" />
-                                                      <span>Edit target</span>
-                                                   </button>
-                                                   {canPardon &&
-                                                      isPunishedScholar(
-                                                         entry
-                                                      ) && (
-                                                         <button
-                                                            type="button"
-                                                            data-testid="admin-pardon-button"
-                                                            onClick={() =>
-                                                               handleOpenPardon(
-                                                                  entry
-                                                               )
-                                                            }
-                                                            className="px-2.5 py-1 rounded-lg bg-surface-elevated hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1.5 text-xs font-semibold hover:border-feedback-success/50 hover:text-feedback-success"
-                                                            title="Admin: Grant Pardon / Excuse Member"
-                                                         >
-                                                            <HeartHandshake className="h-3.5 w-3.5 text-feedback-success" />
-                                                            <span>Pardon</span>
-                                                         </button>
-                                                      )}
-                                                </div>
-                                             )}
+                                       <TableCell className="px-4 py-3 text-right font-sans font-sans-tabular text-sm font-bold text-white whitespace-nowrap">
+                                          <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                             <Clock className="h-3.5 w-3.5 text-feedback-success shrink-0" />
+                                             <span>
+                                                {entry.totalLoggedClock}
+                                             </span>
+                                             <span className="text-xs text-text-tertiary font-normal shrink-0">
+                                                / {entry.targetClock}
+                                             </span>
+                                          </div>
+                                       </TableCell>
+                                    )}
+
+                                    {/* Admin Actions */}
+                                    {isAdmin && (
+                                       <TableCell className="px-3 py-3 text-center whitespace-nowrap w-[100px]">
+                                          <div className="flex items-center justify-center">
+                                             <AdminRowActions
+                                                entry={entry}
+                                                canPardon={canPardon}
+                                                onOpenOverride={
+                                                   handleOpenOverride
+                                                }
+                                                onOpenTargetOverride={
+                                                   handleOpenTargetOverride
+                                                }
+                                                onOpenPardon={handleOpenPardon}
+                                                showTargetOverride={
+                                                   viewMode !== "today"
+                                                }
+                                             />
                                           </div>
                                        </TableCell>
                                     )}

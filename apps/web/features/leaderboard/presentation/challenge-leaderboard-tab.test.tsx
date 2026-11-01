@@ -678,6 +678,124 @@ describe("ChallengeLeaderboardTab", () => {
       expect(lockedHtml).not.toContain('data-testid="edit-duo-team-');
    });
 
+   it("normalizes duo battle card header and scholar blocks to consistent 2-line structures regardless of name and goal lengths", () => {
+      const duoChallengeWithLongNamesAndGoals: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         format: "DUOS",
+         teams: [
+            {
+               id: "team-1",
+               name: "Justice for chunaid khan super long team name",
+               color: "#ef4444",
+               iconEmoji: "🔥",
+               mascotUrl: null,
+               sortOrder: 0,
+               companionCount: 2,
+               totalLoggedSeconds: 185_400,
+               totalLoggedClock: "51:30:00",
+               targetSeconds: 309_600,
+               targetClock: "86:00:00",
+               targetHours: 86,
+               completionPercentage: 59,
+               isLeader: true,
+            },
+            {
+               id: "team-2",
+               name: "can't think of a name",
+               color: "#f97316",
+               iconEmoji: "🎃",
+               mascotUrl: null,
+               sortOrder: 1,
+               companionCount: 2,
+               totalLoggedSeconds: 220_800,
+               totalLoggedClock: "61:20:00",
+               targetSeconds: 259_200,
+               targetClock: "72:00:00",
+               targetHours: 72,
+               completionPercentage: 85,
+               isLeader: false,
+            },
+         ],
+         standings: [
+            {
+               rank: 1,
+               participantId: "part-1",
+               userId: "user-1",
+               displayName: "Afnan",
+               username: "afnan6969",
+               image: null,
+               teamId: "team-1",
+               teamName: "Justice for chunaid khan super long team name",
+               teamColor: "#ef4444",
+               teamIcon: "🔥",
+               totalLoggedSeconds: 121_839,
+               totalLoggedClock: "33:50:39",
+               todayLoggedSeconds: 4_963,
+               todayLoggedClock: "01:22:43",
+               targetSeconds: 144_000,
+               targetClock: "40:00:00",
+               completionPercentage: 84,
+               weeklyTasksCompletedCount: 2,
+               weeklyTasksTotalCount: 2,
+               paceStatus: "catch-up",
+               paceLabel: "Catch-Up",
+               deficitSeconds: 22_161,
+            },
+            {
+               rank: 2,
+               participantId: "part-2",
+               userId: "user-2",
+               displayName:
+                  "* . ୨ 'miyu ♡. ' super long special styled display name",
+               username: "chaoticreampan_with_long_handle",
+               image: null,
+               teamId: "team-1",
+               teamName: "Justice for chunaid khan super long team name",
+               teamColor: "#ef4444",
+               teamIcon: "🔥",
+               totalLoggedSeconds: 63_561,
+               totalLoggedClock: "17:39:21",
+               todayLoggedSeconds: 0,
+               todayLoggedClock: "00:00:00",
+               targetSeconds: 165_600,
+               targetClock: "46:00:00",
+               completionPercentage: 38,
+               weeklyTasksCompletedCount: 1,
+               weeklyTasksTotalCount: 3,
+               paceStatus: "catch-up",
+               paceLabel: "Catch-Up",
+               deficitSeconds: 102_039,
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: duoChallengeWithLongNamesAndGoals,
+            isAdmin: true,
+         })
+      );
+
+      // 1. Team cards render with consistent styling
+      expect(html).toContain("Justice for chunaid khan super long team name");
+      expect(html).toContain("can&#x27;t think of a name");
+      expect(html).toContain("Weekly Target: 86h • Completed: 59%");
+      expect(html).toContain("Weekly Target: 72h • Completed: 85%");
+
+      // 2. Scholar blocks render with min-h-[68px] normalized block heights
+      expect(html).toContain("min-h-[68px]");
+      expect(html).toContain("33:50:39");
+      expect(html).toContain("/40:00:00");
+      expect(html).toContain("+01:22:43");
+      expect(html).toContain("17:39:21");
+      expect(html).toContain("/46:00:00");
+      expect(html).toContain("+00:00:00");
+
+      // 3. Admin controls are cleanly embedded
+      expect(html).toContain("Edit hr");
+      expect(html).toContain("Edit target");
+   });
+
    it("canonicalizes DUOS participant links against the team default", () => {
       const duoChallenge: ChallengeScoreboardViewModel = {
          ...mockChallenge,
@@ -1187,6 +1305,60 @@ describe("ChallengeLeaderboardTab", () => {
 
          // router.refresh should have been triggered
          expect(mockRefresh).toHaveBeenCalled();
+      });
+   });
+
+   describe("Admin compact icon actions and aligned table layout", () => {
+      it("renders dedicated Actions column in desktop table when isAdmin is true", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).toContain("Actions");
+         expect(html).toContain("Edit hr");
+         expect(html).toContain("Edit target");
+      });
+
+      it("does not render Actions column when isAdmin is false", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain("Actions");
+         expect(html).not.toContain("Edit hr");
+         expect(html).not.toContain("Edit target");
+      });
+
+      it("preserves identical total hours cell structure between regular and admin views", () => {
+         const userHtml = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         const adminHtml = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         // Both user and admin views render total hours on a single line with whitespace-nowrap
+         expect(userHtml).toContain("07:00:00");
+         expect(userHtml).toContain("/ 35:00:00");
+         expect(adminHtml).toContain("07:00:00");
+         expect(adminHtml).toContain("/ 35:00:00");
       });
    });
 });
