@@ -1,12 +1,13 @@
 import {
    MAX_DAILY_LOG_SECONDS,
    DurationRangeError,
+   formatSecondsToClock,
 } from "@/features/study-logs/domain/duration";
 
 export type ValidationResult =
    { ok: true } | { ok: false; code: string; message: string };
 
-/** Validates a daily study duration against integer and 24-hour constraints. */
+/** Validates a daily study duration against integer and 20-hour log-limit constraints. */
 export function validateDailyLogDurationSeconds(
    durationSeconds: number
 ): ValidationResult {
@@ -30,7 +31,7 @@ export function validateDailyLogDurationSeconds(
       return {
          ok: false,
          code: "DAILY_LIMIT_EXCEEDED",
-         message: "A single day cannot exceed 24:00:00 of study time.",
+         message: `A single day cannot exceed ${formatSecondsToClock(MAX_DAILY_LOG_SECONDS)} of study time.`,
       };
    }
 

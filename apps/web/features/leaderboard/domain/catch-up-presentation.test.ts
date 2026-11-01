@@ -92,12 +92,12 @@ describe("sumLoggedSeconds", () => {
       ).toBe(5_400);
    });
 
-   it("caps individual daily logs at 14 hours (50,400s) but sums across days", () => {
+   it("caps individual daily logs at 12 hours (43,200s) but sums across days", () => {
       expect(
          sumLoggedSeconds([
-            { durationSeconds: 16 * 3_600 }, // 16h logged, capped to 14h (50,400)
+            { durationSeconds: 16 * 3_600 }, // 16h logged, capped to 12h (43,200)
             { durationSeconds: 10 * 3_600 }, // 10h logged, uncapped (36,000)
          ])
-      ).toBe(24 * 3_600); // 14h + 10h = 24h
+      ).toBe(22 * 3_600); // 12h + 10h = 22h
    });
 });

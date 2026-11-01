@@ -22,6 +22,7 @@ HoldMeToIt Virtual Economy Phase 1 establishes an auditable, transaction-safe, d
    - Configured base rate: **100 coins per 3,600 eligible study seconds** (1 coin per 36 seconds).
    - Fractional progress is preserved across short sessions.
    - Cumulative rewards across multiple short sessions match a continuous session of equivalent duration.
+   - Raw logs may record up to **20 hours (72,000s)**, but daily eligible time is capped at **12 hours (43,200s)**, so the maximum study reward is **1,200 coins/day**.
 3. **Server-Authoritative Exactly-Once Processing:**
    - Client never dictates balances or reward amounts.
    - Each study session is rewarded exactly once, keyed by a persistent idempotency key (`study-log:<id>`).
