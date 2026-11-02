@@ -23,6 +23,7 @@ export interface ScoreboardMatchHeader {
    leadMarginSeconds: number;
    leadMarginClock: string;
    leadMarginHuman: string;
+   leadMarginDelta?: string;
    leaderTeamId: string | null;
    leaderSide: "a" | "b" | "tie";
    ratioPercentageA: number;

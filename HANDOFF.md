@@ -2183,3 +2183,99 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 - **Jira Status:** `KAN-9` transitioned to `In Review` (`id: 31`).
 - **GitHub Issue Status:** Assigned to `KrishJdev`, implementation complete for [#91](https://github.com/lrfsdevs/holdmetoit/issues/91), PR [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) updated.
 - **NEXT STEP:** Peer review and merge PR #204 into `dev`, then proceed to next roadmap milestone.
+
+### Session 182 — 2026-11-01 (feat(leaderboard): anchor Head-to-Head banner cards and show dynamic leader badge — GH-#206 / Jira KAN-67 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#206](https://github.com/lrfsdevs/holdmetoit/issues/206) / Jira Ticket `KAN-67` ("Anchor Head-to-Head team matchup cards to fixed slots by creation order instead of dynamically flipping positions when hours lead changes. Display dynamic Leading crown and margin delta.").
+- **Jira Status:** `KAN-67` moved from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team aggregation math grouped over `Team` entities remains strictly relational and intact.
+   - **Law L6 (Three-Condition Accountability Invariant):** Lead margin calculations preserve ties as non-punishing (`leaderSide: "tie"` / `Tied`).
+   - **Law L7 (Pure Domain Isolation):** Added pure `formatLeadMarginDelta` function in `features/leaderboard/domain/leaderboard.ts` with zero external/framework dependencies.
+   - **Law L8 (Second-Level Precision):** Second-level precision preserved in margin calculations (`formatSecondsToClock`, `formatSecondsToHuman`, `formatLeadMarginDelta`).
+   - **Law L9 (Zero-State & Error Resilience):** Fixed slot anchoring eliminates layout shifts. Dynamic Leading crown badge and lead margin delta wrap cleanly on mobile viewports (360px+).
+- **Architectural Enhancements Implemented:**
+   1. **Pure Domain Layer (`features/leaderboard/domain`):**
+      - Added `formatLeadMarginDelta(marginSeconds: number): string` formatting lead margin seconds into `+<human> ahead` (e.g. `+7h 45m ahead`, `+1h 1m 1s ahead`) and `Tied` when `marginSeconds === 0`.
+      - Added `leadMarginDelta?: string;` to `ScoreboardMatchHeader` contract in `leaderboard.types.ts`.
+      - Added 7 Vitest unit tests in `leaderboard.test.ts`.
+   2. **Data Layer (`features/leaderboard/data`):**
+      - In `buildScoreboardViewModel`, filtered `!isDeleted` and sorted teams ascending by `sortOrder` to anchor `teamA` (Slot 1) and `teamB` (Slot 2) permanently to creation order.
+      - Attached `leadMarginDelta` to `matchHeader`.
+      - Added Vitest unit tests in `leaderboard-data.test.ts` verifying cards stay anchored in fixed slots and `leaderSide: "b"` is correctly set when Team B leads without flipping card positions.
+   3. **Presentation Layer (`features/leaderboard/presentation`):**
+      - In `ChallengeLeaderboardTab`, derived `isLeadingA`, `isLeadingB`, and `leadMarginDeltaText`.
+      - Rendered high-contrast `👑 Leading` crown badge (`bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text`) in the leading team's header.
+      - Rendered lead margin delta (`+Xh Ym ahead`) next to total logged hours on the leading team card.
+      - Preserved 360px mobile viewport responsiveness with `flex-wrap` and `truncate`.
+      - Added 3 Vitest presentation tests in `challenge-leaderboard-tab.test.tsx` verifying badge and delta rendering on Team A, Team B, and tied states.
+   4. **Documentation (`docs/leaderboard/README.md`):** Added §7.1 documenting Head-to-Head Banner Card Anchoring and Dynamic Leader Badge.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 232/232 test files passing (2,245/2,245 tests green across `@holdmetoit/web`).
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design tokens and anti-slop rules).
+- **Jira Status:** `KAN-67` transitioned to `In Progress` (ID 21).
+- **NEXT STEP:** Submit/update Pull Request and transition `KAN-67` to `In Review`.
+
+### Session 183 — 2026-11-01 (Jira "In Review" Lifecycle Auditing & Transitions to Done on `krish`)
+
+- **Context & Objectives:** Audited all Jira Cloud issues in the `In Review` state against GitHub issue states and `dev` branch merge history per `AGENTS.md` §4.4. Closed and transitioned all verified items to `Done`.
+- **Issues Audited & Closed:**
+   1. **`KAN-66`** (`feat(participant): sick mode status badge with 3-day reminder and leaderboard visibility (#205)`):
+      - GitHub Issue: [#205](https://github.com/lrfsdevs/holdmetoit/issues/205) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   2. **`KAN-65`** (`[GH-#196] fix(tasks): calendar navigation & rollover visibility during challenges and daily reminder snooze`):
+      - GitHub Issue: [#196](https://github.com/lrfsdevs/holdmetoit/issues/196) (Closed).
+      - PR: [#201](https://github.com/lrfsdevs/holdmetoit/pull/201) merged into `dev`, release PR [#202](https://github.com/lrfsdevs/holdmetoit/pull/202) merged into `main`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   3. **`KAN-49`** (`feat(profile): global career stats, off-season logs, and reusable challenge snapshot (#164)`):
+      - GitHub Issue: [#164](https://github.com/lrfsdevs/holdmetoit/issues/164) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   4. **`KAN-48`** (`feat(admin): global user directory and participant roster for hosts/admins (#163)`):
+      - GitHub Issue: [#163](https://github.com/lrfsdevs/holdmetoit/issues/163) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+   5. **`KAN-9`** (`[GH-#91] [UI/UX] Public spectator landing view and dashboard when unauthenticated`):
+      - GitHub Issue: [#91](https://github.com/lrfsdevs/holdmetoit/issues/91) (Closed).
+      - PR: [#204](https://github.com/lrfsdevs/holdmetoit/pull/204) merged into `dev` at `1d5c8d5`.
+      - Jira Status: Moved from `In Review` $\rightarrow$ `Done` (transition ID `41`, status ID `10007`). Resolution comment attached.
+- **Verification:**
+   - Remaining issues in Jira `In Review` state: **0**.
+   - Project KAN status breakdown: `To Do`: 21, `In Progress`: 1 (`KAN-67`), `In Review`: 0, `Done`: 39.
+- **NEXT STEP:** Submit PR for `KAN-67` (`feat(leaderboard): anchor Head-to-Head banner cards and show dynamic leader badge`) and transition `KAN-67` to `In Review`.
+
+### Session 184 — 2026-11-01 (feat(leaderboard): render unassigned scholars section in team view mode — GH-#209 / Jira KAN-70 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) / Jira Ticket `KAN-70` ("When participants enroll in a challenge before being assigned to a house, their teamId is null ('no-assigned'). In 'View by Team' mode, render an 'Unassigned Scholars (⏳)' card alongside house cards, provide a 1-click shortcut link to the Manage tab for hosts/admins, and add 'UNASSIGNED' to the leaderboard team filter dropdown").
+- **Jira Status:** Transitioned `KAN-70` from `To Do` $\rightarrow$ `In Progress` $\rightarrow$ `In Review` (transition ID `31`) and `KAN-67` from `In Progress` $\rightarrow$ `In Review` (transition ID `31`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team aggregation math remains intact. Unassigned participants are accounted for and visible across team and individual standings.
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Unassigned participants are visible to all spectators with their avatars, Discord handles, and live study logs.
+   - **Law L8 (Second-Level Precision):** Second-level precision preserved across total and today logged duration timestamps.
+   - **Law L9 (Zero-State & Error Resilience):** Empty state triggers gracefully when filters exclude all scholars. Responsive grid adapts smoothly across 360px+ mobile and desktop viewports (`grid-cols-1 lg:grid-cols-2`).
+- **Architectural Enhancements Implemented:**
+   1. **Presentation Layer (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+      - Added pure `isUnassignedScholar` helper identifying participants awaiting house allocation (`!entry.teamId || entry.teamId === "no-assigned" || entry.teamId === "UNASSIGNED" || entry.teamName === "Unassigned"`). Excludes `"Solo Scholar"`.
+      - Updated `filteredStandings` team filter logic to properly support `selectedTeamId === "UNASSIGNED"`.
+      - Added dynamic `⏳ Unassigned ({count})` (`value="UNASSIGNED"`) item to the leaderboard team filter dropdown when unassigned scholars exist in the challenge.
+      - Updated active filters pill to display `Team: Unassigned` with 1-click clear support.
+      - In `viewMode === "team"` mode, rendered `unassigned-scholars-card` alongside house cards whenever unassigned scholars exist (`selectedTeamId === "ALL" || selectedTeamId === "UNASSIGNED"`).
+      - Rendered status pill (`{count} unassigned`), subtitle (`Awaiting house assignment`), and intra-unassigned / overall challenge rank badges.
+      - Integrated 1-click shortcut link for hosts and administrators (`isAdmin: true`) targeting `/challenge/[id]?tab=manage&team=UNASSIGNED` to instantly allocate unassigned scholars in the Manage tab roster editor.
+      - Preserved admin inline hours override (`Edit hr`) and target hours override (`Edit target`) controls on unassigned scholar rows.
+   2. **Documentation (`docs/leaderboard/README.md`):** Added §7.2 documenting Unassigned Scholars Section in Team View Mode, dropdown filtering, and host assign shortcut link.
+   3. **Testing & Verification (`challenge-leaderboard-tab.test.tsx`):**
+      - Added 5 new unit tests under `Unassigned Scholars in Team View Mode (GH-#209 / KAN-70)`:
+         1. Renders unassigned scholars card alongside house cards in team view mode with rank, avatar, name, handle, clock, and `⏳ Unassigned` pill.
+         2. Renders 1-click shortcut link to Manage tab for hosts/admins (`/challenge/[id]?tab=manage&team=UNASSIGNED`) alongside `Edit hr` and `Edit target` buttons.
+         3. Verifies admin shortcut button and edit buttons are hidden for regular participants.
+         4. Verifies `UNASSIGNED` option renders in team filter dropdown when unassigned scholars exist.
+         5. Verifies unassigned card and dropdown option do not render when all participants belong to houses.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 27/27 tests green in `challenge-leaderboard-tab.test.tsx`, 109/109 tests green across `features/leaderboard`.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and anti-slop rules).
+- **GitHub PR & Issues Status:** Submitted PR [#214](https://github.com/lrfsdevs/holdmetoit/pull/214) (`krish` $\rightarrow$ `dev`) closing GitHub Issues [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) and [#206](https://github.com/lrfsdevs/holdmetoit/issues/206).
+- **NEXT STEP:** Peer review and merge PR #214 into `dev`, then proceed to release integration.

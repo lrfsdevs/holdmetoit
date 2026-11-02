@@ -81,6 +81,16 @@ function getYptStatusBadge(status?: string | null): {
         };
 }
 
+function isUnassignedScholar(entry: ScoreboardStandingEntry): boolean {
+   if (entry.teamName === "Solo Scholar") return false;
+   return (
+      !entry.teamId ||
+      entry.teamId === "no-assigned" ||
+      entry.teamId === "UNASSIGNED" ||
+      entry.teamName === "Unassigned"
+   );
+}
+
 function YptStatusPill({ status }: { status?: string | null }) {
    const badge = getYptStatusBadge(status);
    if (!badge) return null;
@@ -217,12 +227,23 @@ export function ChallengeLeaderboardTab({
    };
 
    const { matchHeader, teams, standings, currentUser } = challenge;
+   const totalUnassignedCount = standings.filter(isUnassignedScholar).length;
 
    const [isEditOpen, setIsEditOpen] = useState(false);
    const showHeadToHead = challenge.format !== "DUOS";
 
    const teamA = matchHeader.teamA ?? teams[0];
    const teamB = matchHeader.teamB ?? teams[1];
+
+   const isLeadingA =
+      matchHeader.leaderSide === "a" && matchHeader.leadMarginSeconds > 0;
+   const isLeadingB =
+      matchHeader.leaderSide === "b" && matchHeader.leadMarginSeconds > 0;
+   const leadMarginDeltaText =
+      matchHeader.leadMarginDelta ??
+      (matchHeader.leadMarginSeconds > 0
+         ? `+${matchHeader.leadMarginHuman} ahead`
+         : "Tied");
 
    const paletteA = getTeamColorPalette(teamA?.color, 0);
    const paletteB = getTeamColorPalette(teamB?.color, 1);
@@ -240,11 +261,17 @@ export function ChallengeLeaderboardTab({
 
       // 2. Team Filter
       if (selectedTeamId !== "ALL") {
-         if (
-            entry.teamId !== selectedTeamId &&
-            entry.teamName !== selectedTeamId
-         ) {
-            return false;
+         if (selectedTeamId === "UNASSIGNED") {
+            if (!isUnassignedScholar(entry)) {
+               return false;
+            }
+         } else {
+            if (
+               entry.teamId !== selectedTeamId &&
+               entry.teamName !== selectedTeamId
+            ) {
+               return false;
+            }
          }
       }
 
@@ -328,14 +355,26 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
-                              {teamA.iconEmoji && (
-                                 <span className="shrink-0">
-                                    {teamA.iconEmoji}
+                           <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+                                 {teamA.iconEmoji && (
+                                    <span className="shrink-0">
+                                       {teamA.iconEmoji}
+                                    </span>
+                                 )}
+                                 <span className="truncate">{teamA.name}</span>
+                              </h3>
+                              {isLeadingA && (
+                                 <span
+                                    data-testid="team-a-leading-badge"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-bold border shrink-0 bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text shadow-sm"
+                                    title="Currently Leading"
+                                 >
+                                    <Crown className="h-3 w-3 fill-current text-feedback-warning" />
+                                    <span>Leading</span>
                                  </span>
                               )}
-                              <span className="truncate">{teamA.name}</span>
-                           </h3>
+                           </div>
                            <p className="text-xs text-text-secondary mt-0.5">
                               {teamA.companionCount} Participants
                            </p>
@@ -347,9 +386,19 @@ export function ChallengeLeaderboardTab({
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
-                              {teamA.totalLoggedClock}
-                           </span>
+                           <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
+                                 {teamA.totalLoggedClock}
+                              </span>
+                              {isLeadingA && (
+                                 <span
+                                    data-testid="team-a-lead-margin"
+                                    className="text-xs sm:text-sm font-bold text-feedback-warning-text flex items-center gap-0.5 font-sans font-sans-tabular"
+                                 >
+                                    {leadMarginDeltaText}
+                                 </span>
+                              )}
+                           </div>
                            <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursA} hrs / Person
                            </span>
@@ -388,14 +437,26 @@ export function ChallengeLeaderboardTab({
                   >
                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                           <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
-                              {teamB.iconEmoji && (
-                                 <span className="shrink-0">
-                                    {teamB.iconEmoji}
+                           <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 truncate">
+                                 {teamB.iconEmoji && (
+                                    <span className="shrink-0">
+                                       {teamB.iconEmoji}
+                                    </span>
+                                 )}
+                                 <span className="truncate">{teamB.name}</span>
+                              </h3>
+                              {isLeadingB && (
+                                 <span
+                                    data-testid="team-b-leading-badge"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label font-bold border shrink-0 bg-feedback-warning-bg border-feedback-warning text-feedback-warning-text shadow-sm"
+                                    title="Currently Leading"
+                                 >
+                                    <Crown className="h-3 w-3 fill-current text-feedback-warning" />
+                                    <span>Leading</span>
                                  </span>
                               )}
-                              <span className="truncate">{teamB.name}</span>
-                           </h3>
+                           </div>
                            <p className="text-xs text-text-secondary mt-0.5">
                               {teamB.companionCount} Participants
                            </p>
@@ -407,9 +468,19 @@ export function ChallengeLeaderboardTab({
 
                      <div>
                         <div className="flex items-baseline justify-between gap-2">
-                           <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
-                              {teamB.totalLoggedClock}
-                           </span>
+                           <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-xl sm:text-2xl font-extrabold text-white font-sans font-sans-tabular">
+                                 {teamB.totalLoggedClock}
+                              </span>
+                              {isLeadingB && (
+                                 <span
+                                    data-testid="team-b-lead-margin"
+                                    className="text-xs sm:text-sm font-bold text-feedback-warning-text flex items-center gap-0.5 font-sans font-sans-tabular"
+                                 >
+                                    {leadMarginDeltaText}
+                                 </span>
+                              )}
+                           </div>
                            <span className="text-meta sm:text-xs text-text-secondary shrink-0 text-right whitespace-nowrap pl-2">
                               ~{avgHoursB} hrs / Person
                            </span>
@@ -698,6 +769,11 @@ export function ChallengeLeaderboardTab({
                                  {t.name} ({t.companionCount})
                               </SelectItem>
                            ))}
+                           {totalUnassignedCount > 0 && (
+                              <SelectItem value="UNASSIGNED">
+                                 ⏳ Unassigned ({totalUnassignedCount})
+                              </SelectItem>
+                           )}
                         </SelectContent>
                      </Select>
                   </div>
@@ -756,8 +832,10 @@ export function ChallengeLeaderboardTab({
                         {selectedTeamId !== "ALL" && (
                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-nested border border-border-strong text-white text-meta">
                               Team:{" "}
-                              {teams.find((t) => t.id === selectedTeamId)
-                                 ?.name || selectedTeamId}
+                              {selectedTeamId === "UNASSIGNED"
+                                 ? "Unassigned"
+                                 : teams.find((t) => t.id === selectedTeamId)
+                                      ?.name || selectedTeamId}
                               <button
                                  type="button"
                                  onClick={() => setSelectedTeamId("ALL")}
@@ -818,24 +896,38 @@ export function ChallengeLeaderboardTab({
             ) : viewMode === "team" ? (
                /* View by Team Section (Side-by-Side on Desktop/Tablet Landscape) */
                (() => {
+                  const unassignedScholars =
+                     filteredStandings.filter(isUnassignedScholar);
+                  const shouldRenderUnassigned =
+                     unassignedScholars.length > 0 &&
+                     (selectedTeamId === "ALL" ||
+                        selectedTeamId === "UNASSIGNED");
+
                   const teamsToRender =
                      selectedTeamId === "ALL"
                         ? teams
-                        : teams.filter(
-                             (t) =>
-                                t.id === selectedTeamId ||
-                                t.name === selectedTeamId
-                          );
+                        : selectedTeamId === "UNASSIGNED"
+                          ? []
+                          : teams.filter(
+                               (t) =>
+                                  t.id === selectedTeamId ||
+                                  t.name === selectedTeamId
+                            );
+
+                  const totalCardsCount =
+                     teamsToRender.length + (shouldRenderUnassigned ? 1 : 0);
 
                   return (
                      <div
                         className={`grid grid-cols-1 ${
-                           teamsToRender.length > 1 ? "lg:grid-cols-2" : ""
+                           totalCardsCount > 1 ? "lg:grid-cols-2" : ""
                         } gap-6 items-start`}
                      >
                         {teamsToRender.map((t) => {
                            const teamScholars = filteredStandings.filter(
-                              (e) => e.teamId === t.id || e.teamName === t.name
+                              (e) =>
+                                 !isUnassignedScholar(e) &&
+                                 (e.teamId === t.id || e.teamName === t.name)
                            );
                            const isTeamA = teamA && t.name === teamA.name;
                            const badgeTint = isTeamA
@@ -1065,6 +1157,201 @@ export function ChallengeLeaderboardTab({
                               </div>
                            );
                         })}
+
+                        {/* Unassigned Scholars Card */}
+                        {shouldRenderUnassigned && (
+                           <div
+                              key="unassigned-scholars"
+                              data-testid="unassigned-scholars-card"
+                              className="rounded-2xl border border-border-default bg-surface-secondary p-4 sm:p-5 space-y-4 shadow-sm"
+                           >
+                              {/* Unassigned Header Summary Card */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-default">
+                                 <div className="flex items-center gap-3 min-w-0">
+                                    <span className="text-2xl shrink-0">
+                                       ⏳
+                                    </span>
+                                    <div className="min-w-0">
+                                       <div className="flex items-center gap-1.5 flex-wrap">
+                                          <h4 className="text-base font-bold text-white truncate">
+                                             Unassigned Scholars
+                                          </h4>
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-label font-semibold border shrink-0 bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text">
+                                             {unassignedScholars.length}{" "}
+                                             unassigned
+                                          </span>
+                                       </div>
+                                       <p className="text-xs text-text-tertiary mt-0.5 truncate">
+                                          Awaiting house assignment
+                                       </p>
+                                    </div>
+                                 </div>
+
+                                 {/* Admin shortcut link / summary count */}
+                                 {isAdmin ? (
+                                    <Link
+                                       href={`/challenge/${challenge.id}?tab=manage&team=UNASSIGNED`}
+                                       data-testid="assign-unassigned-scholars-btn"
+                                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated hover:bg-surface-nested text-xs font-semibold text-accent hover:text-white border border-border-strong transition-colors shrink-0"
+                                       title="Assign unassigned scholars in Manage tab"
+                                    >
+                                       <Users className="h-3.5 w-3.5" />
+                                       <span>Assign in Roster</span>
+                                    </Link>
+                                 ) : (
+                                    <div className="flex items-center gap-2 text-xs font-sans shrink-0 text-text-tertiary">
+                                       <span>
+                                          {unassignedScholars.length}{" "}
+                                          {unassignedScholars.length === 1
+                                             ? "scholar"
+                                             : "scholars"}
+                                       </span>
+                                    </div>
+                                 )}
+                              </div>
+
+                              {/* Unassigned Scholars List */}
+                              <div className="space-y-2.5">
+                                 {unassignedScholars.map((entry, idx) => (
+                                    <div
+                                       key={entry.participantId}
+                                       className="rounded-xl border border-border-default bg-surface-primary p-3 flex items-center justify-between gap-2.5 hover:border-border-strong transition-colors"
+                                    >
+                                       {/* Intra-team Rank & Overall Rank */}
+                                       <div className="flex items-center gap-2.5 min-w-0">
+                                          <div className="flex flex-col items-center justify-center w-7 shrink-0 text-center">
+                                             <span className="text-xs font-bold text-white font-sans">
+                                                #{idx + 1}
+                                             </span>
+                                             <span className="text-caption text-text-tertiary">
+                                                (#{entry.rank})
+                                             </span>
+                                          </div>
+
+                                          {/* Avatar */}
+                                          <Link
+                                             href={getParticipantProfileUrl(
+                                                entry.userId ||
+                                                   entry.participantId
+                                             )}
+                                             className="h-8 w-8 rounded-full bg-surface-nested border border-border-strong overflow-hidden flex items-center justify-center shrink-0 text-xs hover:border-feedback-success transition-colors"
+                                          >
+                                             <UserAvatar
+                                                src={entry.image}
+                                                name={entry.displayName}
+                                                userId={entry.userId}
+                                                size="sm"
+                                                className="h-full w-full border-0"
+                                             />
+                                          </Link>
+
+                                          {/* Name, Status, Unassigned Status Pill */}
+                                          <div className="min-w-0">
+                                             <div className="flex items-center gap-1.5 flex-wrap">
+                                                <Link
+                                                   href={getParticipantProfileUrl(
+                                                      entry.userId ||
+                                                         entry.participantId
+                                                   )}
+                                                   className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] sm:max-w-[150px] lg:max-w-[130px] xl:max-w-[180px] block"
+                                                >
+                                                   {entry.displayName}
+                                                </Link>
+                                                <span
+                                                   data-testid={`unassigned-pill-${entry.participantId}`}
+                                                   className="inline-flex items-center px-1.5 py-0.5 rounded-full text-caption font-semibold bg-surface-tertiary border border-border-strong text-text-tertiary shrink-0"
+                                                >
+                                                   ⏳ Unassigned
+                                                </span>
+                                                {isGlobalLeaderboardEnabled &&
+                                                   typeof entry.trophies ===
+                                                      "number" && (
+                                                      <TrophyRoleBadge
+                                                         trophies={
+                                                            entry.trophies
+                                                         }
+                                                         size="sm"
+                                                      />
+                                                   )}
+                                                <YptStatusPill
+                                                   status={entry.status}
+                                                />
+                                                <SickStatusBadge
+                                                   isSick={entry.isSick}
+                                                   activatedAt={
+                                                      entry.sickModeActivatedAt
+                                                   }
+                                                   note={entry.sickModeNote}
+                                                   variant="compact"
+                                                />
+                                                {entry.paceLabel && (
+                                                   <span
+                                                      className={`px-1.5 py-0.2 rounded text-caption font-semibold shrink-0 ${
+                                                         entry.paceStatus ===
+                                                            "on-track" ||
+                                                         entry.paceStatus ===
+                                                            "serene"
+                                                            ? "bg-feedback-success-bg text-feedback-success-text"
+                                                            : "bg-feedback-error-bg text-feedback-error-text"
+                                                      }`}
+                                                   >
+                                                      {entry.paceLabel}
+                                                   </span>
+                                                )}
+                                             </div>
+                                             <p className="text-label text-text-tertiary truncate">
+                                                @{entry.username || "scholar"}
+                                             </p>
+                                          </div>
+                                       </div>
+
+                                       {/* Clock & Admin edit */}
+                                       <div className="shrink-0 text-right font-sans font-sans-tabular flex items-center gap-2">
+                                          <div>
+                                             <p className="text-xs font-bold text-white">
+                                                {entry.totalLoggedClock}
+                                                <span className="text-label font-normal text-text-tertiary">
+                                                   /{entry.targetClock}
+                                                </span>
+                                             </p>
+                                             <p className="text-meta font-semibold text-feedback-success">
+                                                +{entry.todayLoggedClock}
+                                             </p>
+                                          </div>
+                                          {isAdmin && (
+                                             <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                   type="button"
+                                                   onClick={() =>
+                                                      handleOpenOverride(entry)
+                                                   }
+                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
+                                                   title="Admin: Edit Study Hours"
+                                                >
+                                                   <Clock className="h-3 w-3 text-feedback-info" />
+                                                   <span>Edit hr</span>
+                                                </button>
+                                                <button
+                                                   type="button"
+                                                   onClick={() =>
+                                                      handleOpenTargetOverride(
+                                                         entry
+                                                      )
+                                                   }
+                                                   className="px-2 py-1 rounded-lg bg-surface-nested hover:bg-surface-nested text-text-secondary hover:text-white border border-border-strong transition-colors flex items-center gap-1 text-label font-semibold"
+                                                   title="Admin: Edit Weekly Target Hours"
+                                                >
+                                                   <Target className="h-3 w-3 text-accent" />
+                                                   <span>Edit target</span>
+                                                </button>
+                                             </div>
+                                          )}
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           </div>
+                        )}
                      </div>
                   );
                })()

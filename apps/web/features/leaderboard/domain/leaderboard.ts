@@ -1,4 +1,7 @@
-import { DurationRangeError } from "@/features/study-logs/domain/duration";
+import {
+   DurationRangeError,
+   formatSecondsToHuman,
+} from "@/features/study-logs/domain/duration";
 
 export interface TeamRef {
    id: string;
@@ -94,6 +97,19 @@ export function calculateLeadMargin(
       leader: signedMarginSeconds > 0 ? "a" : "b",
       signedMarginSeconds,
    };
+}
+
+/**
+ * Formats lead margin seconds into a human-readable lead delta string (Law L7, Law L8).
+ * Positive seconds: `+<human> ahead` (e.g. `+7h 45m ahead`, `+1h 1m 1s ahead`).
+ * Zero seconds: `Tied`.
+ */
+export function formatLeadMarginDelta(marginSeconds: number): string {
+   assertNonNegativeInteger("marginSeconds", marginSeconds);
+   if (marginSeconds === 0) {
+      return "Tied";
+   }
+   return `+${formatSecondsToHuman(marginSeconds)} ahead`;
 }
 
 export interface SharePercentages {
