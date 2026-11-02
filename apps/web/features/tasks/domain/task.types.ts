@@ -51,6 +51,7 @@ export interface UserCategorizedTasks {
    categories: CategoryItem[];
    dailyCategories: CategoryGroup[];
    weeklyCategories: CategoryGroup[];
+   completedChallengeIds?: string[];
    totalDailyTasks: number;
    completedDailyTasks: number;
    totalWeeklyTasks: number;

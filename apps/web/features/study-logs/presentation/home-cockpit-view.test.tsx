@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomeCockpitView } from "./home-cockpit-view";
 import type { CockpitViewModel } from "@/features/study-logs/data/cockpit-data";
+import type { UserCategorizedTasks } from "@/features/tasks/domain/task.types";
 
 vi.mock("next/link", () => ({
    default: ({
@@ -429,5 +430,49 @@ describe("HomeCockpitView", () => {
       expect(html).not.toContain("Past day locked (new tasks blocked)");
       expect(html).not.toContain("This challenge day has passed.");
       expect(html).toContain('aria-label="Calendar Week Day Tabs"');
+   });
+
+   it("passes completedChallengeIds through to the weekly task board", () => {
+      const userTasks: UserCategorizedTasks = {
+         categories: [],
+         dailyCategories: [],
+         weeklyCategories: [
+            {
+               id: "cat-weekly",
+               name: "Weekly",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "task-old",
+                     userId: "user-1",
+                     categoryId: "cat-weekly",
+                     challengeId: "chal-old",
+                     title: "Old Weekly Goal",
+                     taskType: "WEEKLY",
+                     isComplete: false,
+                     status: "TODO",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+         completedChallengeIds: ["chal-old"],
+         totalDailyTasks: 0,
+         completedDailyTasks: 0,
+         totalWeeklyTasks: 1,
+         completedWeeklyTasks: 0,
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: { id: "user-1", displayName: "Krish" },
+            userTasks,
+         })
+      );
+
+      expect(html).not.toContain("Old Weekly Goal");
    });
 });
