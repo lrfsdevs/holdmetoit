@@ -119,7 +119,7 @@ apps/web/
    - In weekly mode, pagination chevrons navigate week by week, and the popover trigger displays the formatted calendar week range (e.g., `Oct 26 – Nov 1`).
    - Navigating away from the active calendar week reveals a dedicated "This Week" quick snap button (analogous to Daily's "Today" button).
    - The date picker popover highlights the entire active week as a continuous pill and provides a "Jump to This Week" action.
-   - Tasks are filtered dynamically to the selected week (`isTaskInWeeklyWeek`) with live week-scoped completion metrics.
+   - Tasks are filtered dynamically to the selected week (`isTaskInWeeklyWeek`) with live week-scoped completion metrics. Tasks stay scoped to the week when they were created (`createdAt`) or their explicit `dueDate`, preventing tasks from sticking across week boundaries when a new week begins.
 
 ---
 

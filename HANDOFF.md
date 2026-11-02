@@ -2619,3 +2619,30 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `KAN-73`: Status is now `[In Review]`
       - `KAN-74`: Status is now `[In Review]`
 - **NEXT STEP:** Peer review and merge PR #218 into `dev`, then proceed to release integration into `main`.
+
+### Session 195 — 2026-11-02 (fix(tasks): anchor weekly tasks to creation week and prevent cross-week sticking on new week start — on `krish`)
+
+- **Context & Objectives:** User reported an issue where weekly tasks were sticking to the current week when a new calendar week starts instead of staying in the previous week or the week they were created.
+- **Root Cause Analysis:**
+   1. In `CockpitTasksSection`, `isTaskInWeeklyWeek` contained an early return `if (isViewingCurrentWeeklyWeek) return true;` before evaluating `task.createdAt`.
+   2. Because of this, any weekly task lacking a `dueDate` evaluated to `true` whenever the user viewed "This Week", causing all prior weekly tasks to persist into new weeks indefinitely.
+   3. In `handleAddTodoSubmit`, newly added tasks did not have `createdAt: nowIso` explicitly stamped on optimistic state objects.
+   4. In `handleSaveEditTask`, editing weekly tasks was wiping out `dueDate` to `null`.
+   5. In UI rendering, `visibleWeeklyTasksCount === 0` had a guard `!isViewingCurrentWeeklyWeek`, preventing the clean empty-state fallback when a user begins a fresh week with zero tasks.
+- **Architectural Slices Implemented:**
+   1. **Task Week Scoping Filter (`cockpit-tasks-section.tsx`):**
+      - Removed premature `if (isViewingCurrentWeeklyWeek) return true;` from `isTaskInWeeklyWeek`.
+      - Evaluates `task.createdAt` against `activeWeeklyAnchorDateKey` via `isSameCalendarWeek`, strictly scoping weekly tasks without an explicit `dueDate` to the calendar week they were created.
+      - Uses `isViewingCurrentWeeklyWeek` strictly as a fallback when neither `dueDate` nor `createdAt` is provided (e.g. bare unit test mocks).
+   2. **State & Modal Hydration Integrity:**
+      - Explicitly stamped `createdAt: nowIso` onto optimistic `newTask` objects in `handleAddTodoSubmit`.
+      - Preserved `editTaskModal.dueDate` in `handleSaveEditTask` instead of clearing to `null`.
+      - Corrected category container filtering (`if (weekTasks.length === 0) return null;`) and empty-state condition (`visibleWeeklyTasksCount === 0`) to show "No weekly todos for this week" cleanly when entering a new week.
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `cockpit-tasks-week-navigation.test.tsx` verifying weekly tasks created in previous weeks stay in the previous week and do not stick into the new week, while navigating back displays them properly.
+      - Verified explicit `dueDate` weekly task routing across calendar weeks.
+      - Fixed mock dates in `cockpit-tasks-rollover-and-scoping.test.tsx` to anchor relative to test `todayDate`.
+      - Updated `docs/cockpit/README.md` documentation.
+      - `npm run typecheck:web`: ✅ 0 compiler errors.
+      - `npm run test -w @holdmetoit/web`: ✅ 240 test files, 2369 tests passed (100% green exit).
+- **NEXT STEP:** Review working tree diff, commit changes with conventional commits, and present fix to user.

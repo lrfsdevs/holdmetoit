@@ -329,5 +329,157 @@ describe("CockpitTasksSection Interactive Week Navigation (GH #184 / KAN-60)", (
 
          expect(within(weeklyBoard).getByText("Oct 5 – 11")).toBeTruthy();
       });
+
+      it("does not stick weekly tasks to the new week when a new week starts (they stay in the previous week where created)", () => {
+         const tasksFromPreviousWeek: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_weekly_1",
+                  userId: "user_1",
+                  name: "Sprint Goals",
+                  taskType: "WEEKLY",
+                  createdAt: new Date("2026-10-20T10:00:00Z"),
+                  updatedAt: new Date("2026-10-20T10:00:00Z"),
+               },
+            ],
+            dailyCategories: [],
+            weeklyCategories: [
+               {
+                  id: "cat_weekly_1",
+                  name: "Sprint Goals",
+                  taskType: "WEEKLY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "task_w_prev",
+                        userId: "user_1",
+                        categoryId: "cat_weekly_1",
+                        title: "Complete Week 1 Physics Problem Set",
+                        taskType: "WEEKLY",
+                        isComplete: false,
+                        status: "TODO",
+                        dueDate: null,
+                        createdAt: new Date("2026-10-20T10:00:00Z"),
+                        updatedAt: new Date("2026-10-20T10:00:00Z"),
+                        completedAt: null,
+                     },
+                  ],
+               },
+            ],
+            totalDailyTasks: 0,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 1,
+            completedWeeklyTasks: 0,
+         };
+
+         // Render on Monday Oct 26 (start of the new week)
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={tasksFromPreviousWeek}
+               todayDate="2026-10-26"
+            />
+         );
+
+         const weeklyBoard = screen.getByTestId("weekly-tasks-board");
+         // Current week range is Oct 26 – Nov 1
+         expect(within(weeklyBoard).getByText("Oct 26 – Nov 1")).toBeTruthy();
+
+         // Task from previous week must NOT stick in the new week!
+         expect(
+            within(weeklyBoard).queryByText(
+               "Complete Week 1 Physics Problem Set"
+            )
+         ).toBeNull();
+         // Shows clean empty state for the new week
+         expect(
+            within(weeklyBoard).getByText("No weekly todos for this week")
+         ).toBeTruthy();
+         // Completed counter shows 0/0 Completed for this week
+         expect(within(weeklyBoard).getByText("0/0 Completed")).toBeTruthy();
+
+         // Click Previous week button to navigate back to Oct 19 – 25
+         const prevWeekBtn = within(weeklyBoard).getByRole("button", {
+            name: /Previous week for weekly todos/i,
+         });
+         fireEvent.click(prevWeekBtn);
+
+         // In the previous week where it was created, the task MUST be present!
+         expect(within(weeklyBoard).getByText("Oct 19 – 25")).toBeTruthy();
+         expect(
+            within(weeklyBoard).getByText("Complete Week 1 Physics Problem Set")
+         ).toBeTruthy();
+         expect(within(weeklyBoard).getByText("0/1 Completed")).toBeTruthy();
+      });
+
+      it("scopes weekly tasks with explicit dueDate to their dueDate week rather than current week", () => {
+         const tasksWithExplicitDueDate: UserCategorizedTasks = {
+            categories: [
+               {
+                  id: "cat_weekly_1",
+                  userId: "user_1",
+                  name: "Sprint Deliverables",
+                  taskType: "WEEKLY",
+                  createdAt: new Date("2026-10-20T10:00:00Z"),
+                  updatedAt: new Date("2026-10-20T10:00:00Z"),
+               },
+            ],
+            dailyCategories: [],
+            weeklyCategories: [
+               {
+                  id: "cat_weekly_1",
+                  name: "Sprint Deliverables",
+                  taskType: "WEEKLY",
+                  isCollapsed: false,
+                  tasks: [
+                     {
+                        id: "task_w_scheduled",
+                        userId: "user_1",
+                        categoryId: "cat_weekly_1",
+                        title: "Mid-October Milestone",
+                        taskType: "WEEKLY",
+                        isComplete: true,
+                        status: "COMPLETED",
+                        dueDate: "2026-10-14", // Week of Oct 12 – 18
+                        createdAt: new Date("2026-10-10T10:00:00Z"),
+                        updatedAt: new Date("2026-10-10T10:00:00Z"),
+                        completedAt: new Date("2026-10-14T10:00:00Z"),
+                     },
+                  ],
+               },
+            ],
+            totalDailyTasks: 0,
+            completedDailyTasks: 0,
+            totalWeeklyTasks: 1,
+            completedWeeklyTasks: 1,
+         };
+
+         // Viewing current week Oct 19 – 25
+         render(
+            <CockpitTasksSection
+               isLoggedIn={true}
+               userTasks={tasksWithExplicitDueDate}
+               todayDate="2026-10-25"
+            />
+         );
+
+         const weeklyBoard = screen.getByTestId("weekly-tasks-board");
+         expect(within(weeklyBoard).getByText("Oct 19 – 25")).toBeTruthy();
+         expect(
+            within(weeklyBoard).queryByText("Mid-October Milestone")
+         ).toBeNull();
+
+         // Navigate back to week of Oct 12 – 18
+         const prevWeekBtn = within(weeklyBoard).getByRole("button", {
+            name: /Previous week for weekly todos/i,
+         });
+         fireEvent.click(prevWeekBtn);
+
+         expect(within(weeklyBoard).getByText("Oct 12 – 18")).toBeTruthy();
+         expect(
+            within(weeklyBoard).getByText("Mid-October Milestone")
+         ).toBeTruthy();
+         expect(within(weeklyBoard).getByText("1/1 Completed")).toBeTruthy();
+      });
    });
 });

@@ -822,9 +822,6 @@ export function CockpitTasksSection({
                return true;
             }
          }
-         if (isViewingCurrentWeeklyWeek) {
-            return true;
-         }
          if (task.createdAt) {
             const taskCreatedKey =
                typeof task.createdAt === "string"
@@ -835,7 +832,7 @@ export function CockpitTasksSection({
                activeWeeklyAnchorDateKey
             );
          }
-         return false;
+         return isViewingCurrentWeeklyWeek;
       },
       [
          activeWeeklyAnchorDateKey,
@@ -1705,7 +1702,9 @@ export function CockpitTasksSection({
             ? newDueDate !== undefined
                ? newDueDate
                : (editTaskModal.dueDate ?? selectedDateKey)
-            : null;
+            : newDueDate !== undefined
+              ? newDueDate
+              : (editTaskModal.dueDate ?? null);
 
       if (taskType === "daily" && resolvedDueDate) {
          const originalDateKey = editTaskModal.dueDate
@@ -2724,6 +2723,7 @@ export function CockpitTasksSection({
                : null
             : null;
 
+      const nowIso = new Date().toISOString();
       const newTaskId = crypto.randomUUID();
       const nextCompleted = newTodoStatus === "COMPLETED";
       const newTask: TaskItem = {
@@ -2732,6 +2732,7 @@ export function CockpitTasksSection({
          completed: nextCompleted,
          status: newTodoStatus,
          dueDate: resolvedDueDate,
+         createdAt: nowIso,
          challengeId: targetChallengeId,
       };
 
@@ -2829,8 +2830,6 @@ export function CockpitTasksSection({
             }
          });
       }
-
-      const nowIso = new Date().toISOString();
 
       let initialSortOrder = 0;
       if (isNew && targetCatId) {
@@ -5624,8 +5623,7 @@ export function CockpitTasksSection({
                               the challenge.
                            </p>
                         </div>
-                     ) : visibleWeeklyTasksCount === 0 &&
-                       !isViewingCurrentWeeklyWeek ? (
+                     ) : visibleWeeklyTasksCount === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-strong bg-surface-tertiary/50 p-6 text-center">
                            <p className="text-sm font-medium text-text-secondary">
                               No weekly todos for this week
@@ -5640,11 +5638,7 @@ export function CockpitTasksSection({
                            {weeklyCategories.map((cat, catIdx) => {
                               const weekTasks =
                                  cat.tasks.filter(isTaskInWeeklyWeek);
-                              if (
-                                 weekTasks.length === 0 &&
-                                 cat.tasks.length > 0 &&
-                                 !isViewingCurrentWeeklyWeek
-                              ) {
+                              if (weekTasks.length === 0) {
                                  return null;
                               }
                               const isCollapsed = isCategoryCollapsed(
