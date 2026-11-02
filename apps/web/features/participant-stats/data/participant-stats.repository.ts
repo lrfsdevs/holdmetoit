@@ -6,7 +6,10 @@ import {
    calculateParticipantTeamStats,
    calculateParticipantAccountability,
 } from "../domain/participant-stats";
-import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
+import type {
+   ParticipantStatsViewModel,
+   ParticipantWeeklyGoalItem,
+} from "../domain/participant-stats.types";
 import {
    getUserCompetitiveStats,
    getTrophyHistory,
@@ -216,6 +219,9 @@ export async function getChallengeParticipantStats(
             statusBadge:
                scoreboard.status === "COMPLETED" ? "Completed" : "On-Track",
          },
+         weeklyGoals: [],
+         completedGoalsCount: 0,
+         totalGoalsCount: 0,
          viewer: {
             isAdmin: isEffectiveAdmin,
             isOwner,
@@ -223,11 +229,49 @@ export async function getChallengeParticipantStats(
       };
    }
 
-   // 4. Fetch authoritative scoreboard to reuse exact ranking, tie-breaking, and team totals
-   const scoreboard = await getChallengeScoreboard(challengeId, currentUserId);
+   // 4. Fetch authoritative scoreboard and challenge-linked weekly goals in parallel
+   const [scoreboard, weeklyTasks] = await Promise.all([
+      getChallengeScoreboard(challengeId, currentUserId),
+      prisma.task.findMany({
+         where: {
+            challengeId,
+            userId: participant.userId,
+            taskType: "WEEKLY",
+            isDeleted: false,
+         },
+         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+         select: {
+            id: true,
+            title: true,
+            status: true,
+            isComplete: true,
+            completedAt: true,
+         },
+      }),
+   ]);
+
    if (!scoreboard) {
       return null;
    }
+
+   const weeklyGoals: ParticipantWeeklyGoalItem[] = (weeklyTasks ?? []).map(
+      (task) => {
+         const isComplete = task.isComplete || task.status === "COMPLETED";
+         return {
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            isComplete,
+            completedAt: task.completedAt
+               ? typeof task.completedAt === "string"
+                  ? task.completedAt
+                  : task.completedAt.toISOString()
+               : null,
+         };
+      }
+   );
+   const totalGoalsCount = weeklyGoals.length;
+   const completedGoalsCount = weeklyGoals.filter((g) => g.isComplete).length;
 
    const standing = scoreboard.standings.find(
       (s) => s.participantId === participant.id
@@ -399,6 +443,9 @@ export async function getChallengeParticipantStats(
       teamStats,
       accountability,
       competitive,
+      weeklyGoals,
+      completedGoalsCount,
+      totalGoalsCount,
       viewer: {
          isAdmin: isEffectiveAdmin,
          isOwner,

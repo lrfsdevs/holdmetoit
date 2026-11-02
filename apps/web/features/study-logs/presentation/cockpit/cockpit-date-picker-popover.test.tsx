@@ -110,6 +110,49 @@ describe("CockpitDatePickerPopover", () => {
 
       expect(onSelectDate).toHaveBeenCalledWith("2026-10-25");
    });
+
+   it("renders trigger and footer adapted for weekly mode", () => {
+      const onSelectDate = vi.fn();
+      render(
+         <CockpitDatePickerPopover
+            {...defaultProps}
+            mode="weekly"
+            onSelectDate={onSelectDate}
+         />
+      );
+
+      const trigger = screen.getByRole("button", {
+         name: /Selected week: Oct 19 – 25\. Click to pick week/i,
+      });
+      expect(trigger).toBeTruthy();
+      fireEvent.click(trigger);
+
+      const jumpBtn = screen.getByRole("button", { name: "Jump to This Week" });
+      expect(jumpBtn).toBeTruthy();
+      fireEvent.click(jumpBtn);
+
+      expect(onSelectDate).toHaveBeenCalledWith("2026-10-25");
+   });
+
+   it("displays today week range in footer when viewing a different week in weekly mode", () => {
+      render(
+         <CockpitDatePickerPopover
+            {...defaultProps}
+            mode="weekly"
+            selectedDateKey="2026-10-14"
+            weekRangeLabel="Oct 12 – 18"
+            todayDateKey="2026-10-25"
+         />
+      );
+
+      const trigger = screen.getByRole("button", {
+         name: /Selected week: Oct 12 – 18\. Click to pick week/i,
+      });
+      fireEvent.click(trigger);
+
+      // The footer beside "Jump to This Week" should display today's week range (Oct 19 – 25)
+      expect(screen.getByText("Oct 19 – 25")).toBeTruthy();
+   });
 });
 
 describe("CockpitWeekNavigator", () => {
@@ -198,6 +241,48 @@ describe("CockpitWeekNavigator", () => {
       const todayBtn = screen.getByRole("button", { name: "Today" });
       expect(todayBtn).toBeTruthy();
       fireEvent.click(todayBtn);
+      expect(onJumpToToday).toHaveBeenCalledTimes(1);
+   });
+
+   it("renders weekly navigation controls and This Week snap button when mode is weekly", () => {
+      const onJumpToToday = vi.fn();
+      const onPreviousWeek = vi.fn();
+      const onNextWeek = vi.fn();
+
+      render(
+         <CockpitWeekNavigator
+            selectedDateKey="2026-10-14"
+            todayDateKey="2026-10-25"
+            weekRangeLabel="Oct 12 – 18"
+            onPreviousWeek={onPreviousWeek}
+            onNextWeek={onNextWeek}
+            onSelectDate={vi.fn()}
+            mode="weekly"
+            showToday={true}
+            onJumpToToday={onJumpToToday}
+         />
+      );
+
+      const prevBtn = screen.getByTestId("weekly-prev-week");
+      expect(prevBtn).toBeTruthy();
+      expect(prevBtn.getAttribute("aria-label")).toBe(
+         "Previous week for weekly todos"
+      );
+      fireEvent.click(prevBtn);
+      expect(onPreviousWeek).toHaveBeenCalledTimes(1);
+
+      const nextBtn = screen.getByTestId("weekly-next-week");
+      expect(nextBtn).toBeTruthy();
+      expect(nextBtn.getAttribute("aria-label")).toBe(
+         "Next week for weekly todos"
+      );
+      fireEvent.click(nextBtn);
+      expect(onNextWeek).toHaveBeenCalledTimes(1);
+
+      const thisWeekBtn = screen.getByTestId("weekly-jump-this-week");
+      expect(thisWeekBtn).toBeTruthy();
+      expect(thisWeekBtn.textContent).toBe("This Week");
+      fireEvent.click(thisWeekBtn);
       expect(onJumpToToday).toHaveBeenCalledTimes(1);
    });
 });

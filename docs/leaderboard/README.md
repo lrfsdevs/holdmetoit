@@ -150,6 +150,84 @@ The per-challenge standings are separate from the global trophy board. Two forma
    - Selecting `UNASSIGNED` scopes both the table view and team view mode strictly to unassigned scholars.
    - Active filters pill displays `Team: Unassigned` with 1-click filter reset capabilities.
 
+### 7.3 Desktop Standings Table Progress & Pace Status Columns (GH #208 / KAN-69)
+
+1. **Context & Problem Statement:**
+   - In accordance with **FEATURES.md §7.2 (Unified Roster Standings Table)**, the scoreboard standings table requires dedicated visibility into goal progress and participant pace status.
+   - Previously, the desktop table (`hidden sm:block`) only displayed `Rank`, `Name`, `Team`, `Today's hours`, and `Total hours`.
+
+2. **Architectural Implementation:**
+   - **Progress Column:**
+      - `<TableHead className="px-4 py-3 min-w-[120px]">Progress</TableHead>` in `<TableHeader>`.
+      - Displays formatted completion percentage (`{Math.round(entry.completionPercentage)}%`) alongside a slim, accessible progress bar track (`bg-surface-elevated` track, `bg-feedback-success` fill clamped between 0% and 100%).
+   - **Pace Status Column:**
+      - `<TableHead className="px-4 py-3 text-center">Pace Status</TableHead>` in `<TableHeader>`.
+      - Renders semantic status pills via `PaceStatusBadge`:
+         - `Serene` / `Completed`: `bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`
+         - `On Track`: `bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`
+         - `Catch-Up`: `bg-feedback-warning-bg border-feedback-warning/40 text-feedback-warning-text`
+         - `Punished`: `bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text`
+         - `Excused`: `bg-accent-bg border-accent/40 text-accent-text`
+   - **View Mode Isolation:**
+      - Progress and Pace Status columns are rendered in `viewMode !== "today"` (Overall Rank mode) and omitted in Today's LB mode (`initialViewMode: "today"`), preserving dedicated focus on today's study duration.
+   - **Responsive & Design Integrity:**
+      - Fully compliant with Obsidian Dark theme and semantic design tokens (zero hex values).
+      - Compact padding and `overflow-x-auto` container ensure smooth horizontal scroll safety on 640px–1024px tablet viewports.
+
+### 7.4 Locked Challenge Pace Status Invariant & Auto-Lock Reconciliation (GH #217 / KAN-74)
+
+1. **Context & Problem Statement:**
+   - On the challenge Leaderboard tab (`/challenge/[id]?tab=leaderboard`), scholars with uncompleted weekly target hours (e.g. 14%, 11%, 3% progress) were displaying a green **'Completed'** badge under Pace Status when a challenge was locked.
+   - In `buildScoreboardViewModel` (`features/leaderboard/data/leaderboard-data.ts`), a line guarded `!isResultsLocked && deficitSeconds > 0`. Consequently, once `resultsLockedAt` was set (`isResultsLocked = true`), the deficit check was skipped. If a participant had no explicit `PunishmentRecord` and their status was `NORMAL`, they fell through to the default `Completed` state.
+   - Additionally, the YPT ingestion daemon auto-lock (`apps/ypt-bot/src/db/challenge-repository.js`) updated `resultsLockedAt: now` directly without evaluating participants or creating `PunishmentRecord` entries.
+
+2. **Architectural Implementation:**
+   - **Leaderboard Data Invariant (`features/leaderboard/data/leaderboard-data.ts`):**
+      - Any participant with `deficitSeconds > 0` or uncompleted challenge-linked weekly tasks (`weeklyTasksCompletedCount < weeklyTasksTotalCount`) on a completed/locked challenge is strictly evaluated as `paceStatus: "punished"` and `paceLabel: "Punished"` unless pardoned/excused (`isPardonedRecord`), preserving **Law L6 (Three-Condition Accountability Invariant)** and **Law L3 (The Catch-Up Deficit Model)**.
+      - Safeguard against false 100% completion percentages: `completionPercentage` is clamped below 100% (to 99%) whenever `deficitSeconds > 0`.
+   - **Automated Accountability Reconciliation (`apps/ypt-bot/src/db/challenge-repository.js`):**
+      - `lockExpiredChallengesAfterGrace` triggers `reconcileChallengeAccountability` upon auto-locking expired challenges.
+      - Reconciles all 3 conditions: target hours met, weekly tasks completed, and winning team (ties are draws: all teams at the maximum score win; individual competition in SOLOS format).
+      - Automatically sets `status: "PUNISHED"` and creates `PunishmentRecord` rows for uncompleted participants, while setting qualifying participants to `status: "NORMAL"`.
+
+### 7.5 Duo Battle Card Normalization & UI Alignment (GH #220 / KAN-77)
+
+1. **Context & Problem Statement:**
+   - In "View by Team" mode (`viewMode === "team"`), duo battles render side-by-side in a 2-column responsive grid (`lg:grid-cols-2`).
+   - Previously, team cards and internal scholar blocks displayed uneven heights and crooked layouts depending on team name lengths, scholar display names, and hour goal numbers:
+      - Team names longer than 10–12 characters pushed the scholars badge onto a second line, expanding the header to 3 lines while shorter teams remained 2 lines.
+      - Inside scholar blocks, unconstrained `flex-wrap` caused badges (`Offline`, `Catch-Up`, `Serene`) and handles (`@username`) to wrap into 2, 3, or 4 random lines depending on the exact character widths of display names and clock values (`totalLoggedClock / targetClock`).
+      - This produced severely misaligned, crooked cards with different vertical heights across the grid.
+
+2. **Architectural Implementation (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+   - **Normalized Team Header (Strict 2-Row Layout):**
+      - **Row 1:** Left: Emoji, team name (`truncate` with native title tooltip), and duo edit pencil (caller's team only). Right: Total study time (`totalLoggedClock`) and bounded progress bar track (`w-16 sm:w-24`).
+      - **Row 2:** Left: Scholars count pill (`{count} / {target} scholars`) and `Leading House` badge. Right: Weekly target hours and completion percentage (`Weekly Target: {targetHours}h • Completed: {completionPercentage}%`).
+      - Row 1 and Row 2 have fixed, single-line heights across all house and unassigned cards regardless of name or hour lengths.
+   - **Normalized Scholar Block (Strict 2-Line Layout & `min-h-[68px]`):**
+      - **Line 1:** Intra-team rank (`#idx`), overall rank (`(#rank)`), 32px avatar, display name (`truncate font-bold`), trophy badge, and YPT status pill (`Offline` / `Studying`, `shrink-0`).
+      - **Line 2:** Scholar handle (`@{username}`, `truncate max-w-[90px] sm:max-w-[130px]`), compact sick badge (`SickStatusBadge`), and pace status pill (`Catch-Up` / `Serene` / `On Track` / `Punished`, `shrink-0`).
+      - **Right-Aligned Telemetry & Actions:** Formatted tabular clock (`totalLoggedClock / targetClock`, `whitespace-nowrap`), today's hours (`+todayLoggedClock`, `whitespace-nowrap`), and vertically centered compact icon-only admin controls with hover tooltips (`Clock`: "Edit Study Hours", `Target`: "Edit Weekly Target", `HeartHandshake`: "Grant Pardon"), saving ~88px of horizontal width for display names.
+   - **Visual Symmetry & Equal Block Shapes:**
+      - All duo cards and unassigned cards render with identical height bounding boxes and visual symmetry down to 360px mobile viewports (Law L9).
+
+### 7.6 Compact Admin Action Buttons & Aligned Total Hours Layout
+
+1. **Context & Problem Statement:**
+   - In dev/admin view (`isAdmin: true`), the Leaderboard desktop table displayed full-text action buttons (`Edit hr`, `Edit target`, `Pardon`) directly within the `Total hours` cell.
+   - For rows with 3 buttons (~260px width), the hours container was compressed, forcing `/ 45:00:00` onto a second line underneath the logged hours, creating a lopsided layout relative to rows with only 2 buttons. The wide buttons also triggered horizontal page scrolling.
+
+2. **Architectural Implementation (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+   - **Compact Icon-Only Action Buttons (`AdminRowActions`):**
+      - Full-text buttons are replaced with compact icon-only buttons (`Clock`, `Target`, `HeartHandshake`).
+      - Accessible for screen readers via `<span className="sr-only">` and accessible labels.
+      - Includes hover tooltips via Radix UI `Tooltip` (`TooltipProvider`, `Tooltip`, `TooltipTrigger`, `TooltipContent`) alongside native `title` tooltips, explaining button capabilities ("Edit Study Hours", "Edit Weekly Target", "Grant Pardon").
+   - **Dedicated Desktop `Actions` Column:**
+      - In desktop standings (`hidden sm:block`), admin controls are decoupled from the hours cell into a dedicated centered `Actions` column (`w-[100px]`).
+      - The `Total hours` column is rendered identically between regular and admin views (`(clock) HH:MM:SS / HH:MM:SS`, `whitespace-nowrap`, `text-right font-sans font-sans-tabular text-sm font-bold text-white`), eliminating line breaks and horizontal lopsidedness across all participant rows.
+   - **Mobile Cards & Team Mode Sizing:**
+      - Uses `size="sm"` (`h-6 w-6` with `h-3 w-3` icons) in mobile cards (`sm:hidden`) and team view mode to preserve responsive layout without clipping or horizontal overflow on 360px+ viewports (Law L9).
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See

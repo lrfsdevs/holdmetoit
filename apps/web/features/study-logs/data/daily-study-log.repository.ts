@@ -66,11 +66,24 @@ async function upsertDailyStudyLogOnce(params: UpsertDailyStudyLogParams) {
                challengeId: true,
                plannedLeaveDays: true,
                usedLeaveDays: true,
+               isWithdrawn: true,
+               withdrawalAt: true,
             },
          });
 
          if (!participant) {
             throw new Error("Participant not found.");
+         }
+
+         if (
+            participant.isWithdrawn ||
+            (participant.withdrawalAt != null &&
+               logDate.getTime() >
+                  toUtcDateOnly(participant.withdrawalAt).getTime())
+         ) {
+            throw new ChallengeStateError(
+               "Cannot log study hours after participant withdrawal."
+            );
          }
 
          // Freeze the accountability input once results are locked.

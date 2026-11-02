@@ -50,21 +50,29 @@ The action checks the feature flag first, requires a session, delegates to
 `withdrawParticipant`, invalidates scoreboard/cockpit caches, revalidates the
 challenge/challenges/admin/home paths, and logs `challenge.participant_withdrew`.
 
-## 5. Data exclusion
+## 5. Data Exclusion & Frozen Historical Hours (GH-#210)
 
 Withdrawn participants are excluded from:
 
-- Public standings/ranks and team totals/companion counts
-- Challenge participant counts
-- Participant statistics lookups
-- YPT study-time ingest
-- Wrapped lookup
-- Weekly task/punishment, reward, and trophy evaluation at lock
+- Individual public standings and podium rankings
+- Active companion counts on team rosters
+- Post-lock punishment records and reward/trophy distributions
+- Future study logging (study logs after `withdrawalAt` are rejected)
+- Wrapped lookup and challenge-linked active goal requirements
 
 `currentUser.isEnrolled` becomes false and `currentUser.hasWithdrawn` becomes
 true, so the overview hides the button and the hero shows a withdrawn state.
 Admin `findAdminChallengeDetails` remains unfiltered; the event is visible in the
 Event Audit `ROSTER` tab.
+
+### 5.1 Frozen Historical Study Hours Preservation
+
+Per GH-#210, a participant's departure mid-event must not unfairly penalize their remaining teammates in team/duo battles:
+
+- All study hours logged prior to or at `withdrawalAt` are **frozen and permanently credited** to their team's cumulative score (`aggregateTeamScores`).
+- When the host locks challenge results (`lockChallengeResults`), winning team determination includes frozen study logs from withdrawn participants.
+- Withdrawn participants are exempt from individual punishments (`PunishmentRecord`), even if their team loses or targets were unmet.
+- Historical study breakdown cards (`ChallengeSnapshot`) display a `Withdrawn (Hours Frozen)` badge for transparency.
 
 ## 6. Admin removal (soft)
 
@@ -97,15 +105,3 @@ normal enrollment flow and reactivates the existing row:
 - `usedLeaveDays = 0`, `status = NORMAL`, `enrolledAt = now`
 - writes a `PARTICIPANT_REENROLLED` audit event with the previous withdrawal
   state and the new enrollment values
-
-The enrollment action is not gated by `challenge_withdrawal_v1`; the flag only
-gates new withdrawals/removals.
-
-## 8. Lifecycle
-
-- The flag gates **new withdrawals only**. Existing withdrawn rows stay excluded
-  if the flag is later disabled.
-- Withdrawal/removal is reversible through re-enrollment while the challenge is
-  not completed.
-- To decommission: remove the button/action, then remove the filters and columns
-  in a follow-up migration (keep the historical migration).
