@@ -76,7 +76,7 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
       completedWeeklyTasks: 0,
    };
 
-   it("renders quick-add buttons in both Daily and Weekly headers and clicking them opens the respective modal", () => {
+   it("removes top add buttons from Daily and Weekly headers now that the todo list size is fixed", () => {
       render(
          createElement(CockpitTasksSection, {
             isLoggedIn: true,
@@ -85,34 +85,14 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
          })
       );
 
-      // Daily header quick-add button
-      const dailyQuickAdd = screen.getByTestId("quick-add-daily-button");
-      expect(dailyQuickAdd).toBeTruthy();
-      expect(dailyQuickAdd.getAttribute("aria-label")).toMatch(/Add todo for/i);
-      expect(dailyQuickAdd.className).toContain("min-h-control-sm");
-      expect(dailyQuickAdd.className).toContain("min-w-control-sm");
+      // Daily header quick-add button must no longer be present
+      expect(screen.queryByTestId("quick-add-daily-button")).toBeNull();
 
-      // Clicking Daily header quick-add opens Daily modal
-      fireEvent.click(dailyQuickAdd);
-      expect(screen.getByText("Add Daily Todo")).toBeTruthy();
-
-      // Close modal
-      const closeDaily = screen.getByRole("button", { name: "Cancel" });
-      fireEvent.click(closeDaily);
-
-      // Weekly header quick-add button
-      const weeklyQuickAdd = screen.getByTestId("quick-add-weekly-button");
-      expect(weeklyQuickAdd).toBeTruthy();
-      expect(weeklyQuickAdd.getAttribute("aria-label")).toBe("Add weekly todo");
-      expect(weeklyQuickAdd.className).toContain("min-h-control-sm");
-      expect(weeklyQuickAdd.className).toContain("min-w-control-sm");
-
-      // Clicking Weekly header quick-add opens Weekly modal
-      fireEvent.click(weeklyQuickAdd);
-      expect(screen.getByText("Add Weekly Todo")).toBeTruthy();
+      // Weekly header quick-add button must no longer be present
+      expect(screen.queryByTestId("quick-add-weekly-button")).toBeNull();
    });
 
-   it("hides Daily Quick-Add button when viewing a locked past challenge day", () => {
+   it("does not render top quick-add buttons even when viewing an active challenge day", () => {
       render(
          createElement(CockpitTasksSection, {
             isLoggedIn: true,
@@ -124,11 +104,8 @@ describe("CockpitTasksSection - Quick-Add, Scroll Containment & Mobile Switcher 
          })
       );
 
-      // Daily quick add should be hidden because past challenge days cannot accept new tasks
       expect(screen.queryByTestId("quick-add-daily-button")).toBeNull();
-
-      // Weekly quick add remains accessible regardless of active day tab
-      expect(screen.getByTestId("quick-add-weekly-button")).toBeTruthy();
+      expect(screen.queryByTestId("quick-add-weekly-button")).toBeNull();
    });
 
    it("retains bottom add buttons for both Daily and Weekly columns as secondary actions", () => {

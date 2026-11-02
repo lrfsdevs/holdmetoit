@@ -737,6 +737,115 @@ export function CockpitTasksSection({
       }
    };
 
+   // Weekly Todos Week Navigation (adapted for weekly system)
+   const [activeWeeklyAnchorDateKey, setActiveWeeklyAnchorDateKey] =
+      useState<string>(() => {
+         if (initialSelectedDateKey) return initialSelectedDateKey;
+         if (hasChallengeContext && effectiveStartDate) {
+            const startKey = effectiveStartDate.slice(0, 10);
+            if (isSameCalendarWeek(effectiveTodayDate, startKey)) {
+               return effectiveTodayDate;
+            }
+            return startKey;
+         }
+         return effectiveTodayDate;
+      });
+
+   const activeWeeklyWeekDateKeys = useMemo(() => {
+      const calendarDays = getCalendarWeekDayOptions(
+         activeWeeklyAnchorDateKey,
+         effectiveTodayDate
+      );
+      return calendarDays.map((d) => d.dateKey);
+   }, [activeWeeklyAnchorDateKey, effectiveTodayDate]);
+
+   const weeklyRangeLabel = useMemo(() => {
+      const calendarDays = getCalendarWeekDayOptions(
+         activeWeeklyAnchorDateKey,
+         effectiveTodayDate
+      );
+      if (calendarDays.length >= 7) {
+         return formatWeekRange(
+            calendarDays[0].dateKey,
+            calendarDays[6].dateKey
+         );
+      }
+      return "";
+   }, [activeWeeklyAnchorDateKey, effectiveTodayDate]);
+
+   const isViewingCurrentWeeklyWeek = useMemo(() => {
+      return isSameCalendarWeek(activeWeeklyAnchorDateKey, effectiveTodayDate);
+   }, [activeWeeklyAnchorDateKey, effectiveTodayDate]);
+
+   const handleWeeklyPreviousWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeeklyAnchorDateKey, -1);
+      setActiveWeeklyAnchorDateKey(newAnchor);
+   };
+
+   const handleWeeklyNextWeek = () => {
+      const newAnchor = getAdjacentWeekAnchor(activeWeeklyAnchorDateKey, 1);
+      setActiveWeeklyAnchorDateKey(newAnchor);
+   };
+
+   const handleWeeklyJumpToCurrentWeek = () => {
+      setActiveWeeklyAnchorDateKey(effectiveTodayDate);
+   };
+
+   const handleSelectWeeklyDateFromPicker = (targetDateKey: string) => {
+      setActiveWeeklyAnchorDateKey(targetDateKey);
+   };
+
+   const isTaskInWeeklyWeek = useCallback(
+      (task: TaskItem): boolean => {
+         if (task.dueDate) {
+            const taskDueDateKey =
+               typeof task.dueDate === "string"
+                  ? task.dueDate.slice(0, 10)
+                  : new Date(task.dueDate).toISOString().slice(0, 10);
+            return isSameCalendarWeek(
+               taskDueDateKey,
+               activeWeeklyAnchorDateKey
+            );
+         }
+         if (
+            hasChallengeContext &&
+            task.challengeId &&
+            task.challengeId === linkableChallengeId
+         ) {
+            if (
+               effectiveStartDate &&
+               isSameCalendarWeek(
+                  effectiveStartDate.slice(0, 10),
+                  activeWeeklyAnchorDateKey
+               )
+            ) {
+               return true;
+            }
+         }
+         if (isViewingCurrentWeeklyWeek) {
+            return true;
+         }
+         if (task.createdAt) {
+            const taskCreatedKey =
+               typeof task.createdAt === "string"
+                  ? task.createdAt.slice(0, 10)
+                  : new Date(task.createdAt).toISOString().slice(0, 10);
+            return isSameCalendarWeek(
+               taskCreatedKey,
+               activeWeeklyAnchorDateKey
+            );
+         }
+         return false;
+      },
+      [
+         activeWeeklyAnchorDateKey,
+         hasChallengeContext,
+         linkableChallengeId,
+         effectiveStartDate,
+         isViewingCurrentWeeklyWeek,
+      ]
+   );
+
    const getTaskDateKey = useCallback(
       (task: TaskItem): string => {
          if (task.dueDate) {
@@ -2551,6 +2660,25 @@ export function CockpitTasksSection({
       0
    );
 
+   const totalWeeklyTasksForWeek = useMemo(() => {
+      return weeklyCategories.reduce(
+         (acc, cat) => acc + cat.tasks.filter(isTaskInWeeklyWeek).length,
+         0
+      );
+   }, [weeklyCategories, isTaskInWeeklyWeek]);
+
+   const completedWeeklyTasksForWeek = useMemo(() => {
+      return weeklyCategories.reduce(
+         (acc, cat) =>
+            acc +
+            cat.tasks.filter((t) => isTaskInWeeklyWeek(t) && t.completed)
+               .length,
+         0
+      );
+   }, [weeklyCategories, isTaskInWeeklyWeek]);
+
+   const visibleWeeklyTasksCount = totalWeeklyTasksForWeek;
+
    const handleAddTodoSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!newTodoText.trim()) return;
@@ -2577,7 +2705,11 @@ export function CockpitTasksSection({
             : selectedCategory) || "General";
       const taskType = addModalType === "daily" ? "DAILY" : "WEEKLY";
       const resolvedDueDate =
-         addModalType === "daily" ? addTodoDateKey || selectedDateKey : null;
+         addModalType === "daily"
+            ? addTodoDateKey || selectedDateKey
+            : isViewingCurrentWeeklyWeek
+              ? null
+              : activeWeeklyAnchorDateKey;
 
       if (addModalType === "daily" && resolvedDueDate) {
          if (checkIsDayLocked(resolvedDueDate)) {
@@ -4191,20 +4323,6 @@ export function CockpitTasksSection({
                            {completedDailyTasksForDay}/{totalDailyTasksForDay}{" "}
                            Completed
                         </span>
-                        {!isPastDayLocked && (
-                           <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => openAddDailyModal(selectedDateKey)}
-                              aria-label={`Add todo for ${activeDayOption.shortLabel}`}
-                              data-testid="quick-add-daily-button"
-                              className="h-11 min-h-control-sm min-w-control-sm px-3.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center justify-center gap-1 shrink-0"
-                              title={`Add todo for ${activeDayOption.shortLabel}`}
-                           >
-                              <Plus className="h-3.5 w-3.5" />
-                              <span>Add</span>
-                           </Button>
-                        )}
                      </div>
                   </div>
 
@@ -5447,7 +5565,7 @@ export function CockpitTasksSection({
                      : "border-border-default"
                }`}
             >
-               <div className="space-y-4">
+               <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                      <div className="flex items-center gap-2 shrink-0">
                         <h3 className="text-lg font-bold text-white shrink-0">
@@ -5472,25 +5590,31 @@ export function CockpitTasksSection({
                      </div>
                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
-                           {completedWeeklyTasks}/{totalWeeklyTasks} Completed
+                           {completedWeeklyTasksForWeek}/
+                           {totalWeeklyTasksForWeek} Completed
                         </span>
-                        <Button
-                           type="button"
-                           size="sm"
-                           onClick={openAddWeeklyModal}
-                           aria-label="Add weekly todo"
-                           data-testid="quick-add-weekly-button"
-                           className="h-11 min-h-control-sm min-w-control-sm px-3.5 rounded-full bg-white text-black text-xs font-bold hover:bg-white/90 shadow-sm inline-flex items-center justify-center gap-1 shrink-0"
-                           title="Add weekly todo"
-                        >
-                           <Plus className="h-3.5 w-3.5" />
-                           <span>Add</span>
-                        </Button>
                      </div>
                   </div>
 
+                  {/* Row 2: Calendar Week Navigator for Weekly Todos (Adapted for weekly system) */}
+                  <div className="flex items-center justify-start gap-2 pt-0.5">
+                     <CockpitWeekNavigator
+                        selectedDateKey={activeWeeklyAnchorDateKey}
+                        todayDateKey={effectiveTodayDate}
+                        weekRangeLabel={weeklyRangeLabel}
+                        onPreviousWeek={handleWeeklyPreviousWeek}
+                        onNextWeek={handleWeeklyNextWeek}
+                        onSelectDate={handleSelectWeeklyDateFromPicker}
+                        activeWeekDateKeys={activeWeeklyWeekDateKeys}
+                        mode="weekly"
+                        showToday={!isViewingCurrentWeeklyWeek}
+                        onJumpToToday={handleWeeklyJumpToCurrentWeek}
+                     />
+                  </div>
+
                   <div className="space-y-3">
-                     {weeklyCategories.length === 0 ? (
+                     {visibleWeeklyTasksCount === 0 &&
+                     weeklyCategories.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border-strong bg-surface-tertiary/50 p-6 text-center">
                            <p className="text-sm font-medium text-text-secondary">
                               No weekly todos yet
@@ -5500,9 +5624,29 @@ export function CockpitTasksSection({
                               the challenge.
                            </p>
                         </div>
+                     ) : visibleWeeklyTasksCount === 0 &&
+                       !isViewingCurrentWeeklyWeek ? (
+                        <div className="rounded-xl border border-dashed border-border-strong bg-surface-tertiary/50 p-6 text-center">
+                           <p className="text-sm font-medium text-text-secondary">
+                              No weekly todos for this week
+                           </p>
+                           <p className="text-xs text-text-tertiary mt-1">
+                              Set your weekly milestones and track them across
+                              the challenge.
+                           </p>
+                        </div>
                      ) : (
                         <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian">
                            {weeklyCategories.map((cat, catIdx) => {
+                              const weekTasks =
+                                 cat.tasks.filter(isTaskInWeeklyWeek);
+                              if (
+                                 weekTasks.length === 0 &&
+                                 cat.tasks.length > 0 &&
+                                 !isViewingCurrentWeeklyWeek
+                              ) {
+                                 return null;
+                              }
                               const isCollapsed = isCategoryCollapsed(
                                  "weekly",
                                  cat,
@@ -5716,13 +5860,13 @@ export function CockpitTasksSection({
 
                                     {!isCollapsed && (
                                        <div className="px-4 pb-3 pt-1 space-y-2.5 border-t border-border-strong">
-                                          {cat.tasks.length === 0 ? (
+                                          {weekTasks.length === 0 ? (
                                              <p className="text-xs text-text-tertiary py-1">
                                                 No weekly tasks in this
                                                 category.
                                              </p>
                                           ) : (
-                                             cat.tasks.map((task) => {
+                                             weekTasks.map((task) => {
                                                 const isTaskDragging =
                                                    draggedItem?.type ===
                                                       "task" &&
