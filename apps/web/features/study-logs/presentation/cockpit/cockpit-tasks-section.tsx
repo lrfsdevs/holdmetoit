@@ -2294,6 +2294,18 @@ export function CockpitTasksSection({
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
 
+         if (
+            sourceCat.tasks.some((t) =>
+               isWeeklyTaskGraceExpired({
+                  taskType: "WEEKLY",
+                  challengeId: t.challengeId,
+                  createdAt: t.createdAt ?? new Date(),
+               })
+            )
+         ) {
+            return;
+         }
+
          const res = moveCategoryToDay<TaskItem, CategoryGroup>({
             categoryIndex: catIdx,
             sourceColumn: "weekly",

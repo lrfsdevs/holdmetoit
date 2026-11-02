@@ -380,8 +380,21 @@ export function CategoryMenuItems({
            cat.id ? c.id === cat.id : c.name === cat.name
         );
 
+   const weeklyTargetCat = weeklyCategories.find((c) =>
+      cat.id ? c.id === cat.id : catType === "weekly" && c.name === cat.name
+   );
+   const hasGraceLockedTasks = Boolean(
+      weeklyTargetCat?.tasks.some((t) =>
+         isWeeklyTaskGraceExpired({
+            taskType: "WEEKLY",
+            challengeId: t.challengeId,
+            createdAt: t.createdAt ?? new Date(),
+         })
+      )
+   );
+
    const eligibleDays =
-      catIdx === -1
+      catIdx === -1 || (!isDaily && hasGraceLockedTasks)
          ? []
          : dayOptions.filter((opt) => {
               if (isDaily) {
@@ -413,17 +426,6 @@ export function CategoryMenuItems({
            );
 
    const relevantDailyCat = catType === "daily" ? targetCat : dailyTargetCat;
-
-   const hasGraceLockedTasks = Boolean(
-      catType === "weekly" &&
-      targetCat?.tasks.some((t) =>
-         isWeeklyTaskGraceExpired({
-            taskType: "WEEKLY",
-            challengeId: t.challengeId,
-            createdAt: t.createdAt ?? new Date(),
-         })
-      )
-   );
 
    const hasPastTasks = Boolean(
       isChallengeActive &&

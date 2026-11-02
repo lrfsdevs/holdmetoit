@@ -129,6 +129,21 @@ async function resolveWritableChallengeLink(
    }
 }
 
+/**
+ * Whether a category still holds a weekly goal past its 24-hour grace period.
+ */
+async function categoryHasLockedGoals(
+   tx: Prisma.TransactionClient,
+   categoryId: string,
+   userId: string
+): Promise<boolean> {
+   const tasks = await tx.task.findMany({
+      where: { categoryId, userId, isDeleted: false },
+      select: { taskType: true, challengeId: true, createdAt: true },
+   });
+   return tasks.some((task) => isWeeklyTaskGraceExpired(task));
+}
+
 async function applyCategoryMutation(
    tx: Prisma.TransactionClient,
    userId: string,
@@ -279,6 +294,14 @@ async function applyCategoryMutation(
                   }
                   dataToUpdate.taskType = taskType;
                   taskTypeChanged = true;
+
+                  if (await categoryHasLockedGoals(tx, catId, userId)) {
+                     return {
+                        status: "conflict",
+                        reason: "task_locked",
+                        currentCategory: toCategoryItem(currentCategory),
+                     };
+                  }
                }
             }
          }
@@ -366,11 +389,7 @@ async function applyCategoryMutation(
 
       if (!currentCategory || currentCategory.isDeleted) return APPLIED;
 
-      const categoryTasks = await tx.task.findMany({
-         where: { categoryId: catId, userId, isDeleted: false },
-         select: { taskType: true, challengeId: true, createdAt: true },
-      });
-      if (categoryTasks.some((task) => isWeeklyTaskGraceExpired(task))) {
+      if (await categoryHasLockedGoals(tx, catId, userId)) {
          return {
             status: "conflict",
             reason: "task_locked",
@@ -559,12 +578,12 @@ async function applyTaskMutation(
          }
       }
 
-      // Weekly goals lock after 24 hours: no delete, rename, or re-scope.
-      // Completion toggles and moves stay allowed.
       const changesLockedFields =
          m.action === "DELETE" ||
          ((m.action === "UPDATE" || m.action === "MOVE") &&
-            (Boolean(title) || payload.challengeId !== undefined));
+            (Boolean(title) ||
+               payload.challengeId !== undefined ||
+               (Boolean(payload.taskType) && taskType !== guard?.taskType)));
 
       if (guard && changesLockedFields && isWeeklyTaskGraceExpired(guard)) {
          const current = await tx.task.findFirst({
