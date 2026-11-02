@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/popover";
 import {
    getCalendarMonthGrid,
+   getCalendarWeekDayOptions,
+   formatWeekRange,
    formatDayDate,
    type CalendarMonthCell,
 } from "@/features/study-logs/domain/challenge-day";
@@ -20,6 +22,7 @@ export interface CockpitDatePickerPopoverProps {
    weekRangeLabel: string;
    onSelectDate: (dateKey: string) => void;
    activeWeekDateKeys?: string[];
+   mode?: "daily" | "weekly";
    disabled?: boolean;
    className?: string;
 }
@@ -30,6 +33,7 @@ export function CockpitDatePickerPopover({
    weekRangeLabel,
    onSelectDate,
    activeWeekDateKeys = [],
+   mode = "daily",
    disabled = false,
    className,
 }: CockpitDatePickerPopoverProps) {
@@ -48,6 +52,16 @@ export function CockpitDatePickerPopover({
 
    const [viewYear, setViewYear] = useState(initialYearMonth.year);
    const [viewMonth, setViewMonth] = useState(initialYearMonth.month);
+
+   const todayWeekRangeLabel = useMemo(() => {
+      try {
+         const days = getCalendarWeekDayOptions(todayDateKey);
+         if (days.length >= 7) {
+            return formatWeekRange(days[0].dateKey, days[6].dateKey);
+         }
+      } catch {}
+      return weekRangeLabel;
+   }, [todayDateKey, weekRangeLabel]);
 
    const handleOpenChange = (open: boolean) => {
       if (open) {
@@ -105,7 +119,11 @@ export function CockpitDatePickerPopover({
             <button
                type="button"
                disabled={disabled}
-               aria-label={`Current week: ${weekRangeLabel}. Click to pick date`}
+               aria-label={
+                  mode === "weekly"
+                     ? `Selected week: ${weekRangeLabel}. Click to pick week`
+                     : `Current week: ${weekRangeLabel}. Click to pick date`
+               }
                className={cn(
                   "flex items-center gap-1.5 px-2 py-0.5 rounded text-caption font-semibold text-text-primary hover:text-white hover:bg-surface-secondary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-2",
                   disabled && "opacity-50 cursor-not-allowed",
@@ -162,7 +180,10 @@ export function CockpitDatePickerPopover({
             <div className="grid grid-cols-7 gap-1">
                {monthGrid.weeks.flatMap((week, wIdx) =>
                   week.map((cell) => {
-                     const isSelected = cell.dateKey === selectedDateKey;
+                     const isSelected =
+                        mode === "weekly"
+                           ? activeWeekDateKeys.includes(cell.dateKey)
+                           : cell.dateKey === selectedDateKey;
                      const isToday = cell.dateKey === todayDateKey;
                      const isInActiveWeek = activeWeekDateKeys.includes(
                         cell.dateKey
@@ -177,7 +198,16 @@ export function CockpitDatePickerPopover({
                            className={cn(
                               "h-7 w-7 sm:h-8 sm:w-8 mx-auto rounded-lg text-caption flex items-center justify-center transition-colors relative select-none",
                               isSelected
-                                 ? "bg-brand-2 text-white font-bold shadow-sm"
+                                 ? cn(
+                                      "bg-brand-2 text-white font-bold shadow-sm",
+                                      mode === "weekly" && "rounded-none",
+                                      mode === "weekly" &&
+                                         cell.weekdayIndex === 0 &&
+                                         "rounded-l-lg",
+                                      mode === "weekly" &&
+                                         cell.weekdayIndex === 6 &&
+                                         "rounded-r-lg"
+                                   )
                                  : isInActiveWeek
                                    ? "bg-surface-nested text-text-primary hover:bg-surface-secondary"
                                    : cell.isCurrentMonth
@@ -185,13 +215,22 @@ export function CockpitDatePickerPopover({
                                      : "text-text-tertiary/40 hover:bg-surface-secondary/40",
                               isToday &&
                                  !isSelected &&
-                                 "ring-1 ring-emerald-400 font-semibold text-emerald-400"
+                                 "ring-1 ring-emerald-400 font-semibold text-emerald-400",
+                              isToday &&
+                                 isSelected &&
+                                 mode === "weekly" &&
+                                 "ring-1 ring-emerald-300"
                            )}
                         >
                            <span>{cell.dayOfMonth}</span>
-                           {isToday && !isSelected && (
+                           {isToday && (
                               <span
-                                 className="absolute bottom-0.5 h-1 w-1 rounded-full bg-emerald-400"
+                                 className={cn(
+                                    "absolute bottom-0.5 h-1 w-1 rounded-full",
+                                    isSelected && mode !== "weekly"
+                                       ? "bg-white"
+                                       : "bg-emerald-400"
+                                 )}
                                  title="Today"
                               />
                            )}
@@ -201,17 +240,19 @@ export function CockpitDatePickerPopover({
                )}
             </div>
 
-            {/* Quick jump to Today button */}
+            {/* Quick jump to Today / This Week button */}
             <div className="mt-2 pt-2 border-t border-border-subtle flex items-center justify-between">
                <button
                   type="button"
                   onClick={handleJumpToToday}
                   className="text-micro font-medium text-brand-2 hover:text-brand-1 hover:underline transition-colors"
                >
-                  Jump to Today
+                  {mode === "weekly" ? "Jump to This Week" : "Jump to Today"}
                </button>
                <span className="text-micro text-text-tertiary">
-                  {formatDayDate(todayDateKey)}
+                  {mode === "weekly"
+                     ? todayWeekRangeLabel
+                     : formatDayDate(todayDateKey)}
                </span>
             </div>
          </PopoverContent>
@@ -227,6 +268,7 @@ export interface CockpitWeekNavigatorProps {
    onNextWeek: () => void;
    onSelectDate: (dateKey: string) => void;
    activeWeekDateKeys?: string[];
+   mode?: "daily" | "weekly";
    showToday?: boolean;
    onJumpToToday?: () => void;
    disabled?: boolean;
@@ -241,6 +283,7 @@ export function CockpitWeekNavigator({
    onNextWeek,
    onSelectDate,
    activeWeekDateKeys = [],
+   mode = "daily",
    showToday = false,
    onJumpToToday,
    disabled = false,
@@ -255,7 +298,12 @@ export function CockpitWeekNavigator({
       >
          <button
             type="button"
-            aria-label="Previous week"
+            aria-label={
+               mode === "weekly"
+                  ? "Previous week for weekly todos"
+                  : "Previous week"
+            }
+            data-testid={mode === "weekly" ? "weekly-prev-week" : undefined}
             onClick={onPreviousWeek}
             disabled={disabled}
             className="p-1 rounded text-text-tertiary hover:text-white hover:bg-surface-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -269,12 +317,16 @@ export function CockpitWeekNavigator({
             weekRangeLabel={weekRangeLabel}
             onSelectDate={onSelectDate}
             activeWeekDateKeys={activeWeekDateKeys}
+            mode={mode}
             disabled={disabled}
          />
 
          <button
             type="button"
-            aria-label="Next week"
+            aria-label={
+               mode === "weekly" ? "Next week for weekly todos" : "Next week"
+            }
+            data-testid={mode === "weekly" ? "weekly-next-week" : undefined}
             onClick={onNextWeek}
             disabled={disabled}
             className="p-1 rounded text-text-tertiary hover:text-white hover:bg-surface-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -288,10 +340,13 @@ export function CockpitWeekNavigator({
                <button
                   type="button"
                   onClick={onJumpToToday}
-                  aria-label="Today"
+                  aria-label={mode === "weekly" ? "This week" : "Today"}
+                  data-testid={
+                     mode === "weekly" ? "weekly-jump-this-week" : undefined
+                  }
                   className="px-1.5 py-0.5 rounded text-meta font-medium text-brand-2 hover:text-brand-1 hover:bg-surface-secondary transition-colors shrink-0"
                >
-                  Today
+                  {mode === "weekly" ? "This Week" : "Today"}
                </button>
             </>
          )}

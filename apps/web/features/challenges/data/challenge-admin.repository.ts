@@ -28,6 +28,7 @@ import {
    settleChallengeTrophies,
    reverseChallengeTrophies,
 } from "@/features/trophies/data/trophy.repository";
+import { filterLogsBeforeWithdrawal } from "@/features/challenges/domain/withdrawal";
 import { applyParticipantWithdrawal } from "./participant.repository";
 import { listAllChallenges } from "./challenge.repository";
 
@@ -279,10 +280,18 @@ export async function lockChallengeResults(
 
       const teamTotals = aggregateTeamScores(
          challenge.teams,
-         evaluatedParticipants.map((participant) => ({
-            teamId: participant.teamId ?? "no-assigned",
-            loggedSeconds: sumLoggedSeconds(participant.dailyStudyLogs ?? []),
-         }))
+         challenge.participants.map((participant) => {
+            const eligibleLogs = participant.isWithdrawn
+               ? filterLogsBeforeWithdrawal(
+                    participant.dailyStudyLogs ?? [],
+                    participant.withdrawalAt
+                 )
+               : (participant.dailyStudyLogs ?? []);
+            return {
+               teamId: participant.teamId ?? "no-assigned",
+               loggedSeconds: sumLoggedSeconds(eligibleLogs),
+            };
+         })
       ).filter((aggregate) =>
          challenge.teams.some((team) => team.id === aggregate.teamId)
       );

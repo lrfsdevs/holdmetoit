@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-01 (Session 189 on `afnan-jr` · Session 181 on `krish`)
+> **Last Updated:** 2026-11-02 (Session 197 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2260,3 +2260,424 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design-token typography and anti-slop rules).
 - **GitHub PR & Issues Status:** Submitted PR [#214](https://github.com/lrfsdevs/holdmetoit/pull/214) (`krish` $\rightarrow$ `dev`) closing GitHub Issues [#209](https://github.com/lrfsdevs/holdmetoit/issues/209) and [#206](https://github.com/lrfsdevs/holdmetoit/issues/206).
 - **NEXT STEP:** Peer review and merge PR #214 into `dev`, then proceed to release integration.
+
+### Session 185 — 2026-11-02 (feat(leaderboard): add progress percentage and pace status columns to desktop standings table — GH-#208 / Jira KAN-69 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#208](https://github.com/lrfsdevs/holdmetoit/issues/208) / Jira Ticket `KAN-69` ("In accordance with FEATURES.md §7.2, add dedicated Progress (% Completed progress bar) and Pace Status (semantic status badge) columns to the desktop standings table in `ChallengeLeaderboardTab`").
+- **Jira Status:** Transitioned `KAN-69` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team aggregation and individual scoring math remain intact across all battle modes.
+   - **Law L6 (Three-Condition Accountability Invariant):** Surfaces live accountability status badges (`Serene`, `On Track`, `Catch-Up`, `Punished`, `Excused`) directly in the standings table.
+   - **Law L8 (Second-Level Precision):** Second-level precision preserved across study duration and target timestamps; progress percentage accurately derived from integer seconds.
+   - **Law L9 (Zero-State & Error Resilience):** Obsidian Dark semantic tokens enforced with zero hardcoded hex values. Desktop table retains `overflow-x-auto` container ensuring smooth horizontal scroll safety on 640px–1024px tablet viewports.
+- **Architectural Enhancements Implemented:**
+   1. **Presentation Layer (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+      - Added pure `getPaceStatusBadge` and `PaceStatusBadge` component with token-compliant semantic styling (`bg-feedback-success-bg`, `bg-feedback-warning-bg`, `bg-feedback-error-bg`, `bg-accent-bg`, and `bg-surface-elevated`).
+      - In `<TableHeader>`, added dedicated `Progress` (`min-w-[120px]`) and `Pace Status` (`text-center`) column headers when `viewMode !== "today"`.
+      - In `<TableRow>`, added dedicated Progress cell rendering formatted completion percentage (`{Math.round(entry.completionPercentage)}%`) with a slim progress bar track (`bg-surface-elevated` track, `bg-feedback-success` fill clamped between 0% and 100%).
+      - In `<TableRow>`, added dedicated Pace Status cell rendering the semantic `PaceStatusBadge`.
+      - Kept Today's LB view mode (`initialViewMode: "today"`) focused purely on daily study duration.
+   2. **Documentation (`docs/leaderboard/README.md`):** Added §7.3 documenting Desktop Standings Table Progress & Pace Status Columns.
+   3. **Testing & Verification (`challenge-leaderboard-tab.test.tsx`):**
+      - Added 4 new unit tests under `Desktop Standings Table Progress & Pace Status Columns (GH-#208 / KAN-69)`:
+         1. Renders dedicated Progress and Pace Status column headers, percentage, progress bar track, and status badge in desktop table.
+         2. Renders semantic pace status badges for serene, on-track, catch-up, punished, and excused.
+         3. Omits Progress and Pace Status columns in Today's LB view mode.
+         4. Safely handles 0% and caps 100%+ progress bar widths.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 31/31 tests green in `challenge-leaderboard-tab.test.tsx`, 113/113 tests green across `features/leaderboard`.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design tokens and anti-slop rules).
+- **NEXT STEP:** Submit PR for `KAN-69` / GH-#208, and transition Jira ticket `KAN-69` to `In Review`.
+
+### Session 186 — 2026-11-02 (feat(participant-stats): display challenge-linked weekly goals checklist on participant profile — GH-#207 / Jira KAN-68 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#207](https://github.com/lrfsdevs/holdmetoit/issues/207) / Jira Ticket `KAN-68` ("Under Law L6 (Three-Condition Accountability Invariant), every participant must complete 100% of their challenge-linked weekly tasks to avoid punishment at results lock. Display challenge-linked weekly goals checklist on participant profile at `/challenge/[id]/participant/[participantId]`").
+- **Jira Status:** Transitioned `KAN-68` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Law Invariants Preserved:**
+   - **Law L6 (Three-Condition Accountability Invariant):** Provides direct, unambiguous visibility into whether scholars committed to and completed their challenge-linked weekly tasks.
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Teammates and spectators can view the full list of declared weekly tasks on the participant profile without requiring write permissions.
+   - **Law L9 (Zero-State & Error Resilience):** Obsidian Dark semantic tokens enforced (`bg-surface-primary`, `bg-surface-tertiary`, `border-border-default`, `text-feedback-success`, `text-caption`). Polished on-theme empty state rendered when an enrolled scholar has not committed any weekly goals. Fully responsive down to 360px viewports with `min-w-0 break-words` text wrapping.
+- **Architectural Enhancements Implemented:**
+   1. **Domain Layer (`features/participant-stats/domain/participant-stats.types.ts`):**
+      - Defined `ParticipantWeeklyGoalItem` interface (`{ id, title, status, isComplete, completedAt }`).
+      - Updated `ParticipantStatsViewModel` to include `weeklyGoals: ParticipantWeeklyGoalItem[]`, `completedGoalsCount: number`, and `totalGoalsCount: number`.
+      - Exported `ParticipantChallengeStatsViewModel` type alias for backward and domain compatibility.
+   2. **Data Layer (`features/participant-stats/data/participant-stats.repository.ts`):**
+      - Queried `prisma.task.findMany({ where: { challengeId, userId: participant.userId, taskType: 'WEEKLY', isDeleted: false }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] })` in parallel with scoreboard fetching.
+      - Mapped tasks into serializable `weeklyGoals` array, normalizing `isComplete` and ISO timestamp strings.
+      - Accurately computed `completedGoalsCount` and `totalGoalsCount`.
+      - Provided zero-state defaults (`weeklyGoals: []`, `completedGoalsCount: 0`, `totalGoalsCount: 0`) in fallback unenrolled resolution mode.
+   3. **Presentation Layer (`features/participant-stats/presentation/`):**
+      - Created `ParticipantWeeklyGoalsCard` (`participant-weekly-goals-card.tsx`) featuring:
+         - Target icon and section heading.
+         - Completion ratio pill (`X/Y Goals Completed`) with dynamic success styling (`bg-feedback-success-bg border-feedback-success/40 text-feedback-success-text`) on 100% completion.
+         - On-theme empty state container (`bg-surface-tertiary/40 border-dashed`) with `ListTodo` icon when no goals are declared.
+         - Goal list with `CheckCircle2` (in `text-feedback-success`) and "Done" tag for completed goals, neutral `Circle` (`text-text-tertiary`) for pending goals, and strikethrough styling for completed tasks.
+      - Embedded `ParticipantWeeklyGoalsCard` into `ChallengeSnapshot` (and exported from `participant-stats-view.tsx`), ensuring consistent rendering across participant profile views and global profile challenge history snapshots.
+   4. **Documentation (`docs/implementation/participant-statistics.md`):** Updated repository query documentation and presentation layer catalog to reflect weekly goals capability.
+   5. **Testing & Verification:**
+      - Added 5 unit tests in `participant-weekly-goals-card.test.tsx` verifying ratio pills, empty states, 100% complete styling, partial states, and icon decorations.
+      - Added repository tests in `participant-stats.repository.test.ts` verifying task query isolation (`taskType = 'WEEKLY'`, `challengeId`, `isDeleted: false`), mapping, and count calculation.
+      - Added 3 unit tests in `participant-stats-view.test.tsx` verifying goal checklist rendering, empty state handling, and exclusion in unenrolled fallback states.
+      - Updated snapshot integration tests in `challenge-snapshot.test.tsx`.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 10/10 test files green (85/85 tests passed) in `features/participant-stats`, 235/235 test files green (2,304/2,304 tests passed) across the full web workspace.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-68 transitioned to `In Review`.
+
+### Session 187 — 2026-11-02 (feat(participant-stats): add responsive pagination to participant weekly goals card on profiles on `krish`)
+
+- **Context & Objectives:** The challenge-linked weekly goals section on participant profiles could grow excessively long when a participant declared numerous goals (e.g. 18+ items). Add responsive pagination to keep the card compact, prevent vertical page stretching, and avoid mobile scroll trapping.
+- **Decision: Pagination vs. Fixed Height Scroll Container:**
+   - Evaluated fixed height scroll (`max-h-[300px] overflow-y-auto`) vs. pagination. Fixed-height nested scrolls cause scroll trapping / gesture hijacking on mobile viewports (360px+), violating UX quality guidelines.
+   - Selected clean client-side pagination utilizing the repository's standard `DataPagination` component with a default `pageSize = 5`.
+- **Architectural Enhancements Implemented:**
+   1. **`ParticipantWeeklyGoalsCard` (`apps/web/features/participant-stats/presentation/participant-weekly-goals-card.tsx`):**
+      - Added `"use client"` directive and interactive state (`currentPage`, `pageSize = 5`, `DEFAULT_WEEKLY_GOALS_PAGE_SIZE = 5`).
+      - Derived `totalPages` and clamped `safeCurrentPage` (`Math.min(Math.max(1, currentPage), totalPages)`).
+      - Added state key detection to automatically reset pagination to page 1 whenever the underlying goals list changes (e.g. switching challenges or participants).
+      - Integrated `DataPagination` (renders "Showing X–Y of Z goals" and Prev/Next/numbered page controls) only when `totalPages > 1`.
+   2. **`ChallengeSnapshot` (`apps/web/features/participant-stats/presentation/challenge-snapshot.tsx`):**
+      - Added optional `weeklyGoalsPageSize?: number` prop to `ChallengeSnapshotProps` and passed down to `ParticipantWeeklyGoalsCard`.
+   3. **Documentation & Tests:**
+      - Updated `docs/implementation/participant-statistics.md`.
+      - Expanded `participant-weekly-goals-card.test.tsx` to 10 comprehensive tests covering default page size constant, page slicing, hidden pagination when goals <= pageSize, pagination controls on multi-page lists, interactive page changes, and automatic page reset on goal list switch.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 10/10 test files green (90/90 tests passed) in `features/participant-stats`.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-68 transitioned to `In Review`.
+
+### Session 188 — 2026-11-02 (fix(challenges): freeze and preserve historical study hours upon mid-challenge withdrawal — GH-#210 / Jira KAN-71 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#210](https://github.com/lrfsdevs/holdmetoit/issues/210) / Jira Ticket `KAN-71` ("fix(challenges): freeze and preserve historical study hours upon mid-challenge withdrawal"). Previously, when a participant withdrew mid-challenge, `isWithdrawn` was set to `true`, and scoreboard queries filtered out all withdrawn participants, instantly dropping all their previously logged study hours from their team's cumulative score and unfairly penalizing remaining teammates.
+- **Jira Status:** Transitioned `KAN-71` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Team scores are aggregated uniformly. Historical hours logged by a participant prior to or on `withdrawalAt` remain frozen and permanently credited to their team's cumulative score.
+   - **Law L6 (Three-Condition Accountability Invariant):** In team battles, winning team determination at results lock includes frozen historical study hours of withdrawn members, ensuring teammates are not unfairly punished due to another member's departure. Withdrawn participants remain exempt from individual rankings, podiums, reward distributions, and post-lock punishment records.
+   - **Law L7 (Pure Domain Isolation):** Pure domain functions `isStudyLogBeforeWithdrawal` and `filterLogsBeforeWithdrawal` isolate withdrawal boundary checks with zero database or framework imports.
+   - **Law L8 (Second-Level Clock Precision):** Frozen study hours retain exact second-level integer precision.
+   - **Law L9 (Zero-State & Error Resilience):** Historical challenge breakdown cards display an explicit, subtle `Withdrawn (Hours Frozen)` badge for complete transparency.
+- **Architectural Slices Implemented:**
+   1. **Domain Layer (`features/challenges/domain/` & `features/leaderboard/domain/`):**
+      - In `features/challenges/domain/withdrawal.ts`:
+         - Added `isStudyLogBeforeWithdrawal(log, withdrawalAt)`: accurately compares log `createdAt` timestamp against `withdrawalAt`, falling back to `logDate` UTC date key comparison when `createdAt` is omitted.
+         - Added `filterLogsBeforeWithdrawal(logs, withdrawalAt)`: filters study logs to only those recorded on or before withdrawal.
+      - In `features/leaderboard/domain/leaderboard.ts`:
+         - Updated `aggregateTeamScores` and `ParticipantLogEntry` to support participant withdrawal info and daily logs.
+         - Added `calculateParticipantScoredSeconds(participant)`: preserves frozen historical hours for withdrawn members while active members contribute all logs.
+   2. **Data Layer (`features/leaderboard/data/` & `features/challenges/data/`):**
+      - In `features/leaderboard/data/leaderboard-data.ts`:
+         - Updated `buildScoreboardViewModel`: calculates team scores using `scoringLogEntries` that preserve frozen hours of withdrawn participants up to `withdrawalAt`, while keeping active podiums and individual standings restricted to `activeParticipants`.
+         - Updated `getCachedChallengeScoreboardPayload`: daily study logs payload schema supports `createdAt` (with `createdAt` selection added to the query in Session 195 to align sub-day second precision against `withdrawalAt`).
+      - In `features/challenges/data/challenge-admin.repository.ts`:
+         - In `lockChallengeResults`: calculated `teamTotals` including frozen study logs of withdrawn participants when evaluating `winningTeamIds`, while keeping `evaluatedParticipants` filtered to active participants so withdrawn members are never penalized.
+      - In `features/study-logs/data/daily-study-log.repository.ts`:
+         - In `upsertDailyStudyLogOnce`: enforced that any study hours logged for a withdrawn participant (or for a log date after `withdrawalAt`) are rejected with `ChallengeStateError`.
+   3. **Presentation Layer (`features/participant-stats/presentation/challenge-snapshot.tsx`):**
+      - Updated `getParticipantStatusBadge` to render `Withdrawn (Hours Frozen)` on historical challenge breakdown cards for enrolled scholars who withdrew mid-challenge.
+   4. **Documentation & Quality Gates:**
+      - Updated `docs/challenges/withdrawal.md` (§5 Data Exclusion & Frozen Historical Hours).
+      - Added comprehensive test suites:
+         - `features/challenges/domain/withdrawal.test.ts`: 4 new unit tests covering timestamp millisecond comparisons, fallback date key comparison, and log filtering.
+         - `features/leaderboard/domain/leaderboard.test.ts`: verified frozen hours preservation in `aggregateTeamScores`.
+         - `features/leaderboard/data/leaderboard-data.test.ts`: verified historical team score retention and post-withdrawal log exclusion.
+         - `features/study-logs/data/daily-study-log.repository.test.ts`: verified post-withdrawal logging rejection.
+         - `features/challenges/data/challenge-admin.repository.test.ts`: verified winning team resolution with frozen hours and punishment exemption.
+         - `features/challenges/data/participant.repository.test.ts`: verified historical study hour preservation upon withdrawal.
+         - `features/participant-stats/presentation/challenge-snapshot.test.tsx`: verified `Withdrawn (Hours Frozen)` badge rendering.
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+   - Test suites: ✅ 235/235 test files green (2,318/2,318 tests passed) across the full web workspace.
+   - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-71 transitioned to `In Review`.
+
+### Session 189 — 2026-11-02 (feat(accountability): add admin quick-pardon modal trigger to post-lock leaderboard rows — GH-#211 / Jira KAN-72 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#211](https://github.com/lrfsdevs/holdmetoit/issues/211) / Jira Ticket `KAN-72` ("feat(accountability): add admin quick-pardon modal trigger to post-lock leaderboard rows"). Administrators inspecting final standings on the public Leaderboard tab (`/challenge/[id]?tab=leaderboard`) could see "Edit hr" and "Edit target", but had no direct way to pardon an unfairly punished scholar from their standings row without having to navigate away to the Manage tab roster.
+- **Jira Status:** Transitioned `KAN-72` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L4 (Discord Identity Primacy & Public Spectator Mode):** Spectators and regular participants do not see admin pardon controls; only authenticated admins/devs see quick-pardon triggers on completed/locked challenges.
+   - **Law L5 (Admin Override Absolute):** Community hosts possess unconditional authority to pardon/excuse any participant directly from final leaderboard standings with verified rationale, creating an immutable audit trail.
+   - **Law L6 (Three-Condition Accountability Invariant):** Excusing a participant sets `status = "EXCUSED"` and `isPardoned = true`, relieving them from forfeit obligations while preserving team scoring integrity.
+   - **Law L9 (Zero-State & Error Resilience):** Modal dialog mounts cleanly with pre-selected scholar identity card, handles validation (minimum 3 characters), loading state, and error handling.
+- **Architectural Slices Implemented:**
+   1. **Presentation Layer (`features/leaderboard/presentation/`):**
+      - In `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`:
+         - Imported and mounted `AdminPardonModal` from `@/features/accountability/presentation/admin-pardon-modal`.
+         - Conditioned pardon visibility on `canPardon = isAdmin && isChallengeLocked` where `isChallengeLocked = challenge.status === "COMPLETED" || Boolean(challenge.resultsLockedAt)`.
+         - Added `isPunishedScholar` helper to identify punished scholars (`entry.paceStatus === "punished" || entry.status === "PUNISHED"`) while excluding excused scholars.
+         - Rendered high-contrast `Pardon` button with `HeartHandshake` icon (`data-testid="admin-pardon-button"`) next to `Edit hr` / `Edit target` across:
+            - Team View mode: House member rows
+            - Team View mode: Unassigned scholars section
+            - Individual View mode: Mobile card list
+            - Individual View mode: Desktop standings table (both `today` and total hours columns)
+         - Connected `handleOpenPardon` to pre-populate `pardonParticipant` and open modal.
+         - Connected `onSuccess` callback to fire `router.refresh()` to revalidate server-rendered scoreboard standings immediately upon successful pardon.
+   2. **Documentation & Quality Gates:**
+      - Updated `docs/accountability/README.md` (§7 Host Pardon & Leaderboard Quick-Pardon Trigger).
+      - Added 5 unit tests in `features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (`Admin Quick-Pardon Trigger (FEAT-PUN-04 / GH-#211)`):
+         - Verified Pardon button renders for punished participants when `isAdmin` is true on completed/locked challenges.
+         - Verified Pardon button is omitted for regular participants and spectators (`isAdmin: false`).
+         - Verified Pardon button is omitted when challenge is still active/unlocked.
+         - Verified Pardon button renders in Team View mode for punished house members and unassigned scholars.
+         - Verified clicking Pardon opens `AdminPardonModal` with pre-selected participant and triggers `router.refresh()` on success.
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
+      - Test suites: ✅ 36/36 tests green in `challenge-leaderboard-tab.test.tsx`, 121/121 green across `features/leaderboard`.
+- **NEXT STEP (completed in Session 194 / PR #218):** Committed and submitted in PR #218; KAN-72 transitioned to `In Review`.
+
+### Session 189B — 2026-11-02 (feat(preferences): user preferences tab and opt-in todo completion sound effect ("yippee") — GH-#216 / Jira KAN-73 on `krish`)
+
+- **Context & Objectives:** Implement GitHub Issue [#216](https://github.com/lrfsdevs/holdmetoit/issues/216) / Jira Ticket `KAN-73` ("feat(preferences): user preferences tab and opt-in todo completion sound effect ('yippee')"). Provide auditory celebration feedback when participants complete daily or weekly tasks in the cockpit (`cockpit-tasks-section.tsx`), strictly opt-in (disabled by default) to respect quiet study sessions in libraries and streams. Also introduce a dedicated `/preferences` hub with themes and notifications sections marked as "Coming Soon".
+- **Jira Status:** Transitioned `KAN-73` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L4 (Discord Identity Primacy & Spectator / Local Sandbox Support):** Preferences are accessible to both authenticated members and guest study companions; settings persist client-side via resilient `localStorage` with safe SSR hydration.
+   - **Law L7 (Pure Domain Isolation):** All preference schemas, default configurations, volume clamps, and validation logic reside in pure TypeScript within `features/preferences/domain/` with zero framework or UI dependencies.
+   - **Law L9 (Zero-State & Error Resilience):** Audio playback controller (`audio-service.ts`) safely handles browser autoplay restrictions, muted states, and unsupported audio codecs with silent failover so task mutations and UI state are never blocked.
+   - **Design System Fidelity (`DESIGN.md`):** Preferences interface strictly complies with Obsidian Dark tokens (no raw hex codes, semantic typography tokens `text-label`, `text-meta`, `text-caption`, responsive grid 360px+).
+- **Architectural Slices Implemented:**
+   1. **Asset Management & Storage Layer (`apps/web/public/` & `features/preferences/data/`):**
+      - Installed bundled celebratory audio asset in `apps/web/public/sounds/yippee.mp3` (44 KB).
+      - Built `preferences-storage.ts`: manages persistent storage key `holdmetoit:user_preferences` with in-memory fallback, safe SSR checks (`typeof window !== "undefined"`), and cross-tab/custom event dispatching (`holdmetoit:preferences-updated`).
+   2. **Domain Layer (`features/preferences/domain/`):**
+      - Implemented `user-preferences.ts`: defines `UserPreferences`, `SoundPreferences`, `ThemePreferences`, and `NotificationPreferences`.
+      - Enforced invariant: `DEFAULT_USER_PREFERENCES.sound.todoCompletionSfx = false` (strictly opt-in).
+      - Added pure domain functions: `isTodoCompletionSfxEnabled`, `clampVolume`, `sanitizeUserPreferences`.
+   3. **Presentation Layer (`features/preferences/presentation/` & `apps/web/app/preferences/`):**
+      - Built `audio-service.ts`: provides `playCompletionAudio({ preview, volume })` with autoplay fallback and opt-in gate.
+      - Built `use-user-preferences.ts`: client hook with reactive synchronization to storage updates.
+      - Built `PreferencesView` (`preferences-view.tsx`):
+         - Audio Feedback card with status badge (`Enabled` vs `Muted by Default`), toggle switch (`todo-sfx-switch`), and interactive "Preview" sound button (`preview-sound-button`).
+         - Themes & Aesthetics card with prominent `Coming Soon` badge and 4 theme preview tiles: Obsidian Dark (Active default), Midnight Azure, Emerald Forest, Cozy Sunset.
+         - Notifications & Reminders card with prominent `Coming Soon` badge and 3 scheduled notification preview rows.
+      - Added page route at `apps/web/app/preferences/page.tsx`.
+   4. **Header Navigation & Cockpit Wiring:**
+      - In `components/ui/header.tsx`: added prominent `Preferences` navigation link in header nav (`data-testid="preferences-nav-link"`) and quick-access settings icon button (`data-testid="quick-preferences-button"`).
+      - In `features/study-logs/presentation/cockpit/cockpit-tasks-section.tsx`: wired `playCompletionAudio()` into task completion handlers:
+         - `handleToggleDailyTask` (when transitioning to `COMPLETED`)
+         - `handleToggleWeeklyTask` (when transitioning to `COMPLETED`)
+         - `handleSaveEditTask` (when editing task status to `COMPLETED` from non-completed)
+         - Enforced that unchecking or moving between `TODO` and `IN_PROGRESS` does not trigger audio.
+   5. **Documentation & Quality Gates:**
+      - Created comprehensive feature architecture documentation in `docs/preferences/README.md`.
+      - Added test suites across all layers (100% green exit):
+         - `features/preferences/domain/user-preferences.test.ts` (12 tests)
+         - `features/preferences/data/preferences-storage.test.ts` (5 tests)
+         - `features/preferences/presentation/audio-service.test.ts` (5 tests)
+         - `features/preferences/presentation/preferences-view.test.tsx` (6 tests)
+         - `features/study-logs/presentation/cockpit/cockpit-tasks-audio.test.tsx` (3 tests)
+         - `components/ui/header.test.tsx` (13 tests)
+      - `npm run typecheck:web`: ✅ 0 compiler errors.
+      - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
+      - `npm run test:web`: ✅ 240/240 test files green (2,355/2,355 tests passed).
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-73 transitioned to `In Review`.
+
+### Session 190 — 2026-11-02 (fix(leaderboard): prevent uncompleted participants from showing 'Completed' pace status on locked challenges — GH-#217 / Jira KAN-74 on `krish`)
+
+- **Context & Objectives:** Implement and fix GitHub Issue [#217](https://github.com/lrfsdevs/holdmetoit/issues/217) / Jira Ticket `KAN-74` ("fix(leaderboard): prevent uncompleted participants from showing 'Completed' pace status on locked challenges"). Fix display fallback in `buildScoreboardViewModel` so that participants with target hour deficits (`deficitSeconds > 0`) or incomplete challenge-linked weekly goals are strictly evaluated as `punished` on locked challenges, rather than falsely displaying a green "Completed" badge. Clamp `completionPercentage` so that deficits never round to 100%. Implement `reconcileChallengeAccountability` in `apps/ypt-bot` to evaluate participant outcomes and write `PunishmentRecord` rows upon 6-hour post-grace auto-lock.
+- **Jira Status:** Transitioned `KAN-74` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
+- **Product Invariants & Laws Preserved:**
+   - **Law L3 (The Catch-Up Deficit Model: Zero Grace Passes):** Uncompleted target hours remain active deficits that must not be masked as completed once a challenge is locked.
+   - **Law L6 (Three-Condition Accountability Invariant):** At event lock, scholars are saved only when (1) all challenge-linked weekly tasks are completed, (2) target hours are met, and (3) their team is a winning team (ties are draws where all max-score teams win; solo format evaluates individually). If any condition fails, the scholar is flagged `PUNISHED` and never displays `Completed`.
+   - **Law L8 (Second-Level Precision):** Deficit and completion percentage calculations respect exact integer seconds without rounding up to 100% when time remains uncompleted.
+   - **Law L9 (Zero-State & Error Resilience):** Auto-lock and leaderboard view models safely handle null/undefined participant structures, missing tasks, and disconnected states with defensive fallback.
+- **Architectural Slices Implemented:**
+   1. **Leaderboard Data Layer (`apps/web/features/leaderboard/data/leaderboard-data.ts`):**
+      - Removed buggy `!isResultsLocked &&` guard in `buildScoreboardViewModel` line 351 that previously bypassed the deficit check on locked challenges.
+      - Enforced that if `status === "COMPLETED"`, participants with `deficitSeconds > 0` or incomplete weekly tasks (`weeklyTasksCompletedCount < weeklyTasksTotalCount`) are assigned `paceStatus: "punished"` and `paceLabel: "Punished"` unless pardoned/excused (`isPardonedRecord`).
+      - Added safeguard clamping `completionPercentage` to 99% if `deficitSeconds > 0` and raw rounded percentage would have been 100%.
+   2. **Accountability & Automated Auto-Lock Reconciliation (`apps/ypt-bot/src/db/challenge-repository.js`):**
+      - Implemented `reconcileChallengeAccountability(challengeId, now, log)`: reads challenge, teams, non-withdrawn participants, and challenge-linked weekly tasks.
+      - Calculates capped team study totals (`clampDailyStudySeconds`), determines winning team IDs, and checks all 3 conditions under Law L6.
+      - Transitions qualifying participants to `status: "NORMAL"`, failing participants to `status: "PUNISHED"`, and writes corresponding `PunishmentRecord` entries (hardened into an atomic `prisma.$transaction` in Session 195).
+      - Wired `reconcileChallengeAccountability` into `lockExpiredChallengesAfterGrace` immediately following challenge lock update and audit log creation.
+   3. **Presentation & Rendering Layer (`apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+      - Verified semantic badge styling via `PaceStatusBadge`: `Punished` renders error styling (`bg-feedback-error-bg text-feedback-error-text`), `Completed` renders success styling (`bg-feedback-success-bg text-feedback-success-text`), and `Excused` renders accent styling.
+   4. **Documentation & Quality Gates:**
+      - Updated architecture documentation in `docs/leaderboard/README.md` (§7.4).
+      - Added unit tests in `apps/web/features/leaderboard/data/leaderboard-data.test.ts` (34/34 tests green):
+         - Tested uncompleted participants with target deficits are marked `punished` on locked challenges.
+         - Tested participants with 0 deficit and no punishments are marked `Completed`.
+         - Tested participants with incomplete weekly goals are marked `punished` even if hours are met.
+         - Tested `completionPercentage` clamp when fractional deficit remains.
+      - Added unit tests in `apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (37/37 tests green):
+         - Verified locked challenge standings table badge rendering for uncompleted vs completed scholars.
+      - Added unit tests in `apps/ypt-bot/test/db/challenge-repository.test.js` (100/100 tests green):
+         - Tested three-condition evaluation during auto-lock (hours, tasks, losing team).
+         - Tested SOLOS format exemption from team loss penalty.
+         - Tested tie draws where all tied maximum teams are saved.
+      - `npm run typecheck:web`: ✅ 0 compiler errors.
+      - `npm run lint:web`: ✅ 0 errors.
+      - `npm --prefix apps/web test -- features/leaderboard`: ✅ 125/125 tests passing.
+      - `npm run test:ypt-bot`: ✅ 100/100 tests passing.
+- **NEXT STEP (completed in Session 194 / PR #218):** Committed and submitted in PR #218; KAN-74 transitioned to `In Review`.
+
+### Session 191 — 2026-11-02 (fix(leaderboard): normalize duo battle team cards and scholar blocks for symmetrical visual UI layout — GH-#220 / Jira KAN-77 on `krish`)
+
+- **Context & Objectives:** Fix visual crookedness, uneven heights, and layout misalignment across duo battle cards in the Leaderboard tab ("View by Team" mode, `viewMode === "team"`). Previously, differences in team name character lengths, display names, handles, and hour values caused cards to expand unpredictably (some headers 2 lines vs 3 lines, and some scholar blocks 2 lines, 3 lines, or 4 lines). Normalize both the team card header and the member rows into strict, predictable 2-line structures with fixed minimum heights (`min-h-[68px]`) and graceful truncation so all duo blocks remain identical in size and shape.
+- **Product Invariants & Laws Preserved:**
+   - **Law L1 (Single Entity & Mathematical Unity):** Duo battles represent 2-member team structures and maintain structural parity with multi-member house and unassigned cards.
+   - **Law L8 (Second-Level Precision):** All duration meters render standard clock formatting with tabular numbers (`whitespace-nowrap font-sans font-sans-tabular`) to prevent line wrapping on clock values.
+   - **Law L9 (Zero-State & Error Resilience, Mobile Verified 360px+):** Responsive 2-column grid (`grid-cols-1 lg:grid-cols-2`) collapses safely to single column on mobile viewports without horizontal overflow or clipped text.
+- **Architectural Slices Implemented:**
+   1. **Normalized Team Card Header (Strict 2-Row Layout in `challenge-leaderboard-tab.tsx`):**
+      - **Row 1:** Team emoji, team name (`truncate font-bold` with native `title` tooltip), optional duo edit button (`Pencil`), and right-aligned total study duration (`t.totalLoggedClock`) with bounded progress bar track (`w-16 sm:w-24`).
+      - **Row 2:** Scholars count badge (`{count} / {companionCount} scholars`), optional `Leading House` badge, and right-aligned weekly commitment summary (`Weekly Target: {targetHours}h • Completed: {completionPercentage}%`).
+      - Eliminates multi-line header expansion: long team names like "Justice for chunaid khan" or "can't think of a name" truncate gracefully on Row 1 without pushing metadata downward.
+   2. **Normalized Scholar Block (Strict 2-Line Layout & `min-h-[68px]` in `challenge-leaderboard-tab.tsx`):**
+      - **Line 1:** Intra-team rank (`#idx`), overall rank (`(#rank)`), 32px circular avatar, scholar display name (`truncate block font-bold text-xs`), global trophy badge (if enabled), and YPT status pill (`YptStatusPill`, `shrink-0`).
+      - **Line 2:** Scholar handle (`@{username}`, `truncate max-w-[90px] sm:max-w-[130px]`), compact sick mode indicator (`SickStatusBadge`), and pace status pill (`Catch-Up` / `Serene` / `On Track` / `Punished`, `shrink-0`).
+      - **Right-Aligned Telemetry & Controls:** Tabular total and target clock (`totalLoggedClock / targetClock`, `whitespace-nowrap`), today's logged hours (`+todayLoggedClock`, `whitespace-nowrap`), and vertically centered compact icon-only admin controls with hover tooltips (`Clock`: "Edit Study Hours", `Target`: "Edit Weekly Target", `HeartHandshake`: "Grant Pardon"), saving ~88px of horizontal width for display names.
+      - Eliminates random 3-line and 4-line wrapping caused by dynamic `flex-wrap`: Line 1 is strictly 1 line, Line 2 is strictly 1 line, and total block height is anchored to `min-h-[68px]`.
+   3. **Unassigned Scholars Card Parity:**
+      - Applied identical 2-row header structure and 2-line scholar block normalization to the unassigned scholars card (`unassigned-scholars-card`).
+   4. **Documentation & Quality Gates:**
+      - Documented architecture and developer usage in `docs/leaderboard/README.md` (§7.5).
+      - Added regression unit test in `apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (38/38 tests green).
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit`).
+      - `npm run test:web -- features/leaderboard`: ✅ 126/126 tests passing across domain, data, and presentation layers.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-77 / GH-#220 ready for review.
+
+### Session 192 — 2026-11-02 (feat(tasks): remove header quick-add buttons & adapt calendar week navigation for weekly todos — on `krish`)
+
+- **Context & Objectives:** User requested two refinements on the Home Cockpit task board (`CockpitTasksSection`):
+   1. Remove the top Quick-Add (`+ Add`) buttons from both Daily Todos and Weekly Todos card headers since the todo lists now have bounded/contained heights (`max-h-[520px] overflow-y-auto`) and bottom add buttons are always conveniently accessible.
+   2. Add the calendar week navigation feature to the Weekly Todos column, adapted specifically for the weekly system (week-level range display, "This Week" quick snap, week-level row selection in the calendar popover, and weekly task scoping).
+- **Architectural Slices Implemented:**
+   1. **Top Add Buttons Removal (`cockpit-tasks-section.tsx`):**
+      - Removed `data-testid="quick-add-daily-button"` from the Daily Todos header row.
+      - Removed `data-testid="quick-add-weekly-button"` from the Weekly Todos header row.
+      - Maintained clean visual symmetry in Row 1 across both cards: Left has section title and status badge (`Daily Todos` + `Day X` vs `Weekly Todos` + `Trophy Goals`), and Right has completed counter (`0/0 Completed` vs `18/18 Completed`).
+      - Preserved bottom add buttons (`+ Add more todos for Day X` and `+ Add more todos`) as primary addition triggers.
+   2. **Calendar Week Navigation Adapted for Weekly System (`cockpit-date-picker-popover.tsx` & `cockpit-tasks-section.tsx`):**
+      - Enhanced `CockpitWeekNavigator` and `CockpitDatePickerPopover` with `mode?: "daily" | "weekly"` support.
+      - In `mode="weekly"`, chevrons page week by week (`weekly-prev-week`, `weekly-next-week`).
+      - Popover trigger displays `Calendar` icon with the active week range (`Oct 26 – Nov 1`).
+      - When navigated away from current week, renders a dedicated "This Week" quick snap button (replacing Daily's day-level "Today" button).
+      - Popover footer renders "Jump to This Week" alongside the formatted week range.
+      - In popover month grid, active week days form a cohesive continuous week highlight (`rounded-l-lg`, `rounded-none`, `rounded-r-lg`).
+      - Wired `activeWeeklyAnchorDateKey`, `weeklyRangeLabel`, `activeWeeklyWeekDateKeys`, and `isViewingCurrentWeeklyWeek` in `CockpitTasksSection`.
+      - Added `isTaskInWeeklyWeek` filter: tasks with `dueDate` in that week, challenge goals in challenge week, or unassigned tasks in current week are shown.
+      - Added dynamic completion counters for Weekly Todos (`{completedWeeklyTasksForWeek}/{totalWeeklyTasksForWeek} Completed`).
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `cockpit-date-picker-popover.test.tsx` verifying weekly trigger aria-label, weekly footer "Jump to This Week", and weekly navigator chevrons and "This Week" snap button.
+      - Updated `cockpit-tasks-quick-add-and-scroll.test.tsx` asserting top add buttons are removed while bottom add buttons remain fully functional.
+      - Updated `cockpit-tasks-week-navigation.test.tsx` adding dedicated weekly navigation test suite.
+      - `npm run typecheck -w @holdmetoit/web`: ✅ 0 compiler errors.
+      - `npm run test -w @holdmetoit/web`: ✅ 240 test files, 2364 tests passed (100% green exit).
+- **NEXT STEP:** Verify mobile responsiveness on 360px+ viewport and present walkthrough to user.
+
+### Session 193 — 2026-11-02 (fix(leaderboard): replace admin action buttons with compact icon buttons and align total hours — GH-#217 / Jira KAN-74 on `krish`)
+
+- **Context & Objectives:** User identified UI defect on `/challenge/[id]?tab=leaderboard`:
+   1. Admin action buttons (`Edit hr`, `Edit target`, `Pardon`) were overflowing horizontally across the desktop table, generating unwanted scrollbars.
+   2. Total Hours column was compressed in admin view when 3 buttons were present (~260px), wrapping `/ 45:00:00` onto a second line underneath logged hours and causing uneven, lopsided vertical and horizontal alignment compared to the clean normal user layout.
+   3. Shorten action buttons to compact icon-only buttons with hover tooltips and ensure the Total Hours format matches the clean single-line format of the normal user layout.
+- **Product Invariants & Laws Preserved:**
+   - **Law L8 (Second-Level Precision):** Tabular numbers and clock values remain strictly on a single line (`whitespace-nowrap font-sans font-sans-tabular`) without multi-line breaks.
+   - **Law L9 (Zero-State & Error Resilience):** Icon-only buttons maintain full screen-reader accessibility (`<span className="sr-only">`, `aria-label`) and descriptive hover tooltips via Radix UI `Tooltip` and native `title`.
+   - **Visual Symmetry:** Decoupled admin controls into a dedicated `Actions` column (`w-[100px]`), ensuring the `Total hours` column is 100% identical in format and position between regular participant and admin views.
+- **Architectural Slices Implemented:**
+   1. **Compact Icon-Only Actions (`AdminRowActions` in `challenge-leaderboard-tab.tsx`):**
+      - Rendered 28px (`h-7 w-7`) icon buttons for `Clock` (Edit Study Hours), `Target` (Edit Weekly Target), and `HeartHandshake` (Grant Pardon).
+      - Styled with Obsidian Dark tokens (`bg-surface-elevated hover:bg-surface-nested border-border-strong`).
+      - Wrapped in Radix UI `Tooltip` with 150ms delay and SSR hydration mounting guard (`mounted` state) to prevent React server layout effect warnings.
+      - Scaled to `size="sm"` (`h-6 w-6` with `h-3 w-3` icons) in mobile cards (`sm:hidden`) and team view mode.
+   2. **Dedicated Desktop Actions Column & Aligned Total Hours:**
+      - Added dedicated `Actions` column header (`TableHead`) when `isAdmin` is true.
+      - Aligned `Total hours` column to `text-right font-sans font-sans-tabular text-sm font-bold text-white whitespace-nowrap` matching normal user layout.
+      - Clean single-line rendering: `(clock) HH:MM:SS / HH:MM:SS` without lopsidedness or horizontal shifting between rows.
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `challenge-leaderboard-tab.test.tsx` verifying dedicated `Actions` column rendering for admins, omission for regular users, and identical total hours structure.
+      - `npm --prefix apps/web test -- features/leaderboard`: ✅ 5 test files, 129/129 tests passing.
+      - `npm run typecheck:web`: ✅ 0 TypeScript errors.
+      - `npm run lint:web`: ✅ 0 lint errors.
+- **NEXT STEP:** Peer review and merge PR #218 into `dev`.
+
+### Session 194 — 2026-11-02 (chore(release): submit PR #218 from krish to dev, link issues #207-#217 & transition Jira KAN-68-74 to In Review — on `krish`)
+
+- **Context & Objectives:** User requested to commit and push all pending changes on `krish`, create a Pull Request from `krish` to `dev` covering completed slices across leaderboard, cockpit, tasks, preferences, and accountability, link relevant issues, and transition associated Jira tickets to `In Review`.
+- **Git State & Push:**
+   - Committed pending task navigation updates: `[krish 82251dc] feat(tasks): remove header quick-add buttons and adapt calendar week navigation for weekly todos`.
+   - Pushed `krish` to remote (`origin/krish` up to date at `82251dc`).
+- **Pull Request Created:**
+   - **PR #218:** [`feat(cockpit & leaderboard): weekly todo navigation, compact admin actions, locked pace invariants & preferences (#207, #208, #210, #211, #216, #217)`](https://github.com/lrfsdevs/holdmetoit/pull/218) submitted from `krish` $\rightarrow$ `dev`.
+   - Linked GitHub Issues:
+      - `Closes #217` (Jira **KAN-74**): Locked challenge pace status invariant, auto-lock reconciliation & compact admin actions.
+      - `Closes #216` (Jira **KAN-73**): User preferences hub & opt-in "yippee" completion audio effect.
+      - `Closes #211` (Jira **KAN-72**): Admin quick-pardon modal trigger on post-lock leaderboard rows.
+      - `Closes #210` (Jira **KAN-71**): Preserve historical study hours on mid-challenge withdrawal.
+      - `Closes #208` (Jira **KAN-69**): Desktop standings progress percentage & pace status columns.
+      - `Closes #207` (Jira **KAN-68**): Participant profile weekly goals checklist & pagination.
+- **Jira Status Lifecycle Transitions (AGENTS.md §4.4):**
+   - Successfully transitioned all 6 Jira issues from `In Progress` $\rightarrow$ `In Review` (transition ID `31`) via Jira Cloud REST API:
+      - `KAN-68`: Status is now `[In Review]`
+      - `KAN-69`: Status is now `[In Review]`
+      - `KAN-71`: Status is now `[In Review]`
+      - `KAN-72`: Status is now `[In Review]`
+      - `KAN-73`: Status is now `[In Review]`
+      - `KAN-74`: Status is now `[In Review]`
+- **NEXT STEP (completed in Session 194):** Create and submit PR #218 targeting `dev`.
+
+### Session 195 — 2026-11-02 (fix(tasks): anchor weekly tasks to creation week and prevent cross-week sticking on new week start — on `krish`)
+
+- **Context & Objectives:** User reported an issue where weekly tasks were sticking to the current week when a new calendar week starts instead of staying in the previous week or the week they were created.
+- **Root Cause Analysis:**
+   1. In `CockpitTasksSection`, `isTaskInWeeklyWeek` contained an early return `if (isViewingCurrentWeeklyWeek) return true;` before evaluating `task.createdAt`.
+   2. Because of this, any weekly task lacking a `dueDate` evaluated to `true` whenever the user viewed "This Week", causing all prior weekly tasks to persist into new weeks indefinitely.
+   3. In `handleAddTodoSubmit`, newly added tasks did not have `createdAt: nowIso` explicitly stamped on optimistic state objects.
+   4. In `handleSaveEditTask`, editing weekly tasks was wiping out `dueDate` to `null`.
+   5. In UI rendering, `visibleWeeklyTasksCount === 0` had a guard `!isViewingCurrentWeeklyWeek`, preventing the clean empty-state fallback when a user begins a fresh week with zero tasks.
+- **Architectural Slices Implemented:**
+   1. **Task Week Scoping Filter (`cockpit-tasks-section.tsx`):**
+      - Removed premature `if (isViewingCurrentWeeklyWeek) return true;` from `isTaskInWeeklyWeek`.
+      - Evaluates `task.createdAt` against `activeWeeklyAnchorDateKey` via `isSameCalendarWeek`, strictly scoping weekly tasks without an explicit `dueDate` to the calendar week they were created.
+      - Uses `isViewingCurrentWeeklyWeek` strictly as a fallback when neither `dueDate` nor `createdAt` is provided (e.g. bare unit test mocks).
+   2. **State & Modal Hydration Integrity:**
+      - Explicitly stamped `createdAt: nowIso` onto optimistic `newTask` objects in `handleAddTodoSubmit`.
+      - Preserved `editTaskModal.dueDate` in `handleSaveEditTask` instead of clearing to `null`.
+      - Corrected category container filtering (`if (weekTasks.length === 0) return null;`) and empty-state condition (`visibleWeeklyTasksCount === 0`) to show "No weekly todos for this week" cleanly when entering a new week.
+   3. **Comprehensive Test Suite & Quality Gates:**
+      - Added tests in `cockpit-tasks-week-navigation.test.tsx` verifying weekly tasks created in previous weeks stay in the previous week and do not stick into the new week, while navigating back displays them properly.
+      - Verified explicit `dueDate` weekly task routing across calendar weeks.
+      - Fixed mock dates in `cockpit-tasks-rollover-and-scoping.test.tsx` to anchor relative to test `todayDate`.
+      - Updated `docs/cockpit/README.md` documentation.
+      - `npm run typecheck:web`: ✅ 0 compiler errors.
+      - `npm run test -w @holdmetoit/web`: ✅ 240 test files, 2369 tests passed (100% green exit).
+- **NEXT STEP (completed in Session 195):** Committed in `64368dd`.
+
+### Session 196 — 2026-11-02 (fix(review): resolve inline review findings across leaderboard, preferences, cockpit date navigation, and auto-lock reconciliation — on `krish`)
+
+- **Context & Objectives:** Verify and resolve review findings across the web application, YPT bot repository, and architecture documentation:
+   1. `leaderboard-data.ts`: include `createdAt` in `dailyStudyLogs` select query to align exact timestamp boundaries for `filterLogsBeforeWithdrawal` with `lockChallengeResults`; filter weekly tasks with `isDeleted: false` and update comment.
+   2. `challenge-leaderboard-tab.tsx`: pass `status: "PUNISHED"` directly in pardon modal payload rather than using scholar's live YPT status string (`entry.status`).
+   3. `preferences-storage.ts`: make `isBrowser()` exception-safe against throwing `window.localStorage` accessors in restricted environments; ensure `loadStoredPreferences()` serves unsaved `memoryFallback` when `localStorage.setItem` throws.
+   4. `cockpit-date-picker-popover.tsx`: update weekly trigger accessible name to "Selected week: {weekRangeLabel}. Click to pick week"; display today's calendar week range in popover footer beside "Jump to This Week" when viewing a different week.
+   5. `cockpit-tasks-section.tsx`: anchor undated challenge-linked weekly tasks to a single week anchor (`effectiveStartDate ?? createdAt`); preserve existing due date on weekly edits without daily fallback and sync `dueDate: resolvedDueDate` in `setWeeklyCategories`.
+   6. `apps/ypt-bot/src/db/challenge-repository.js`: wrap auto-lock accountability mutations in `prisma.$transaction`; add `RECONCILIATION_FAILED` audit retry marker and pre-check retry; include withdrawn participant logs through `withdrawalAt` in team totals while evaluating active members only.
+   7. `admin-pardon.actions.ts` & `admin-pardon.repository.ts`: trim pardon reason before length validation, and pass `transactionClient: tx` to `recordAuditEvent`.
+   8. `docs/accountability/README.md` & `HANDOFF.md`: align documentation, session numbering, and prune stale NEXT STEP entries.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Targeted web test suites: ✅ 100% green exit across leaderboard (129/129), preferences (30/30), accountability (22/22), and cockpit date navigation (11/11).
+   - `apps/ypt-bot` test suite: ✅ 102/102 tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **NEXT STEP (completed in Session 196):** Review feedback addressed across leaderboard, preferences, cockpit date navigation, and auto-lock reconciliation; pushed in `0c0eebc`.
+
+### Session 197 — 2026-11-02 (fix(ci): mock auditLog.findMany and challenge.findUnique in ypt-bot tests for database-less CI — on `krish`)
+
+- **Context & Objectives:** GitHub Actions CI failed in step `YPT bot tests` on PR #218 because `lockExpiredChallengesAfterGrace` attempted unmocked calls to `prisma.auditLog.findMany` and `prisma.challenge.findUnique` inside the auto-lock and simulation test suites, which errored when running with `CI_SKIP_DB="true"` and non-existent `localhost:5432` PostgreSQL:
+   1. `apps/ypt-bot/test/db/challenge-repository.test.js`:
+      - Added `beforeEach` and `afterEach` hooks in `describe("ingestGroupMembersToDailyStudyLogs End-to-End Simulation (Mocked DB)")` and `describe("lockExpiredChallengesAfterGrace & Audit Log Creation")` to mock `prisma.auditLog.findMany = async () => []`.
+      - In `locks challenge and writes audit log once 6-hour grace window has elapsed`, mocked `prisma.challenge.findUnique` and `prisma.$transaction`, and ensured `auditCalledWith` matches `CHALLENGE_LOCKED`.
+      - Added unit test `retries previously failed challenge accountability reconciliations and deletes retry marker`.
+      - Restored `prisma.$transaction = origTransaction` in `finally` of the tied-scores test.
+   2. `apps/ypt-bot/test/ingest/ingest-guards.test.js`:
+      - Added `beforeEach` and `afterEach` hooks in `describe("Zero-Drop & Rollover Glitch Guards in ingestGroupMembersToDailyStudyLogs")` to mock `prisma.auditLog.findMany = async () => []`.
+- **Quality Gates:**
+   - Full web test suite: ✅ 240/240 files green (2372/2372 passing).
+   - Next.js production build: ✅ compiled successfully (`next build`).
+   - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
+   - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
+- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.

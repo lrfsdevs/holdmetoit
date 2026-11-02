@@ -1,4 +1,4 @@
-import { describe, it, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { getGroupMembers, getAggregatedMembers } from "../../src/ypt/client.js";
 import { ingestGroupMembersToDailyStudyLogs } from "../../src/ingest/daily-study-log.js";
@@ -90,6 +90,16 @@ describe("YPT studyDate extraction and aggregation", () => {
 });
 
 describe("Zero-Drop & Rollover Glitch Guards in ingestGroupMembersToDailyStudyLogs", () => {
+   let origAuditLogFindMany;
+
+   beforeEach(() => {
+      origAuditLogFindMany = prisma.auditLog.findMany;
+      prisma.auditLog.findMany = async () => [];
+   });
+
+   afterEach(() => {
+      prisma.auditLog.findMany = origAuditLogFindMany;
+   });
    it("guards against overwriting completed day when YPT member has already rolled over to next date", async () => {
       // Mock prisma dependencies
       const originalFindMany = prisma.dailyStudyLog.findMany;

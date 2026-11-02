@@ -120,6 +120,14 @@ export interface ParticipantCompetitiveStats {
    trophyHistory: ParticipantTrophyHistoryItem[];
 }
 
+export interface ParticipantWeeklyGoalItem {
+   id: string;
+   title: string;
+   status: string;
+   isComplete: boolean;
+   completedAt: string | null;
+}
+
 export interface ParticipantStatsViewModel {
    profile: ParticipantProfileHeader;
    summary: ParticipantSummaryStats;
@@ -127,9 +135,14 @@ export interface ParticipantStatsViewModel {
    teamStats: ParticipantTeamStats | null;
    accountability: ParticipantAccountabilityStats;
    competitive?: ParticipantCompetitiveStats | null;
+   weeklyGoals: ParticipantWeeklyGoalItem[];
+   completedGoalsCount: number;
+   totalGoalsCount: number;
    viewer: {
       isAdmin: boolean;
       isOwner: boolean;
    };
    isFallback?: boolean;
 }
+
+export type ParticipantChallengeStatsViewModel = ParticipantStatsViewModel;

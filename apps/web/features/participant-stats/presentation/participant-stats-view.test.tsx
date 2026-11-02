@@ -168,6 +168,24 @@ describe("ParticipantStatsView", () => {
          isAdmin: false,
          isOwner: false,
       },
+      weeklyGoals: [
+         {
+            id: "task_1",
+            title: "Calculus Problem Set 1",
+            status: "COMPLETED",
+            isComplete: true,
+            completedAt: "2026-10-02T12:00:00.000Z",
+         },
+         {
+            id: "task_2",
+            title: "Physics Lab Report",
+            status: "TODO",
+            isComplete: false,
+            completedAt: null,
+         },
+      ],
+      completedGoalsCount: 1,
+      totalGoalsCount: 2,
    };
 
    it("renders profile header details and breadcrumbs", () => {
@@ -368,6 +386,9 @@ describe("ParticipantStatsView", () => {
             isAdmin: false,
             isOwner: true,
          },
+         weeklyGoals: [],
+         completedGoalsCount: 0,
+         totalGoalsCount: 0,
       };
 
       const html = renderToStaticMarkup(
@@ -399,6 +420,7 @@ describe("ParticipantStatsView", () => {
       // 5. Enrolled-only sections are omitted
       expect(html).not.toContain("Team Standing &amp; Contribution");
       expect(html).not.toContain("Accountability Status");
+      expect(html).not.toContain("Challenge Weekly Goals");
       expect(html).not.toContain("Deficit Pace");
    });
 
@@ -468,6 +490,9 @@ describe("ParticipantStatsView", () => {
             isAdmin: false,
             isOwner: false,
          },
+         weeklyGoals: [],
+         completedGoalsCount: 0,
+         totalGoalsCount: 0,
       };
 
       const html = renderToStaticMarkup(
@@ -477,6 +502,39 @@ describe("ParticipantStatsView", () => {
       expect(html).toContain("Scholar Not Enrolled in This Challenge");
       expect(html).toContain(
          "This scholar does not have an active participation record"
+      );
+      expect(html).not.toContain("Challenge Weekly Goals");
+   });
+
+   it("renders challenge weekly goals checklist for enrolled scholar", () => {
+      const html = renderToStaticMarkup(
+         <ParticipantStatsView stats={mockStats} />
+      );
+
+      expect(html).toContain("Challenge Weekly Goals");
+      expect(html).toContain("1/2 Goals Completed");
+      expect(html).toContain("Calculus Problem Set 1");
+      expect(html).toContain("Physics Lab Report");
+      expect(html).toContain("Done");
+   });
+
+   it("renders empty state when enrolled participant has no declared challenge weekly goals", () => {
+      const statsWithoutGoals: ParticipantStatsViewModel = {
+         ...mockStats,
+         weeklyGoals: [],
+         completedGoalsCount: 0,
+         totalGoalsCount: 0,
+      };
+
+      const html = renderToStaticMarkup(
+         <ParticipantStatsView stats={statsWithoutGoals} />
+      );
+
+      expect(html).toContain("Challenge Weekly Goals");
+      expect(html).toContain("0/0 Goals Completed");
+      expect(html).toContain("No Challenge Goals Declared");
+      expect(html).toContain(
+         "This scholar has not declared any challenge-linked weekly goals for this event."
       );
    });
 });

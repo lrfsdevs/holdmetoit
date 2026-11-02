@@ -13,7 +13,10 @@ const logger = createLogger("accountability.pardon");
 const adminPardonSchema = z.object({
    challengeId: z.string().min(1),
    participantId: z.string().min(1),
-   reason: z.string().min(3, "Please provide an excuse/pardon rationale."),
+   reason: z
+      .string()
+      .trim()
+      .min(3, "Please provide an excuse/pardon rationale."),
 });
 
 export type AdminPardonResult =

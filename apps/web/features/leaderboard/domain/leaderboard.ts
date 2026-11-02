@@ -2,6 +2,7 @@ import {
    DurationRangeError,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
+import { filterLogsBeforeWithdrawal } from "@/features/challenges/domain/withdrawal";
 
 export interface TeamRef {
    id: string;
@@ -10,7 +11,14 @@ export interface TeamRef {
 
 export interface ParticipantLogEntry {
    teamId: string;
-   loggedSeconds: number;
+   loggedSeconds?: number;
+   isWithdrawn?: boolean;
+   withdrawalAt?: Date | string | null;
+   dailyStudyLogs?: readonly {
+      durationSeconds: number;
+      createdAt?: Date | string | null;
+      logDate?: Date | string | null;
+   }[];
 }
 
 export interface TeamAggregateScore {
@@ -30,8 +38,37 @@ export interface LeadMarginResult {
 }
 
 /**
+ * Calculates effective scored seconds for a participant in team aggregations (GH-#210).
+ * Active participants contribute all study logs.
+ * Withdrawn participants contribute historical study logs recorded on or before withdrawalAt.
+ */
+export function calculateParticipantScoredSeconds(participant: {
+   isWithdrawn?: boolean;
+   withdrawalAt?: Date | string | null;
+   dailyStudyLogs?: readonly {
+      durationSeconds: number;
+      createdAt?: Date | string | null;
+      logDate?: Date | string | null;
+   }[];
+   loggedSeconds?: number;
+}): number {
+   if (participant.loggedSeconds != null && !participant.dailyStudyLogs) {
+      return participant.loggedSeconds;
+   }
+   const logs = participant.dailyStudyLogs ?? [];
+   if (!participant.isWithdrawn) {
+      return logs.reduce((total, log) => total + log.durationSeconds, 0);
+   }
+   return filterLogsBeforeWithdrawal(logs, participant.withdrawalAt).reduce(
+      (total, log) => total + log.durationSeconds,
+      0
+   );
+}
+
+/**
  * Aggregates participant logged seconds by team (Law L1).
  * Every team in `teams` receives an entry; teams with no logs total 0.
+ * Frozen historical study hours of withdrawn members are preserved and credited (GH-#210).
  * Results are sorted descending by totalSeconds (standings order).
  */
 export function aggregateTeamScores(
@@ -46,10 +83,15 @@ export function aggregateTeamScores(
    }
 
    for (const log of logs) {
-      assertNonNegativeInteger("loggedSeconds", log.loggedSeconds);
+      const loggedSeconds =
+         log.dailyStudyLogs != null
+            ? calculateParticipantScoredSeconds(log)
+            : (log.loggedSeconds ?? 0);
+
+      assertNonNegativeInteger("loggedSeconds", loggedSeconds);
 
       const current = totals.get(log.teamId) ?? 0;
-      totals.set(log.teamId, current + log.loggedSeconds);
+      totals.set(log.teamId, current + loggedSeconds);
    }
 
    const aggregates: TeamAggregateScore[] = [];

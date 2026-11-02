@@ -108,6 +108,19 @@ apps/web/
 - Clicking any sample chip dispatches a `CustomEvent(LOAD_SAMPLE_TASK_EVENT, { detail: { title } })`.
 - `CockpitTasksSection` listens for the event, assigns it to the `General` category, and persists it into IndexedDB via `putLocalCategory` and `putLocalTask`.
 
+### 4.3 Task Board Navigation & Layout Containment
+
+- **Bounded Height & Symmetrical Card Headers:**
+   - Both Daily and Weekly todo lists use bounded height containers (`max-h-[520px] overflow-y-auto`) with custom Obsidian scrollbars.
+   - Top Quick-Add (`+ Add`) buttons were removed from card headers, preserving clean two-column visual symmetry (left: title + status badge, right: completion counter `{completed}/{total} Completed`).
+   - Bottom add buttons (`+ Add more todos for Day X` / `+ Add more todos`) serve as the primary, uncrowded addition triggers.
+- **Weekly Todos Calendar Week Navigation:**
+   - `CockpitWeekNavigator` and `CockpitDatePickerPopover` support dual modes (`mode?: "daily" | "weekly"`).
+   - In weekly mode, pagination chevrons navigate week by week, and the popover trigger displays the formatted calendar week range (e.g., `Oct 26 – Nov 1`).
+   - Navigating away from the active calendar week reveals a dedicated "This Week" quick snap button (analogous to Daily's "Today" button).
+   - The date picker popover highlights the entire active week as a continuous pill and provides a "Jump to This Week" action.
+   - Tasks are filtered dynamically to the selected week (`isTaskInWeeklyWeek`) with live week-scoped completion metrics. Tasks stay scoped to the week when they were created (`createdAt`) or their explicit `dueDate`, preventing tasks from sticking across week boundaries when a new week begins.
+
 ---
 
 ## 5. Verification & Testing
