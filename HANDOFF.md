@@ -2680,4 +2680,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Next.js production build: ✅ compiled successfully (`next build`).
    - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
    - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
-- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.
+- **NEXT STEP (completed in Session 197):** CI quality-gates run verified green on PR #218; merged into `dev`.
+
+### Session 198 — 2026-11-03 (feat(changelog): comprehensive changelog update, audience filtering & repository path hardening — on `krish`)
+
+- **Context & Objectives:**
+   1. `CHANGELOG.md`: Analyzed complete git commit history and version progression (2026-09-05 through 2026-11-02). Shortened and consolidated recent commits (2026-10-20 to 2026-11-02) into concise, high-signal entries. Distinguished user-visible updates (`[user]`) from internal engineering, database, and admin operations (`[internal]`).
+   2. `apps/web/features/changelog/domain/changelog.ts`: Extended domain model with `ChangelogAudienceFilter` (`"all" | "user" | "internal"`), `countAudienceEntries` counting utility, and updated `selectVisibleGroups` with audience filter support while keeping default parameters 100% backward compatible.
+   3. `apps/web/features/changelog/presentation/changelog-view.tsx`: Enhanced `/changelog` presentation. Regular users see only user-facing updates without internal jargon; admins/devs receive an interactive audience filter toolbar (`All Updates`, `User Facing`, `Admin & Dev`) with count badges, plus emerald `User` and obsidian `Admin / Dev` card badges.
+   4. `apps/web/features/changelog/data/changelog.repository.ts`: Hardened `CHANGELOG.md` candidate path discovery across `process.cwd()` variations to guarantee reliable file loading in monorepo workspaces and serverless runtimes.
+   5. `apps/web/features/changelog/domain/changelog.test.ts`: Added unit tests for audience filtering and entry counts.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Web test suite: ✅ 240/240 test files green (2,375/2,375 tests passing).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, verify CI checks, and review.
