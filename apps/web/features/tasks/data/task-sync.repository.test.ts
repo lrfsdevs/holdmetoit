@@ -27,6 +27,7 @@ vi.mock("@/core/db", () => ({
       task: {
          findFirst: vi.fn(),
          findUnique: vi.fn(),
+         findMany: vi.fn(),
          create: vi.fn(),
          update: vi.fn(),
          upsert: vi.fn(),
@@ -60,6 +61,7 @@ describe("processBatchSync (task-sync.repository)", () => {
       vi.clearAllMocks();
       vi.mocked(prisma.category.findUnique).mockResolvedValue(null);
       vi.mocked(prisma.category.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
 
       vi.mocked(taskRepo.getUserCategorizedTasksFromDatabase).mockResolvedValue(
          {
@@ -879,6 +881,182 @@ describe("processBatchSync (task-sync.repository)", () => {
          }),
       });
       expect(prisma.task.updateMany).not.toHaveBeenCalled();
+   });
+
+   describe("weekly goal grace lock", () => {
+      const lockedGuard = {
+         challengeId: "c_active",
+         taskType: "WEEKLY",
+         createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
+      };
+      const lockedRow = {
+         id: "t_weekly",
+         userId,
+         categoryId: "cat_1",
+         challengeId: "c_active",
+         title: "Weekly goal",
+         taskType: "WEEKLY",
+         sortOrder: 0,
+         isComplete: false,
+         status: "TODO",
+         dueDate: null,
+         isDeleted: false,
+         deletionTime: null,
+         createdAt: lockedGuard.createdAt,
+         updatedAt: new Date(),
+         completedAt: null,
+         revision: 1,
+      };
+
+      it("rejects deleting a weekly goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst)
+            .mockResolvedValueOnce(lockedGuard as never)
+            .mockResolvedValueOnce(lockedRow as never);
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-del",
+               entityType: "TASK",
+               action: "DELETE",
+               payload: { taskId: "t_weekly" },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            id: "mut-grace-del",
+            status: "conflict",
+            reason: "task_locked",
+            currentTask: expect.objectContaining({ id: "t_weekly" }),
+         });
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("rejects renaming a weekly goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst)
+            .mockResolvedValueOnce(lockedGuard as never)
+            .mockResolvedValueOnce(lockedRow as never);
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-rename",
+               entityType: "TASK",
+               action: "UPDATE",
+               payload: { taskId: "t_weekly", title: "Renamed goal" },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            status: "conflict",
+            reason: "task_locked",
+         });
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("rejects unlinking a weekly goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst)
+            .mockResolvedValueOnce(lockedGuard as never)
+            .mockResolvedValueOnce(lockedRow as never);
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-unlink",
+               entityType: "TASK",
+               action: "UPDATE",
+               payload: { taskId: "t_weekly", challengeId: null },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            status: "conflict",
+            reason: "task_locked",
+         });
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
+      });
+
+      it("still applies a completion toggle after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValueOnce(
+            lockedGuard as never
+         );
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-toggle",
+               entityType: "TASK",
+               action: "TOGGLE",
+               payload: { taskId: "t_weekly", isComplete: true },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            id: "mut-grace-toggle",
+            status: "applied",
+         });
+         expect(prisma.task.updateMany).toHaveBeenCalled();
+      });
+
+      it("deletes a weekly goal inside the grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValueOnce({
+            ...lockedGuard,
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+         } as never);
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-ok",
+               entityType: "TASK",
+               action: "DELETE",
+               payload: { taskId: "t_weekly" },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            id: "mut-grace-ok",
+            status: "applied",
+         });
+         expect(prisma.task.updateMany).toHaveBeenCalled();
+      });
+
+      it("rejects deleting a category that holds a locked weekly goal", async () => {
+         vi.mocked(prisma.category.findFirst).mockResolvedValue({
+            id: "cat_1",
+            userId,
+            name: "Chemistry",
+            isDeleted: false,
+         } as never);
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            lockedGuard,
+         ] as never);
+
+         const res = await processBatchSync(userId, [
+            {
+               id: "mut-grace-cat",
+               entityType: "CATEGORY",
+               action: "DELETE",
+               payload: { categoryId: "cat_1" },
+               createdAt: Date.now(),
+               retryCount: 0,
+            },
+         ]);
+
+         expect(res.mutationResults?.[0]).toMatchObject({
+            id: "mut-grace-cat",
+            status: "conflict",
+            reason: "task_locked",
+            currentCategory: expect.objectContaining({ id: "cat_1" }),
+         });
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
+         expect(prisma.category.updateMany).not.toHaveBeenCalled();
+      });
    });
 
    it("returns a category name conflict before writing a colliding rename", async () => {

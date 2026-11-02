@@ -19,6 +19,7 @@ import type {
    QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
+import { isWeeklyTaskGraceExpired } from "@/features/tasks/domain/task-lock";
 import {
    DEFAULT_CATEGORY_NAME,
    assertChallengeWritable,
@@ -365,6 +366,18 @@ async function applyCategoryMutation(
 
       if (!currentCategory || currentCategory.isDeleted) return APPLIED;
 
+      const categoryTasks = await tx.task.findMany({
+         where: { categoryId: catId, userId, isDeleted: false },
+         select: { taskType: true, challengeId: true, createdAt: true },
+      });
+      if (categoryTasks.some((task) => isWeeklyTaskGraceExpired(task))) {
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentCategory: toCategoryItem(currentCategory),
+         };
+      }
+
       const now = new Date();
 
       await tx.task.updateMany({
@@ -523,7 +536,7 @@ async function applyTaskMutation(
 
       const guard = await tx.task.findFirst({
          where: { id: taskId, userId, isDeleted: false },
-         select: { challengeId: true },
+         select: { challengeId: true, taskType: true, createdAt: true },
       });
 
       if (guard?.challengeId) {
@@ -544,6 +557,24 @@ async function applyTaskMutation(
             }
             throw error;
          }
+      }
+
+      // Weekly goals lock after 24 hours: no delete, rename, or re-scope.
+      // Completion toggles and moves stay allowed.
+      const changesLockedFields =
+         m.action === "DELETE" ||
+         ((m.action === "UPDATE" || m.action === "MOVE") &&
+            (Boolean(title) || payload.challengeId !== undefined));
+
+      if (guard && changesLockedFields && isWeeklyTaskGraceExpired(guard)) {
+         const current = await tx.task.findFirst({
+            where: { id: taskId, userId, isDeleted: false },
+         });
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentTask: current ? toTaskItem(current, current.taskType) : null,
+         };
       }
    }
 
