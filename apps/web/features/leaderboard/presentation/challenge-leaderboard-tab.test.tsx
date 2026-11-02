@@ -1,14 +1,47 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ChallengeLeaderboardTab } from "./challenge-leaderboard-tab";
 import type { ChallengeScoreboardViewModel } from "../domain/leaderboard.types";
 
+const mockRefresh = vi.fn();
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
       push: vi.fn(),
-      refresh: vi.fn(),
+      refresh: mockRefresh,
    }),
+}));
+
+vi.mock("@/features/accountability/presentation/admin-pardon-modal", () => ({
+   AdminPardonModal: ({
+      isOpen,
+      participant,
+      onSuccess,
+   }: {
+      isOpen: boolean;
+      participant: any;
+      onSuccess?: () => void;
+   }) =>
+      isOpen && participant
+         ? createElement(
+              "div",
+              {
+                 "data-testid": "admin-pardon-modal",
+                 "data-participant-id": participant.participantId,
+                 "data-participant-name": participant.displayName,
+              },
+              createElement(
+                 "button",
+                 {
+                    "data-testid": "mock-pardon-success-btn",
+                    onClick: () => onSuccess?.(),
+                 },
+                 "Confirm Pardon"
+              )
+           )
+         : null,
 }));
 
 vi.mock("@/features/challenges/presentation/edit-duo-team-modal", () => ({
@@ -645,6 +678,124 @@ describe("ChallengeLeaderboardTab", () => {
       expect(lockedHtml).not.toContain('data-testid="edit-duo-team-');
    });
 
+   it("normalizes duo battle card header and scholar blocks to consistent 2-line structures regardless of name and goal lengths", () => {
+      const duoChallengeWithLongNamesAndGoals: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         format: "DUOS",
+         teams: [
+            {
+               id: "team-1",
+               name: "Justice for chunaid khan super long team name",
+               color: "#ef4444",
+               iconEmoji: "🔥",
+               mascotUrl: null,
+               sortOrder: 0,
+               companionCount: 2,
+               totalLoggedSeconds: 185_400,
+               totalLoggedClock: "51:30:00",
+               targetSeconds: 309_600,
+               targetClock: "86:00:00",
+               targetHours: 86,
+               completionPercentage: 59,
+               isLeader: true,
+            },
+            {
+               id: "team-2",
+               name: "can't think of a name",
+               color: "#f97316",
+               iconEmoji: "🎃",
+               mascotUrl: null,
+               sortOrder: 1,
+               companionCount: 2,
+               totalLoggedSeconds: 220_800,
+               totalLoggedClock: "61:20:00",
+               targetSeconds: 259_200,
+               targetClock: "72:00:00",
+               targetHours: 72,
+               completionPercentage: 85,
+               isLeader: false,
+            },
+         ],
+         standings: [
+            {
+               rank: 1,
+               participantId: "part-1",
+               userId: "user-1",
+               displayName: "Afnan",
+               username: "afnan6969",
+               image: null,
+               teamId: "team-1",
+               teamName: "Justice for chunaid khan super long team name",
+               teamColor: "#ef4444",
+               teamIcon: "🔥",
+               totalLoggedSeconds: 121_839,
+               totalLoggedClock: "33:50:39",
+               todayLoggedSeconds: 4_963,
+               todayLoggedClock: "01:22:43",
+               targetSeconds: 144_000,
+               targetClock: "40:00:00",
+               completionPercentage: 84,
+               weeklyTasksCompletedCount: 2,
+               weeklyTasksTotalCount: 2,
+               paceStatus: "catch-up",
+               paceLabel: "Catch-Up",
+               deficitSeconds: 22_161,
+            },
+            {
+               rank: 2,
+               participantId: "part-2",
+               userId: "user-2",
+               displayName:
+                  "* . ୨ 'miyu ♡. ' super long special styled display name",
+               username: "chaoticreampan_with_long_handle",
+               image: null,
+               teamId: "team-1",
+               teamName: "Justice for chunaid khan super long team name",
+               teamColor: "#ef4444",
+               teamIcon: "🔥",
+               totalLoggedSeconds: 63_561,
+               totalLoggedClock: "17:39:21",
+               todayLoggedSeconds: 0,
+               todayLoggedClock: "00:00:00",
+               targetSeconds: 165_600,
+               targetClock: "46:00:00",
+               completionPercentage: 38,
+               weeklyTasksCompletedCount: 1,
+               weeklyTasksTotalCount: 3,
+               paceStatus: "catch-up",
+               paceLabel: "Catch-Up",
+               deficitSeconds: 102_039,
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(ChallengeLeaderboardTab, {
+            challenge: duoChallengeWithLongNamesAndGoals,
+            isAdmin: true,
+         })
+      );
+
+      // 1. Team cards render with consistent styling
+      expect(html).toContain("Justice for chunaid khan super long team name");
+      expect(html).toContain("can&#x27;t think of a name");
+      expect(html).toContain("Weekly Target: 86h • Completed: 59%");
+      expect(html).toContain("Weekly Target: 72h • Completed: 85%");
+
+      // 2. Scholar blocks render with min-h-[68px] normalized block heights
+      expect(html).toContain("min-h-[68px]");
+      expect(html).toContain("33:50:39");
+      expect(html).toContain("/40:00:00");
+      expect(html).toContain("+01:22:43");
+      expect(html).toContain("17:39:21");
+      expect(html).toContain("/46:00:00");
+      expect(html).toContain("+00:00:00");
+
+      // 3. Admin controls are cleanly embedded
+      expect(html).toContain("Edit hr");
+      expect(html).toContain("Edit target");
+   });
+
    it("canonicalizes DUOS participant links against the team default", () => {
       const duoChallenge: ChallengeScoreboardViewModel = {
          ...mockChallenge,
@@ -819,6 +970,395 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).not.toContain('data-testid="unassigned-scholars-card"');
          expect(html).not.toContain('value="UNASSIGNED"');
          expect(html).not.toContain("Awaiting house assignment");
+      });
+   });
+
+   describe("Desktop Standings Table Progress & Pace Status Columns (GH-#208 / KAN-69)", () => {
+      it("renders dedicated Progress and Pace Status column headers in desktop table", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+            })
+         );
+
+         expect(html).toContain(">Progress<");
+         expect(html).toContain(">Pace Status<");
+         expect(html).toContain("20%");
+         expect(html).toContain("width:20%");
+         expect(html).toContain("Catch-Up");
+      });
+
+      it("renders semantic pace status badges for serene, on-track, catch-up, punished, and excused", () => {
+         const variedChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-serene",
+                  displayName: "Scholar Serene",
+                  completionPercentage: 100,
+                  paceStatus: "serene",
+                  paceLabel: "Serene",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-ontrack",
+                  displayName: "Scholar OnTrack",
+                  completionPercentage: 50,
+                  paceStatus: "on-track",
+                  paceLabel: "On Track",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-catchup",
+                  displayName: "Scholar CatchUp",
+                  completionPercentage: 25,
+                  paceStatus: "catch-up",
+                  paceLabel: "Catch-Up",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-punished",
+                  displayName: "Scholar Punished",
+                  completionPercentage: 10,
+                  paceStatus: "punished",
+                  paceLabel: "Punished",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-excused",
+                  displayName: "Scholar Excused",
+                  completionPercentage: 80,
+                  paceStatus: "excused",
+                  paceLabel: "Excused",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: variedChallenge,
+            })
+         );
+
+         expect(html).toContain("Scholar Serene");
+         expect(html).toContain("100%");
+         expect(html).toContain("Serene");
+         expect(html).toContain("Scholar OnTrack");
+         expect(html).toContain("50%");
+         expect(html).toContain("On Track");
+         expect(html).toContain("Scholar CatchUp");
+         expect(html).toContain("25%");
+         expect(html).toContain("Catch-Up");
+         expect(html).toContain("Scholar Punished");
+         expect(html).toContain("10%");
+         expect(html).toContain("Punished");
+         expect(html).toContain("Scholar Excused");
+         expect(html).toContain("80%");
+         expect(html).toContain("Excused");
+      });
+
+      it("omits Progress and Pace Status columns in Today's LB view mode", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               initialViewMode: "today",
+            })
+         );
+
+         expect(html).not.toContain(">Progress<");
+         expect(html).not.toContain(">Pace Status<");
+         expect(html).toContain("Today&#x27;s hours");
+      });
+
+      it("safely handles 0% and caps 100%+ progress bar widths", () => {
+         const extremeProgressChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-zero",
+                  displayName: "Zero Scholar",
+                  completionPercentage: 0,
+                  paceStatus: "catch-up",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-over",
+                  displayName: "Overachiever Scholar",
+                  completionPercentage: 125,
+                  paceStatus: "serene",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: extremeProgressChallenge,
+            })
+         );
+
+         expect(html).toContain("0%");
+         expect(html).toContain("width:0%");
+         expect(html).toContain("125%");
+         expect(html).toContain("width:100%");
+      });
+
+      it("renders Punished badge for uncompleted scholars and Completed badge for finished scholars on locked challenges (GH-#217)", () => {
+         const lockedChallenge: ChallengeScoreboardViewModel = {
+            ...mockChallenge,
+            status: "COMPLETED",
+            resultsLockedAt: "2026-10-08T00:00:00.000Z",
+            standings: [
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-completed",
+                  displayName: "Champion Scholar",
+                  completionPercentage: 100,
+                  deficitSeconds: 0,
+                  paceStatus: "serene",
+                  paceLabel: "Completed",
+               },
+               {
+                  ...mockChallenge.standings[0]!,
+                  participantId: "part-uncompleted",
+                  displayName: "Deficit Scholar",
+                  completionPercentage: 14,
+                  deficitSeconds: 108_000,
+                  paceStatus: "punished",
+                  paceLabel: "Punished",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+            })
+         );
+
+         expect(html).toContain("Champion Scholar");
+         expect(html).toContain("100%");
+         expect(html).toContain("Completed");
+         expect(html).toContain("bg-feedback-success-bg");
+
+         expect(html).toContain("Deficit Scholar");
+         expect(html).toContain("14%");
+         expect(html).toContain("Punished");
+         expect(html).toContain("bg-feedback-error-bg");
+      });
+   });
+
+   describe("Admin Quick-Pardon Trigger (FEAT-PUN-04 / GH-#211)", () => {
+      const lockedChallenge: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         status: "COMPLETED",
+         resultsLockedAt: "2026-10-08T00:00:00.000Z",
+         standings: [
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-punished",
+               userId: "user-punished",
+               displayName: "Punished Scholar",
+               username: "punished_one",
+               teamName: "Serpents",
+               paceStatus: "punished",
+               status: "PUNISHED",
+            },
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-serene",
+               userId: "user-serene",
+               displayName: "Serene Scholar",
+               username: "serene_one",
+               teamName: "Serpents",
+               paceStatus: "serene",
+               status: "ACTIVE",
+            },
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-excused",
+               userId: "user-excused",
+               displayName: "Excused Scholar",
+               username: "excused_one",
+               teamName: "Serpents",
+               paceStatus: "excused",
+               status: "EXCUSED",
+            },
+         ],
+      };
+
+      it("renders Pardon button for punished participants when isAdmin is true on completed/locked challenges", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).toContain('data-testid="admin-pardon-button"');
+         expect(html).toContain("Pardon");
+         expect(html).toContain("Edit hr");
+         expect(html).toContain("Edit target");
+      });
+
+      it("does not render Pardon button for regular participants or spectators (isAdmin: false)", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain('data-testid="admin-pardon-button"');
+         expect(html).not.toContain("Admin: Grant Pardon");
+      });
+
+      it("does not render Pardon button when challenge is still active / unlocked even if isAdmin is true", () => {
+         const activeChallenge: ChallengeScoreboardViewModel = {
+            ...lockedChallenge,
+            status: "ACTIVE",
+            resultsLockedAt: null,
+            standings: [
+               {
+                  ...lockedChallenge.standings[0]!,
+                  paceStatus: "catch-up",
+                  status: "ACTIVE",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: activeChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain('data-testid="admin-pardon-button"');
+      });
+
+      it("renders Pardon button in Team View mode for punished house members and unassigned scholars", () => {
+         const teamChallengeWithUnassigned: ChallengeScoreboardViewModel = {
+            ...lockedChallenge,
+            standings: [
+               ...lockedChallenge.standings,
+               {
+                  ...lockedChallenge.standings[0]!,
+                  participantId: "part-unassigned-punished",
+                  userId: "user-unassigned",
+                  displayName: "Unassigned Punished Scholar",
+                  teamId: "no-assigned",
+                  teamName: "Unassigned",
+                  paceStatus: "punished",
+                  status: "PUNISHED",
+               },
+            ],
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: teamChallengeWithUnassigned,
+               isAdmin: true,
+               initialViewMode: "team",
+            })
+         );
+
+         expect(html).toContain('data-testid="admin-pardon-button"');
+      });
+
+      it("opens AdminPardonModal with pre-selected participant on click and triggers router.refresh on success", () => {
+         mockRefresh.mockClear();
+
+         render(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: lockedChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         // Initially modal is not open
+         expect(screen.queryByTestId("admin-pardon-modal")).toBeNull();
+
+         // Find pardon button and click it
+         const pardonButtons = screen.getAllByTestId("admin-pardon-button");
+         expect(pardonButtons.length).toBeGreaterThan(0);
+         fireEvent.click(pardonButtons[0]!);
+
+         // Modal should now be open with the punished participant
+         const modal = screen.getByTestId("admin-pardon-modal");
+         expect(modal).not.toBeNull();
+         expect(modal.getAttribute("data-participant-id")).toBe(
+            "part-punished"
+         );
+         expect(modal.getAttribute("data-participant-name")).toBe(
+            "Punished Scholar"
+         );
+
+         // Simulate successful pardon
+         const successBtn = screen.getByTestId("mock-pardon-success-btn");
+         fireEvent.click(successBtn);
+
+         // router.refresh should have been triggered
+         expect(mockRefresh).toHaveBeenCalled();
+      });
+   });
+
+   describe("Admin compact icon actions and aligned table layout", () => {
+      it("renders dedicated Actions column in desktop table when isAdmin is true", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).toContain("Actions");
+         expect(html).toContain("Edit hr");
+         expect(html).toContain("Edit target");
+      });
+
+      it("does not render Actions column when isAdmin is false", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         expect(html).not.toContain("Actions");
+         expect(html).not.toContain("Edit hr");
+         expect(html).not.toContain("Edit target");
+      });
+
+      it("preserves identical total hours cell structure between regular and admin views", () => {
+         const userHtml = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: false,
+               initialViewMode: "individual",
+            })
+         );
+
+         const adminHtml = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: mockChallenge,
+               isAdmin: true,
+               initialViewMode: "individual",
+            })
+         );
+
+         // Both user and admin views render total hours on a single line with whitespace-nowrap
+         expect(userHtml).toContain("07:00:00");
+         expect(userHtml).toContain("/ 35:00:00");
+         expect(adminHtml).toContain("07:00:00");
+         expect(adminHtml).toContain("/ 35:00:00");
       });
    });
 });

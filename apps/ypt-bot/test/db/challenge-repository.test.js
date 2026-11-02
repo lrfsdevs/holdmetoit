@@ -1,10 +1,11 @@
-import { test, describe, mock } from "node:test";
+import { test, describe, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
    getChallengeLifecycle,
    CHALLENGE_GRACE_WINDOW_MS,
    getActiveChallenge,
    lockExpiredChallengesAfterGrace,
+   reconcileChallengeAccountability,
 } from "../../src/db/challenge-repository.js";
 import { computeChallengeDayLogDate } from "../../src/ingest/date-buckets.js";
 import { ingestGroupMembersToDailyStudyLogs } from "../../src/ingest/daily-study-log.js";
@@ -283,6 +284,16 @@ describe(
 );
 
 describe("ingestGroupMembersToDailyStudyLogs End-to-End Simulation (Mocked DB)", () => {
+   let origAuditLogFindMany;
+
+   beforeEach(() => {
+      origAuditLogFindMany = prisma.auditLog.findMany;
+      prisma.auditLog.findMany = async () => [];
+   });
+
+   afterEach(() => {
+      prisma.auditLog.findMany = origAuditLogFindMany;
+   });
    const mockChallenge = {
       id: "chal-day7-mock",
       title: "Mock Day 7 Challenge",
@@ -585,6 +596,17 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
       resultsLockedAt: null,
    };
 
+   let origAuditFindMany;
+
+   beforeEach(() => {
+      origAuditFindMany = prisma.auditLog.findMany;
+      prisma.auditLog.findMany = async () => [];
+   });
+
+   afterEach(() => {
+      prisma.auditLog.findMany = origAuditFindMany;
+   });
+
    test("does not lock challenge while still within the 6-hour grace window", async () => {
       const nowInsideGrace = new Date("2026-10-12T04:00:00.000Z"); // 4h into grace (< 6h)
 
@@ -638,6 +660,8 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
       const origFindMany = prisma.challenge.findMany;
       const origUpdateMany = prisma.challenge.updateMany;
       const origAuditCreate = prisma.auditLog.create;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTransaction = prisma.$transaction;
 
       let updateCalledWith = null;
       let auditCalledWith = null;
@@ -647,8 +671,13 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          updateCalledWith = args;
          return { count: 1 };
       };
+      prisma.challenge.findUnique = async () => null;
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
       prisma.auditLog.create = async (args) => {
-         auditCalledWith = args;
+         if (args.data.actionType === "CHALLENGE_LOCKED") {
+            auditCalledWith = args;
+         }
          return args;
       };
 
@@ -690,6 +719,8 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          prisma.challenge.findMany = origFindMany;
          prisma.challenge.updateMany = origUpdateMany;
          prisma.auditLog.create = origAuditCreate;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.$transaction = origTransaction;
       }
    });
 
@@ -720,6 +751,451 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          prisma.challenge.findMany = origFindMany;
          prisma.challenge.updateMany = origUpdateMany;
          prisma.auditLog.create = origAuditCreate;
+      }
+   });
+
+   test("retries previously failed challenge accountability reconciliations and deletes retry marker", async () => {
+      const nowPastGrace = new Date("2026-10-12T06:15:00.000Z");
+
+      const origFindMany = prisma.challenge.findMany;
+      const origAuditDelete = prisma.auditLog.delete;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+
+      let reconciledId = null;
+      let deletedAuditId = null;
+
+      prisma.challenge.findMany = async () => [];
+      prisma.auditLog.findMany = async () => [
+         { id: "audit-failed-1", challengeId: "chal-retry-123" },
+      ];
+      prisma.challenge.findUnique = async (args) => {
+         reconciledId = args.where.id;
+         return null;
+      };
+      prisma.auditLog.delete = async (args) => {
+         deletedAuditId = args.where.id;
+         return { id: args.where.id };
+      };
+
+      try {
+         await lockExpiredChallengesAfterGrace(nowPastGrace);
+         assert.strictEqual(reconciledId, "chal-retry-123");
+         assert.strictEqual(deletedAuditId, "audit-failed-1");
+      } finally {
+         prisma.challenge.findMany = origFindMany;
+         prisma.auditLog.delete = origAuditDelete;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+      }
+   });
+});
+
+describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
+   const mockChallengeId = "chal-accountability-mock";
+
+   test("flags uncompleted participants (hours, tasks, losing team) as PUNISHED and creates PunishmentRecords", async () => {
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
+
+      const mockChallengeData = {
+         id: mockChallengeId,
+         title: "Accountability Test Battle",
+         format: "TEAM_VS_TEAM",
+         teams: [
+            { id: "team-a", isDeleted: false },
+            { id: "team-b", isDeleted: false },
+         ],
+         participants: [
+            {
+               id: "p1-winner",
+               userId: "u1",
+               teamId: "team-a",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 40_000 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "p2-hours-deficit",
+               userId: "u2",
+               teamId: "team-a",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 10_000 }], // 26h deficit
+               punishmentRecords: [],
+            },
+            {
+               id: "p3-losing-team",
+               userId: "u3",
+               teamId: "team-b",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 36_000 }], // Hours met, but team-b loses (36k vs 50k)
+               punishmentRecords: [],
+            },
+            {
+               id: "p4-incomplete-tasks",
+               userId: "u4",
+               teamId: "team-a",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 40_000 }], // Hours met, in winning team, but task pending
+               punishmentRecords: [],
+            },
+            {
+               id: "p5-excused",
+               userId: "u5",
+               teamId: "team-b",
+               targetSeconds: 36_000,
+               status: "EXCUSED",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 0 }],
+               punishmentRecords: [{ isPardoned: true }],
+            },
+         ],
+      };
+
+      const mockTasks = [
+         { userId: "u1", status: "COMPLETED" },
+         { userId: "u2", status: "COMPLETED" },
+         { userId: "u3", status: "COMPLETED" },
+         { userId: "u4", status: "TODO" }, // Incomplete task!
+      ];
+
+      const participantUpdates = [];
+      let deletedStalePunishments = false;
+      let createdPunishments = [];
+
+      prisma.challenge.findUnique = async () => mockChallengeData;
+      prisma.task.findMany = async () => mockTasks;
+      prisma.challengeParticipant.updateMany = async (args) => {
+         participantUpdates.push(args);
+         return { count: args.where.id.in.length };
+      };
+      prisma.punishmentRecord.deleteMany = async (args) => {
+         deletedStalePunishments = true;
+         return { count: 0 };
+      };
+      prisma.punishmentRecord.createMany = async (args) => {
+         createdPunishments = args.data;
+         return { count: args.data.length };
+      };
+
+      try {
+         const result = await reconcileChallengeAccountability(mockChallengeId);
+
+         assert.ok(result);
+         assert.deepStrictEqual(result.savedParticipantIds, ["p1-winner"]);
+         assert.deepStrictEqual(result.punishedParticipantIds, [
+            "p2-hours-deficit",
+            "p3-losing-team",
+            "p4-incomplete-tasks",
+         ]);
+
+         assert.ok(
+            deletedStalePunishments,
+            "Must delete stale unpardoned punishment records"
+         );
+         assert.strictEqual(createdPunishments.length, 3);
+         const createdIds = createdPunishments.map((p) => p.participantId);
+         assert.ok(createdIds.includes("p2-hours-deficit"));
+         assert.ok(createdIds.includes("p3-losing-team"));
+         assert.ok(createdIds.includes("p4-incomplete-tasks"));
+
+         const normalUpdate = participantUpdates.find(
+            (u) => u.data.status === "NORMAL"
+         );
+         assert.ok(normalUpdate);
+         assert.deepStrictEqual(normalUpdate.where.id.in, ["p1-winner"]);
+
+         const punishedUpdate = participantUpdates.find(
+            (u) => u.data.status === "PUNISHED"
+         );
+         assert.ok(punishedUpdate);
+         assert.deepStrictEqual(punishedUpdate.where.id.in, [
+            "p2-hours-deficit",
+            "p3-losing-team",
+            "p4-incomplete-tasks",
+         ]);
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+
+   test("reconciles accountability in SOLOS format: individual competition with no team penalty", async () => {
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
+
+      const mockSoloChallenge = {
+         id: "solo-chal",
+         format: "SOLOS",
+         teams: [],
+         participants: [
+            {
+               id: "p1",
+               userId: "u1",
+               teamId: null,
+               targetSeconds: 18_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 18_000 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "p2",
+               userId: "u2",
+               teamId: null,
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 20_000 }], // 16h deficit
+               punishmentRecords: [],
+            },
+         ],
+      };
+
+      prisma.challenge.findUnique = async () => mockSoloChallenge;
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 1 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 1 });
+
+      try {
+         const result = await reconcileChallengeAccountability("solo-chal");
+         assert.deepStrictEqual(result.savedParticipantIds, ["p1"]);
+         assert.deepStrictEqual(result.punishedParticipantIds, ["p2"]);
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+
+   test("reconciles accountability when team scores tie: both winning teams are saved (Law L6)", async () => {
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
+
+      const mockTiedChallenge = {
+         id: "tied-chal",
+         format: "TEAM_VS_TEAM",
+         teams: [
+            { id: "team-a", isDeleted: false },
+            { id: "team-b", isDeleted: false },
+         ],
+         participants: [
+            {
+               id: "p1",
+               userId: "u1",
+               teamId: "team-a",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 36_000 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "p2",
+               userId: "u2",
+               teamId: "team-b",
+               targetSeconds: 36_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 36_000 }],
+               punishmentRecords: [],
+            },
+         ],
+      };
+
+      prisma.challenge.findUnique = async () => mockTiedChallenge;
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 2 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 0 });
+
+      try {
+         const result = await reconcileChallengeAccountability("tied-chal");
+         assert.deepStrictEqual(result.savedParticipantIds, ["p1", "p2"]);
+         assert.deepStrictEqual(result.punishedParticipantIds, []);
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+   test("executes accountability mutations inside prisma.$transaction", async () => {
+      let transactionCalled = false;
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) => {
+         transactionCalled = true;
+         return fn(prisma);
+      };
+      prisma.challenge.findUnique = async () => ({
+         id: "tx-chal",
+         format: "SOLOS",
+         teams: [],
+         participants: [
+            {
+               id: "p1",
+               userId: "u1",
+               targetSeconds: 1000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 2000 }],
+               punishmentRecords: [],
+            },
+         ],
+      });
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 1 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 0 });
+
+      try {
+         await reconcileChallengeAccountability("tx-chal");
+         assert.strictEqual(
+            transactionCalled,
+            true,
+            "$transaction must be invoked for mutations"
+         );
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+
+   test("counts withdrawn participant logs through withdrawalAt toward team totals but excludes them from outcome evaluation", async () => {
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
+
+      // Team A: 1 active member (10,000s) + 1 withdrawn member with logs before withdrawal (30,000s) + logs after withdrawal (50,000s, ignored)
+      // Total Team A eligible: 40,000s
+      // Team B: 1 active member (30,000s)
+      // Total Team B: 30,000s -> Team A wins!
+      const mockChallenge = {
+         id: "chal-withdrawn",
+         format: "TEAM_VS_TEAM",
+         teams: [
+            { id: "team-a", isDeleted: false },
+            { id: "team-b", isDeleted: false },
+         ],
+         participants: [
+            {
+               id: "p-active-a",
+               userId: "u-active-a",
+               teamId: "team-a",
+               targetSeconds: 10_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 10_000 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "p-withdrawn-a",
+               userId: "u-withdrawn-a",
+               teamId: "team-a",
+               targetSeconds: 100_000,
+               status: "NORMAL",
+               isWithdrawn: true,
+               withdrawalAt: new Date("2026-10-10T12:00:00.000Z"),
+               dailyStudyLogs: [
+                  {
+                     durationSeconds: 30_000,
+                     createdAt: new Date("2026-10-10T10:00:00.000Z"),
+                  }, // eligible
+                  {
+                     durationSeconds: 50_000,
+                     createdAt: new Date("2026-10-10T14:00:00.000Z"),
+                  }, // after withdrawal, excluded
+               ],
+               punishmentRecords: [],
+            },
+            {
+               id: "p-active-b",
+               userId: "u-active-b",
+               teamId: "team-b",
+               targetSeconds: 10_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 30_000 }],
+               punishmentRecords: [],
+            },
+         ],
+      };
+
+      prisma.challenge.findUnique = async () => mockChallenge;
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 1 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 1 });
+
+      try {
+         const result =
+            await reconcileChallengeAccountability("chal-withdrawn");
+         // Team A wins because 10k + 30k = 40k > 30k (Team B).
+         // Active A met hours and won -> saved.
+         // Active B met hours but lost -> punished.
+         // Withdrawn A is not in either list!
+         assert.deepStrictEqual(result.savedParticipantIds, ["p-active-a"]);
+         assert.deepStrictEqual(result.punishedParticipantIds, ["p-active-b"]);
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
       }
    });
 });

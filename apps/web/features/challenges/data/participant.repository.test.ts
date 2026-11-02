@@ -644,5 +644,35 @@ describe("participant repository", () => {
             withdrawParticipant({ challengeId: "c_1", userId: "u_1" })
          ).rejects.toThrow("You have already withdrawn from this challenge.");
       });
+
+      it("preserves historical study hours on the withdrawal record without deleting them (GH-#210)", async () => {
+         vi.mocked(prisma.challengeParticipant.findUnique).mockResolvedValue(
+            participantRecord as never
+         );
+
+         const result = await withdrawParticipant({
+            challengeId: "c_1",
+            userId: "u_1",
+         });
+
+         expect(result.participantId).toBe("part_1");
+         expect(result.withdrawalAt).toBeInstanceOf(Date);
+
+         // Verifies audit event accurately preserves totalLoggedSeconds from dailyStudyLogs
+         expect(recordAuditEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+               actionType: "PARTICIPANT_WITHDRAWN",
+               targetEntityId: "part_1",
+               previousValue: expect.objectContaining({
+                  totalLoggedSeconds: 3600,
+               }),
+               newValue: expect.objectContaining({
+                  isWithdrawn: true,
+                  withdrawalAt: expect.any(String),
+               }),
+            }),
+            expect.anything()
+         );
+      });
    });
 });

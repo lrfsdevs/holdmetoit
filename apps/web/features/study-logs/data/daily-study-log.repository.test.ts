@@ -62,6 +62,32 @@ describe("dailyStudyLog repository", () => {
          expect(prisma.dailyStudyLog.upsert).not.toHaveBeenCalled();
       });
 
+      it("rejects study logging when participant has withdrawn (GH-#210)", async () => {
+         vi.mocked(
+            prisma.challengeParticipant.findUnique
+         ).mockResolvedValueOnce({
+            id: "part_1",
+            challengeId: "chal_1",
+            plannedLeaveDays: 2,
+            usedLeaveDays: 0,
+            isWithdrawn: true,
+            withdrawalAt: new Date("2026-09-05T12:00:00.000Z"),
+         } as never);
+
+         await expect(
+            upsertDailyStudyLog({
+               participantId: "part_1",
+               challengeId: "chal_1",
+               logDate: "2026-09-06",
+               durationSeconds: 3600,
+            })
+         ).rejects.toThrow(
+            "Cannot log study hours after participant withdrawal."
+         );
+
+         expect(prisma.dailyStudyLog.upsert).not.toHaveBeenCalled();
+      });
+
       it("normalizes date string to UTC date-only and performs upsert", async () => {
          const mockResult = {
             id: "log_1",

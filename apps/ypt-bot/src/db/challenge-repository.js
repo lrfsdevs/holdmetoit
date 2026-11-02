@@ -1,6 +1,7 @@
 import { prisma } from "./client.js";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { clampDailyStudySeconds } from "../config/limits.js";
 
 export const CHALLENGE_GRACE_WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -78,6 +79,43 @@ export async function lockExpiredChallengesAfterGrace(
    const now = new Date(nowUtc);
    const cutoff = new Date(now.getTime() - CHALLENGE_GRACE_WINDOW_MS);
 
+   // Retry previously failed challenge accountability reconciliations
+   if (prisma.auditLog?.findMany) {
+      try {
+         const failedReconciliations = await prisma.auditLog.findMany({
+            where: { actionType: "RECONCILIATION_FAILED" },
+            select: { id: true, challengeId: true },
+         });
+         for (const record of failedReconciliations) {
+            if (!record.challengeId) continue;
+            try {
+               await reconcileChallengeAccountability(
+                  record.challengeId,
+                  now,
+                  log
+               );
+               if (prisma.auditLog?.delete) {
+                  await prisma.auditLog
+                     .delete({ where: { id: record.id } })
+                     .catch(() => {});
+               }
+            } catch (retryErr) {
+               log.error(
+                  "Failed to retry challenge accountability reconciliation:",
+                  {
+                     challengeId: record.challengeId,
+                     error: retryErr?.message,
+                  }
+               );
+            }
+         }
+      } catch (checkErr) {
+         log.error("Failed to check for unreconciled challenges:", {
+            error: checkErr?.message,
+         });
+      }
+   }
+
    // Find challenges whose Day 7 + 6h grace window has passed and resultsLockedAt is null
    const expiredUnlocked = await prisma.challenge.findMany({
       where: {
@@ -137,6 +175,42 @@ export async function lockExpiredChallengesAfterGrace(
             challengeTitle: challenge.title,
             resultsLockedAt: now.toISOString(),
          });
+
+         try {
+            await reconcileChallengeAccountability(challenge.id, now, log);
+         } catch (reconcileErr) {
+            log.error(
+               "Failed to reconcile challenge accountability during auto-lock:",
+               {
+                  challengeId: challenge.id,
+                  error: reconcileErr?.message,
+               }
+            );
+            if (prisma.auditLog?.create) {
+               await prisma.auditLog
+                  .create({
+                     data: {
+                        challengeId: challenge.id,
+                        actorId: null,
+                        actorUsername: "system",
+                        actorDisplayName: "YPT Auto-Lock",
+                        actionType: "RECONCILIATION_FAILED",
+                        targetEntityId: challenge.id,
+                        targetEntityType: "CHALLENGE",
+                        targetEntityName: challenge.title,
+                        previousValue: { resultsLockedAt: now.toISOString() },
+                        newValue: {
+                           autoLocked: true,
+                           error: reconcileErr?.message,
+                        },
+                        auditReason:
+                           "Failed to reconcile challenge accountability during auto-lock",
+                        createdAt: now,
+                     },
+                  })
+                  .catch(() => {});
+            }
+         }
 
          locked.push({ ...challenge, resultsLockedAt: now });
       }
@@ -256,4 +330,225 @@ export async function getParticipantMap(challengeId) {
    }
 
    return map;
+}
+
+/**
+ * Reconciles the three-condition accountability invariant (Law L6) upon challenge locking:
+ * Condition 1: Target hours met (deficitSeconds === 0)
+ * Condition 2: All challenge-linked weekly tasks completed
+ * Condition 3: In a winning team (ties are draws: all teams with maximum score win; in SOLOS format or no teams, individual)
+ *
+ * Participants meeting all 3 conditions receive status 'NORMAL'.
+ * Participants failing any condition receive status 'PUNISHED' and a PunishmentRecord entry.
+ * Excused/pardoned participants retain their excused status.
+ *
+ * @param {string} challengeId
+ * @param {Date|string|number} [now=new Date()]
+ * @param {import('winston').Logger} [log=logger]
+ */
+export async function reconcileChallengeAccountability(
+   challengeId,
+   now = new Date(),
+   log = logger
+) {
+   if (!prisma.challenge?.findUnique) {
+      return;
+   }
+
+   const challenge = await prisma.challenge.findUnique({
+      where: { id: challengeId },
+      include: {
+         teams: { where: { isDeleted: false }, select: { id: true } },
+         participants: {
+            include: {
+               dailyStudyLogs: true,
+               punishmentRecords: true,
+            },
+         },
+      },
+   });
+
+   if (!challenge) {
+      return;
+   }
+
+   const allParticipants = challenge.participants || [];
+   const evaluatedParticipants = allParticipants.filter((p) => !p.isWithdrawn);
+   const participantUserIds = evaluatedParticipants
+      .map((p) => p.userId)
+      .filter(Boolean);
+
+   const weeklyTasks =
+      participantUserIds.length > 0 && prisma.task?.findMany
+         ? await prisma.task.findMany({
+              where: {
+                 challengeId,
+                 taskType: "WEEKLY",
+                 isDeleted: false,
+                 userId: { in: participantUserIds },
+              },
+              select: { userId: true, status: true },
+           })
+         : [];
+
+   const weeklyTasksByUser = new Map();
+   for (const task of weeklyTasks) {
+      const list = weeklyTasksByUser.get(task.userId) || [];
+      list.push(task);
+      weeklyTasksByUser.set(task.userId, list);
+   }
+
+   // Aggregate team totals using capped study seconds (Law L1 / Law L8).
+   // Withdrawn participants count toward team totals for logs on or before withdrawalAt.
+   const teamTotals = new Map();
+   for (const team of challenge.teams || []) {
+      teamTotals.set(team.id, 0);
+   }
+
+   for (const p of allParticipants) {
+      if (p.teamId && teamTotals.has(p.teamId)) {
+         const eligibleLogs = p.isWithdrawn
+            ? (p.dailyStudyLogs || []).filter((logEntry) => {
+                 if (!p.withdrawalAt) return true;
+                 const withdrawalTime = new Date(p.withdrawalAt).getTime();
+                 if (Number.isNaN(withdrawalTime)) return true;
+                 if (logEntry.createdAt) {
+                    const createdTime = new Date(logEntry.createdAt).getTime();
+                    if (!Number.isNaN(createdTime)) {
+                       return createdTime <= withdrawalTime;
+                    }
+                 }
+                 if (logEntry.logDate) {
+                    const logDateKey = new Date(logEntry.logDate)
+                       .toISOString()
+                       .slice(0, 10);
+                    const withdrawalDateKey = new Date(p.withdrawalAt)
+                       .toISOString()
+                       .slice(0, 10);
+                    return logDateKey <= withdrawalDateKey;
+                 }
+                 return true;
+              })
+            : p.dailyStudyLogs || [];
+
+         const loggedSeconds = eligibleLogs.reduce(
+            (sum, logEntry) =>
+               sum + clampDailyStudySeconds(logEntry.durationSeconds || 0),
+            0
+         );
+         teamTotals.set(p.teamId, teamTotals.get(p.teamId) + loggedSeconds);
+      }
+   }
+
+   // Find max score and winning team IDs
+   let maxTeamScore = 0;
+   for (const score of teamTotals.values()) {
+      if (score > maxTeamScore) {
+         maxTeamScore = score;
+      }
+   }
+
+   const winningTeamIds = [];
+   for (const [teamId, score] of teamTotals.entries()) {
+      if (score === maxTeamScore) {
+         winningTeamIds.push(teamId);
+      }
+   }
+
+   const isSoloChallenge =
+      challenge.format === "SOLOS" || (challenge.teams || []).length === 0;
+
+   const punishedParticipantIds = [];
+   const savedParticipantIds = [];
+
+   for (const p of evaluatedParticipants) {
+      const isExcused =
+         p.status === "EXCUSED" ||
+         (p.punishmentRecords || []).some((r) => r.isPardoned);
+
+      if (isExcused) {
+         continue;
+      }
+
+      const loggedSeconds = (p.dailyStudyLogs || []).reduce(
+         (sum, logEntry) =>
+            sum + clampDailyStudySeconds(logEntry.durationSeconds || 0),
+         0
+      );
+      const hoursMet = loggedSeconds >= (p.targetSeconds || 0);
+
+      const userTasks = weeklyTasksByUser.get(p.userId) || [];
+      const allWeeklyTasksCompleted = userTasks.every(
+         (t) => t.status === "COMPLETED"
+      );
+
+      const inWinningTeam =
+         isSoloChallenge ||
+         (p.teamId != null && winningTeamIds.includes(p.teamId));
+
+      const isSaved = hoursMet && allWeeklyTasksCompleted && inWinningTeam;
+
+      if (isSaved) {
+         savedParticipantIds.push(p.id);
+      } else {
+         punishedParticipantIds.push(p.id);
+      }
+   }
+
+   const executeAccountabilityMutations = async (tx) => {
+      if (
+         savedParticipantIds.length > 0 &&
+         tx.challengeParticipant?.updateMany
+      ) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: savedParticipantIds } },
+            data: { status: "NORMAL" },
+         });
+      }
+
+      if (
+         punishedParticipantIds.length > 0 &&
+         tx.challengeParticipant?.updateMany
+      ) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: punishedParticipantIds } },
+            data: { status: "PUNISHED" },
+         });
+      }
+
+      if (tx.punishmentRecord?.deleteMany) {
+         await tx.punishmentRecord.deleteMany({
+            where: { challengeId, isPardoned: false },
+         });
+      }
+
+      if (
+         punishedParticipantIds.length > 0 &&
+         tx.punishmentRecord?.createMany
+      ) {
+         await tx.punishmentRecord.createMany({
+            data: punishedParticipantIds.map((participantId) => ({
+               challengeId,
+               participantId,
+            })),
+         });
+      }
+   };
+
+   if (typeof prisma.$transaction === "function") {
+      await prisma.$transaction(executeAccountabilityMutations);
+   } else {
+      await executeAccountabilityMutations(prisma);
+   }
+
+   log.info("Challenge accountability reconciled after lock.", {
+      challengeId,
+      punishedCount: punishedParticipantIds.length,
+      savedCount: savedParticipantIds.length,
+   });
+
+   return {
+      punishedParticipantIds,
+      savedParticipantIds,
+   };
 }

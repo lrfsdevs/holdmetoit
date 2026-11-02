@@ -8,12 +8,14 @@ import { ParticipantProgressChart } from "./participant-progress-chart";
 import { ParticipantDailyHistory } from "./participant-daily-history";
 import { ParticipantTeamStats } from "./participant-team-stats";
 import { ParticipantAccountability } from "./participant-accountability";
+import { ParticipantWeeklyGoalsCard } from "./participant-weekly-goals-card";
 
 export interface ChallengeSnapshotProps {
    stats: ParticipantStatsViewModel;
    showChallengeHeader?: boolean;
    showCockpitLink?: boolean;
    onEditTarget?: () => void;
+   weeklyGoalsPageSize?: number;
    className?: string;
 }
 
@@ -41,7 +43,7 @@ function getParticipantStatusBadge(stats: ParticipantStatsViewModel): {
    switch (status) {
       case "WITHDRAWN":
          return {
-            label: "Withdrawn",
+            label: "Withdrawn (Hours Frozen)",
             className:
                "bg-feedback-error-bg border-feedback-error/40 text-feedback-error-text",
          };
@@ -106,6 +108,7 @@ export function ChallengeSnapshot({
    showChallengeHeader = true,
    showCockpitLink = true,
    onEditTarget,
+   weeklyGoalsPageSize,
    className = "",
 }: ChallengeSnapshotProps) {
    const {
@@ -198,7 +201,25 @@ export function ChallengeSnapshot({
             <ParticipantAccountability accountability={accountability} />
          )}
 
-         {/* 5. Complete Chronological Daily Study History */}
+         {/* 5. Challenge-Linked Weekly Goals Checklist (Enrolled Only) */}
+         {!isFallback && (
+            <ParticipantWeeklyGoalsCard
+               weeklyGoals={stats.weeklyGoals ?? []}
+               completedGoalsCount={
+                  stats.completedGoalsCount ??
+                  (stats.weeklyGoals
+                     ? stats.weeklyGoals.filter((g) => g.isComplete).length
+                     : 0)
+               }
+               totalGoalsCount={
+                  stats.totalGoalsCount ??
+                  (stats.weeklyGoals ? stats.weeklyGoals.length : 0)
+               }
+               pageSize={weeklyGoalsPageSize}
+            />
+         )}
+
+         {/* 6. Complete Chronological Daily Study History */}
          <ParticipantDailyHistory
             dailyHistory={dailyHistory}
             isFallback={isFallback}

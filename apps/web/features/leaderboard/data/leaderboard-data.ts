@@ -21,6 +21,7 @@ import {
    getChallengeDayNumber,
 } from "@/features/study-logs/domain/challenge-day";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
+import { filterLogsBeforeWithdrawal } from "@/features/challenges/domain/withdrawal";
 import { canEditDuoTeamIdentity } from "@/features/challenges/domain/duo-team-identity";
 import { CACHE_REVALIDATE_SECONDS, cacheTags } from "@/core/cache";
 import { unstable_cache } from "next/cache";
@@ -88,6 +89,7 @@ export interface RawChallengePayload {
       dailyStudyLogs: Array<{
          durationSeconds: number;
          logDate?: Date | string;
+         createdAt?: Date | string;
          status?: string | null;
       }>;
       punishmentRecords?: Array<{
@@ -124,6 +126,14 @@ export function normalizeScoreboardPayload(
          ...participant,
          dailyStudyLogs: participant.dailyStudyLogs.map((log) => ({
             ...log,
+            ...(log.createdAt === undefined || log.createdAt === null
+               ? {}
+               : {
+                    createdAt: normalizeScoreboardDate(
+                       log.createdAt,
+                       "createdAt"
+                    ),
+                 }),
             ...(log.logDate === undefined
                ? {}
                : { logDate: normalizeScoreboardDate(log.logDate, "logDate") }),
@@ -160,13 +170,17 @@ export function buildScoreboardViewModel(
       (p) => !p.isWithdrawn
    );
 
-   // 1. Participant logs mapping
-   const participantScores = activeParticipants.map((p) => {
-      const totalLoggedSeconds = sumLoggedSeconds(p.dailyStudyLogs);
+   // 1. Participant logs mapping for team aggregations (Law L1):
+   // Active participants contribute all study logs.
+   // Withdrawn participants freeze and preserve historical study hours prior to withdrawalAt (GH-#210).
+   const scoringLogEntries = challenge.participants.map((p) => {
+      const eligibleLogs = p.isWithdrawn
+         ? filterLogsBeforeWithdrawal(p.dailyStudyLogs, p.withdrawalAt)
+         : p.dailyStudyLogs;
       return {
          participantId: p.id,
          teamId: p.teamId ?? "no-assigned",
-         loggedSeconds: totalLoggedSeconds,
+         loggedSeconds: sumLoggedSeconds(eligibleLogs),
       };
    });
 
@@ -174,7 +188,7 @@ export function buildScoreboardViewModel(
    const teamRefs: TeamRef[] = challenge.teams.map((t) => ({ id: t.id }));
    const teamAggregates = aggregateTeamScores(
       teamRefs,
-      participantScores.map((ps) => ({
+      scoringLogEntries.map((ps) => ({
          teamId: ps.teamId,
          loggedSeconds: ps.loggedSeconds,
       }))
@@ -316,13 +330,15 @@ export function buildScoreboardViewModel(
       const weeklyTasksTotalCount = p.weeklyTasksTotalCount ?? 0;
       const deficitSeconds = Math.max(0, p.targetSeconds - totalLoggedSeconds);
 
-      const completionPercentage =
+      const rawPercentage =
          p.targetSeconds > 0
             ? Math.min(
                  100,
                  Math.round((totalLoggedSeconds / p.targetSeconds) * 100)
               )
             : 100;
+      const completionPercentage =
+         deficitSeconds > 0 && rawPercentage === 100 ? 99 : rawPercentage;
 
       const punishmentRecords = p.punishmentRecords ?? [];
       const isPardonedRecord =
@@ -339,10 +355,12 @@ export function buildScoreboardViewModel(
          if (isPardonedRecord) {
             paceStatus = "excused";
             paceLabel = "Excused";
-         } else if (isPunishedRecord) {
-            paceStatus = "punished";
-            paceLabel = "Punished";
-         } else if (!isResultsLocked && deficitSeconds > 0) {
+         } else if (
+            isPunishedRecord ||
+            deficitSeconds > 0 ||
+            (weeklyTasksTotalCount > 0 &&
+               weeklyTasksCompletedCount < weeklyTasksTotalCount)
+         ) {
             paceStatus = "punished";
             paceLabel = "Punished";
          } else {
@@ -350,7 +368,10 @@ export function buildScoreboardViewModel(
             paceLabel = "Completed";
          }
       } else {
-         if (deficitSeconds === 0) {
+         if (isPardonedRecord) {
+            paceStatus = "excused";
+            paceLabel = "Excused";
+         } else if (deficitSeconds === 0) {
             paceStatus = "serene";
             paceLabel = "Serene";
          } else {
@@ -541,6 +562,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                         select: {
                            durationSeconds: true,
                            logDate: true,
+                           createdAt: true,
                            status: true,
                            isLeave: true,
                         },
@@ -561,7 +583,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
          }
 
          // Challenge-linked weekly task counts (mirrors the lock evaluation:
-         // soft-deleted rows are intentionally included).
+         // active rows only; soft-deleted rows are excluded).
          const participantUserIds = challenge.participants.map(
             (participant) => participant.userId
          );
@@ -571,6 +593,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                     where: {
                        challengeId,
                        taskType: "WEEKLY",
+                       isDeleted: false,
                        userId: { in: participantUserIds },
                     },
                     select: { userId: true, status: true },

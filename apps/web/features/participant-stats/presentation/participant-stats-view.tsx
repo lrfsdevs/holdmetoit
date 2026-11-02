@@ -6,6 +6,9 @@ import { ParticipantProfileHeader } from "./participant-profile-header";
 import { ParticipantFallbackBanner } from "./participant-fallback-banner";
 import { ChallengeSnapshot } from "./challenge-snapshot";
 import { AdminTargetOverrideModal } from "@/features/challenges/presentation/admin-target-override-modal";
+import { ParticipantWeeklyGoalsCard } from "./participant-weekly-goals-card";
+
+export { ParticipantWeeklyGoalsCard };
 
 interface ParticipantStatsViewProps {
    stats: ParticipantStatsViewModel;

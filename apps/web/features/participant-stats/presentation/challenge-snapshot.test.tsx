@@ -126,6 +126,17 @@ describe("ChallengeSnapshot", () => {
          isAdmin: false,
          isOwner: false,
       },
+      weeklyGoals: [
+         {
+            id: "task_1",
+            title: "Calculus Homework",
+            status: "COMPLETED",
+            isComplete: true,
+            completedAt: "2026-10-02T12:00:00.000Z",
+         },
+      ],
+      completedGoalsCount: 1,
+      totalGoalsCount: 1,
    };
 
    it("renders challenge header bar with title, format badge, status badge, and date range", () => {
@@ -174,6 +185,9 @@ describe("ChallengeSnapshot", () => {
       expect(html).toContain("20:00:00");
       expect(html).toContain("Team Standing &amp; Contribution");
       expect(html).toContain("Accountability &amp; Catch-Up Status");
+      expect(html).toContain("Challenge Weekly Goals");
+      expect(html).toContain("1/1 Goals Completed");
+      expect(html).toContain("Calculus Homework");
       expect(html).toContain("Daily Study History");
    });
 
@@ -215,7 +229,7 @@ describe("ChallengeSnapshot", () => {
       const withdrawnHtml = renderToStaticMarkup(
          <ChallengeSnapshot stats={withdrawnStats} />
       );
-      expect(withdrawnHtml).toContain("Withdrawn");
+      expect(withdrawnHtml).toContain("Withdrawn (Hours Frozen)");
 
       const completedStats: ParticipantStatsViewModel = {
          ...mockStats,
@@ -269,6 +283,7 @@ describe("ChallengeSnapshot", () => {
 
       expect(html).not.toContain("Team Standing &amp; Contribution");
       expect(html).not.toContain("Accountability &amp; Catch-Up Status");
+      expect(html).not.toContain("Challenge Weekly Goals");
       expect(html).toContain("Daily Study History");
    });
 });
