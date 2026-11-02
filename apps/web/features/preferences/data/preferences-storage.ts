@@ -14,12 +14,17 @@ export const USER_PREFERENCES_STORAGE_KEY = "holdmetoit:user_preferences";
 export const USER_PREFERENCES_UPDATED_EVENT = "holdmetoit:preferences-updated";
 
 let memoryFallback: UserPreferences | null = null;
+let storageWriteFailed = false;
 
 function isBrowser(): boolean {
-   return (
-      typeof window !== "undefined" &&
-      typeof window.localStorage !== "undefined"
-   );
+   try {
+      return (
+         typeof window !== "undefined" &&
+         typeof window.localStorage !== "undefined"
+      );
+   } catch {
+      return false;
+   }
 }
 
 /**
@@ -32,10 +37,16 @@ export function loadStoredPreferences(): UserPreferences {
       );
    }
 
+   if (storageWriteFailed && memoryFallback) {
+      return memoryFallback;
+   }
+
    try {
       const raw = window.localStorage.getItem(USER_PREFERENCES_STORAGE_KEY);
       if (!raw) {
-         return sanitizeUserPreferences(DEFAULT_USER_PREFERENCES);
+         return (
+            memoryFallback ?? sanitizeUserPreferences(DEFAULT_USER_PREFERENCES)
+         );
       }
       const parsed = JSON.parse(raw);
       const sanitized = sanitizeUserPreferences(parsed);
@@ -69,8 +80,10 @@ export function saveStoredPreferences(
             USER_PREFERENCES_STORAGE_KEY,
             JSON.stringify(sanitized)
          );
+         storageWriteFailed = false;
       } catch {
          // Silently keep memoryFallback if localStorage quota is exceeded or restricted
+         storageWriteFailed = true;
       }
 
       try {

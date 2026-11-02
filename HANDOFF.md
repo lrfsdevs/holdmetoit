@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 194 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-02 (Session 196 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2325,7 +2325,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - Test suites: ✅ 10/10 test files green (85/85 tests passed) in `features/participant-stats`, 235/235 test files green (2,304/2,304 tests passed) across the full web workspace.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
-- **NEXT STEP:** Submit PR for `KAN-68` / GH-#207, and transition Jira ticket `KAN-68` to `In Review`.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-68 transitioned to `In Review`.
 
 ### Session 187 — 2026-11-02 (feat(participant-stats): add responsive pagination to participant weekly goals card on profiles on `krish`)
 
@@ -2348,7 +2348,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - Test suites: ✅ 10/10 test files green (90/90 tests passed) in `features/participant-stats`.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
-- **NEXT STEP:** Submit PR for `KAN-68` / GH-#207 with weekly goals checklist and pagination.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-68 transitioned to `In Review`.
 
 ### Session 188 — 2026-11-02 (fix(challenges): freeze and preserve historical study hours upon mid-challenge withdrawal — GH-#210 / Jira KAN-71 on `krish`)
 
@@ -2371,7 +2371,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    2. **Data Layer (`features/leaderboard/data/` & `features/challenges/data/`):**
       - In `features/leaderboard/data/leaderboard-data.ts`:
          - Updated `buildScoreboardViewModel`: calculates team scores using `scoringLogEntries` that preserve frozen hours of withdrawn participants up to `withdrawalAt`, while keeping active podiums and individual standings restricted to `activeParticipants`.
-         - Updated `getCachedChallengeScoreboardPayload`: selected `createdAt` on daily study logs to ensure sub-day second precision against `withdrawalAt`.
+         - Updated `getCachedChallengeScoreboardPayload`: daily study logs payload schema supports `createdAt` (with `createdAt` selection added to the query in Session 195 to align sub-day second precision against `withdrawalAt`).
       - In `features/challenges/data/challenge-admin.repository.ts`:
          - In `lockChallengeResults`: calculated `teamTotals` including frozen study logs of withdrawn participants when evaluating `winningTeamIds`, while keeping `evaluatedParticipants` filtered to active participants so withdrawn members are never penalized.
       - In `features/study-logs/data/daily-study-log.repository.ts`:
@@ -2391,7 +2391,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
    - Test suites: ✅ 235/235 test files green (2,318/2,318 tests passed) across the full web workspace.
    - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
-- **NEXT STEP:** Submit PR for `KAN-71` / GH-#210 and transition Jira ticket `KAN-71` to `In Review`.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-71 transitioned to `In Review`.
 
 ### Session 189 — 2026-11-02 (feat(accountability): add admin quick-pardon modal trigger to post-lock leaderboard rows — GH-#211 / Jira KAN-72 on `krish`)
 
@@ -2425,9 +2425,9 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
          - Verified clicking Pardon opens `AdminPardonModal` with pre-selected participant and triggers `router.refresh()` on success.
       - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited 0).
       - Test suites: ✅ 36/36 tests green in `challenge-leaderboard-tab.test.tsx`, 121/121 green across `features/leaderboard`.
-- **NEXT STEP:** Create atomic commit for `KAN-72` / GH-#211, and prepare pull request for peer review.
+- **NEXT STEP (completed in Session 194 / PR #218):** Committed and submitted in PR #218; KAN-72 transitioned to `In Review`.
 
-### Session 189 — 2026-11-02 (feat(preferences): user preferences tab and opt-in todo completion sound effect ("yippee") — GH-#216 / Jira KAN-73 on `krish`)
+### Session 189B — 2026-11-02 (feat(preferences): user preferences tab and opt-in todo completion sound effect ("yippee") — GH-#216 / Jira KAN-73 on `krish`)
 
 - **Context & Objectives:** Implement GitHub Issue [#216](https://github.com/lrfsdevs/holdmetoit/issues/216) / Jira Ticket `KAN-73` ("feat(preferences): user preferences tab and opt-in todo completion sound effect ('yippee')"). Provide auditory celebration feedback when participants complete daily or weekly tasks in the cockpit (`cockpit-tasks-section.tsx`), strictly opt-in (disabled by default) to respect quiet study sessions in libraries and streams. Also introduce a dedicated `/preferences` hub with themes and notifications sections marked as "Coming Soon".
 - **Jira Status:** Transitioned `KAN-73` from `To Do` $\rightarrow$ `In Progress` (transition ID `21`) via Jira Cloud API.
@@ -2471,7 +2471,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run typecheck:web`: ✅ 0 compiler errors.
       - `npm run lint:web`: ✅ 0 errors (fully compliant with design token typography and ESLint rules).
       - `npm run test:web`: ✅ 240/240 test files green (2,355/2,355 tests passed).
-- **NEXT STEP:** Submit PR for `KAN-73` / GH-#216 and transition Jira ticket `KAN-73` to `In Review`.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-73 transitioned to `In Review`.
 
 ### Session 190 — 2026-11-02 (fix(leaderboard): prevent uncompleted participants from showing 'Completed' pace status on locked challenges — GH-#217 / Jira KAN-74 on `krish`)
 
@@ -2490,7 +2490,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    2. **Accountability & Automated Auto-Lock Reconciliation (`apps/ypt-bot/src/db/challenge-repository.js`):**
       - Implemented `reconcileChallengeAccountability(challengeId, now, log)`: reads challenge, teams, non-withdrawn participants, and challenge-linked weekly tasks.
       - Calculates capped team study totals (`clampDailyStudySeconds`), determines winning team IDs, and checks all 3 conditions under Law L6.
-      - Atomically transitions qualifying participants to `status: "NORMAL"`, failing participants to `status: "PUNISHED"`, and writes corresponding `PunishmentRecord` entries.
+      - Transitions qualifying participants to `status: "NORMAL"`, failing participants to `status: "PUNISHED"`, and writes corresponding `PunishmentRecord` entries (hardened into an atomic `prisma.$transaction` in Session 195).
       - Wired `reconcileChallengeAccountability` into `lockExpiredChallengesAfterGrace` immediately following challenge lock update and audit log creation.
    3. **Presentation & Rendering Layer (`apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
       - Verified semantic badge styling via `PaceStatusBadge`: `Punished` renders error styling (`bg-feedback-error-bg text-feedback-error-text`), `Completed` renders success styling (`bg-feedback-success-bg text-feedback-success-text`), and `Excused` renders accent styling.
@@ -2511,7 +2511,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run lint:web`: ✅ 0 errors.
       - `npm --prefix apps/web test -- features/leaderboard`: ✅ 125/125 tests passing.
       - `npm run test:ypt-bot`: ✅ 100/100 tests passing.
-- **NEXT STEP:** Create atomic commits for `KAN-74` / GH-#217, prepare pull request for peer review, and update Jira status to In Review upon PR submission.
+- **NEXT STEP (completed in Session 194 / PR #218):** Committed and submitted in PR #218; KAN-74 transitioned to `In Review`.
 
 ### Session 191 — 2026-11-02 (fix(leaderboard): normalize duo battle team cards and scholar blocks for symmetrical visual UI layout — GH-#220 / Jira KAN-77 on `krish`)
 
@@ -2537,7 +2537,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Added regression unit test in `apps/web/features/leaderboard/presentation/challenge-leaderboard-tab.test.tsx` (38/38 tests green).
       - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit`).
       - `npm run test:web -- features/leaderboard`: ✅ 126/126 tests passing across domain, data, and presentation layers.
-- **NEXT STEP:** Review working tree diff, prepare pull request to `dev`, and transition associated Jira issue to In Review.
+- **NEXT STEP (completed in Session 194 / PR #218):** Submitted in PR #218; KAN-77 / GH-#220 ready for review.
 
 ### Session 192 — 2026-11-02 (feat(tasks): remove header quick-add buttons & adapt calendar week navigation for weekly todos — on `krish`)
 
@@ -2645,4 +2645,22 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Updated `docs/cockpit/README.md` documentation.
       - `npm run typecheck:web`: ✅ 0 compiler errors.
       - `npm run test -w @holdmetoit/web`: ✅ 240 test files, 2369 tests passed (100% green exit).
-- **NEXT STEP:** Review working tree diff, commit changes with conventional commits, and present fix to user.
+- **NEXT STEP (completed in Session 195):** Committed in `64368dd`.
+
+### Session 196 — 2026-11-02 (fix(review): resolve inline review findings across leaderboard, preferences, cockpit date navigation, and auto-lock reconciliation — on `krish`)
+
+- **Context & Objectives:** Verify and resolve review findings across the web application, YPT bot repository, and architecture documentation:
+   1. `leaderboard-data.ts`: include `createdAt` in `dailyStudyLogs` select query to align exact timestamp boundaries for `filterLogsBeforeWithdrawal` with `lockChallengeResults`; filter weekly tasks with `isDeleted: false` and update comment.
+   2. `challenge-leaderboard-tab.tsx`: pass `status: "PUNISHED"` directly in pardon modal payload rather than using scholar's live YPT status string (`entry.status`).
+   3. `preferences-storage.ts`: make `isBrowser()` exception-safe against throwing `window.localStorage` accessors in restricted environments; ensure `loadStoredPreferences()` serves unsaved `memoryFallback` when `localStorage.setItem` throws.
+   4. `cockpit-date-picker-popover.tsx`: update weekly trigger accessible name to "Selected week: {weekRangeLabel}. Click to pick week"; display today's calendar week range in popover footer beside "Jump to This Week" when viewing a different week.
+   5. `cockpit-tasks-section.tsx`: anchor undated challenge-linked weekly tasks to a single week anchor (`effectiveStartDate ?? createdAt`); preserve existing due date on weekly edits without daily fallback and sync `dueDate: resolvedDueDate` in `setWeeklyCategories`.
+   6. `apps/ypt-bot/src/db/challenge-repository.js`: wrap auto-lock accountability mutations in `prisma.$transaction`; add `RECONCILIATION_FAILED` audit retry marker and pre-check retry; include withdrawn participant logs through `withdrawalAt` in team totals while evaluating active members only.
+   7. `admin-pardon.actions.ts` & `admin-pardon.repository.ts`: trim pardon reason before length validation, and pass `transactionClient: tx` to `recordAuditEvent`.
+   8. `docs/accountability/README.md` & `HANDOFF.md`: align documentation, session numbering, and prune stale NEXT STEP entries.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Targeted web test suites: ✅ 100% green exit across leaderboard (129/129), preferences (30/30), accountability (22/22), and cockpit date navigation (11/11).
+   - `apps/ypt-bot` test suite: ✅ 102/102 tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **NEXT STEP:** Peer review and merge PR #218 into `dev`, then proceed to release integration into `main`.

@@ -122,7 +122,7 @@ describe("CockpitDatePickerPopover", () => {
       );
 
       const trigger = screen.getByRole("button", {
-         name: /Current week: Oct 19 – 25\. Click to pick week/i,
+         name: /Selected week: Oct 19 – 25\. Click to pick week/i,
       });
       expect(trigger).toBeTruthy();
       fireEvent.click(trigger);
@@ -132,6 +132,26 @@ describe("CockpitDatePickerPopover", () => {
       fireEvent.click(jumpBtn);
 
       expect(onSelectDate).toHaveBeenCalledWith("2026-10-25");
+   });
+
+   it("displays today week range in footer when viewing a different week in weekly mode", () => {
+      render(
+         <CockpitDatePickerPopover
+            {...defaultProps}
+            mode="weekly"
+            selectedDateKey="2026-10-14"
+            weekRangeLabel="Oct 12 – 18"
+            todayDateKey="2026-10-25"
+         />
+      );
+
+      const trigger = screen.getByRole("button", {
+         name: /Selected week: Oct 12 – 18\. Click to pick week/i,
+      });
+      fireEvent.click(trigger);
+
+      // The footer beside "Jump to This Week" should display today's week range (Oct 19 – 25)
+      expect(screen.getByText("Oct 19 – 25")).toBeTruthy();
    });
 });
 

@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/popover";
 import {
    getCalendarMonthGrid,
+   getCalendarWeekDayOptions,
+   formatWeekRange,
    formatDayDate,
    type CalendarMonthCell,
 } from "@/features/study-logs/domain/challenge-day";
@@ -50,6 +52,16 @@ export function CockpitDatePickerPopover({
 
    const [viewYear, setViewYear] = useState(initialYearMonth.year);
    const [viewMonth, setViewMonth] = useState(initialYearMonth.month);
+
+   const todayWeekRangeLabel = useMemo(() => {
+      try {
+         const days = getCalendarWeekDayOptions(todayDateKey);
+         if (days.length >= 7) {
+            return formatWeekRange(days[0].dateKey, days[6].dateKey);
+         }
+      } catch {}
+      return weekRangeLabel;
+   }, [todayDateKey, weekRangeLabel]);
 
    const handleOpenChange = (open: boolean) => {
       if (open) {
@@ -109,7 +121,7 @@ export function CockpitDatePickerPopover({
                disabled={disabled}
                aria-label={
                   mode === "weekly"
-                     ? `Current week: ${weekRangeLabel}. Click to pick week`
+                     ? `Selected week: ${weekRangeLabel}. Click to pick week`
                      : `Current week: ${weekRangeLabel}. Click to pick date`
                }
                className={cn(
@@ -239,7 +251,7 @@ export function CockpitDatePickerPopover({
                </button>
                <span className="text-micro text-text-tertiary">
                   {mode === "weekly"
-                     ? weekRangeLabel
+                     ? todayWeekRangeLabel
                      : formatDayDate(todayDateKey)}
                </span>
             </div>

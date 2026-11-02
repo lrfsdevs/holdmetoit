@@ -88,4 +88,44 @@ describe("preferences-storage", () => {
       const prefs = loadStoredPreferences();
       expect(prefs.sound.todoCompletionSfx).toBe(false);
    });
+
+   it("retains unsaved memory fallback when localStorage.setItem throws", () => {
+      const setItemSpy = vi
+         .spyOn(window.localStorage, "setItem")
+         .mockImplementation(() => {
+            throw new Error("QuotaExceededError");
+         });
+
+      saveStoredPreferences((prev) => ({
+         ...prev,
+         sound: {
+            ...prev.sound,
+            todoCompletionSfx: true,
+         },
+      }));
+
+      // Subsequent read should read memoryFallback rather than empty/stale localStorage
+      const loaded = loadStoredPreferences();
+      expect(loaded.sound.todoCompletionSfx).toBe(true);
+      setItemSpy.mockRestore();
+   });
+
+   it("handles restricted localStorage getter without crashing", () => {
+      const originalStorage = window.localStorage;
+      Object.defineProperty(window, "localStorage", {
+         configurable: true,
+         get: () => {
+            throw new Error("SecurityError: Access is denied");
+         },
+      });
+
+      const prefs = loadStoredPreferences();
+      expect(prefs.sound.todoCompletionSfx).toBe(false);
+
+      // Restore
+      Object.defineProperty(window, "localStorage", {
+         configurable: true,
+         value: originalStorage,
+      });
+   });
 });

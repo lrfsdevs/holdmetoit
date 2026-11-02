@@ -729,11 +729,15 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
    const mockChallengeId = "chal-accountability-mock";
 
    test("flags uncompleted participants (hours, tasks, losing team) as PUNISHED and creates PunishmentRecords", async () => {
+      const origTransaction = prisma.$transaction;
       const origChallengeFindUnique = prisma.challenge.findUnique;
       const origTaskFindMany = prisma.task.findMany;
       const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
       const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
       const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
 
       const mockChallengeData = {
          id: mockChallengeId,
@@ -860,6 +864,7 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
             "p4-incomplete-tasks",
          ]);
       } finally {
+         prisma.$transaction = origTransaction;
          prisma.challenge.findUnique = origChallengeFindUnique;
          prisma.task.findMany = origTaskFindMany;
          prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
@@ -869,11 +874,15 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
    });
 
    test("reconciles accountability in SOLOS format: individual competition with no team penalty", async () => {
+      const origTransaction = prisma.$transaction;
       const origChallengeFindUnique = prisma.challenge.findUnique;
       const origTaskFindMany = prisma.task.findMany;
       const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
       const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
       const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
 
       const mockSoloChallenge = {
          id: "solo-chal",
@@ -914,6 +923,7 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
          assert.deepStrictEqual(result.savedParticipantIds, ["p1"]);
          assert.deepStrictEqual(result.punishedParticipantIds, ["p2"]);
       } finally {
+         prisma.$transaction = origTransaction;
          prisma.challenge.findUnique = origChallengeFindUnique;
          prisma.task.findMany = origTaskFindMany;
          prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
@@ -923,11 +933,15 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
    });
 
    test("reconciles accountability when team scores tie: both winning teams are saved (Law L6)", async () => {
+      const origTransaction = prisma.$transaction;
       const origChallengeFindUnique = prisma.challenge.findUnique;
       const origTaskFindMany = prisma.task.findMany;
       const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
       const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
       const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
 
       const mockTiedChallenge = {
          id: "tied-chal",
@@ -971,6 +985,147 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
          assert.deepStrictEqual(result.savedParticipantIds, ["p1", "p2"]);
          assert.deepStrictEqual(result.punishedParticipantIds, []);
       } finally {
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+   test("executes accountability mutations inside prisma.$transaction", async () => {
+      let transactionCalled = false;
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) => {
+         transactionCalled = true;
+         return fn(prisma);
+      };
+      prisma.challenge.findUnique = async () => ({
+         id: "tx-chal",
+         format: "SOLOS",
+         teams: [],
+         participants: [
+            {
+               id: "p1",
+               userId: "u1",
+               targetSeconds: 1000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 2000 }],
+               punishmentRecords: [],
+            },
+         ],
+      });
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 1 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 0 });
+
+      try {
+         await reconcileChallengeAccountability("tx-chal");
+         assert.strictEqual(
+            transactionCalled,
+            true,
+            "$transaction must be invoked for mutations"
+         );
+      } finally {
+         prisma.$transaction = origTransaction;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.task.findMany = origTaskFindMany;
+         prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
+         prisma.punishmentRecord.deleteMany = origPunishmentDeleteMany;
+         prisma.punishmentRecord.createMany = origPunishmentCreateMany;
+      }
+   });
+
+   test("counts withdrawn participant logs through withdrawalAt toward team totals but excludes them from outcome evaluation", async () => {
+      const origTransaction = prisma.$transaction;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTaskFindMany = prisma.task.findMany;
+      const origParticipantUpdateMany = prisma.challengeParticipant.updateMany;
+      const origPunishmentDeleteMany = prisma.punishmentRecord.deleteMany;
+      const origPunishmentCreateMany = prisma.punishmentRecord.createMany;
+
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
+
+      // Team A: 1 active member (10,000s) + 1 withdrawn member with logs before withdrawal (30,000s) + logs after withdrawal (50,000s, ignored)
+      // Total Team A eligible: 40,000s
+      // Team B: 1 active member (30,000s)
+      // Total Team B: 30,000s -> Team A wins!
+      const mockChallenge = {
+         id: "chal-withdrawn",
+         format: "TEAM_VS_TEAM",
+         teams: [
+            { id: "team-a", isDeleted: false },
+            { id: "team-b", isDeleted: false },
+         ],
+         participants: [
+            {
+               id: "p-active-a",
+               userId: "u-active-a",
+               teamId: "team-a",
+               targetSeconds: 10_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 10_000 }],
+               punishmentRecords: [],
+            },
+            {
+               id: "p-withdrawn-a",
+               userId: "u-withdrawn-a",
+               teamId: "team-a",
+               targetSeconds: 100_000,
+               status: "NORMAL",
+               isWithdrawn: true,
+               withdrawalAt: new Date("2026-10-10T12:00:00.000Z"),
+               dailyStudyLogs: [
+                  {
+                     durationSeconds: 30_000,
+                     createdAt: new Date("2026-10-10T10:00:00.000Z"),
+                  }, // eligible
+                  {
+                     durationSeconds: 50_000,
+                     createdAt: new Date("2026-10-10T14:00:00.000Z"),
+                  }, // after withdrawal, excluded
+               ],
+               punishmentRecords: [],
+            },
+            {
+               id: "p-active-b",
+               userId: "u-active-b",
+               teamId: "team-b",
+               targetSeconds: 10_000,
+               status: "NORMAL",
+               isWithdrawn: false,
+               dailyStudyLogs: [{ durationSeconds: 30_000 }],
+               punishmentRecords: [],
+            },
+         ],
+      };
+
+      prisma.challenge.findUnique = async () => mockChallenge;
+      prisma.task.findMany = async () => [];
+      prisma.challengeParticipant.updateMany = async () => ({ count: 1 });
+      prisma.punishmentRecord.deleteMany = async () => ({ count: 0 });
+      prisma.punishmentRecord.createMany = async () => ({ count: 1 });
+
+      try {
+         const result =
+            await reconcileChallengeAccountability("chal-withdrawn");
+         // Team A wins because 10k + 30k = 40k > 30k (Team B).
+         // Active A met hours and won -> saved.
+         // Active B met hours but lost -> punished.
+         // Withdrawn A is not in either list!
+         assert.deepStrictEqual(result.savedParticipantIds, ["p-active-a"]);
+         assert.deepStrictEqual(result.punishedParticipantIds, ["p-active-b"]);
+      } finally {
+         prisma.$transaction = origTransaction;
          prisma.challenge.findUnique = origChallengeFindUnique;
          prisma.task.findMany = origTaskFindMany;
          prisma.challengeParticipant.updateMany = origParticipantUpdateMany;

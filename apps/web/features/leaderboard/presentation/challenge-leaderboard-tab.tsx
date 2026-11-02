@@ -418,7 +418,7 @@ export function ChallengeLeaderboardTab({
          teamName: entry.teamName,
          teamColor: entry.teamColor,
          paceStatus: entry.paceStatus,
-         status: entry.status || entry.paceStatus.toUpperCase(),
+         status: "PUNISHED",
       });
       setIsPardonModalOpen(true);
    };

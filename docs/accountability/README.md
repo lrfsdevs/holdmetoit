@@ -248,6 +248,6 @@ In accordance with **Law L5 (Admin Override Absolute)** and **Law L6 (Three-Cond
    1. The user has `ADMIN` or `DEV` privileges (`isAdmin = true`).
    2. The challenge is completed or locked (`challenge.status === "COMPLETED" || Boolean(challenge.resultsLockedAt)`).
    3. The scholar is punished (`entry.paceStatus === "punished" || entry.status === "PUNISHED"`), and not already excused.
-- **Action flow:** Clicking `Pardon` opens `AdminPardonModal` pre-populated with the scholar's identity card. Upon entering the mandatory audit reason (minimum 3 characters) and submitting:
-   1. `adminPardonAction` executes in a database transaction, setting `Participant.status = "EXCUSED"`, upserting `PunishmentRecord.isPardoned = true`, and writing an immutable `PARTICIPANT_PARDONED` audit log.
+- **Action flow:** Clicking `Pardon` opens `AdminPardonModal` pre-populated with the scholar's identity card. Upon entering the mandatory audit reason (minimum 3 trimmed characters) and submitting:
+   1. `adminPardonAction` executes in a database transaction, setting `Participant.status = "EXCUSED"`, upserting `PunishmentRecord.isPardoned = true`, and writing an immutable `PARTICIPANT_PARDONED` audit log (with `transactionClient: tx`).
    2. The client fires `router.refresh()` to revalidate server-rendered scoreboard standings immediately.

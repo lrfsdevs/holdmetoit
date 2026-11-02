@@ -49,25 +49,28 @@ export async function adminPardonParticipant(params: {
               },
            });
 
-      await recordAuditEvent({
-         actorId: params.admin.id,
-         actorUsername: params.admin.username,
-         actionType: "PARTICIPANT_PARDONED",
-         targetEntityId: params.participantId,
-         targetEntityType: "PARTICIPANT",
-         targetEntityName: participantName,
-         challengeId: participant.challengeId,
-         previousValue: {
-            status: participant.status,
-            isPardoned: existingRecord?.isPardoned ?? false,
+      await recordAuditEvent(
+         {
+            actorId: params.admin.id,
+            actorUsername: params.admin.username,
+            actionType: "PARTICIPANT_PARDONED",
+            targetEntityId: params.participantId,
+            targetEntityType: "PARTICIPANT",
+            targetEntityName: participantName,
+            challengeId: participant.challengeId,
+            previousValue: {
+               status: participant.status,
+               isPardoned: existingRecord?.isPardoned ?? false,
+            },
+            newValue: {
+               status: "EXCUSED",
+               isPardoned: true,
+               pardonReason: params.reason.trim(),
+            },
+            auditReason: params.reason.trim(),
          },
-         newValue: {
-            status: "EXCUSED",
-            isPardoned: true,
-            pardonReason: params.reason.trim(),
-         },
-         auditReason: params.reason.trim(),
-      });
+         { transactionClient: tx }
+      );
 
       return {
          participant: updatedParticipant,

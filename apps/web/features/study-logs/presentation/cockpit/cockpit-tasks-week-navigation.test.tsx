@@ -309,7 +309,7 @@ describe("CockpitTasksSection Interactive Week Navigation (GH #184 / KAN-60)", (
 
          const weeklyBoard = screen.getByTestId("weekly-tasks-board");
          const trigger = within(weeklyBoard).getByRole("button", {
-            name: /Current week: Oct 19 – 25\. Click to pick week/i,
+            name: /Selected week: Oct 19 – 25\. Click to pick week/i,
          });
          fireEvent.click(trigger);
 

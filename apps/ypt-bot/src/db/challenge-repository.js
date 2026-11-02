@@ -79,6 +79,43 @@ export async function lockExpiredChallengesAfterGrace(
    const now = new Date(nowUtc);
    const cutoff = new Date(now.getTime() - CHALLENGE_GRACE_WINDOW_MS);
 
+   // Retry previously failed challenge accountability reconciliations
+   if (prisma.auditLog?.findMany) {
+      try {
+         const failedReconciliations = await prisma.auditLog.findMany({
+            where: { actionType: "RECONCILIATION_FAILED" },
+            select: { id: true, challengeId: true },
+         });
+         for (const record of failedReconciliations) {
+            if (!record.challengeId) continue;
+            try {
+               await reconcileChallengeAccountability(
+                  record.challengeId,
+                  now,
+                  log
+               );
+               if (prisma.auditLog?.delete) {
+                  await prisma.auditLog
+                     .delete({ where: { id: record.id } })
+                     .catch(() => {});
+               }
+            } catch (retryErr) {
+               log.error(
+                  "Failed to retry challenge accountability reconciliation:",
+                  {
+                     challengeId: record.challengeId,
+                     error: retryErr?.message,
+                  }
+               );
+            }
+         }
+      } catch (checkErr) {
+         log.error("Failed to check for unreconciled challenges:", {
+            error: checkErr?.message,
+         });
+      }
+   }
+
    // Find challenges whose Day 7 + 6h grace window has passed and resultsLockedAt is null
    const expiredUnlocked = await prisma.challenge.findMany({
       where: {
@@ -149,6 +186,30 @@ export async function lockExpiredChallengesAfterGrace(
                   error: reconcileErr?.message,
                }
             );
+            if (prisma.auditLog?.create) {
+               await prisma.auditLog
+                  .create({
+                     data: {
+                        challengeId: challenge.id,
+                        actorId: null,
+                        actorUsername: "system",
+                        actorDisplayName: "YPT Auto-Lock",
+                        actionType: "RECONCILIATION_FAILED",
+                        targetEntityId: challenge.id,
+                        targetEntityType: "CHALLENGE",
+                        targetEntityName: challenge.title,
+                        previousValue: { resultsLockedAt: now.toISOString() },
+                        newValue: {
+                           autoLocked: true,
+                           error: reconcileErr?.message,
+                        },
+                        auditReason:
+                           "Failed to reconcile challenge accountability during auto-lock",
+                        createdAt: now,
+                     },
+                  })
+                  .catch(() => {});
+            }
          }
 
          locked.push({ ...challenge, resultsLockedAt: now });
@@ -299,7 +360,6 @@ export async function reconcileChallengeAccountability(
       include: {
          teams: { where: { isDeleted: false }, select: { id: true } },
          participants: {
-            where: { isWithdrawn: false },
             include: {
                dailyStudyLogs: true,
                punishmentRecords: true,
@@ -312,7 +372,8 @@ export async function reconcileChallengeAccountability(
       return;
    }
 
-   const evaluatedParticipants = challenge.participants || [];
+   const allParticipants = challenge.participants || [];
+   const evaluatedParticipants = allParticipants.filter((p) => !p.isWithdrawn);
    const participantUserIds = evaluatedParticipants
       .map((p) => p.userId)
       .filter(Boolean);
@@ -337,15 +398,40 @@ export async function reconcileChallengeAccountability(
       weeklyTasksByUser.set(task.userId, list);
    }
 
-   // Aggregate team totals using capped study seconds (Law L1 / Law L8)
+   // Aggregate team totals using capped study seconds (Law L1 / Law L8).
+   // Withdrawn participants count toward team totals for logs on or before withdrawalAt.
    const teamTotals = new Map();
    for (const team of challenge.teams || []) {
       teamTotals.set(team.id, 0);
    }
 
-   for (const p of evaluatedParticipants) {
+   for (const p of allParticipants) {
       if (p.teamId && teamTotals.has(p.teamId)) {
-         const loggedSeconds = (p.dailyStudyLogs || []).reduce(
+         const eligibleLogs = p.isWithdrawn
+            ? (p.dailyStudyLogs || []).filter((logEntry) => {
+                 if (!p.withdrawalAt) return true;
+                 const withdrawalTime = new Date(p.withdrawalAt).getTime();
+                 if (Number.isNaN(withdrawalTime)) return true;
+                 if (logEntry.createdAt) {
+                    const createdTime = new Date(logEntry.createdAt).getTime();
+                    if (!Number.isNaN(createdTime)) {
+                       return createdTime <= withdrawalTime;
+                    }
+                 }
+                 if (logEntry.logDate) {
+                    const logDateKey = new Date(logEntry.logDate)
+                       .toISOString()
+                       .slice(0, 10);
+                    const withdrawalDateKey = new Date(p.withdrawalAt)
+                       .toISOString()
+                       .slice(0, 10);
+                    return logDateKey <= withdrawalDateKey;
+                 }
+                 return true;
+              })
+            : p.dailyStudyLogs || [];
+
+         const loggedSeconds = eligibleLogs.reduce(
             (sum, logEntry) =>
                sum + clampDailyStudySeconds(logEntry.durationSeconds || 0),
             0
@@ -409,42 +495,50 @@ export async function reconcileChallengeAccountability(
       }
    }
 
-   if (
-      savedParticipantIds.length > 0 &&
-      prisma.challengeParticipant?.updateMany
-   ) {
-      await prisma.challengeParticipant.updateMany({
-         where: { id: { in: savedParticipantIds } },
-         data: { status: "NORMAL" },
-      });
-   }
+   const executeAccountabilityMutations = async (tx) => {
+      if (
+         savedParticipantIds.length > 0 &&
+         tx.challengeParticipant?.updateMany
+      ) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: savedParticipantIds } },
+            data: { status: "NORMAL" },
+         });
+      }
 
-   if (
-      punishedParticipantIds.length > 0 &&
-      prisma.challengeParticipant?.updateMany
-   ) {
-      await prisma.challengeParticipant.updateMany({
-         where: { id: { in: punishedParticipantIds } },
-         data: { status: "PUNISHED" },
-      });
-   }
+      if (
+         punishedParticipantIds.length > 0 &&
+         tx.challengeParticipant?.updateMany
+      ) {
+         await tx.challengeParticipant.updateMany({
+            where: { id: { in: punishedParticipantIds } },
+            data: { status: "PUNISHED" },
+         });
+      }
 
-   if (prisma.punishmentRecord?.deleteMany) {
-      await prisma.punishmentRecord.deleteMany({
-         where: { challengeId, isPardoned: false },
-      });
-   }
+      if (tx.punishmentRecord?.deleteMany) {
+         await tx.punishmentRecord.deleteMany({
+            where: { challengeId, isPardoned: false },
+         });
+      }
 
-   if (
-      punishedParticipantIds.length > 0 &&
-      prisma.punishmentRecord?.createMany
-   ) {
-      await prisma.punishmentRecord.createMany({
-         data: punishedParticipantIds.map((participantId) => ({
-            challengeId,
-            participantId,
-         })),
-      });
+      if (
+         punishedParticipantIds.length > 0 &&
+         tx.punishmentRecord?.createMany
+      ) {
+         await tx.punishmentRecord.createMany({
+            data: punishedParticipantIds.map((participantId) => ({
+               challengeId,
+               participantId,
+            })),
+         });
+      }
+   };
+
+   if (typeof prisma.$transaction === "function") {
+      await prisma.$transaction(executeAccountabilityMutations);
+   } else {
+      await executeAccountabilityMutations(prisma);
    }
 
    log.info("Challenge accountability reconciled after lock.", {

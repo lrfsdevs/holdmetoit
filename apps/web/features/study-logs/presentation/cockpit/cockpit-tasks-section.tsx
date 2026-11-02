@@ -812,15 +812,20 @@ export function CockpitTasksSection({
             task.challengeId &&
             task.challengeId === linkableChallengeId
          ) {
-            if (
-               effectiveStartDate &&
-               isSameCalendarWeek(
-                  effectiveStartDate.slice(0, 10),
+            const challengeAnchor =
+               effectiveStartDate?.slice(0, 10) ??
+               (task.createdAt
+                  ? typeof task.createdAt === "string"
+                     ? task.createdAt.slice(0, 10)
+                     : new Date(task.createdAt).toISOString().slice(0, 10)
+                  : null);
+            if (challengeAnchor) {
+               return isSameCalendarWeek(
+                  challengeAnchor,
                   activeWeeklyAnchorDateKey
-               )
-            ) {
-               return true;
+               );
             }
+            return isViewingCurrentWeeklyWeek;
          }
          if (task.createdAt) {
             const taskCreatedKey =
@@ -1699,10 +1704,10 @@ export function CockpitTasksSection({
       const nowIso = new Date().toISOString();
       const resolvedDueDate =
          taskType === "daily"
-            ? newDueDate !== undefined
+            ? newDueDate !== undefined && newDueDate !== ""
                ? newDueDate
                : (editTaskModal.dueDate ?? selectedDateKey)
-            : newDueDate !== undefined
+            : newDueDate !== undefined && newDueDate !== ""
               ? newDueDate
               : (editTaskModal.dueDate ?? null);
 
@@ -1806,6 +1811,7 @@ export function CockpitTasksSection({
                                   text: trimmed,
                                   completed: nextCompleted,
                                   status: newStatus,
+                                  dueDate: resolvedDueDate,
                                   challengeId: editTaskInputChallengeId,
                                }
                              : t
@@ -6294,8 +6300,8 @@ export function CockpitTasksSection({
                                                                            )
                                                                         );
                                                                         setEditTaskInputDueDate(
-                                                                           task.dueDate ||
-                                                                              selectedDateKey
+                                                                           task.dueDate ??
+                                                                              ""
                                                                         );
                                                                      }}
                                                                      onDeleteTask={() =>
@@ -6404,8 +6410,8 @@ export function CockpitTasksSection({
                                                                   )
                                                                );
                                                                setEditTaskInputDueDate(
-                                                                  task.dueDate ||
-                                                                     selectedDateKey
+                                                                  task.dueDate ??
+                                                                     ""
                                                                );
                                                             }}
                                                             onDeleteTask={() =>

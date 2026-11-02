@@ -126,6 +126,14 @@ export function normalizeScoreboardPayload(
          ...participant,
          dailyStudyLogs: participant.dailyStudyLogs.map((log) => ({
             ...log,
+            ...(log.createdAt === undefined || log.createdAt === null
+               ? {}
+               : {
+                    createdAt: normalizeScoreboardDate(
+                       log.createdAt,
+                       "createdAt"
+                    ),
+                 }),
             ...(log.logDate === undefined
                ? {}
                : { logDate: normalizeScoreboardDate(log.logDate, "logDate") }),
@@ -554,6 +562,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                         select: {
                            durationSeconds: true,
                            logDate: true,
+                           createdAt: true,
                            status: true,
                            isLeave: true,
                         },
@@ -574,7 +583,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
          }
 
          // Challenge-linked weekly task counts (mirrors the lock evaluation:
-         // soft-deleted rows are intentionally included).
+         // active rows only; soft-deleted rows are excluded).
          const participantUserIds = challenge.participants.map(
             (participant) => participant.userId
          );
@@ -584,6 +593,7 @@ async function getCachedChallengeScoreboardPayload(challengeId: string) {
                     where: {
                        challengeId,
                        taskType: "WEEKLY",
+                       isDeleted: false,
                        userId: { in: participantUserIds },
                     },
                     select: { userId: true, status: true },
