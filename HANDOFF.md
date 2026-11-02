@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 193 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-02 (Session 194 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2593,4 +2593,29 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm --prefix apps/web test -- features/leaderboard`: ✅ 5 test files, 129/129 tests passing.
       - `npm run typecheck:web`: ✅ 0 TypeScript errors.
       - `npm run lint:web`: ✅ 0 lint errors.
-- **NEXT STEP:** Prepare release PR to `dev`, review with peer, and transition Jira `KAN-74` to In Review.
+- **NEXT STEP:** Peer review and merge PR #218 into `dev`.
+
+### Session 194 — 2026-11-02 (chore(release): submit PR #218 from krish to dev, link issues #207-#217 & transition Jira KAN-68-74 to In Review — on `krish`)
+
+- **Context & Objectives:** User requested to commit and push all pending changes on `krish`, create a Pull Request from `krish` to `dev` covering completed slices across leaderboard, cockpit, tasks, preferences, and accountability, link relevant issues, and transition associated Jira tickets to `In Review`.
+- **Git State & Push:**
+   - Committed pending task navigation updates: `[krish 82251dc] feat(tasks): remove header quick-add buttons and adapt calendar week navigation for weekly todos`.
+   - Pushed `krish` to remote (`origin/krish` up to date at `82251dc`).
+- **Pull Request Created:**
+   - **PR #218:** [`feat(cockpit & leaderboard): weekly todo navigation, compact admin actions, locked pace invariants & preferences (#207, #208, #210, #211, #216, #217)`](https://github.com/lrfsdevs/holdmetoit/pull/218) submitted from `krish` $\rightarrow$ `dev`.
+   - Linked GitHub Issues:
+      - `Closes #217` (Jira **KAN-74**): Locked challenge pace status invariant, auto-lock reconciliation & compact admin actions.
+      - `Closes #216` (Jira **KAN-73**): User preferences hub & opt-in "yippee" completion audio effect.
+      - `Closes #211` (Jira **KAN-72**): Admin quick-pardon modal trigger on post-lock leaderboard rows.
+      - `Closes #210` (Jira **KAN-71**): Preserve historical study hours on mid-challenge withdrawal.
+      - `Closes #208` (Jira **KAN-69**): Desktop standings progress percentage & pace status columns.
+      - `Closes #207` (Jira **KAN-68**): Participant profile weekly goals checklist & pagination.
+- **Jira Status Lifecycle Transitions (AGENTS.md §4.4):**
+   - Successfully transitioned all 6 Jira issues from `In Progress` $\rightarrow$ `In Review` (transition ID `31`) via Jira Cloud REST API:
+      - `KAN-68`: Status is now `[In Review]`
+      - `KAN-69`: Status is now `[In Review]`
+      - `KAN-71`: Status is now `[In Review]`
+      - `KAN-72`: Status is now `[In Review]`
+      - `KAN-73`: Status is now `[In Review]`
+      - `KAN-74`: Status is now `[In Review]`
+- **NEXT STEP:** Peer review and merge PR #218 into `dev`, then proceed to release integration into `main`.
