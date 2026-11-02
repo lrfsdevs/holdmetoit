@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 196 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-02 (Session 197 on `krish` · Session 189 on `afnan-jr`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2618,7 +2618,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `KAN-72`: Status is now `[In Review]`
       - `KAN-73`: Status is now `[In Review]`
       - `KAN-74`: Status is now `[In Review]`
-- **NEXT STEP:** Peer review and merge PR #218 into `dev`, then proceed to release integration into `main`.
+- **NEXT STEP (completed in Session 194):** Create and submit PR #218 targeting `dev`.
 
 ### Session 195 — 2026-11-02 (fix(tasks): anchor weekly tasks to creation week and prevent cross-week sticking on new week start — on `krish`)
 
@@ -2663,4 +2663,21 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Targeted web test suites: ✅ 100% green exit across leaderboard (129/129), preferences (30/30), accountability (22/22), and cockpit date navigation (11/11).
    - `apps/ypt-bot` test suite: ✅ 102/102 tests passing.
    - `npm run lint:web`: ✅ 0 errors.
-- **NEXT STEP:** Peer review and merge PR #218 into `dev`, then proceed to release integration into `main`.
+- **NEXT STEP (completed in Session 196):** Review feedback addressed across leaderboard, preferences, cockpit date navigation, and auto-lock reconciliation; pushed in `0c0eebc`.
+
+### Session 197 — 2026-11-02 (fix(ci): mock auditLog.findMany and challenge.findUnique in ypt-bot tests for database-less CI — on `krish`)
+
+- **Context & Objectives:** GitHub Actions CI failed in step `YPT bot tests` on PR #218 because `lockExpiredChallengesAfterGrace` attempted unmocked calls to `prisma.auditLog.findMany` and `prisma.challenge.findUnique` inside the auto-lock and simulation test suites, which errored when running with `CI_SKIP_DB="true"` and non-existent `localhost:5432` PostgreSQL:
+   1. `apps/ypt-bot/test/db/challenge-repository.test.js`:
+      - Added `beforeEach` and `afterEach` hooks in `describe("ingestGroupMembersToDailyStudyLogs End-to-End Simulation (Mocked DB)")` and `describe("lockExpiredChallengesAfterGrace & Audit Log Creation")` to mock `prisma.auditLog.findMany = async () => []`.
+      - In `locks challenge and writes audit log once 6-hour grace window has elapsed`, mocked `prisma.challenge.findUnique` and `prisma.$transaction`, and ensured `auditCalledWith` matches `CHALLENGE_LOCKED`.
+      - Added unit test `retries previously failed challenge accountability reconciliations and deletes retry marker`.
+      - Restored `prisma.$transaction = origTransaction` in `finally` of the tied-scores test.
+   2. `apps/ypt-bot/test/ingest/ingest-guards.test.js`:
+      - Added `beforeEach` and `afterEach` hooks in `describe("Zero-Drop & Rollover Glitch Guards in ingestGroupMembersToDailyStudyLogs")` to mock `prisma.auditLog.findMany = async () => []`.
+- **Quality Gates:**
+   - Full web test suite: ✅ 240/240 files green (2372/2372 passing).
+   - Next.js production build: ✅ compiled successfully (`next build`).
+   - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
+   - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
+- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.

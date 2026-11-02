@@ -1,4 +1,4 @@
-import { test, describe, mock } from "node:test";
+import { test, describe, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import {
    getChallengeLifecycle,
@@ -284,6 +284,16 @@ describe(
 );
 
 describe("ingestGroupMembersToDailyStudyLogs End-to-End Simulation (Mocked DB)", () => {
+   let origAuditLogFindMany;
+
+   beforeEach(() => {
+      origAuditLogFindMany = prisma.auditLog.findMany;
+      prisma.auditLog.findMany = async () => [];
+   });
+
+   afterEach(() => {
+      prisma.auditLog.findMany = origAuditLogFindMany;
+   });
    const mockChallenge = {
       id: "chal-day7-mock",
       title: "Mock Day 7 Challenge",
@@ -586,6 +596,17 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
       resultsLockedAt: null,
    };
 
+   let origAuditFindMany;
+
+   beforeEach(() => {
+      origAuditFindMany = prisma.auditLog.findMany;
+      prisma.auditLog.findMany = async () => [];
+   });
+
+   afterEach(() => {
+      prisma.auditLog.findMany = origAuditFindMany;
+   });
+
    test("does not lock challenge while still within the 6-hour grace window", async () => {
       const nowInsideGrace = new Date("2026-10-12T04:00:00.000Z"); // 4h into grace (< 6h)
 
@@ -639,6 +660,8 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
       const origFindMany = prisma.challenge.findMany;
       const origUpdateMany = prisma.challenge.updateMany;
       const origAuditCreate = prisma.auditLog.create;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+      const origTransaction = prisma.$transaction;
 
       let updateCalledWith = null;
       let auditCalledWith = null;
@@ -648,8 +671,13 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          updateCalledWith = args;
          return { count: 1 };
       };
+      prisma.challenge.findUnique = async () => null;
+      prisma.$transaction = async (fn) =>
+         typeof fn === "function" ? fn(prisma) : fn;
       prisma.auditLog.create = async (args) => {
-         auditCalledWith = args;
+         if (args.data.actionType === "CHALLENGE_LOCKED") {
+            auditCalledWith = args;
+         }
          return args;
       };
 
@@ -691,6 +719,8 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          prisma.challenge.findMany = origFindMany;
          prisma.challenge.updateMany = origUpdateMany;
          prisma.auditLog.create = origAuditCreate;
+         prisma.challenge.findUnique = origChallengeFindUnique;
+         prisma.$transaction = origTransaction;
       }
    });
 
@@ -721,6 +751,40 @@ describe("lockExpiredChallengesAfterGrace & Audit Log Creation", () => {
          prisma.challenge.findMany = origFindMany;
          prisma.challenge.updateMany = origUpdateMany;
          prisma.auditLog.create = origAuditCreate;
+      }
+   });
+
+   test("retries previously failed challenge accountability reconciliations and deletes retry marker", async () => {
+      const nowPastGrace = new Date("2026-10-12T06:15:00.000Z");
+
+      const origFindMany = prisma.challenge.findMany;
+      const origAuditDelete = prisma.auditLog.delete;
+      const origChallengeFindUnique = prisma.challenge.findUnique;
+
+      let reconciledId = null;
+      let deletedAuditId = null;
+
+      prisma.challenge.findMany = async () => [];
+      prisma.auditLog.findMany = async () => [
+         { id: "audit-failed-1", challengeId: "chal-retry-123" },
+      ];
+      prisma.challenge.findUnique = async (args) => {
+         reconciledId = args.where.id;
+         return null;
+      };
+      prisma.auditLog.delete = async (args) => {
+         deletedAuditId = args.where.id;
+         return { id: args.where.id };
+      };
+
+      try {
+         await lockExpiredChallengesAfterGrace(nowPastGrace);
+         assert.strictEqual(reconciledId, "chal-retry-123");
+         assert.strictEqual(deletedAuditId, "audit-failed-1");
+      } finally {
+         prisma.challenge.findMany = origFindMany;
+         prisma.auditLog.delete = origAuditDelete;
+         prisma.challenge.findUnique = origChallengeFindUnique;
       }
    });
 });
@@ -985,6 +1049,7 @@ describe("reconcileChallengeAccountability (Law L6 / GH-#217)", () => {
          assert.deepStrictEqual(result.savedParticipantIds, ["p1", "p2"]);
          assert.deepStrictEqual(result.punishedParticipantIds, []);
       } finally {
+         prisma.$transaction = origTransaction;
          prisma.challenge.findUnique = origChallengeFindUnique;
          prisma.task.findMany = origTaskFindMany;
          prisma.challengeParticipant.updateMany = origParticipantUpdateMany;
