@@ -19,6 +19,7 @@ import type {
    QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
+import { isWeeklyTaskGraceExpired } from "@/features/tasks/domain/task-lock";
 import {
    DEFAULT_CATEGORY_NAME,
    assertChallengeWritable,
@@ -126,6 +127,21 @@ async function resolveWritableChallengeLink(
       }
       throw error;
    }
+}
+
+/**
+ * Whether a category still holds a weekly goal past its 24-hour grace period.
+ */
+async function categoryHasLockedGoals(
+   tx: Prisma.TransactionClient,
+   categoryId: string,
+   userId: string
+): Promise<boolean> {
+   const tasks = await tx.task.findMany({
+      where: { categoryId, userId, isDeleted: false },
+      select: { taskType: true, challengeId: true, createdAt: true },
+   });
+   return tasks.some((task) => isWeeklyTaskGraceExpired(task));
 }
 
 async function applyCategoryMutation(
@@ -278,6 +294,14 @@ async function applyCategoryMutation(
                   }
                   dataToUpdate.taskType = taskType;
                   taskTypeChanged = true;
+
+                  if (await categoryHasLockedGoals(tx, catId, userId)) {
+                     return {
+                        status: "conflict",
+                        reason: "task_locked",
+                        currentCategory: toCategoryItem(currentCategory),
+                     };
+                  }
                }
             }
          }
@@ -364,6 +388,14 @@ async function applyCategoryMutation(
       });
 
       if (!currentCategory || currentCategory.isDeleted) return APPLIED;
+
+      if (await categoryHasLockedGoals(tx, catId, userId)) {
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentCategory: toCategoryItem(currentCategory),
+         };
+      }
 
       const now = new Date();
 
@@ -523,7 +555,7 @@ async function applyTaskMutation(
 
       const guard = await tx.task.findFirst({
          where: { id: taskId, userId, isDeleted: false },
-         select: { challengeId: true },
+         select: { challengeId: true, taskType: true, createdAt: true },
       });
 
       if (guard?.challengeId) {
@@ -544,6 +576,24 @@ async function applyTaskMutation(
             }
             throw error;
          }
+      }
+
+      const changesLockedFields =
+         m.action === "DELETE" ||
+         ((m.action === "UPDATE" || m.action === "MOVE") &&
+            (Boolean(title) ||
+               payload.challengeId !== undefined ||
+               (Boolean(payload.taskType) && taskType !== guard?.taskType)));
+
+      if (guard && changesLockedFields && isWeeklyTaskGraceExpired(guard)) {
+         const current = await tx.task.findFirst({
+            where: { id: taskId, userId, isDeleted: false },
+         });
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentTask: current ? toTaskItem(current, current.taskType) : null,
+         };
       }
    }
 
