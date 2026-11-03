@@ -104,6 +104,7 @@ import {
    type TaskScope,
 } from "@/features/tasks/domain/task-scope";
 import { buildTaskEditPatch } from "@/features/tasks/domain/task-edit-patch";
+import { isWeeklyTaskGraceExpired } from "@/features/tasks/domain/task-lock";
 import type {
    TaskStatus,
    UserCategorizedTasks,
@@ -355,6 +356,14 @@ export function CockpitTasksSection({
    const [editTaskInputChallengeId, setEditTaskInputChallengeId] = useState<
       string | null
    >(null);
+   const isEditTaskGraceLocked = Boolean(
+      editTaskModal &&
+      isWeeklyTaskGraceExpired({
+         taskType: editTaskModal.taskType === "weekly" ? "WEEKLY" : "DAILY",
+         challengeId: editTaskModal.challengeId,
+         createdAt: editTaskModal.createdAt ?? new Date(),
+      })
+   );
    const [addTodoChallengeScope, setAddTodoChallengeScope] =
       useState<TaskScope>("CHALLENGE");
    const [isRolloverDismissed, setIsRolloverDismissed] = useState(false);
@@ -1694,6 +1703,19 @@ export function CockpitTasksSection({
             )
          );
       } else {
+         const weeklyTaskToDelete = weeklyCategories[catIndex]?.tasks.find(
+            (t) => t.id === taskId
+         );
+         if (
+            weeklyTaskToDelete &&
+            isWeeklyTaskGraceExpired({
+               taskType: "WEEKLY",
+               challengeId: weeklyTaskToDelete.challengeId,
+               createdAt: weeklyTaskToDelete.createdAt ?? new Date(),
+            })
+         ) {
+            return;
+         }
          setWeeklyCategories((prev) =>
             prev.map((cat, i) =>
                i === catIndex
@@ -1784,6 +1806,13 @@ export function CockpitTasksSection({
          },
          taskType === "daily" ? "DAILY" : "WEEKLY"
       );
+
+      if (
+         isEditTaskGraceLocked &&
+         (patch.title !== undefined || patch.challengeId !== undefined)
+      ) {
+         return;
+      }
 
       if (Object.keys(patch).length === 0) {
          setEditTaskModal(null);
@@ -2128,6 +2157,16 @@ export function CockpitTasksSection({
          }
          if (!foundTask || !foundCat) return;
 
+         if (
+            isWeeklyTaskGraceExpired({
+               taskType: "WEEKLY",
+               challengeId: foundTask.challengeId,
+               createdAt: foundTask.createdAt ?? new Date(),
+            })
+         ) {
+            return;
+         }
+
          setWeeklyCategories((prev) =>
             prev.map((cat) => ({
                ...cat,
@@ -2282,6 +2321,18 @@ export function CockpitTasksSection({
          if (catIdx < 0 || catIdx >= weeklyCategories.length) return;
          const sourceCat = weeklyCategories[catIdx];
          if (!sourceCat) return;
+
+         if (
+            sourceCat.tasks.some((t) =>
+               isWeeklyTaskGraceExpired({
+                  taskType: "WEEKLY",
+                  challengeId: t.challengeId,
+                  createdAt: t.createdAt ?? new Date(),
+               })
+            )
+         ) {
+            return;
+         }
 
          const res = moveCategoryToDay<TaskItem, CategoryGroup>({
             categoryIndex: catIdx,
@@ -2584,7 +2635,20 @@ export function CockpitTasksSection({
          })
       );
 
-      if (hasLockedTasks) {
+      const weeklyTargetCat = weeklyCategories.find((c) =>
+         catId ? c.id === catId : catType === "weekly" && c.name === targetName
+      );
+      const hasGraceLockedTasks = Boolean(
+         weeklyTargetCat?.tasks.some((t) =>
+            isWeeklyTaskGraceExpired({
+               taskType: "WEEKLY",
+               challengeId: t.challengeId,
+               createdAt: t.createdAt ?? new Date(),
+            })
+         )
+      );
+
+      if (hasLockedTasks || hasGraceLockedTasks) {
          setDeleteCategoryModal(null);
          return;
       }
@@ -6948,6 +7012,7 @@ export function CockpitTasksSection({
                         type="text"
                         value={editTaskInputText}
                         onChange={(e) => setEditTaskInputText(e.target.value)}
+                        disabled={isEditTaskGraceLocked}
                         autoFocus
                         required
                         className="h-11 bg-input-bg border-input-border text-text-primary rounded-xl"
@@ -7073,6 +7138,7 @@ export function CockpitTasksSection({
                            <div className="grid grid-cols-2 gap-2">
                               <button
                                  type="button"
+                                 disabled={isEditTaskGraceLocked}
                                  onClick={() =>
                                     setEditTaskInputChallengeId(
                                        linkableChallengeId
@@ -7095,6 +7161,7 @@ export function CockpitTasksSection({
                               </button>
                               <button
                                  type="button"
+                                 disabled={isEditTaskGraceLocked}
                                  onClick={() =>
                                     setEditTaskInputChallengeId(null)
                                  }

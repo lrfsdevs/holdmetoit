@@ -1,7 +1,10 @@
 import { prisma } from "@/core/db";
 import { recordAuditEvent } from "@/features/audit/data/audit-log.repository";
 import { calculateChallengeStatus } from "@/features/challenges/domain/challenge-lifecycle";
-import { resolveWithdrawalEligibility } from "@/features/challenges/domain/withdrawal";
+import {
+   resolveWithdrawalEligibility,
+   WithdrawalError,
+} from "@/features/challenges/domain/withdrawal";
 
 export async function findParticipantForUser(
    userId: string,
@@ -322,7 +325,7 @@ export async function applyParticipantWithdrawal(params: {
    });
 
    if (!eligibility.allowed) {
-      throw new Error(eligibility.message);
+      throw new WithdrawalError(eligibility.message, eligibility.code);
    }
 
    const now = new Date();

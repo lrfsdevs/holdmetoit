@@ -1,5 +1,6 @@
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { toClientError } from "@/core/errors";
 import { revalidatePath } from "next/cache";
 import { processStudyReward } from "@/features/economy/api/study-reward.service";
 import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
@@ -239,22 +240,23 @@ export async function ingestYptActivity(
          isDuplicate,
       };
    } catch (error) {
-      logger.error(logEvents.appError, {
+      const clientError = toClientError(error, {
+         scope: "ypt.ingest",
+         event: logEvents.appError,
          context: {
             action: "ingestYptActivity",
             date: payload.date,
             durationSeconds,
          },
-         error,
+         defaultCode: "INGEST_ERROR",
+         defaultMessage:
+            "An unexpected error occurred during YPT activity ingestion.",
       });
 
       return {
          ok: false,
-         code: "INGEST_ERROR",
-         message:
-            error instanceof Error
-               ? error.message
-               : "An unexpected error occurred during YPT activity ingestion.",
+         code: clientError.code,
+         message: clientError.message,
          durationSeconds,
          coinsCredited: 0,
          isDuplicate: false,

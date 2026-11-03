@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/core/db";
+import { ChallengeStateError } from "@/features/challenges/domain/challenge-lifecycle";
 import {
    createCategory,
    createTask,
@@ -29,6 +30,7 @@ vi.mock("@/core/db", () => {
       task: {
          create: vi.fn(),
          findFirst: vi.fn(),
+         findMany: vi.fn(),
          update: vi.fn(),
          updateMany: vi.fn(),
          delete: vi.fn(),
@@ -45,9 +47,23 @@ vi.mock("@/core/db", () => {
    return { prisma: mockPrisma };
 });
 
+const HOUR_MS = 60 * 60 * 1000;
+
+function lockedWeeklyTask(overrides: Record<string, unknown> = {}) {
+   return {
+      id: "task_weekly",
+      userId: "user_1",
+      taskType: "WEEKLY",
+      challengeId: "challenge_1",
+      createdAt: new Date(Date.now() - 25 * HOUR_MS),
+      ...overrides,
+   };
+}
+
 describe("task.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.task.findMany).mockResolvedValue([] as never);
       vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue(
          [] as never
       );
@@ -707,6 +723,47 @@ describe("task.repository", () => {
             },
          });
       });
+
+      it("deletes a weekly challenge goal inside the 24-hour grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask({
+               createdAt: new Date(Date.now() - 23 * HOUR_MS),
+            }) as never
+         );
+         vi.mocked(prisma.task.update).mockResolvedValue({
+            id: "task_weekly",
+            isDeleted: true,
+         } as never);
+
+         await deleteTask({ taskId: "task_weekly", userId: "user_1" });
+
+         expect(prisma.task.update).toHaveBeenCalled();
+      });
+
+      it("rejects deleting a weekly challenge goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask() as never
+         );
+
+         await expect(
+            deleteTask({ taskId: "task_weekly", userId: "user_1" })
+         ).rejects.toBeInstanceOf(ChallengeStateError);
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("still deletes a weekly personal task after 24 hours", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask({ challengeId: null }) as never
+         );
+         vi.mocked(prisma.task.update).mockResolvedValue({
+            id: "task_weekly",
+            isDeleted: true,
+         } as never);
+
+         await deleteTask({ taskId: "task_weekly", userId: "user_1" });
+
+         expect(prisma.task.update).toHaveBeenCalled();
+      });
    });
 
    describe("createCategory", () => {
@@ -782,6 +839,55 @@ describe("task.repository", () => {
    });
 
    describe("updateTask", () => {
+      it("rejects renaming a weekly challenge goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask() as never
+         );
+
+         await expect(
+            updateTask({
+               taskId: "task_weekly",
+               userId: "user_1",
+               title: "Renamed goal",
+            })
+         ).rejects.toBeInstanceOf(ChallengeStateError);
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects unlinking a weekly challenge goal after the grace period", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask() as never
+         );
+
+         await expect(
+            updateTask({
+               taskId: "task_weekly",
+               userId: "user_1",
+               challengeId: null,
+            })
+         ).rejects.toBeInstanceOf(ChallengeStateError);
+         expect(prisma.task.update).not.toHaveBeenCalled();
+      });
+
+      it("still updates the status of a locked weekly challenge goal", async () => {
+         vi.mocked(prisma.task.findFirst).mockResolvedValue(
+            lockedWeeklyTask() as never
+         );
+         vi.mocked(prisma.task.update).mockResolvedValue({
+            id: "task_weekly",
+            status: "COMPLETED",
+         } as never);
+
+         const result = await updateTask({
+            taskId: "task_weekly",
+            userId: "user_1",
+            status: "COMPLETED",
+         });
+
+         expect(result).toBeDefined();
+         expect(prisma.task.update).toHaveBeenCalled();
+      });
+
       it("updates task title when owned by user", async () => {
          vi.mocked(prisma.task.findFirst).mockResolvedValue({
             id: "task_1",
@@ -1202,6 +1308,23 @@ describe("task.repository", () => {
    });
 
    describe("deleteCategory", () => {
+      it("rejects deleting a category that holds a locked weekly goal", async () => {
+         vi.mocked(prisma.category.findFirst).mockResolvedValue({
+            id: "cat_del",
+            userId: "user_1",
+            name: "Chemistry",
+         } as never);
+         vi.mocked(prisma.task.findMany).mockResolvedValue([
+            lockedWeeklyTask(),
+         ] as never);
+
+         await expect(
+            deleteCategory({ categoryId: "cat_del", userId: "user_1" })
+         ).rejects.toBeInstanceOf(ChallengeStateError);
+         expect(prisma.task.updateMany).not.toHaveBeenCalled();
+         expect(prisma.category.update).not.toHaveBeenCalled();
+      });
+
       it("soft-deletes the category and its tasks, tombstoning the name", async () => {
          vi.mocked(prisma.category.findFirst).mockResolvedValue({
             id: "cat_del",

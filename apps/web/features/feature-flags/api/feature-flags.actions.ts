@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { toClientError } from "@/core/errors";
 import { requireDevUser } from "@/features/auth/api/require-dev";
 import {
    assignTesterTx,
@@ -44,10 +45,14 @@ export async function createFeatureFlagAction(
       revalidatePath("/devboard");
       return { ok: true, data: flag };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.create",
+         defaultCode: "FLAG_CREATE_FAILED",
+         defaultMessage: "Failed to create flag.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to create flag.",
+         error: clientError.message,
       };
    }
 }
@@ -77,10 +82,14 @@ export async function updateFeatureFlagAction(
       revalidatePath("/devboard");
       return { ok: true, data: updated };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.update",
+         defaultCode: "FLAG_UPDATE_FAILED",
+         defaultMessage: "Failed to update flag.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to update flag.",
+         error: clientError.message,
       };
    }
 }
@@ -110,12 +119,14 @@ export async function setRolloutModeAction(
       revalidatePath("/devboard");
       return { ok: true, data: updated };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.set_rollout",
+         defaultCode: "ROLLOUT_MODE_FAILED",
+         defaultMessage: "Failed to update rollout mode.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error
-               ? error.message
-               : "Failed to update rollout mode.",
+         error: clientError.message,
       };
    }
 }
@@ -145,10 +156,14 @@ export async function assignTesterAction(
       revalidatePath("/devboard");
       return { ok: true, data: target };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.assign_tester",
+         defaultCode: "ASSIGN_TESTER_FAILED",
+         defaultMessage: "Failed to assign tester.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to assign tester.",
+         error: clientError.message,
       };
    }
 }
@@ -178,10 +193,14 @@ export async function removeTesterAction(
       revalidatePath("/devboard");
       return { ok: true, data: removed };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.remove_tester",
+         defaultCode: "REMOVE_TESTER_FAILED",
+         defaultMessage: "Failed to remove tester.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to remove tester.",
+         error: clientError.message,
       };
    }
 }
@@ -202,10 +221,14 @@ export async function deleteFeatureFlagAction(
       revalidatePath("/devboard");
       return { ok: true, data: deleted };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.delete",
+         defaultCode: "FLAG_DELETE_FAILED",
+         defaultMessage: "Failed to delete flag.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to delete flag.",
+         error: clientError.message,
       };
    }
 }
@@ -221,12 +244,14 @@ export async function getFlagAuditTrailAction(
       const logs = await getFlagAuditTrail(flagId);
       return { ok: true, data: logs };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.audit_trail",
+         defaultCode: "AUDIT_TRAIL_FAILED",
+         defaultMessage: "Failed to retrieve audit trail.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error
-               ? error.message
-               : "Failed to retrieve audit trail.",
+         error: clientError.message,
       };
    }
 }
@@ -242,12 +267,14 @@ export async function searchDiscordUsersAction(
       const users = await searchAssignableDiscordUsers(query);
       return { ok: true, data: users };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "feature_flags.search_users",
+         defaultCode: "SEARCH_USERS_FAILED",
+         defaultMessage: "Failed to search Discord users.",
+      });
       return {
          ok: false,
-         error:
-            error instanceof Error
-               ? error.message
-               : "Failed to search Discord users.",
+         error: clientError.message,
       };
    }
 }

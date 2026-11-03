@@ -9,6 +9,7 @@ import { validateWeeklyTargetSeconds } from "@/features/challenges/domain/target
 import { composeDurationSeconds } from "@/features/study-logs/domain/daily-log.validation";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { toClientError } from "@/core/errors";
 
 const logger = createLogger("challenge.enroll");
 
@@ -85,18 +86,18 @@ export async function enrollInChallengeAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.challengeEnrolled, {
+      const clientError = toClientError(error, {
+         scope: "challenges.enroll",
+         event: logEvents.challengeEnrolled,
          context: { challengeId: input?.challengeId },
-         error,
+         defaultCode: "ENROLLMENT_FAILED",
+         defaultMessage: "Failed to enroll in challenge.",
       });
 
       return {
          ok: false,
-         code: "ENROLLMENT_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to enroll in challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

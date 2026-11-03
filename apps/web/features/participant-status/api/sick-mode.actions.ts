@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSessionUser } from "@/features/auth/api/require-session";
+import { toClientError } from "@/core/errors";
 import {
    activateSickMode,
    deactivateSickMode,
@@ -55,12 +56,14 @@ export async function toggleSickModeAction(
 
       return { ok: true, status };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "participant_status.sick_mode",
+         defaultCode: "SICK_MODE_ERROR",
+         defaultMessage: "An error occurred while updating Sick Mode.",
+      });
       return {
          ok: false,
-         message:
-            error instanceof Error
-               ? error.message
-               : "An error occurred while updating Sick Mode.",
+         message: clientError.message,
       };
    }
 }
@@ -97,12 +100,15 @@ export async function respondSickReminderAction(
 
       return { ok: true, status };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "participant_status.sick_reminder",
+         defaultCode: "SICK_REMINDER_ERROR",
+         defaultMessage:
+            "An error occurred while processing reminder response.",
+      });
       return {
          ok: false,
-         message:
-            error instanceof Error
-               ? error.message
-               : "An error occurred while processing reminder response.",
+         message: clientError.message,
       };
    }
 }

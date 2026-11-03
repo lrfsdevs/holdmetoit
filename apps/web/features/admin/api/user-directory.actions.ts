@@ -19,6 +19,7 @@ import type {
    UserDirectoryQuery,
 } from "../domain/user-directory.types";
 import type { UserRole } from "@prisma/client";
+import { toClientError } from "@/core/errors";
 
 const updateUserRoleSchema = z.object({
    targetUserId: z.string().min(1, "Target user ID required"),
@@ -56,13 +57,15 @@ export async function fetchAdminUserRosterAction(
             message: error.message,
          };
       }
+      const clientError = toClientError(error, {
+         scope: "admin.user_directory.fetch_roster",
+         defaultCode: "FETCH_ROSTER_FAILED",
+         defaultMessage: "Failed to fetch user directory roster.",
+      });
       return {
          ok: false,
-         code: "FETCH_ROSTER_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch user directory roster.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -71,9 +74,7 @@ export async function fetchAdminUserRosterAction(
  * Updates a user's global role with self-demotion protection and immutable audit trail.
  * Protected by requireAdminUser.
  */
-export async function updateUserRoleAction(
-   input: UpdateUserRoleInput
-): Promise<
+export async function updateUserRoleAction(input: UpdateUserRoleInput): Promise<
    ServerActionResult<{
       userId: string;
       newRole: AdminRosterRole;
@@ -173,13 +174,16 @@ export async function updateUserRoleAction(
             message: error.message,
          };
       }
+      const clientError = toClientError(error, {
+         scope: "admin.user_directory.update_role",
+         defaultCode: "UPDATE_ROLE_FAILED",
+         defaultMessage: "Failed to update user role.",
+         context: { targetUserId: input?.targetUserId },
+      });
       return {
          ok: false,
-         code: "UPDATE_ROLE_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to update user role.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -220,13 +224,16 @@ export async function getUserAuditLogsAction(params: {
             data: [],
          };
       }
+      const clientError = toClientError(error, {
+         scope: "admin.user_directory.fetch_audit_logs",
+         defaultCode: "FETCH_AUDIT_LOGS_FAILED",
+         defaultMessage: "Failed to fetch user audit logs.",
+         context: { targetUserId: params?.targetUserId },
+      });
       return {
          ok: false,
-         code: "FETCH_AUDIT_LOGS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch user audit logs.",
+         code: clientError.code,
+         message: clientError.message,
          data: [],
       };
    }

@@ -31,6 +31,7 @@ import {
 import { createLogger, logEvents } from "@/core/observability/logger";
 import { checkRateLimit } from "@/core/security/rate-limiter";
 import { getClientIp } from "@/core/security/client-ip";
+import { toClientError } from "@/core/errors";
 
 const logger = createLogger("feedback");
 
@@ -332,11 +333,20 @@ export async function POST(req: NextRequest) {
          { status: 201 }
       );
    } catch (error) {
-      const message =
-         error instanceof Error ? error.message : "Internal server error";
-      logger.error(logEvents.feedbackSubmitted, { error });
+      const clientError = toClientError(error, {
+         scope: "feedback.route",
+         event: logEvents.feedbackSubmitted,
+         defaultCode: "INTERNAL_SERVER_ERROR",
+         defaultMessage:
+            "An unexpected error occurred while processing feedback.",
+      });
       return NextResponse.json(
-         { success: false, error: message },
+         {
+            success: false,
+            error: clientError.message,
+            code: clientError.code,
+            correlationId: clientError.correlationId,
+         },
          { status: 500 }
       );
    }

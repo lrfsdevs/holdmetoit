@@ -253,6 +253,33 @@ describe("user-directory.actions", () => {
             data: { role: "ADMIN" },
          });
       });
+
+      it("masks raw database error with sanitized message", async () => {
+         vi.mocked(requireAdminUser).mockResolvedValue(mockAdmin);
+         vi.mocked(prisma.user.findUnique).mockResolvedValue({
+            id: "user_3",
+            role: "PARTICIPANT",
+         } as any);
+         vi.mocked(prisma.user.update).mockRejectedValueOnce(
+            new Error(
+               'FATAL: relation "User" corrupted on postgres://cluster:5432'
+            )
+         );
+
+         const result = await updateUserRoleAction({
+            targetUserId: "user_3",
+            newRole: "ADMIN",
+            reason: "Promote",
+         });
+
+         expect(result.ok).toBe(false);
+         if (!result.ok) {
+            expect(result.code).toBe("UPDATE_ROLE_FAILED");
+            expect(result.message).toBe("Failed to update user role.");
+            expect(result.message).not.toContain("corrupted");
+            expect(result.message).not.toContain("postgres://");
+         }
+      });
    });
 
    describe("getUserAuditLogsAction", () => {

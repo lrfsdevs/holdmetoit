@@ -5,6 +5,7 @@ import {
    generateSummary,
    resolveApiKeys,
 } from "../lib/summarizer.js";
+import { sanitizeTaskerError } from "../lib/error-sanitizer.js";
 
 export default {
    name: "yapperize",
@@ -259,11 +260,15 @@ export default {
             return;
          }
 
-         console.error("[yapperize] Command execution failed:", err);
-         const userMessage =
-            err instanceof Error
-               ? err.message
-               : "An unexpected error occurred.";
+         const correlationId = crypto.randomUUID();
+         console.error(
+            `[yapperize] [${correlationId}] Command execution failed:`,
+            err
+         );
+         const userMessage = sanitizeTaskerError(
+            err,
+            "An unexpected error occurred while generating the summary. Please try again later."
+         );
          if (interaction.deferred || interaction.replied) {
             await interaction
                .editReply({

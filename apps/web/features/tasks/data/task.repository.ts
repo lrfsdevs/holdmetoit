@@ -12,6 +12,7 @@ import {
    ChallengeStateError,
 } from "@/features/challenges/domain/challenge-lifecycle";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
+import { assertWeeklyTaskEditable } from "@/features/tasks/domain/task-lock";
 import type {
    CategoryGroup,
    CategoryItem,
@@ -473,6 +474,8 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       return null;
    }
 
+   assertWeeklyTaskEditable(existing);
+
    return prisma.task.update({
       where: { id: params.taskId },
       data: {
@@ -547,11 +550,16 @@ export async function updateTask(params: {
             id: true,
             taskType: true,
             challengeId: true,
+            createdAt: true,
          },
       });
 
       if (!existing) {
          return null;
+      }
+
+      if (params.title !== undefined || params.challengeId !== undefined) {
+         assertWeeklyTaskEditable(existing);
       }
 
       const dataToUpdate: {
@@ -731,6 +739,16 @@ export async function deleteCategory(params: {
    const now = new Date();
 
    return prisma.$transaction(async (tx) => {
+      const categoryTasks = await tx.task.findMany({
+         where: {
+            categoryId: params.categoryId,
+            userId: params.userId,
+            isDeleted: false,
+         },
+         select: { taskType: true, challengeId: true, createdAt: true },
+      });
+      categoryTasks.forEach((task) => assertWeeklyTaskEditable(task));
+
       await tx.task.updateMany({
          where: {
             categoryId: params.categoryId,

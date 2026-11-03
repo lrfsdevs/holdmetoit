@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { toClientError } from "@/core/errors";
 
 import {
    DevAccessError,
@@ -98,13 +99,16 @@ export async function getCronRunDetailAction(
    } catch (error) {
       if (isDevAccessError(error)) return FORBIDDEN;
 
+      const clientError = toClientError(error, {
+         scope: "cron_logs.detail",
+         defaultCode: "FETCH_CRON_LOGS_FAILED",
+         defaultMessage: "Failed to load the cron run.",
+      });
+
       return {
          ok: false,
-         code: "FETCH_CRON_LOGS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to load the cron run.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -118,13 +122,16 @@ export async function getCronOverviewAction(): Promise<
    } catch (error) {
       if (isDevAccessError(error)) return FORBIDDEN;
 
+      const clientError = toClientError(error, {
+         scope: "cron_logs.overview",
+         defaultCode: "FETCH_CRON_LOGS_FAILED",
+         defaultMessage: "Failed to load the cron overview.",
+      });
+
       return {
          ok: false,
-         code: "FETCH_CRON_LOGS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to load the cron overview.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

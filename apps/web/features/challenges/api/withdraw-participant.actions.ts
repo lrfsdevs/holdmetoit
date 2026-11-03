@@ -7,6 +7,7 @@ import { cacheTags, invalidateTags } from "@/core/cache";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import { requireSessionUser } from "@/features/auth/api/require-session";
 import { withdrawParticipant } from "@/features/challenges/data/participant.repository";
+import { toClientError } from "@/core/errors";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 
@@ -70,18 +71,18 @@ export async function withdrawFromChallengeAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.challengeParticipantWithdrew, {
+      const clientError = toClientError(error, {
+         scope: "challenge.withdraw",
+         event: logEvents.challengeParticipantWithdrew,
          context: { challengeId: input?.challengeId },
-         error,
+         defaultCode: "WITHDRAWAL_FAILED",
+         defaultMessage: "Failed to withdraw from challenge.",
       });
 
       return {
          ok: false,
-         code: "WITHDRAWAL_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to withdraw from challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
