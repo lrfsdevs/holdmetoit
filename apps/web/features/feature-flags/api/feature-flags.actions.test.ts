@@ -9,12 +9,19 @@ import {
 import { requireDevUser } from "@/features/auth/api/require-dev";
 import * as repo from "../data/feature-flags.repository";
 
-vi.mock("@/features/auth/api/require-dev", () => ({
-   requireDevUser: vi.fn(),
-   DevAccessError: class extends Error {
+vi.mock("@/features/auth/api/require-dev", () => {
+   class DevAccessError extends Error {
       readonly code = "FORBIDDEN_NOT_DEV";
-   },
-}));
+      constructor(message = "Developer permissions required.") {
+         super(message);
+         this.name = "DevAccessError";
+      }
+   }
+   return {
+      requireDevUser: vi.fn(),
+      DevAccessError,
+   };
+});
 
 vi.mock("next/cache", () => ({
    revalidatePath: vi.fn(),
@@ -37,8 +44,10 @@ describe("feature-flags.actions (DevBoard Role Guard)", () => {
    });
 
    it("blocks non-DEV users with authorization error", async () => {
+      const { DevAccessError } =
+         await import("@/features/auth/api/require-dev");
       vi.mocked(requireDevUser).mockRejectedValueOnce(
-         new Error("Developer permissions required.")
+         new DevAccessError("Developer permissions required.")
       );
 
       const result = await createFeatureFlagAction({

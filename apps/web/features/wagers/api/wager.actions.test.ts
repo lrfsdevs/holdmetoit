@@ -6,6 +6,10 @@ import {
 } from "./wager.actions";
 import * as wagerRepo from "../data/wager.repository";
 import * as authSession from "@/features/auth/api/require-session";
+import {
+   WagerValidationError,
+   BettingClosedError,
+} from "@/features/economy/domain/economy-settings";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 vi.mock("../data/wager.repository", () => ({

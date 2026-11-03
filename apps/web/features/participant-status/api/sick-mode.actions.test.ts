@@ -12,10 +12,18 @@ import {
    snoozeSickReminder,
 } from "../data/sick-mode.repository";
 
-vi.mock("@/features/auth/api/require-session", () => ({
-   requireSessionUser: vi.fn(),
-   AuthError: class AuthError extends Error {},
-}));
+vi.mock("@/features/auth/api/require-session", () => {
+   class AuthError extends Error {
+      constructor(message = "You must sign in to continue.") {
+         super(message);
+         this.name = "AuthError";
+      }
+   }
+   return {
+      requireSessionUser: vi.fn(),
+      AuthError,
+   };
+});
 
 vi.mock("next/cache", () => ({
    revalidatePath: vi.fn(),
@@ -35,14 +43,39 @@ describe("features/participant-status/api/sick-mode.actions", () => {
 
    describe("toggleSickModeAction", () => {
       it("fails if user is not authenticated", async () => {
+         const { AuthError } =
+            await import("@/features/auth/api/require-session");
          vi.mocked(requireSessionUser).mockRejectedValue(
-            new Error("You must sign in to continue.")
+            new AuthError("You must sign in to continue.")
          );
 
          const res = await toggleSickModeAction({ isSick: true, note: null });
          expect(res.ok).toBe(false);
          if (!res.ok) {
             expect(res.message).toBe("You must sign in to continue.");
+         }
+      });
+
+      it("masks unexpected database errors without leaking internal connection or query strings", async () => {
+         vi.mocked(requireSessionUser).mockResolvedValue({
+            id: "user-1",
+         } as any);
+         vi.mocked(activateSickMode).mockRejectedValue(
+            new Error(
+               "FATAL: connection pool closed at postgres://postgres:secret@db.internal:5432/hmt"
+            )
+         );
+
+         const res = await toggleSickModeAction({
+            isSick: true,
+            note: "Migraine",
+         });
+         expect(res.ok).toBe(false);
+         if (!res.ok) {
+            expect(res.message).toBe(
+               "An error occurred while updating Sick Mode."
+            );
+            expect(res.message).not.toContain("postgres://");
          }
       });
 

@@ -16,6 +16,7 @@ import {
    WagerValidationError,
    BettingClosedError,
 } from "@/features/economy/domain/economy-settings";
+import { toClientError } from "@/core/errors";
 
 const placeWagerSchema = z.object({
    challengeId: z.string().min(1),
@@ -75,24 +76,21 @@ export async function placeWagerAction(input: PlaceWagerInput) {
          isDuplicate: result.isDuplicate,
       };
    } catch (error) {
-      if (
-         error instanceof WagerValidationError ||
-         error instanceof BettingClosedError
-      ) {
-         return {
-            ok: false,
-            code: error.code,
-            message: error.message,
-         };
-      }
+      const clientError = toClientError(error, {
+         scope: "wagers.place",
+         defaultCode: "WAGER_ERROR",
+         defaultMessage: "An unexpected error occurred while placing wager.",
+         context: {
+            challengeId: input?.challengeId,
+            targetTeamId: input?.targetTeamId,
+            stake: input?.stake,
+         },
+      });
 
       return {
          ok: false,
-         code: "WAGER_ERROR",
-         message:
-            error instanceof Error
-               ? error.message
-               : "An unexpected error occurred while placing wager.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -102,13 +100,16 @@ export async function getChallengeWagersAction(challengeId: string) {
       const wagers = await getWagersForChallenge(challengeId);
       return { ok: true, wagers };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "wagers.get_challenge",
+         defaultCode: "FETCH_WAGERS_FAILED",
+         defaultMessage: "Failed to fetch challenge wagers.",
+         context: { challengeId },
+      });
       return {
          ok: false,
          wagers: [],
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch challenge wagers.",
+         message: clientError.message,
       };
    }
 }
@@ -119,13 +120,16 @@ export async function getUserChallengeWagersAction(challengeId: string) {
       const wagers = await getUserWagersForChallenge(user.id, challengeId);
       return { ok: true, wagers };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "wagers.get_user_challenge",
+         defaultCode: "FETCH_USER_WAGERS_FAILED",
+         defaultMessage: "Failed to fetch user wagers.",
+         context: { challengeId },
+      });
       return {
          ok: false,
          wagers: [],
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch user wagers.",
+         message: clientError.message,
       };
    }
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { toClientError } from "@/core/errors";
 import { prisma } from "@/core/db";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
@@ -88,25 +89,25 @@ async function markSeen(
 
       return { ok: true };
    } catch (error) {
-      const code =
-         error instanceof AuthError
-            ? "UNAUTHORIZED"
-            : error instanceof ParticipantAccessError
-              ? error.code
-              : "WRAPPED_MARK_FAILED";
+      if (error instanceof AuthError) {
+         return { ok: false, code: "UNAUTHORIZED", message: error.message };
+      }
+      if (error instanceof ParticipantAccessError) {
+         return { ok: false, code: error.code, message: error.message };
+      }
 
-      logger.error(logEvents.wrappedSeen, {
+      const clientError = toClientError(error, {
+         scope: "wrapped.mark_seen",
+         event: logEvents.wrappedSeen,
          context: { challengeId, mode },
-         error,
+         defaultCode: "WRAPPED_MARK_FAILED",
+         defaultMessage: "Failed to update the wrapped status.",
       });
 
       return {
          ok: false,
-         code,
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to update the wrapped status.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -277,25 +278,25 @@ export async function submitChallengeFeedbackAction(
          feedbackId: feedbackRecord.id,
       };
    } catch (error) {
-      const code =
-         error instanceof AuthError
-            ? "UNAUTHORIZED"
-            : error instanceof ParticipantAccessError
-              ? error.code
-              : "FEEDBACK_SUBMIT_FAILED";
+      if (error instanceof AuthError) {
+         return { ok: false, code: "UNAUTHORIZED", message: error.message };
+      }
+      if (error instanceof ParticipantAccessError) {
+         return { ok: false, code: error.code, message: error.message };
+      }
 
-      logger.error(logEvents.feedbackSubmitted, {
+      const clientError = toClientError(error, {
+         scope: "wrapped.feedback",
+         event: logEvents.feedbackSubmitted,
          context: { action: "submitChallengeFeedbackAction" },
-         error,
+         defaultCode: "FEEDBACK_SUBMIT_FAILED",
+         defaultMessage: "Failed to submit challenge feedback.",
       });
 
       return {
          ok: false,
-         code,
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to submit challenge feedback.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
