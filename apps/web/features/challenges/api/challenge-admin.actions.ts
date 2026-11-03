@@ -35,6 +35,7 @@ import {
    type ChallengeImagePurpose,
 } from "@/features/challenges/domain/punishment-pfp";
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { toClientError } from "@/core/errors";
 import { clearTeamColorCache } from "@/features/challenges/domain/team-colors";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
@@ -176,14 +177,16 @@ export async function createChallengeAction(
          data: { challengeId: challenge.id },
       };
    } catch (error) {
-      logger.error(logEvents.challengeCreated, { error });
+      const clientError = toClientError(error, {
+         scope: "challenge.create",
+         event: logEvents.challengeCreated,
+         defaultCode: "CREATION_FAILED",
+         defaultMessage: "Failed to create challenge event.",
+      });
       return {
          ok: false,
-         code: "CREATION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to create challenge event.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -214,15 +217,17 @@ export async function kickoffChallengeAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.challengeKickoff, {
+      const clientError = toClientError(error, {
+         scope: "challenge.kickoff",
+         event: logEvents.challengeKickoff,
          context: { challengeId },
-         error,
+         defaultCode: "KICKOFF_FAILED",
+         defaultMessage: "Failed to start event.",
       });
       return {
          ok: false,
-         code: "KICKOFF_FAILED",
-         message:
-            error instanceof Error ? error.message : "Failed to start event.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -263,11 +268,6 @@ export async function lockChallengeResultsAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.challengeLocked, {
-         context: { challengeId },
-         error,
-      });
-
       if (error instanceof ChallengeStateError) {
          return {
             ok: false,
@@ -276,13 +276,18 @@ export async function lockChallengeResultsAction(
          };
       }
 
+      const clientError = toClientError(error, {
+         scope: "challenge.lock",
+         event: logEvents.challengeLocked,
+         context: { challengeId },
+         defaultCode: "LOCK_FAILED",
+         defaultMessage: "Failed to finalize and lock results.",
+      });
+
       return {
          ok: false,
-         code: "LOCK_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to finalize and lock results.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -313,11 +318,6 @@ export async function unlockChallengeResultsAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.challengeUnlocked, {
-         context: { challengeId },
-         error,
-      });
-
       if (error instanceof ChallengeStateError) {
          return {
             ok: false,
@@ -326,13 +326,18 @@ export async function unlockChallengeResultsAction(
          };
       }
 
+      const clientError = toClientError(error, {
+         scope: "challenge.unlock",
+         event: logEvents.challengeUnlocked,
+         context: { challengeId },
+         defaultCode: "UNLOCK_FAILED",
+         defaultMessage: "Failed to unlock the final results.",
+      });
+
       return {
          ok: false,
-         code: "UNLOCK_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to unlock the final results.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -409,17 +414,18 @@ export async function adminEnrollParticipantAction(
          };
       }
 
-      logger.error(logEvents.challengeEnrolled, {
+      const clientError = toClientError(error, {
+         scope: "challenge.admin_enroll",
+         event: logEvents.challengeEnrolled,
          context: { challengeId: input?.challengeId },
-         error,
+         defaultCode: "ENROLLMENT_FAILED",
+         defaultMessage: "Failed to enroll member in challenge.",
       });
+
       return {
          ok: false,
-         code: "ENROLLMENT_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to enroll member in challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -583,17 +589,18 @@ export async function updateChallengeAction(
          };
       }
 
-      logger.error(logEvents.challengeUpdated, {
+      const clientError = toClientError(error, {
+         scope: "challenge.update",
+         event: logEvents.challengeUpdated,
          context: { challengeId: input?.challengeId },
-         error,
+         defaultCode: "UPDATE_FAILED",
+         defaultMessage: "Failed to update challenge.",
       });
+
       return {
          ok: false,
-         code: "UPDATE_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to update challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -660,20 +667,21 @@ export async function reassignParticipantTeamAction(
          };
       }
 
-      logger.error(logEvents.challengeParticipantReassigned, {
+      const clientError = toClientError(error, {
+         scope: "challenge.reassign_team",
+         event: logEvents.challengeParticipantReassigned,
          context: {
             challengeId: input?.challengeId,
             participantId: input?.participantId,
          },
-         error,
+         defaultCode: "REASSIGN_FAILED",
+         defaultMessage: "Failed to reassign participant to team.",
       });
+
       return {
          ok: false,
-         code: "REASSIGN_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to reassign participant to team.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -748,20 +756,21 @@ export async function removeChallengeParticipantAction(
          };
       }
 
-      logger.error(logEvents.challengeParticipantRemoved, {
+      const clientError = toClientError(error, {
+         scope: "challenge.remove_participant",
+         event: logEvents.challengeParticipantRemoved,
          context: {
             challengeId: input?.challengeId,
             participantId: input?.participantId,
          },
-         error,
+         defaultCode: "REMOVAL_FAILED",
+         defaultMessage: "Failed to remove participant from challenge.",
       });
+
       return {
          ok: false,
-         code: "REMOVAL_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to remove participant from challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -862,20 +871,21 @@ export async function adminUpdateParticipantTargetAction(
          };
       }
 
-      logger.error(logEvents.challengeTargetOverridden, {
+      const clientError = toClientError(error, {
+         scope: "challenge.update_target",
+         event: logEvents.challengeTargetOverridden,
          context: {
             challengeId: input?.challengeId,
             participantId: input?.participantId,
          },
-         error,
+         defaultCode: "UPDATE_TARGET_FAILED",
+         defaultMessage: "Failed to update participant target hours.",
       });
+
       return {
          ok: false,
-         code: "UPDATE_TARGET_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to update participant target hours.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -936,17 +946,18 @@ export async function deleteChallengeAction(
          };
       }
 
-      logger.error(logEvents.challengeDeleted, {
+      const clientError = toClientError(error, {
+         scope: "challenge.delete",
+         event: logEvents.challengeDeleted,
          context: { challengeId },
-         error,
+         defaultCode: "DELETE_FAILED",
+         defaultMessage: "Failed to delete challenge.",
       });
+
       return {
          ok: false,
-         code: "DELETE_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to delete challenge.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

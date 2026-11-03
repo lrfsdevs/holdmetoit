@@ -21,6 +21,7 @@ import {
 import { YptClaimStatus } from "../domain/ypt-claim-state-machine";
 import { classifyYptError } from "../domain/ypt-error-classifier";
 import { checkRateLimit } from "@/core/security/rate-limiter";
+import { toClientError } from "@/core/errors";
 
 const submitYptClaimSchema = z.object({
    yptId: z
@@ -55,13 +56,15 @@ export async function getEligibleMembersAction(search?: string) {
          data: members,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.eligible_members",
+         defaultCode: "FETCH_MEMBERS_FAILED",
+         defaultMessage: "Failed to fetch eligible members.",
+      });
       return {
          ok: false,
-         code: "FETCH_MEMBERS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch eligible members.",
+         code: clientError.code,
+         message: clientError.message,
          data: [],
       };
    }
@@ -77,13 +80,15 @@ export async function getCurrentUserClaimStatusAction() {
          data: claim,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.status",
+         defaultCode: "FETCH_STATUS_FAILED",
+         defaultMessage: "Failed to retrieve claim status.",
+      });
       return {
          ok: false,
-         code: "FETCH_STATUS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to retrieve claim status.",
+         code: clientError.code,
+         message: clientError.message,
          data: null,
       };
    }
@@ -126,13 +131,16 @@ export async function submitYptClaimAction(input: SubmitYptClaimInput) {
          data: claim,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.submit",
+         defaultCode: "CLAIM_SUBMISSION_FAILED",
+         defaultMessage: "Failed to submit YPT verification request.",
+         context: { yptId: input?.yptId },
+      });
       return {
          ok: false,
-         code: "CLAIM_SUBMISSION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to submit YPT verification request.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -235,13 +243,16 @@ export async function submitYptSelectionAction(input: SubmitYptSelectionInput) {
          data: claim,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.select",
+         defaultCode: "CLAIM_SUBMISSION_FAILED",
+         defaultMessage: "Failed to submit YPT verification request.",
+         context: { yptUserId: input?.yptUserId },
+      });
       return {
          ok: false,
-         code: "CLAIM_SUBMISSION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to submit YPT verification request.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -288,13 +299,16 @@ export async function adminApproveClaimAction(
             message: "Developer permissions required.",
          };
       }
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.approve",
+         defaultCode: "APPROVAL_FAILED",
+         defaultMessage: "Failed to approve YPT claim.",
+         context: { claimId },
+      });
       return {
          ok: false,
-         code: "APPROVAL_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to approve YPT claim.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -329,13 +343,16 @@ export async function adminRejectClaimAction(claimId: string, reason: string) {
             message: "Developer permissions required.",
          };
       }
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.reject",
+         defaultCode: "REJECTION_FAILED",
+         defaultMessage: "Failed to reject YPT claim.",
+         context: { claimId },
+      });
       return {
          ok: false,
-         code: "REJECTION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to reject YPT claim.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -370,13 +387,16 @@ export async function adminRevokeClaimAction(claimId: string, reason: string) {
             message: "Developer permissions required.",
          };
       }
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.revoke",
+         defaultCode: "REVOCATION_FAILED",
+         defaultMessage: "Failed to revoke YPT claim.",
+         context: { claimId },
+      });
       return {
          ok: false,
-         code: "REVOCATION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to revoke YPT claim.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -405,13 +425,15 @@ export async function getAdminClaimsListAction(
             },
          };
       }
+      const clientError = toClientError(error, {
+         scope: "ypt.claim.admin_list",
+         defaultCode: "FETCH_CLAIMS_FAILED",
+         defaultMessage: "Failed to retrieve claim requests.",
+      });
       return {
          ok: false,
-         code: "FETCH_CLAIMS_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to retrieve claim requests.",
+         code: clientError.code,
+         message: clientError.message,
          data: {
             claims: [],
             pagination: { page: 1, limit: 20, totalCount: 0, totalPages: 1 },

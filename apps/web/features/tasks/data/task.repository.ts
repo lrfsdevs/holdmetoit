@@ -12,6 +12,7 @@ import {
    ChallengeStateError,
 } from "@/features/challenges/domain/challenge-lifecycle";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
+import { assertWeeklyTaskEditable } from "@/features/tasks/domain/task-lock";
 import type {
    CategoryGroup,
    CategoryItem,
@@ -195,6 +196,9 @@ export async function getUserCategorizedTasksFromDatabase(
       include: {
          tasks: {
             where: { isDeleted: false },
+            include: {
+               challenge: { select: { resultsLockedAt: true } },
+            },
             orderBy: [
                { sortOrder: "asc" },
                { createdAt: "asc" },
@@ -208,11 +212,12 @@ export async function getUserCategorizedTasksFromDatabase(
    const categoryItems: CategoryItem[] = categories.map(toCategoryItem);
 
    const dailyCategories: CategoryGroup[] = categories
-      .filter(
-         (c) =>
-            c.taskType === "DAILY" ||
-            c.tasks.some((t) => t.taskType === "DAILY")
-      )
+      .filter((c) => {
+         const hasDailyTasks = c.tasks.some((t) => t.taskType === "DAILY");
+         return (
+            hasDailyTasks || (c.tasks.length === 0 && c.taskType === "DAILY")
+         );
+      })
       .map((c) => {
          const dailyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "DAILY")
@@ -233,7 +238,12 @@ export async function getUserCategorizedTasksFromDatabase(
       });
 
    const weeklyCategories: CategoryGroup[] = categories
-      .filter((c) => c.taskType === "WEEKLY")
+      .filter((c) => {
+         const hasWeeklyTasks = c.tasks.some((t) => t.taskType === "WEEKLY");
+         return (
+            hasWeeklyTasks || (c.tasks.length === 0 && c.taskType === "WEEKLY")
+         );
+      })
       .map((c) => {
          const weeklyTasks: TaskItem[] = c.tasks
             .filter((t) => t.taskType === "WEEKLY")
@@ -256,11 +266,22 @@ export async function getUserCategorizedTasksFromDatabase(
    const allTasks = categories.flatMap((c) => c.tasks);
    const dailyAll = allTasks.filter((t) => t.taskType === "DAILY");
    const weeklyAll = allTasks.filter((t) => t.taskType === "WEEKLY");
+   const completedChallengeIds = Array.from(
+      new Set(
+         allTasks
+            .filter(
+               (task) =>
+                  task.challengeId && task.challenge?.resultsLockedAt != null
+            )
+            .map((task) => task.challengeId as string)
+      )
+   );
 
    return {
       categories: categoryItems,
       dailyCategories,
       weeklyCategories,
+      completedChallengeIds,
       totalDailyTasks: dailyAll.length,
       completedDailyTasks: dailyAll.filter((t) => t.isComplete).length,
       totalWeeklyTasks: weeklyAll.length,
@@ -358,9 +379,11 @@ export async function createTask(params: {
       const isComplete = status === "COMPLETED";
       const dueDate = params.dueDate ? new Date(params.dueDate) : null;
       const challengeId =
-         params.challengeId !== undefined
-            ? params.challengeId
-            : await resolveTaskChallengeId(params.userId, tx);
+         params.taskType !== "WEEKLY"
+            ? null
+            : params.challengeId !== undefined
+              ? params.challengeId
+              : await resolveTaskChallengeId(params.userId, tx);
 
       if (challengeId !== null && challengeId !== undefined) {
          await assertChallengeWritable(tx, challengeId);
@@ -451,6 +474,8 @@ export async function deleteTask(params: { taskId: string; userId: string }) {
       return null;
    }
 
+   assertWeeklyTaskEditable(existing);
+
    return prisma.task.update({
       where: { id: params.taskId },
       data: {
@@ -525,11 +550,16 @@ export async function updateTask(params: {
             id: true,
             taskType: true,
             challengeId: true,
+            createdAt: true,
          },
       });
 
       if (!existing) {
          return null;
+      }
+
+      if (params.title !== undefined || params.challengeId !== undefined) {
+         assertWeeklyTaskEditable(existing);
       }
 
       const dataToUpdate: {
@@ -709,6 +739,16 @@ export async function deleteCategory(params: {
    const now = new Date();
 
    return prisma.$transaction(async (tx) => {
+      const categoryTasks = await tx.task.findMany({
+         where: {
+            categoryId: params.categoryId,
+            userId: params.userId,
+            isDeleted: false,
+         },
+         select: { taskType: true, challengeId: true, createdAt: true },
+      });
+      categoryTasks.forEach((task) => assertWeeklyTaskEditable(task));
+
       await tx.task.updateMany({
          where: {
             categoryId: params.categoryId,

@@ -159,6 +159,40 @@ IndexedDB (`holdmetoit_db`) is now version 2:
 
 The upgrade only adds the new index/store; existing rows are preserved.
 
+### 2.7 Challenge links and task/category columns
+
+- `challengeId` is only valid on `taskType = "WEEKLY"`. Daily tasks never auto-link to the
+  current challenge; an explicit daily `challengeId` is ignored (and logged), and a legacy
+  daily link can be cleared with a `null` challengeId.
+- A task’s `taskType` is its own board column. A category may contain tasks of either type
+  (a weekly parent can hold daily tasks); task type is immutable on update/move, and a
+  category type change does not rewrite child task types.
+- `getUserCategorizedTasksFromDatabase` groups tasks by their own `taskType`: a task is always
+  visible in its own column, and a category appears in the columns where it has tasks. Empty
+  categories stay in their own column.
+- The results-lock guard applies only to weekly tasks. Legacy daily tasks with a challenge
+  link remain editable; the repair script unlinks them.
+- `apps/web/scripts/repair-task-invariants.ts` is report-only by default. It unlinks daily
+  challenge links, moves live tasks out of deleted categories, and fixes status mismatches
+  with `--apply --force-host`; task/category type differences and duplicate clusters are
+  reported, not rewritten. Unlinking a locked challenge’s daily links additionally requires
+  `--allow-locked-challenges`.
+
+### 2.8 Cockpit visibility
+
+The daily board shows every daily task, including `COMPLETED` and `CROSSED_OUT` rows.
+
+The weekly board hides a task only when it is linked to a challenge whose results are
+finalized (`Challenge.resultsLockedAt != null`). Everything else stays visible and
+editable, including completed/crossed-out weekly tasks that are unlinked or belong to an
+active/upcoming challenge. `completedChallengeIds` is computed server-side from the task's
+challenge relation and passed to the cockpit; the client never infers it from task status.
+
+Hiding is presentation-only. Hidden tasks remain in IndexedDB and PostgreSQL so progress
+counts, scoring, and finalized results are unchanged. The filter never queues a delete or
+rewrites a challenge result; weekly write protection remains the server-side
+`resultsLockedAt` guard.
+
 ---
 
 ## 3. Persistence
@@ -219,7 +253,13 @@ psql "$DATABASE_URL" -c 'SELECT "userId", LOWER("name"), "taskType", COUNT(*) FR
 npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts
 npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts --apply
 
-# 3. apply the migration and regenerate the client
+# 3. task invariant audit (read-only)
+npx tsx --env-file=packages/database/.env apps/web/scripts/repair-task-invariants.ts
+
+# 4. after review + backup, apply the safe repairs
+npx tsx --env-file=packages/database/.env apps/web/scripts/repair-task-invariants.ts --apply --force-host --allow-locked-challenges
+
+# 5. apply the migration and regenerate the client
 ```
 
 ---

@@ -11,6 +11,7 @@ import { requireAdminUser } from "@/features/auth/api/require-admin";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { revalidatePath } from "next/cache";
+import { toClientError } from "@/core/errors";
 import { z } from "zod";
 import {
    AcquisitionResultViewModel,
@@ -172,14 +173,16 @@ export async function pullPokemonAction(input: {
 
       return { ok: true, data: result };
    } catch (error: any) {
-      const message =
-         error instanceof Error ? error.message : "Failed to execute summon.";
-      const code = error?.code || "ACQUISITION_FAILED";
+      const clientError = toClientError(error, {
+         scope: "pokemon.acquisition.summon",
+         defaultCode: "ACQUISITION_FAILED",
+         defaultMessage: "Failed to execute summon.",
+      });
 
       return {
          ok: false,
-         error: message,
-         code,
+         error: clientError.message,
+         code: clientError.code,
       };
    }
 }
@@ -240,13 +243,16 @@ export async function adminListAllBannersAction(): Promise<
       const banners = await listBanners({ includeInactive: true });
       return { ok: true, data: { banners } };
    } catch (error: any) {
+      const clientError = toClientError(error, {
+         scope: "pokemon.acquisition.admin_list",
+         defaultCode: "ADMIN_BANNERS_FAILED",
+         defaultMessage: "Failed to load admin banner list.",
+      });
+
       return {
          ok: false,
-         error:
-            error instanceof Error
-               ? error.message
-               : "Failed to load admin banner list.",
-         code: "ADMIN_BANNERS_FAILED",
+         error: clientError.message,
+         code: clientError.code,
       };
    }
 }
@@ -287,11 +293,16 @@ export async function adminCreateBannerAction(
 
       return { ok: true, data: { bannerId: created.id } };
    } catch (error: any) {
+      const clientError = toClientError(error, {
+         scope: "pokemon.acquisition.admin_create",
+         defaultCode: "ADMIN_BANNER_CREATE_FAILED",
+         defaultMessage: "Failed to create banner.",
+      });
+
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to create banner.",
-         code: error?.code || "ADMIN_BANNER_CREATE_FAILED",
+         error: clientError.message,
+         code: clientError.code,
       };
    }
 }
@@ -378,11 +389,16 @@ export async function adminUpdateBannerAction(
 
       return { ok: true, data: { updated: true } };
    } catch (error: any) {
+      const clientError = toClientError(error, {
+         scope: "pokemon.acquisition.admin_update",
+         defaultCode: "ADMIN_BANNER_UPDATE_FAILED",
+         defaultMessage: "Failed to update banner.",
+      });
+
       return {
          ok: false,
-         error:
-            error instanceof Error ? error.message : "Failed to update banner.",
-         code: error?.code || "ADMIN_BANNER_UPDATE_FAILED",
+         error: clientError.message,
+         code: clientError.code,
       };
    }
 }
@@ -409,13 +425,16 @@ export async function adminSetBannerStatusAction(
 
       return { ok: true, data: { updated: true } };
    } catch (error: any) {
+      const clientError = toClientError(error, {
+         scope: "pokemon.acquisition.admin_set_status",
+         defaultCode: "ADMIN_STATUS_UPDATE_FAILED",
+         defaultMessage: "Failed to set banner status.",
+      });
+
       return {
          ok: false,
-         error:
-            error instanceof Error
-               ? error.message
-               : "Failed to set banner status.",
-         code: "ADMIN_STATUS_UPDATE_FAILED",
+         error: clientError.message,
+         code: clientError.code,
       };
    }
 }

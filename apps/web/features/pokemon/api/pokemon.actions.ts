@@ -9,6 +9,7 @@
 import { auth } from "@/core/auth";
 import { requireAdminUser } from "@/features/auth/api/require-admin";
 import { revalidatePath } from "next/cache";
+import { toClientError } from "@/core/errors";
 import {
    adminUpsertPokemonSpecies,
    countAvailablePokemonSpecies,

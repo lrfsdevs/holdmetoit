@@ -7,10 +7,21 @@ import {
 } from "@/features/changelog/domain/changelog";
 
 export function getChangelogGroups(): ChangelogGroup[] {
-   try {
-      const filePath = path.join(process.cwd(), "CHANGELOG.md");
-      return parseChangelogMarkdown(fs.readFileSync(filePath, "utf8"));
-   } catch {
-      return [];
+   const candidatePaths = [
+      path.join(process.cwd(), "CHANGELOG.md"),
+      path.resolve(process.cwd(), "../../CHANGELOG.md"),
+      path.resolve(process.cwd(), "../CHANGELOG.md"),
+   ];
+
+   for (const filePath of candidatePaths) {
+      try {
+         if (fs.existsSync(filePath)) {
+            return parseChangelogMarkdown(fs.readFileSync(filePath, "utf8"));
+         }
+      } catch {
+         // Continue searching candidate paths
+      }
    }
+
+   return [];
 }

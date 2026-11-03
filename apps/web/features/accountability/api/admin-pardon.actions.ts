@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireAdminUser } from "@/features/auth/api/require-admin";
 import { adminPardonParticipant } from "@/features/accountability/data/admin-pardon.repository";
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { toClientError } from "@/core/errors";
 import { createLogger, logEvents } from "@/core/observability/logger";
 
 const logger = createLogger("accountability.pardon");
@@ -62,20 +63,20 @@ export async function adminPardonAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.accountabilityPardoned, {
+      const clientError = toClientError(error, {
+         scope: "accountability.pardon",
+         event: logEvents.accountabilityPardoned,
          context: {
             challengeId: input?.challengeId,
             participantId: input?.participantId,
          },
-         error,
+         defaultCode: "PARDON_FAILED",
+         defaultMessage: "Failed to pardon participant.",
       });
       return {
          ok: false,
-         code: "PARDON_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to pardon participant.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

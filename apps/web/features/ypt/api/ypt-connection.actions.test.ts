@@ -60,7 +60,8 @@ describe("features/ypt/api/ypt-connection.actions", () => {
 
       expect(res.ok).toBe(false);
       expect(res.data).toBeNull();
-      expect(res.message).toContain("db unavailable");
+      expect(res.message).toBe("Failed to retrieve YPT connection status.");
+      expect(res.message).not.toContain("db unavailable");
    });
 
    it("triggers manual sync for a verified user", async () => {
@@ -88,5 +89,7 @@ describe("features/ypt/api/ypt-connection.actions", () => {
       expect(res.ok).toBe(false);
       expect(res.code).toBe("SYNC_ERROR");
       expect(res.importedDurationSeconds).toBe(0);
+      expect(res.message).toBe("Study synchronization failed.");
+      expect(res.message).not.toContain("boom");
    });
 });

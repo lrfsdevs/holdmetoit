@@ -3,11 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Trophy, ExternalLink, X } from "lucide-react";
-import type { ChallengeWrappedViewModel } from "../domain/wrapped";
+import type {
+   ChallengeWrappedViewModel,
+   WrappedMascotVariant,
+} from "../domain/wrapped";
+import { WrappedMascot } from "./wrapped-mascot";
+import { useWrappedMascotPreference } from "./wrapped-storage";
 
 interface WrappedShyCardProps {
    wrapped: ChallengeWrappedViewModel;
    onReplayStory: () => void;
+   variantOverride?: WrappedMascotVariant;
 }
 
 /**
@@ -20,7 +26,10 @@ interface WrappedShyCardProps {
 export function WrappedShyCard({
    wrapped,
    onReplayStory,
+   variantOverride,
 }: WrappedShyCardProps) {
+   const { variant: mascotVariant } =
+      useWrappedMascotPreference(variantOverride);
    const [isOpen, setIsOpen] = useState(false);
    const cardRef = useRef<HTMLDivElement | null>(null);
    const hideBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -119,14 +128,14 @@ export function WrappedShyCard({
             className={`fixed z-[60] outline-none transition-[left,right,top,bottom,width,transform] duration-600 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
                isOpen
                   ? "left-1/2 right-auto top-1/2 bottom-auto w-[min(340px,calc(100vw-32px))] max-h-[calc(100dvh-2rem)] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rotate-0 scale-100 cursor-default"
-                  : "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 left-auto top-auto w-[72px] origin-bottom-right -rotate-6 scale-100 cursor-pointer hover:scale-105 focus-visible:outline-2 focus-visible:outline-feedback-success sm:left-full sm:right-auto sm:top-1/2 sm:bottom-auto sm:origin-top-left sm:w-[min(340px,calc(100vw-32px))] sm:-translate-x-[64px] sm:-translate-y-[16px] sm:-rotate-12 sm:scale-75 sm:hover:-translate-x-[76px] sm:hover:-rotate-8"
+                  : "bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 left-auto top-auto w-[96px] origin-bottom-right -rotate-6 scale-100 cursor-pointer hover:scale-105 focus-visible:outline-2 focus-visible:outline-feedback-success sm:left-full sm:right-auto sm:top-1/2 sm:bottom-auto sm:origin-top-left sm:w-[min(340px,calc(100vw-32px))] sm:-translate-x-[116px] sm:-translate-y-[16px] sm:-rotate-12 sm:scale-100 sm:hover:-translate-x-[132px] sm:hover:-rotate-8"
             }`}
          >
             <div
-               className={`card-body bg-surface-primary border-2 rounded-2xl p-3 sm:p-5 flex flex-col gap-3.5 shadow-2xl shadow-black/80 transition-all duration-400 ${
+               className={`card-body bg-surface-primary border-2 rounded-2xl flex flex-col gap-3.5 shadow-2xl shadow-black/80 transition-all duration-400 ${
                   isOpen
-                     ? "border-border-default bg-surface-primary"
-                     : "border-feedback-success animate-shy-nudge hover:border-feedback-success-text"
+                     ? "border-border-default bg-surface-primary p-3 sm:p-5"
+                     : "border-feedback-success animate-shy-nudge hover:border-feedback-success-text p-2.5 sm:p-3"
                }`}
             >
                {/* Animated Eyes Header */}
@@ -134,29 +143,14 @@ export function WrappedShyCard({
                   className={`flex items-center w-full ${
                      isOpen
                         ? "justify-between"
-                        : "justify-center sm:justify-between"
+                        : "justify-center sm:justify-start"
                   }`}
                >
-                  <div
-                     className="eyes flex gap-1.5"
-                     aria-hidden="true"
-                     title="Peek peek"
-                  >
-                     <span className="w-5 h-5 bg-white border-2 border-border-subtle rounded-full grid place-items-center animate-shy-blink">
-                        <span
-                           className={`w-2 h-2 bg-surface-page rounded-full transition-transform duration-400 delay-300 ${
-                              isOpen ? "translate-x-0" : "-translate-x-[3px]"
-                           }`}
-                        />
-                     </span>
-                     <span className="w-5 h-5 bg-white border-2 border-border-subtle rounded-full grid place-items-center animate-shy-blink">
-                        <span
-                           className={`w-2 h-2 bg-surface-page rounded-full transition-transform duration-400 delay-300 ${
-                              isOpen ? "translate-x-0" : "-translate-x-[3px]"
-                           }`}
-                        />
-                     </span>
-                  </div>
+                  <WrappedMascot
+                     variant={mascotVariant}
+                     mood={isOpen ? "proud" : undefined}
+                     size="md"
+                  />
 
                   {isOpen && (
                      <button

@@ -1,5 +1,13 @@
 export type ChangelogAudience = "user" | "internal";
 
+export type ChangelogAudienceFilter = "all" | "user" | "internal";
+
+export interface ChangelogAudienceCounts {
+   total: number;
+   user: number;
+   internal: number;
+}
+
 export interface ChangelogEntry {
    title: string;
    body: string;
@@ -95,16 +103,47 @@ export function sortGroupsByDate(
 
 export function selectVisibleGroups(
    groups: readonly ChangelogGroup[],
-   isAdmin: boolean
+   isAdmin: boolean,
+   audienceFilter: ChangelogAudienceFilter = "all"
 ): ChangelogGroup[] {
    return sortGroupsByDate(groups)
       .map((group) => ({
          date: group.date,
-         entries: group.entries.filter(
-            (entry) => isAdmin || entry.audience === "user"
-         ),
+         entries: group.entries.filter((entry) => {
+            if (!isAdmin) {
+               return entry.audience === "user";
+            }
+            if (audienceFilter === "user") {
+               return entry.audience === "user";
+            }
+            if (audienceFilter === "internal") {
+               return entry.audience === "internal";
+            }
+            return true;
+         }),
       }))
       .filter(hasEntries);
+}
+
+export function countAudienceEntries(
+   groups: readonly ChangelogGroup[]
+): ChangelogAudienceCounts {
+   let total = 0;
+   let user = 0;
+   let internal = 0;
+
+   for (const group of groups) {
+      for (const entry of group.entries) {
+         total += 1;
+         if (entry.audience === "user") {
+            user += 1;
+         } else {
+            internal += 1;
+         }
+      }
+   }
+
+   return { total, user, internal };
 }
 
 export function formatEntryDate(iso: string): string {

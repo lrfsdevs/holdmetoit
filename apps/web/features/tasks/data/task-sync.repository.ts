@@ -19,6 +19,7 @@ import type {
    QueuedMutation,
 } from "@/features/tasks/domain/task-sync.types";
 import { buildCategoryTombstoneName } from "@/features/tasks/domain/task-deletion";
+import { isWeeklyTaskGraceExpired } from "@/features/tasks/domain/task-lock";
 import {
    DEFAULT_CATEGORY_NAME,
    assertChallengeWritable,
@@ -126,6 +127,21 @@ async function resolveWritableChallengeLink(
       }
       throw error;
    }
+}
+
+/**
+ * Whether a category still holds a weekly goal past its 24-hour grace period.
+ */
+async function categoryHasLockedGoals(
+   tx: Prisma.TransactionClient,
+   categoryId: string,
+   userId: string
+): Promise<boolean> {
+   const tasks = await tx.task.findMany({
+      where: { categoryId, userId, isDeleted: false },
+      select: { taskType: true, challengeId: true, createdAt: true },
+   });
+   return tasks.some((task) => isWeeklyTaskGraceExpired(task));
 }
 
 async function applyCategoryMutation(
@@ -255,7 +271,6 @@ async function applyCategoryMutation(
          const currentCategory = await tx.category.findUnique({
             where: { id: catId },
          });
-         let taskTypeChanged = false;
 
          if (payload.taskType) {
             if (currentCategory && currentCategory.userId === userId) {
@@ -277,7 +292,14 @@ async function applyCategoryMutation(
                      dataToUpdate.name = explicitName;
                   }
                   dataToUpdate.taskType = taskType;
-                  taskTypeChanged = true;
+
+                  if (await categoryHasLockedGoals(tx, catId, userId)) {
+                     return {
+                        status: "conflict",
+                        reason: "task_locked",
+                        currentCategory: toCategoryItem(currentCategory),
+                     };
+                  }
                }
             }
          }
@@ -332,13 +354,6 @@ async function applyCategoryMutation(
                   currentCategory: current ? toCategoryItem(current) : null,
                };
             }
-
-            if (taskTypeChanged) {
-               await tx.task.updateMany({
-                  where: { categoryId: catId, userId, isDeleted: false },
-                  data: { taskType, revision: { increment: 1 } },
-               });
-            }
          }
       }
 
@@ -364,6 +379,14 @@ async function applyCategoryMutation(
       });
 
       if (!currentCategory || currentCategory.isDeleted) return APPLIED;
+
+      if (await categoryHasLockedGoals(tx, catId, userId)) {
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentCategory: toCategoryItem(currentCategory),
+         };
+      }
 
       const now = new Date();
 
@@ -461,15 +484,34 @@ async function applyTaskMutation(
          ? new Date(String(payload.dueDate))
          : null;
 
+      const effectiveTaskType = taskType;
       const rawChallengeId = payload.challengeId;
-      const linkedChallengeId = await resolveWritableChallengeLink(
-         tx,
-         userId,
-         typeof rawChallengeId === "string" || rawChallengeId === null
-            ? rawChallengeId
-            : undefined,
-         { resolveCurrent: true, onRejected: "unlink" }
-      );
+      const challengeLinkRequested =
+         typeof rawChallengeId === "string" || rawChallengeId === null;
+      const linkedChallengeId =
+         effectiveTaskType === "WEEKLY"
+            ? await resolveWritableChallengeLink(
+                 tx,
+                 userId,
+                 challengeLinkRequested ? rawChallengeId : undefined,
+                 { resolveCurrent: true, onRejected: "unlink" }
+              )
+            : null;
+
+      if (
+         effectiveTaskType !== "WEEKLY" &&
+         typeof rawChallengeId === "string"
+      ) {
+         logger.warn(logEvents.tasksSyncFailed, {
+            context: {
+               userId,
+               mutationId: m.id,
+               action: m.action,
+               reason: "challenge_link_ignored_daily",
+            },
+         });
+      }
+
       const challengeId = linkedChallengeId ?? null;
 
       const existing = await tx.task.findUnique({
@@ -500,7 +542,7 @@ async function applyTaskMutation(
             categoryId,
             challengeId,
             title,
-            taskType,
+            taskType: effectiveTaskType,
             sortOrder,
             isComplete: finalIsComplete,
             status,
@@ -513,6 +555,12 @@ async function applyTaskMutation(
          : APPLIED;
    }
 
+   let currentTaskGuard: {
+      challengeId: string | null;
+      taskType: TaskType;
+      createdAt: Date;
+   } | null = null;
+
    if (
       m.action === "UPDATE" ||
       m.action === "MOVE" ||
@@ -521,14 +569,17 @@ async function applyTaskMutation(
    ) {
       if (!taskId) return APPLIED;
 
-      const guard = await tx.task.findFirst({
+      currentTaskGuard = await tx.task.findFirst({
          where: { id: taskId, userId, isDeleted: false },
-         select: { challengeId: true },
+         select: { challengeId: true, taskType: true, createdAt: true },
       });
 
-      if (guard?.challengeId) {
+      if (
+         currentTaskGuard?.challengeId &&
+         currentTaskGuard.taskType === "WEEKLY"
+      ) {
          try {
-            await assertChallengeWritable(tx, guard.challengeId);
+            await assertChallengeWritable(tx, currentTaskGuard.challengeId);
          } catch (error) {
             if (error instanceof ChallengeStateError) {
                const current = await tx.task.findFirst({
@@ -544,6 +595,29 @@ async function applyTaskMutation(
             }
             throw error;
          }
+      }
+
+      const changesLockedFields =
+         m.action === "DELETE" ||
+         ((m.action === "UPDATE" || m.action === "MOVE") &&
+            (Boolean(title) ||
+               payload.challengeId !== undefined ||
+               (Boolean(payload.taskType) &&
+                  taskType !== currentTaskGuard?.taskType)));
+
+      if (
+         currentTaskGuard &&
+         changesLockedFields &&
+         isWeeklyTaskGraceExpired(currentTaskGuard)
+      ) {
+         const current = await tx.task.findFirst({
+            where: { id: taskId, userId, isDeleted: false },
+         });
+         return {
+            status: "conflict",
+            reason: "task_locked",
+            currentTask: current ? toTaskItem(current, current.taskType) : null,
+         };
       }
    }
 
@@ -564,7 +638,6 @@ async function applyTaskMutation(
             categoryMissing = true;
          }
       }
-      if (payload.taskType) dataToUpdate.taskType = taskType;
       if (typeof payload.sortOrder === "number")
          dataToUpdate.sortOrder = payload.sortOrder;
       if (payload.dueDate !== undefined) {
@@ -573,15 +646,29 @@ async function applyTaskMutation(
             : null;
       }
       if (payload.challengeId !== undefined) {
-         const rawChalId = payload.challengeId;
-         const linked = await resolveWritableChallengeLink(
-            tx,
-            userId,
-            typeof rawChalId === "string" ? rawChalId.trim() || null : null,
-            { onRejected: "omit" }
-         );
-         if (linked !== undefined) {
-            dataToUpdate.challengeId = linked;
+         if (currentTaskGuard?.taskType === "WEEKLY") {
+            const rawChalId = payload.challengeId;
+            const linked = await resolveWritableChallengeLink(
+               tx,
+               userId,
+               typeof rawChalId === "string" ? rawChalId.trim() || null : null,
+               { onRejected: "omit" }
+            );
+            if (linked !== undefined) {
+               dataToUpdate.challengeId = linked;
+            }
+         } else if (payload.challengeId === null) {
+            // Allow cleanup of a legacy daily challenge link.
+            dataToUpdate.challengeId = null;
+         } else {
+            logger.warn(logEvents.tasksSyncFailed, {
+               context: {
+                  userId,
+                  mutationId: m.id,
+                  action: m.action,
+                  reason: "challenge_link_ignored_daily",
+               },
+            });
          }
       }
       if (payload.status) {

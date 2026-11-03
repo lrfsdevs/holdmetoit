@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 197 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-03 (Session 200 on `feat/wrapped-doodle-mascots-#241` · Session 199 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -183,6 +183,25 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 190 — 2026-11-02 (Cockpit task visibility on `afnan-jr`)
+
+- **Visibility rule:** daily shows every task, including `COMPLETED` and `CROSSED_OUT`. Weekly hides only tasks bound to a results-locked challenge (`completedChallengeIds` from `Challenge.resultsLockedAt`); all other weekly tasks stay visible/editable. Hiding is presentation-only; no queue/delete or result rewrite.
+- **Bug outcome:** the locked October weekly goals (including `36af5dc5-7f03-4e2e-91b4-56fae52ea988`) are hidden because their challenge results are locked. Daily completed/crossed-out rows remain visible; no production writes or accountability deletions.
+- **Correction to Session 189:** daily challenge auto-linking is intentional per `FEATURES.md` (every task created after enrollment is stamped to the challenge); only weekly challenge-linked tasks are accountability conditions. The weekly-only lock guard stays. Revert the daily auto-link suppression in `createTask`/sync `CREATE`, and remove the repair script's “unlink 227 daily links” classification before any `--apply`.
+- **Tests:** web `234 files / 2,291 tests`; `typecheck:web` 0; `lint:web` 0 errors.
+- **Uncommitted:** merge + review fixes + this visibility rule; no commits/pushes.
+- **NEXT:** add the `challenge_locked` notice and disable edit/toggle/scope/delete for locked weekly goals; correct the repair script; then commit/push `afnan-jr`.
+
+### Session 189 — 2026-11-02 (Web task-revert fix on `afnan-jr`)
+
+- **Root cause:** daily tasks were auto-linked to the current challenge. The results-lock guard checked only `challengeId`, so edits/toggles/deletes of those daily tasks returned `challenge_locked` after the host locked results; the client adopted the server row and silently reverted the change. DB audit: 227 live daily tasks with a `challengeId`, all in locked challenges; 20 users with post-lock task writes.
+- **Web fix:** `createTask` and the sync `CREATE` only resolve/auto-link weekly tasks; an explicit daily `challengeId` is ignored (logged); the lock guard applies only to weekly tasks; a daily legacy link can be cleared with `challengeId: null`.
+- **Task/category model:** a task’s `taskType` is its own board column; a category may contain tasks of either type (weekly parents can hold daily tasks). Task type is immutable on update/move; category type changes no longer cascade to child tasks. `getUserCategorizedTasksFromDatabase` groups by the task’s own type, so weekly tasks in daily categories and daily tasks under weekly parents remain visible.
+- **Data audit/repair:** added `apps/web/scripts/repair-task-invariants.ts` (report-only by default). Report: 227 daily challenge links, 9 live tasks in deleted categories, 101 task/category type differences (reported, not rewritten), 3 weekly goals in daily categories (valid), 1 status mismatch, 6 duplicate clusters. No writes applied.
+- **Tests:** web `234 files / 2,291 tests`; `typecheck:web` 0; `build:web` clean.
+- **Uncommitted:** merge + review fixes + this web fix; no commits/pushes.
+- **NEXT:** manual locked-challenge/two-profile checks; run the repair report on a local copy, then apply with approval/backup (`--apply --force-host --allow-locked-challenges`).
 
 ### Session 188 — 2026-11-01 (20h log limit / 12h counted cap on `afnan-jr`)
 
@@ -2680,4 +2699,93 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Next.js production build: ✅ compiled successfully (`next build`).
    - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
    - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
-- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.
+- **NEXT STEP (completed in Session 197):** CI quality-gates run verified green on PR #218; merged into `dev`.
+
+### Session 198 — 2026-11-03 (feat(changelog): comprehensive changelog update, audience filtering & repository path hardening — on `krish`)
+
+- **Context & Objectives:**
+   1. `CHANGELOG.md`: Analyzed complete git commit history and version progression (2026-09-05 through 2026-11-02). Shortened and consolidated recent commits (2026-10-20 to 2026-11-02) into concise, high-signal entries. Distinguished user-visible updates (`[user]`) from internal engineering, database, and admin operations (`[internal]`).
+   2. `apps/web/features/changelog/domain/changelog.ts`: Extended domain model with `ChangelogAudienceFilter` (`"all" | "user" | "internal"`), `countAudienceEntries` counting utility, and updated `selectVisibleGroups` with audience filter support while keeping default parameters 100% backward compatible.
+   3. `apps/web/features/changelog/presentation/changelog-view.tsx`: Enhanced `/changelog` presentation. Regular users see only user-facing updates without internal jargon; admins/devs receive an interactive audience filter toolbar (`All Updates`, `User Facing`, `Admin & Dev`) with count badges, plus emerald `User` and obsidian `Admin / Dev` card badges.
+   4. `apps/web/features/changelog/data/changelog.repository.ts`: Hardened `CHANGELOG.md` candidate path discovery across `process.cwd()` variations to guarantee reliable file loading in monorepo workspaces and serverless runtimes.
+   5. `apps/web/features/changelog/domain/changelog.test.ts`: Added unit tests for audience filtering and entry counts.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Web test suite: ✅ 240/240 test files green (2,375/2,375 tests passing).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, verify CI checks, and review.
+
+### Session 199 — 2026-11-03 (fix(security): sanitize client error responses and mask infrastructure exceptions server-side across web and tasker — GH-#231 / Jira KAN-86 on `krish`)
+
+- **Context & Objectives:**
+   1. **Jira Issue Assignment & Lifecycle (§4.4):** Queried Jira Cloud API for ticket `KAN-86` (`[GH-#231] fix(web): stop returning raw error messages to clients and Discord users`). Assigned issue to Krish Jaiswal (`712020:c817994e-1562-4d95-bb61-97f392dccfa5`) and transitioned from `To Do` $\rightarrow$ `In Progress` (Transition ID `21`).
+   2. **Threat Model (SEC-09):** Many server actions, route handlers, and Tasker bot commands previously returned `error instanceof Error ? error.message : "..."`. Unhandled Prisma, Supabase, Discord, GitHub, or Jira errors leaked database schemas, internal connection strings (`postgres://`), SQL queries, and upstream response bodies.
+   3. **Pure Domain Error Isolation (`apps/web/core/errors/domain/client-error.ts` - Law L7):** Created pure domain models with zero framework/ORM dependencies. Defined `ClientError`, `DomainError`, `isDomainError`, and `WHITELISTED_DOMAIN_ERROR_NAMES` encompassing human-actionable domain error classes (`AuthError`, `AdminAccessError`, `DevAccessError`, `ParticipantAccessError`, `ChallengeStateError`, `WithdrawalError`, `DuoTeamIdentityError`, `WagerValidationError`, `BettingClosedError`, `InsufficientFundsError`, `WalletInvariantViolationError`, `InvalidDurationError`, `DurationParseError`, `MaximumLeavesExceededError`, `BannerNotFoundError`, etc.) as well as recognized authorization codes (`FORBIDDEN_NOT_ADMIN`, `FORBIDDEN_NOT_DEV`, `UNAUTHORIZED`, `NOT_ENROLLED`).
+   4. **Server-Side Correlation Logging (`apps/web/core/errors/to-client-error.ts`):** Standardized `toClientError` helper generating a unique UUID `correlationId` per failure, emitting structured server-side diagnostic events via `createLogger` (`correlationId`, `code`, `isDomainError`, raw exception), and returning sanitized `{ code, message, correlationId, isDomainError }` objects.
+   5. **Tasker Bot Error Sanitization (`apps/tasker/src/lib/error-sanitizer.ts`):** Implemented `sanitizeTaskerError` and updated `yapperize.ts` command to log correlation IDs server-side while presenting safe, user-friendly messages for Gemini API and Discord exceptions.
+   6. **Exhaustive Server Action & API Sanitization:** Updated all call sites in `@holdmetoit/web`:
+      - `apps/web/app/api/feedback/route.ts` (sanitized 500 responses with correlation IDs)
+      - `apps/web/features/challenges/api/challenge-admin.actions.ts` (10 admin actions sanitized)
+      - `apps/web/features/challenges/api/enroll-participant.actions.ts`
+      - `apps/web/features/challenges/api/withdraw-participant.actions.ts`
+      - `apps/web/features/accountability/api/admin-pardon.actions.ts`
+      - `apps/web/features/admin/api/user-directory.actions.ts`
+      - `apps/web/features/cron-logs/api/cron-log.actions.ts`
+      - `apps/web/features/economy/api/wallet.actions.ts`
+      - `apps/web/features/economy/api/study-reward.service.ts`
+      - `apps/web/features/feature-flags/api/feature-flags.actions.ts`
+      - `apps/web/features/participant-status/api/sick-mode.actions.ts`
+      - `apps/web/features/pokemon/api/acquisition.actions.ts`
+      - `apps/web/features/pokemon/api/pokemon.actions.ts`
+      - `apps/web/features/study-logs/api/admin-override.actions.ts`
+      - `apps/web/features/trophies/api/trophy.actions.ts`
+      - `apps/web/features/wagers/api/wager.actions.ts`
+      - `apps/web/features/wrapped/api/wrapped.actions.ts`
+      - `apps/web/features/ypt/api/ypt-claim.actions.ts`
+      - `apps/web/features/ypt/api/ypt-connection.actions.ts`
+      - `apps/web/features/ypt/api/ypt-ingest.service.ts`
+   7. **Documentation:** Created `docs/security/README.md` detailing the client error sanitization architecture, threat model, domain error whitelist, and developer usage patterns.
+- **Quality Gates:**
+   - `npm run test:tasker`: ✅ 5/5 test files green, 84/84 tests passing.
+   - `npm run typecheck:tasker`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run typecheck:web`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run test:web`: ✅ 243/243 test files green, 2,396/2,396 tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **NEXT STEP (completed in Session 199):** PR #238 merged into `dev`.
+
+### Session 200 — 2026-11-03 (feat(wrapped): customizable doodle mascots (cat, dog, bunny) and profile preference selector — on `feat/wrapped-doodle-mascots-#241`)
+
+- **Context & Objectives:** Implement customizable "Wrapped Mascot" companion system for the Event Wrapped feature (`apps/web/features/wrapped/`) and wire a preference selector into the user's Preferences section (`/profile` & `/preferences`), preserving the original Googly Eyes while adding animated Doodle Cat, Doodle Dog, and Doodle Bunny options (Issue #241, Jira KAN-93):
+   1. **Pure Domain Mascot Types (`wrapped-mascot.types.ts`):**
+      - Defined `WrappedMascotVariant` (`'GOOGLY_EYES' | 'CAT' | 'DOG' | 'BUNNY'`) and `WrappedMascotMood` (`'idle' | 'shy' | 'hover' | 'hyped' | 'proud' | 'sleepy'`).
+      - Created `WRAPPED_MASCOT_OPTIONS` metadata array with descriptions and badges.
+      - Added pure domain validation guards `isWrappedMascotVariant` and `normalizeWrappedMascot` (Law L7).
+   2. **Preference Persistence & Instant Event Sync (`wrapped-storage.ts`):**
+      - Implemented `getWrappedMascotPreference` and `setWrappedMascotPreference` using `hmt:wrapped:mascot_preference` in local storage with memory fallback.
+      - Implemented reactive hook `useWrappedMascotPreference` listening to both `storage` events and custom `wrapped-mascot-change` window events for immediate cross-component reactivity without reload.
+   3. **Unified Mascot Component (`wrapped-mascot.tsx`):**
+      - Built `<WrappedMascot />` supporting all 4 variants as inline theme SVGs with shared smooth vector cursor-tracking pupil physics.
+      - Added mood-dependent expressions (ear-twitching, blush circles, floppy ear wiggles, head-tilt, and tongue blep).
+      - Added accessibility support for `prefers-reduced-motion` and safe fallback for non-browser/SSR environments.
+   4. **Integration into Wrapped Presentation:**
+      - Updated `wrapped-shy-card.tsx` and `dashboard-wrapped.tsx` with optional `variantOverride` and reactive mascot peeking.
+      - Updated `challenge-wrapped-modal.tsx` with mascot in the modal header dynamically reacting to slide-specific moods.
+   5. **Profile & Preferences Selector Card (`wrapped-mascot-preference-card.tsx`):**
+      - Built 4-option interactive grid with live cursor-tracking previews and instant selection confirmation toast.
+      - Integrated into `/profile` Settings tab (`global-profile-view.tsx`) and `/preferences` (`preferences-view.tsx`).
+   6. **Visual Scale & Character Illustration Overhaul (`wrapped-mascot.tsx`, `wrapped-shy-card.tsx`):**
+      - Scaled up mascots across all tiers (`sm`: `w-16 h-12 sm:w-20 sm:h-16`, `md`: `w-24 h-20 sm:w-28 sm:h-24`, `lg`: `w-32 h-24 sm:w-36 sm:h-28`, `xl`: `w-40 h-32 sm:w-44 sm:h-36`).
+      - Completely redesigned animal SVG artwork with high-contrast solid light fills (`white`, biscuit `#fef3c7`), bold charcoal linework (`var(--color-surface-page)`), anime double-sparkle eye reflections, and unmistakable anatomical character markers:
+         - **Doodle Cat:** Rounded white kitten dome, triangular ears with soft pink fluff pads, 6 distinct whiskers, :3 mouth, pink button nose, blush cheeks, and chubby paws with pink toe beans.
+         - **Doodle Dog:** Warm biscuit/honey pup, big floppy caramel hound ears, white snout muzzle, heart-shaped black button nose with wet shine highlight, happy head-tilt, and pink tongue blep.
+         - **Doodle Bunny:** Snow-white rabbit dome, tall upright ear with pink contour, charming folded lop ear, twitching pink nose, Y-mouth, and soft fluffy paws with pink pads.
+      - Updated `wrapped-shy-card.tsx` parked card translation from `-translate-x-[64px]` to `-translate-x-[116px]` (hover `-translate-x-[132px]`), removed destructive `sm:scale-75` card shrink, increased mobile card width to `w-[96px]`, and set mascot to `size="md"` so characters peek out boldly with generous room.
+      - Expanded modal header container to `w-[64px] h-[48px]` and preference preview boxes to `h-28 sm:h-32`.
+   7. **Design Token Compliance:**
+      - Replaced raw hex color literals in SVG markup with semantic tokens (`var(--color-surface-page)`, `var(--color-brand-3)`, `var(--color-brand-1-dark)`, `white`).
+      - Standardized typography in selector cards to `text-meta`.
+   8. **Documentation & Quality Gates:**
+      - Added comprehensive feature architecture documentation in `docs/wrapped/README.md`.
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
+      - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
+      - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
+- **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.

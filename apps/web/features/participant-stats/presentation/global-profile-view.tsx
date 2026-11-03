@@ -28,6 +28,7 @@ import { ChallengeSnapshot } from "./challenge-snapshot";
 import { EmptyState } from "@/components/state/empty-state";
 import { CockpitSkeleton } from "@/components/state/cockpit-skeleton";
 import { YptSettingsCard } from "@/features/ypt/presentation/ypt-settings-card";
+import { WrappedMascotPreferenceCard } from "@/features/wrapped/presentation/wrapped-mascot-preference-card";
 import {
    SickModeSettingsCard,
    SickStatusBadge,
@@ -496,6 +497,9 @@ export function GlobalProfileView({
                <YptSettingsCard
                   initialYptId={initialYptId ?? user.yptId ?? null}
                />
+
+               {/* Wrapped Mascot Preference Card */}
+               <WrappedMascotPreferenceCard />
             </div>
          )}
       </div>

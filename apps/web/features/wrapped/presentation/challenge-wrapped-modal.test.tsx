@@ -297,4 +297,21 @@ describe("ChallengeWrappedModal design token migration & responsive layout", () 
          "translate-x-[30px] opacity-0 invisible pointer-events-none"
       );
    });
+   it("renders the customizable mascot companion in modal header with slide-appropriate mood", () => {
+      const challenge = buildChallenge({
+         isWrappedSeen: false,
+         isFeedbackFilled: false,
+      });
+
+      const markup = renderToStaticMarkup(
+         <ChallengeWrappedModal
+            challenge={challenge}
+            mascotVariantOverride="CAT"
+         />
+      );
+
+      expect(markup).toContain('data-testid="wrapped-modal-mascot-header"');
+      expect(markup).toContain('data-variant="CAT"');
+      expect(markup).toContain('data-mood="hyped"');
+   });
 });

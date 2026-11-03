@@ -640,3 +640,93 @@ describe("CockpitTaskMenu (KAN-18 / Issue #100)", () => {
       });
    });
 });
+
+describe("CockpitTaskMenu weekly goal grace lock (Issue #98)", () => {
+   const HOUR_MS = 60 * 60 * 1000;
+
+   function weeklyTask(ageHours: number, challengeId: string | null) {
+      return {
+         id: "t_weekly",
+         text: "Finish the problem set",
+         completed: false,
+         status: "TODO",
+         dueDate: null,
+         createdAt: new Date(Date.now() - ageHours * HOUR_MS).toISOString(),
+         challengeId,
+      } as TaskItem;
+   }
+
+   function renderTaskMenu(task: TaskItem) {
+      return renderToStaticMarkup(
+         createElement(TaskMenuItems, {
+            task,
+            catIdx: 0,
+            taskType: "weekly",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: [],
+            selectedDateKey: "2026-10-02",
+            linkableChallengeId: "challenge_1",
+            onToggleChallengeScope: vi.fn(),
+            onSetStatus: vi.fn(),
+            onMoveToDay: vi.fn(),
+            onEditTask: vi.fn(),
+            onDeleteTask: vi.fn(),
+            Item: MockItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+   }
+
+   it("keeps delete and scope options inside the 24-hour grace period", () => {
+      const html = renderTaskMenu(weeklyTask(2, "challenge_1"));
+
+      expect(html).toContain("Delete Task");
+      expect(html).not.toContain("Delete Task (Locked)");
+      expect(html).toContain("Convert to Personal Goal");
+   });
+
+   it("locks delete and hides scope options for a challenge goal after 24 hours", () => {
+      const html = renderTaskMenu(weeklyTask(26, "challenge_1"));
+
+      expect(html).toContain("Delete Task (Locked)");
+      expect(html).not.toContain("Convert to Personal Goal");
+      expect(html).toContain("Edit Task");
+   });
+
+   it("never locks a personal weekly task", () => {
+      const html = renderTaskMenu(weeklyTask(72, null));
+
+      expect(html).not.toContain("Delete Task (Locked)");
+      expect(html).toContain("Set as Challenge Goal");
+   });
+
+   it("locks category deletion when it holds a locked weekly goal", () => {
+      const cat: CategoryGroup = {
+         id: "cat_weekly",
+         name: "Problem Sets",
+         isCollapsed: false,
+         tasks: [weeklyTask(30, "challenge_1")],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CategoryMenuItems, {
+            cat,
+            catType: "weekly",
+            dailyCategories: [],
+            weeklyCategories: [cat],
+            selectedDateKey: "2026-10-02",
+            effectiveTodayDate: "2026-10-02",
+            dayOptions: [],
+            onMoveCategoryToDay: vi.fn(),
+            onRenameCategory: vi.fn(),
+            onDeleteCategory: vi.fn(),
+            Item: MockItem,
+            Separator: MockSeparator,
+            Label: MockLabel,
+         })
+      );
+
+      expect(html).toContain("Delete Category (Locked)");
+   });
+});

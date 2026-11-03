@@ -5,6 +5,184 @@ Notable changes to HoldMeToIt, newest first — grouped by date, no version numb
 Entries tagged `[user]` are user-facing and shown to everyone. Untagged entries are
 internal (engineering, tooling, and infrastructure) and are shown to admins only.
 
+## 2026-11-02
+
+### Preferences hub & completion sound effect [user]
+
+Added a dedicated preferences page accessible via the header. Customize themes, manage notifications, and toggle an opt-in "yippee" sound effect that plays when completing tasks.
+
+### Leaderboard progress & pace status indicators [user]
+
+Desktop standings now feature Progress % and real-time Pace Status badges (On Track, At Risk, Completed, Punished). Team view also displays unassigned participants in a dedicated section.
+
+### Weekly goals checklist on participant profiles [user]
+
+Participant profile pages now display a paginated checklist of challenge-linked weekly goals.
+
+### Study log limits & hours preservation [user]
+
+Raised the raw daily log cap to 20 hours for comprehensive logging, with a 12-hour scored cap for leaderboard rankings. When withdrawing mid-challenge, your historical study hours are now safely frozen and preserved.
+
+### Leaderboard quick-pardon & compact host actions [internal]
+
+Hosts can now trigger the pardon modal directly from post-lock leaderboard rows with compact icon actions.
+
+### Weekly task anchoring & auto-lock reconciliation [internal]
+
+Weekly tasks are anchored to their creation week to prevent sticking across new weeks, and three-condition accountability checks now auto-reconcile on 6-hour grace auto-locks.
+
+## 2026-11-01
+
+### Guest cockpit dashboard [user]
+
+Unauthenticated visitors can now explore a fully interactive guest cockpit landing page before logging in with Discord.
+
+### Sick mode status badge [user]
+
+Added a Sick Mode toggle to profiles with a temporary status badge and an automatic 3-day reminder prompt.
+
+### Confetti on task completion [user]
+
+Checking off any daily or weekly task now triggers an obsidian-themed celebratory confetti burst.
+
+### Anchored Head-to-Head banner & dynamic leader badge [user]
+
+Matchup banner cards remain anchored at the top of the leaderboard with a dynamic badge highlighting the leading team.
+
+### Global user profiles [user]
+
+New public `/profile/[id]` pages featuring career study statistics, challenge participation snapshots, and direct links from leaderboards.
+
+### Admin user directory console [internal]
+
+Added a searchable `/admin/users` management console with an inspector side-sheet for viewing account details, assigning roles, and reviewing user audit trails.
+
+### Multi-tab offline queue concurrency hardening [internal]
+
+Secured task sync with Web Locks leader election across browser tabs, scoped mutations by user ID, and routed persistent failures to a dead-letter queue with manual retry options.
+
+## 2026-10-31
+
+### Homescreen welcome link to global profile [user]
+
+The cockpit welcome message now links directly to your global profile and career stats.
+
+### Optimistic concurrency & single write path for tasks [internal]
+
+Consolidated task edits, moves, and rollovers through the offline sync queue. Added per-row revision counters on tasks and categories to prevent lost updates during concurrent edits.
+
+### Field-scoped edits & category uniqueness [internal]
+
+Task edits now send field patches instead of full rows, and active category names enforce case-insensitive uniqueness per user. Upgraded Zod to 4.6.6.
+
+## 2026-10-30
+
+### Serialized challenge results lock & input freeze [internal]
+
+Enforced row locks on challenge finalization, froze study logs and goal linkages at lock time, and added a unique database constraint guaranteeing one punishment record per participant.
+
+### Shared Discord interaction package [internal]
+
+Extracted shared Discord interaction handling into the `@holdmetoit/discord` package for unified web and Tasker bot communications.
+
+## 2026-10-29
+
+### Task status transition & hydration stability [internal]
+
+Eliminated task status flicker and sync flashes during rapid status toggles.
+
+## 2026-10-28
+
+### Calendar week navigation & compact date picker [user]
+
+Added calendar week navigation and a compact popover date picker to the task board, making it easy to jump across challenge days.
+
+### Category collapse state persistence [user]
+
+Task category collapsed/expanded states now persist across page refreshes and tab switches without layout shift.
+
+### Daily rollover snooze & mobile view switcher [user]
+
+Added a daily reminder snooze for unfinished tasks from yesterday, alongside a Daily/Weekly view switcher and quick-add actions on mobile.
+
+### YPT bot HEAD /health probe & date range fixes [internal]
+
+Added HEAD `/health` liveness checks to the YPT bot and fixed date boundary calculations for non-7-day challenges.
+
+## 2026-10-27
+
+### Optional punishment profile pictures [user]
+
+Hosts are no longer required to provide a punishment image when creating challenges; unpunished forfeits safely omit download prompts.
+
+## 2026-10-26
+
+### Duo team self-renaming [user]
+
+Participants in duo challenges can now customize and rename their own team identity directly from the challenge page.
+
+### Incomplete task rollover & challenge goal scoping [user]
+
+One-click rollover for yesterday's uncompleted tasks and context-menu actions to scope tasks as official Challenge Goals.
+
+### YPT cron execution audit logging [internal]
+
+Background YPT sync runs now record structured execution logs in the `CronLog` database table for admin inspection.
+
+## 2026-10-25
+
+### Personal task checklist without active challenges [user]
+
+The daily task checklist and week navigation are now fully accessible for personal productivity even when not enrolled in a challenge.
+
+## 2026-10-24
+
+### On-demand Discord avatar sync & image cropping [user]
+
+Sync your latest Discord profile picture on demand from your profile page. Challenge creation now includes pre-upload cropping (5:1 banner, 1:1 avatar) with resolution checks.
+
+### 14-hour daily study evaluation cap [user]
+
+Introduced daily hours evaluation caps with visible raw vs counted hours in daily history to encourage healthy study pacing.
+
+### Serverless auth hardening & YPT bot modular refactor [internal]
+
+Replaced in-memory rate limiting with stateless session validation, persisted OAuth tokens for silent re-auth, and refactored the YPT bot into a modular architecture.
+
+## 2026-10-23
+
+### Expandable task descriptions & tooltips [user]
+
+Long task descriptions can now be expanded in-place with hover tooltips for previewing truncated content.
+
+### Automated database backup script [internal]
+
+Added scheduled database backup routines with retention policies to the automation bot.
+
+## 2026-10-22
+
+### Challenge self-withdrawal & undo enrollment [user]
+
+Participants can now self-withdraw from challenges with an immediate undo action in the enrollment interface.
+
+### Multi-issue feedback sync & economy feature gating [internal]
+
+User feedback submissions now synchronize automatically across GitHub and Jira. Economy and wallet features were isolated behind rollout feature flags.
+
+## 2026-10-21
+
+### LogRocket session recording feature flag [internal]
+
+Client session recording gated behind a feature flag for instant disabling without deployments.
+
+## 2026-10-20
+
+### Open Graph previews for Discord embeds [user]
+
+Challenge and profile links now generate rich Open Graph embeds when shared on Discord and social platforms.
+
+---
+
 ## 2026-10-19
 
 ### Leaderboard ordering, hero cleanup, and join CTA state [user]

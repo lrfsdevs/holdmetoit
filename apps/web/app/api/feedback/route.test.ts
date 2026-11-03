@@ -614,4 +614,32 @@ describe("POST /api/feedback", () => {
          expect.objectContaining({ status: "FAILED" })
       );
    });
+
+   it("sanitizes unexpected database errors and never leaks schema or raw error details to the caller", async () => {
+      vi.mocked(feedbackRepo.createFeedbackRecord).mockRejectedValue(
+         new Error(
+            'FATAL: relation "feedbacks" does not exist at postgres://user:secret@internal-db:5432/hmt'
+         )
+      );
+
+      const res = await POST(
+         createRequest({
+            type: "bug",
+            title: "Button alignment issue",
+            description: "The submit button is slightly off-center on mobile.",
+            url: "https://holdmetoit.com/",
+         })
+      );
+
+      expect(res.status).toBe(500);
+      const json = await res.json();
+      expect(json.success).toBe(false);
+      expect(json.error).toBe(
+         "An unexpected error occurred while processing feedback."
+      );
+      expect(json.code).toBe("INTERNAL_SERVER_ERROR");
+      expect(json.correlationId).toBeDefined();
+      expect(json.error).not.toContain('relation "feedbacks"');
+      expect(json.error).not.toContain("postgres://");
+   });
 });

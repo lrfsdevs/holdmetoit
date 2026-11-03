@@ -10,7 +10,12 @@ vi.mock("next/cache", () => ({
 }));
 
 vi.mock("@/features/auth/api/require-session", () => ({
-   AuthError: class AuthError extends Error {},
+   AuthError: class AuthError extends Error {
+      constructor(message = "User is not authenticated.") {
+         super(message);
+         this.name = "AuthError";
+      }
+   },
    requireSessionUser: vi.fn(),
 }));
 
@@ -60,7 +65,9 @@ describe("enrollInChallengeAction (FEAT-CHAL-02)", () => {
 
    it("rejects when unauthenticated", async () => {
       vi.mocked(requireSessionModule.requireSessionUser).mockRejectedValue(
-         new Error("User is not authenticated.")
+         new (requireSessionModule as any).AuthError(
+            "User is not authenticated."
+         )
       );
 
       const result = await enrollInChallengeAction({
@@ -105,11 +112,13 @@ describe("enrollInChallengeAction (FEAT-CHAL-02)", () => {
          id: "u_1",
       } as never);
 
+      const challengeErr = new Error(
+         "Cannot join a challenge that has already ended."
+      );
+      challengeErr.name = "ChallengeStateError";
       vi.mocked(
          participantRepoModule.enrollParticipantInChallenge
-      ).mockRejectedValue(
-         new Error("Cannot join a challenge that has already ended.")
-      );
+      ).mockRejectedValue(challengeErr);
 
       const result = await enrollInChallengeAction({
          challengeId: "c_1",
