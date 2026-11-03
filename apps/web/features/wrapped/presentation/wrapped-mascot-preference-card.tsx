@@ -99,7 +99,7 @@ export function WrappedMascotPreferenceCard({
                      }`}
                   >
                      {/* Top Badges / Selected Icon */}
-                     <div className="w-full flex items-center justify-between gap-1 text-[10px] font-bold tracking-wider uppercase mb-2">
+                     <div className="w-full flex items-center justify-between gap-1 text-meta font-bold tracking-wider uppercase mb-2">
                         {option.badge ? (
                            <span className="px-1.5 py-0.5 rounded-md bg-surface-nested text-text-tertiary border border-border-subtle group-hover:text-text-secondary transition-colors">
                               {option.badge}
@@ -146,7 +146,7 @@ export function WrappedMascotPreferenceCard({
                               <Check className="w-3.5 h-3.5" /> Selected
                            </span>
                         ) : (
-                           <span className="text-[11px] font-medium text-text-tertiary group-hover:text-text-secondary transition-colors">
+                           <span className="text-meta font-medium text-text-tertiary group-hover:text-text-secondary transition-colors">
                               Click to select
                            </span>
                         )}
