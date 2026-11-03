@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { useUserPreferences } from "./use-user-preferences";
 import { playCompletionAudio } from "./audio-service";
+import { WrappedMascotPreferenceCard } from "@/features/wrapped/presentation/wrapped-mascot-preference-card";
 
 export function PreferencesView() {
    const { preferences, updatePreferences, isHydrated } = useUserPreferences();
@@ -376,6 +377,9 @@ export function PreferencesView() {
                </div>
             </CardContent>
          </Card>
+
+         {/* Section 4: Wrapped Mascot Preference */}
+         <WrappedMascotPreferenceCard />
       </div>
    );
 }

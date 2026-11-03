@@ -108,4 +108,32 @@ describe("WrappedShyCard", () => {
       expect(html).toContain("Accountability: Punished");
       expect(html).toContain("💀");
    });
+   it("renders customizable doodle mascots when variantOverride is provided", () => {
+      const htmlCat = renderToStaticMarkup(
+         <WrappedShyCard
+            wrapped={mockWrapped}
+            onReplayStory={vi.fn()}
+            variantOverride="CAT"
+         />
+      );
+      expect(htmlCat).toContain('data-variant="CAT"');
+
+      const htmlDog = renderToStaticMarkup(
+         <WrappedShyCard
+            wrapped={mockWrapped}
+            onReplayStory={vi.fn()}
+            variantOverride="DOG"
+         />
+      );
+      expect(htmlDog).toContain('data-variant="DOG"');
+
+      const htmlBunny = renderToStaticMarkup(
+         <WrappedShyCard
+            wrapped={mockWrapped}
+            onReplayStory={vi.fn()}
+            variantOverride="BUNNY"
+         />
+      );
+      expect(htmlBunny).toContain('data-variant="BUNNY"');
+   });
 });
