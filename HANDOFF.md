@@ -2680,4 +2680,55 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Next.js production build: ✅ compiled successfully (`next build`).
    - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
    - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
-- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.
+- **NEXT STEP (completed in Session 197):** CI quality-gates run verified green on PR #218; merged into `dev`.
+
+### Session 198 — 2026-11-03 (feat(changelog): comprehensive changelog update, audience filtering & repository path hardening — on `krish`)
+
+- **Context & Objectives:**
+   1. `CHANGELOG.md`: Analyzed complete git commit history and version progression (2026-09-05 through 2026-11-02). Shortened and consolidated recent commits (2026-10-20 to 2026-11-02) into concise, high-signal entries. Distinguished user-visible updates (`[user]`) from internal engineering, database, and admin operations (`[internal]`).
+   2. `apps/web/features/changelog/domain/changelog.ts`: Extended domain model with `ChangelogAudienceFilter` (`"all" | "user" | "internal"`), `countAudienceEntries` counting utility, and updated `selectVisibleGroups` with audience filter support while keeping default parameters 100% backward compatible.
+   3. `apps/web/features/changelog/presentation/changelog-view.tsx`: Enhanced `/changelog` presentation. Regular users see only user-facing updates without internal jargon; admins/devs receive an interactive audience filter toolbar (`All Updates`, `User Facing`, `Admin & Dev`) with count badges, plus emerald `User` and obsidian `Admin / Dev` card badges.
+   4. `apps/web/features/changelog/data/changelog.repository.ts`: Hardened `CHANGELOG.md` candidate path discovery across `process.cwd()` variations to guarantee reliable file loading in monorepo workspaces and serverless runtimes.
+   5. `apps/web/features/changelog/domain/changelog.test.ts`: Added unit tests for audience filtering and entry counts.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Web test suite: ✅ 240/240 test files green (2,375/2,375 tests passing).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, verify CI checks, and review.
+
+### Session 199 — 2026-11-03 (fix(security): sanitize client error responses and mask infrastructure exceptions server-side across web and tasker — GH-#231 / Jira KAN-86 on `krish`)
+
+- **Context & Objectives:**
+   1. **Jira Issue Assignment & Lifecycle (§4.4):** Queried Jira Cloud API for ticket `KAN-86` (`[GH-#231] fix(web): stop returning raw error messages to clients and Discord users`). Assigned issue to Krish Jaiswal (`712020:c817994e-1562-4d95-bb61-97f392dccfa5`) and transitioned from `To Do` $\rightarrow$ `In Progress` (Transition ID `21`).
+   2. **Threat Model (SEC-09):** Many server actions, route handlers, and Tasker bot commands previously returned `error instanceof Error ? error.message : "..."`. Unhandled Prisma, Supabase, Discord, GitHub, or Jira errors leaked database schemas, internal connection strings (`postgres://`), SQL queries, and upstream response bodies.
+   3. **Pure Domain Error Isolation (`apps/web/core/errors/domain/client-error.ts` - Law L7):** Created pure domain models with zero framework/ORM dependencies. Defined `ClientError`, `DomainError`, `isDomainError`, and `WHITELISTED_DOMAIN_ERROR_NAMES` encompassing human-actionable domain error classes (`AuthError`, `AdminAccessError`, `DevAccessError`, `ParticipantAccessError`, `ChallengeStateError`, `WithdrawalError`, `DuoTeamIdentityError`, `WagerValidationError`, `BettingClosedError`, `InsufficientFundsError`, `WalletInvariantViolationError`, `InvalidDurationError`, `DurationParseError`, `MaximumLeavesExceededError`, `BannerNotFoundError`, etc.) as well as recognized authorization codes (`FORBIDDEN_NOT_ADMIN`, `FORBIDDEN_NOT_DEV`, `UNAUTHORIZED`, `NOT_ENROLLED`).
+   4. **Server-Side Correlation Logging (`apps/web/core/errors/to-client-error.ts`):** Standardized `toClientError` helper generating a unique UUID `correlationId` per failure, emitting structured server-side diagnostic events via `createLogger` (`correlationId`, `code`, `isDomainError`, raw exception), and returning sanitized `{ code, message, correlationId, isDomainError }` objects.
+   5. **Tasker Bot Error Sanitization (`apps/tasker/src/lib/error-sanitizer.ts`):** Implemented `sanitizeTaskerError` and updated `yapperize.ts` command to log correlation IDs server-side while presenting safe, user-friendly messages for Gemini API and Discord exceptions.
+   6. **Exhaustive Server Action & API Sanitization:** Updated all call sites in `@holdmetoit/web`:
+      - `apps/web/app/api/feedback/route.ts` (sanitized 500 responses with correlation IDs)
+      - `apps/web/features/challenges/api/challenge-admin.actions.ts` (10 admin actions sanitized)
+      - `apps/web/features/challenges/api/enroll-participant.actions.ts`
+      - `apps/web/features/challenges/api/withdraw-participant.actions.ts`
+      - `apps/web/features/accountability/api/admin-pardon.actions.ts`
+      - `apps/web/features/admin/api/user-directory.actions.ts`
+      - `apps/web/features/cron-logs/api/cron-log.actions.ts`
+      - `apps/web/features/economy/api/wallet.actions.ts`
+      - `apps/web/features/economy/api/study-reward.service.ts`
+      - `apps/web/features/feature-flags/api/feature-flags.actions.ts`
+      - `apps/web/features/participant-status/api/sick-mode.actions.ts`
+      - `apps/web/features/pokemon/api/acquisition.actions.ts`
+      - `apps/web/features/pokemon/api/pokemon.actions.ts`
+      - `apps/web/features/study-logs/api/admin-override.actions.ts`
+      - `apps/web/features/trophies/api/trophy.actions.ts`
+      - `apps/web/features/wagers/api/wager.actions.ts`
+      - `apps/web/features/wrapped/api/wrapped.actions.ts`
+      - `apps/web/features/ypt/api/ypt-claim.actions.ts`
+      - `apps/web/features/ypt/api/ypt-connection.actions.ts`
+      - `apps/web/features/ypt/api/ypt-ingest.service.ts`
+   7. **Documentation:** Created `docs/security/README.md` detailing the client error sanitization architecture, threat model, domain error whitelist, and developer usage patterns.
+- **Quality Gates:**
+   - `npm run test:tasker`: ✅ 5/5 test files green, 84/84 tests passing.
+   - `npm run typecheck:tasker`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run typecheck:web`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run test:web`: ✅ 243/243 test files green, 2,396/2,396 tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **NEXT STEP:** Submit PR from `krish` to `dev`, link GitHub Issue #231, transition Jira `KAN-86` to `In Review`, and request peer review.

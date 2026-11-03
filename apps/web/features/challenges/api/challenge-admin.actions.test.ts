@@ -384,7 +384,7 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(result.ok).toBe(false);
          if (!result.ok) {
             expect(result.code).toBe("UNLOCK_FAILED");
-            expect(result.message).toBe("Challenge results are not locked.");
+            expect(result.message).toBe("Failed to unlock the final results.");
          }
       });
    });
@@ -1270,7 +1270,7 @@ describe("challenge-admin actions (FEAT-CHAL-02, FEAT-CHAL-05)", () => {
          expect(result).toEqual({
             ok: false,
             code: "UPDATE_TARGET_FAILED",
-            message: "Participant not found.",
+            message: "Failed to update participant target hours.",
          });
       });
    });

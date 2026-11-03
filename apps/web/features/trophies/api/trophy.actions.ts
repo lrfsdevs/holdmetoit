@@ -12,6 +12,7 @@ import {
    getUserCompetitiveStats,
    adminAdjustTrophies,
 } from "../data/trophy.repository";
+import { toClientError } from "@/core/errors";
 
 const adminAdjustTrophiesSchema = z.object({
    userId: z.string().min(1, "Target user ID required"),
@@ -52,13 +53,15 @@ export async function getTrophyLeaderboardAction(options?: {
       const data = await getTrophyLeaderboard(options);
       return { ok: true, data };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "trophies.leaderboard",
+         defaultCode: "LEADERBOARD_FETCH_FAILED",
+         defaultMessage: "Failed to fetch trophy leaderboard.",
+      });
       return {
          ok: false,
-         code: "LEADERBOARD_FETCH_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to fetch trophy leaderboard.",
+         code: clientError.code,
+         message: clientError.message,
          data: {
             entries: [],
             pagination: { page: 1, limit: 50, totalCount: 0, totalPages: 1 },
@@ -88,13 +91,15 @@ export async function getUserCompetitiveStatsAction(userId?: string) {
 
       return { ok: true, data: stats };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "trophies.stats",
+         defaultCode: "STATS_FETCH_FAILED",
+         defaultMessage: "Failed to retrieve user competitive stats.",
+      });
       return {
          ok: false,
-         code: "STATS_FETCH_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to retrieve user competitive stats.",
+         code: clientError.code,
+         message: clientError.message,
          data: null,
       };
    }
@@ -119,13 +124,15 @@ export async function getUserTrophyHistoryAction(options?: {
 
       return { ok: true, data: history };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "trophies.history",
+         defaultCode: "HISTORY_FETCH_FAILED",
+         defaultMessage: "Failed to retrieve trophy history.",
+      });
       return {
          ok: false,
-         code: "HISTORY_FETCH_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to retrieve trophy history.",
+         code: clientError.code,
+         message: clientError.message,
          data: {
             transactions: [],
             pagination: { page: 1, limit: 20, totalCount: 0, totalPages: 1 },
@@ -185,13 +192,19 @@ export async function adminAdjustTrophiesAction(
          data: result,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "trophies.admin_adjust",
+         defaultCode: "ADJUSTMENT_FAILED",
+         defaultMessage: "Failed to adjust user trophies.",
+         context: {
+            targetUserId: input?.userId,
+            amount: input?.amount,
+         },
+      });
       return {
          ok: false,
-         code: "ADJUSTMENT_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to adjust user trophies.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

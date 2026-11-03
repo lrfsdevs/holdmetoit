@@ -22,6 +22,7 @@ import { createLogger, logEvents } from "@/core/observability/logger";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { TransactionTypeValue } from "../domain/economy-constants";
+import { toClientError } from "@/core/errors";
 
 const logger = createLogger("economy.actions");
 
@@ -51,13 +52,15 @@ export async function getWalletSummaryAction() {
       const summary = await getWalletSummary(user.id);
       return { ok: true as const, data: summary };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "economy.wallet.summary",
+         defaultCode: "WALLET_FETCH_FAILED",
+         defaultMessage: "Failed to load wallet summary.",
+      });
       return {
          ok: false as const,
-         code: "WALLET_FETCH_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to load wallet summary.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -92,13 +95,15 @@ export async function getTransactionHistoryAction(
          data: result,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "economy.wallet.history",
+         defaultCode: "HISTORY_FETCH_FAILED",
+         defaultMessage: "Failed to load transaction history.",
+      });
       return {
          ok: false as const,
-         code: "HISTORY_FETCH_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to load transaction history.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -193,17 +198,19 @@ export async function adminAdjustBalanceAction(
          },
       };
    } catch (error) {
-      logger.error(logEvents.appError, {
-         context: { action: "adminAdjustBalanceAction" },
-         error,
+      const clientError = toClientError(error, {
+         scope: "economy.wallet.admin_adjust",
+         defaultCode: "ADMIN_ADJUST_FAILED",
+         defaultMessage: "Failed to apply balance adjustment.",
+         context: {
+            action: "adminAdjustBalanceAction",
+            targetUserId: rawInput?.targetUserId,
+         },
       });
       return {
          ok: false as const,
-         code: "ADMIN_ADJUST_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to apply balance adjustment.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -258,13 +265,15 @@ export async function reconcileWalletAction(
          data: report,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "economy.wallet.reconcile",
+         defaultCode: "RECONCILIATION_FAILED",
+         defaultMessage: "Failed to run wallet reconciliation.",
+      });
       return {
          ok: false as const,
-         code: "RECONCILIATION_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to run wallet reconciliation.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
@@ -332,13 +341,16 @@ export async function reverseTransactionAction(
          data: result,
       };
    } catch (error) {
+      const clientError = toClientError(error, {
+         scope: "economy.wallet.reverse",
+         defaultCode: "REVERSAL_FAILED",
+         defaultMessage: "Failed to reverse transaction.",
+         context: { transactionId: rawInput?.transactionId },
+      });
       return {
          ok: false as const,
-         code: "REVERSAL_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to reverse transaction.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }

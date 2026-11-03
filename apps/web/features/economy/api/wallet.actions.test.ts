@@ -23,6 +23,12 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/features/auth/api/require-session", () => ({
    requireSessionUser: vi.fn(),
+   AuthError: class AuthError extends Error {
+      constructor(message = "You must sign in to continue.") {
+         super(message);
+         this.name = "AuthError";
+      }
+   },
 }));
 
 vi.mock("@/features/auth/api/require-admin", () => ({
@@ -116,7 +122,9 @@ describe("wallet.actions", () => {
 
       it("fails safely when user is not authenticated", async () => {
          vi.mocked(requireSessionModule.requireSessionUser).mockRejectedValue(
-            new Error("You must sign in to continue.")
+            new (requireSessionModule as any).AuthError(
+               "You must sign in to continue."
+            )
          );
 
          const result = await getWalletSummaryAction();

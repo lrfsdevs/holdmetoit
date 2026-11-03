@@ -88,9 +88,30 @@ describe("withdrawFromChallengeAction", () => {
       expect(revalidatePath).toHaveBeenCalledWith("/");
    });
 
-   it("maps repository failures to WITHDRAWAL_FAILED", async () => {
+   it("passes through whitelisted WithdrawalError domain messages", async () => {
+      const { WithdrawalError } =
+         await import("@/features/challenges/domain/withdrawal");
       vi.mocked(participantRepo.withdrawParticipant).mockRejectedValue(
-         new Error("Results are locked; withdrawal is no longer possible.")
+         new WithdrawalError(
+            "Results are locked; withdrawal is no longer possible.",
+            "RESULTS_LOCKED"
+         )
+      );
+
+      const result = await withdrawFromChallengeAction({
+         challengeId: "chal_1",
+      });
+
+      expect(result).toEqual({
+         ok: false,
+         code: "RESULTS_LOCKED",
+         message: "Results are locked; withdrawal is no longer possible.",
+      });
+   });
+
+   it("masks untrusted infrastructure errors with generic message", async () => {
+      vi.mocked(participantRepo.withdrawParticipant).mockRejectedValue(
+         new Error("FATAL: connection to server at '10.0.0.5' failed")
       );
 
       const result = await withdrawFromChallengeAction({
@@ -100,7 +121,7 @@ describe("withdrawFromChallengeAction", () => {
       expect(result).toEqual({
          ok: false,
          code: "WITHDRAWAL_FAILED",
-         message: "Results are locked; withdrawal is no longer possible.",
+         message: "Failed to withdraw from challenge.",
       });
    });
 });

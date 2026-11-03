@@ -9,6 +9,7 @@ import {
    executeAdminResetOverallHours,
 } from "@/features/study-logs/data/admin-override.repository";
 import { cacheTags, invalidateTags } from "@/core/cache";
+import { toClientError } from "@/core/errors";
 import {
    composeDurationSeconds,
    validateDailyLogDurationSeconds,
@@ -111,20 +112,20 @@ export async function adminOverrideStudyHoursAction(
 
       return { ok: true };
    } catch (error) {
-      logger.error(logEvents.studyLogOverride, {
+      const clientError = toClientError(error, {
+         scope: "study.log.override",
+         event: logEvents.studyLogOverride,
          context: {
             challengeId: input?.challengeId,
             participantId: input?.participantId,
          },
-         error,
+         defaultCode: "OVERRIDE_FAILED",
+         defaultMessage: "Failed to record manual hours override.",
       });
       return {
          ok: false,
-         code: "OVERRIDE_FAILED",
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to record manual hours override.",
+         code: clientError.code,
+         message: clientError.message,
       };
    }
 }
