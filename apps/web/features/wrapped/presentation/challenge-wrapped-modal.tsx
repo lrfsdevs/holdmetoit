@@ -30,6 +30,12 @@ import {
    writeWrappedLocalState,
 } from "./wrapped-storage";
 import { ChallengeFeedbackDialog } from "./challenge-feedback-dialog";
+import type {
+   WrappedMascotMood,
+   WrappedMascotVariant,
+} from "@/features/wrapped/domain/wrapped-mascot.types";
+import { WrappedMascot } from "./wrapped-mascot";
+import { useWrappedMascotPreference } from "./wrapped-storage";
 
 const FEEDBACK_SLIDE_INDEX = 4;
 const VERDICT_SLIDE_INDEX = 3;
@@ -94,6 +100,7 @@ interface ChallengeWrappedModalProps {
    challenge: ChallengeScoreboardViewModel;
    isOpen?: boolean;
    onClose?: () => void;
+   mascotVariantOverride?: WrappedMascotVariant;
 }
 
 /**
@@ -106,7 +113,11 @@ export function ChallengeWrappedModal({
    challenge,
    isOpen: controlledIsOpen,
    onClose,
+   mascotVariantOverride,
 }: ChallengeWrappedModalProps) {
+   const { variant: mascotVariant } = useWrappedMascotPreference(
+      mascotVariantOverride
+   );
    const [isOpen, setIsOpen] = useState(controlledIsOpen ?? false);
    const [slideIndex, setSlideIndex] = useState(0);
    const [dismissedThisVisit, setDismissedThisVisit] = useState(false);
@@ -593,6 +604,21 @@ export function ChallengeWrappedModal({
    const chart: WrappedStoryChart = story.chart;
    const verdict = story.verdict;
 
+   const slideMood: WrappedMascotMood =
+      slideIndex === 0
+         ? "hyped"
+         : slideIndex === 1
+           ? "hyped"
+           : slideIndex === 2
+             ? "proud"
+             : slideIndex === 3
+               ? revealed
+                  ? verdict?.stamp === "Saved" || verdict?.stamp === "Excused"
+                     ? "proud"
+                     : "sleepy"
+                  : "shy"
+               : "idle";
+
    const verdictToneColors = {
       saved: {
          ring: "var(--color-feedback-success)",
@@ -746,7 +772,7 @@ export function ChallengeWrappedModal({
                      <path d="M3 3l10 10M13 3L3 13" />
                   </svg>
                </button>
-               <div className="flex-1 flex justify-center gap-2 pr-[38px]">
+               <div className="flex-1 flex justify-center gap-2">
                   {Array.from({ length: LAST_SLIDE_INDEX + 1 }, (_, index) => (
                      <button
                         key={index}
@@ -763,6 +789,16 @@ export function ChallengeWrappedModal({
                         onClick={() => go(index)}
                      />
                   ))}
+               </div>
+               <div
+                  className="w-[64px] h-[48px] flex items-center justify-end shrink-0"
+                  data-testid="wrapped-modal-mascot-header"
+               >
+                  <WrappedMascot
+                     variant={mascotVariant}
+                     mood={slideMood}
+                     size="sm"
+                  />
                </div>
             </div>
 

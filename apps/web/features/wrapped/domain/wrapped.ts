@@ -12,6 +12,8 @@ import type {
    ScoreboardStandingEntry,
 } from "@/features/leaderboard/domain/leaderboard.types";
 
+export * from "./wrapped-mascot.types";
+
 /**
  * Pure wrapped domain (Law L7): window/due math and the story view model
  * derived from the cached challenge scoreboard.
