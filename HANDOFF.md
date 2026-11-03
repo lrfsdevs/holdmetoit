@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 197 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-03 (Session 200 on `feat/wrapped-doodle-mascots-#241` · Session 199 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2680,9 +2680,60 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Next.js production build: ✅ compiled successfully (`next build`).
    - Tasker typecheck & tests: ✅ 0 errors, 81/81 tests passing.
    - YPT bot test suite under CI environment (`CI_SKIP_DB="true"`, `DATABASE_URL="postgresql://ci:ci@localhost:5432/ci"`): ✅ 103/103 tests passing (0 failures, 731ms).
-- **NEXT STEP:** Verify CI quality-gates run turns green on PR #218; peer review and merge into `dev`.
+- **NEXT STEP (completed in Session 197):** CI quality-gates run verified green on PR #218; merged into `dev`.
 
-### Session 198 — 2026-11-03 (feat(wrapped): customizable doodle mascots (cat, dog, bunny) and profile preference selector — on `feat/wrapped-doodle-mascots-#241`)
+### Session 198 — 2026-11-03 (feat(changelog): comprehensive changelog update, audience filtering & repository path hardening — on `krish`)
+
+- **Context & Objectives:**
+   1. `CHANGELOG.md`: Analyzed complete git commit history and version progression (2026-09-05 through 2026-11-02). Shortened and consolidated recent commits (2026-10-20 to 2026-11-02) into concise, high-signal entries. Distinguished user-visible updates (`[user]`) from internal engineering, database, and admin operations (`[internal]`).
+   2. `apps/web/features/changelog/domain/changelog.ts`: Extended domain model with `ChangelogAudienceFilter` (`"all" | "user" | "internal"`), `countAudienceEntries` counting utility, and updated `selectVisibleGroups` with audience filter support while keeping default parameters 100% backward compatible.
+   3. `apps/web/features/changelog/presentation/changelog-view.tsx`: Enhanced `/changelog` presentation. Regular users see only user-facing updates without internal jargon; admins/devs receive an interactive audience filter toolbar (`All Updates`, `User Facing`, `Admin & Dev`) with count badges, plus emerald `User` and obsidian `Admin / Dev` card badges.
+   4. `apps/web/features/changelog/data/changelog.repository.ts`: Hardened `CHANGELOG.md` candidate path discovery across `process.cwd()` variations to guarantee reliable file loading in monorepo workspaces and serverless runtimes.
+   5. `apps/web/features/changelog/domain/changelog.test.ts`: Added unit tests for audience filtering and entry counts.
+- **Quality Gates:**
+   - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exited with 0).
+   - Web test suite: ✅ 240/240 test files green (2,375/2,375 tests passing).
+- **NEXT STEP:** Submit PR from `krish` to `dev`, verify CI checks, and review.
+
+### Session 199 — 2026-11-03 (fix(security): sanitize client error responses and mask infrastructure exceptions server-side across web and tasker — GH-#231 / Jira KAN-86 on `krish`)
+
+- **Context & Objectives:**
+   1. **Jira Issue Assignment & Lifecycle (§4.4):** Queried Jira Cloud API for ticket `KAN-86` (`[GH-#231] fix(web): stop returning raw error messages to clients and Discord users`). Assigned issue to Krish Jaiswal (`712020:c817994e-1562-4d95-bb61-97f392dccfa5`) and transitioned from `To Do` $\rightarrow$ `In Progress` (Transition ID `21`).
+   2. **Threat Model (SEC-09):** Many server actions, route handlers, and Tasker bot commands previously returned `error instanceof Error ? error.message : "..."`. Unhandled Prisma, Supabase, Discord, GitHub, or Jira errors leaked database schemas, internal connection strings (`postgres://`), SQL queries, and upstream response bodies.
+   3. **Pure Domain Error Isolation (`apps/web/core/errors/domain/client-error.ts` - Law L7):** Created pure domain models with zero framework/ORM dependencies. Defined `ClientError`, `DomainError`, `isDomainError`, and `WHITELISTED_DOMAIN_ERROR_NAMES` encompassing human-actionable domain error classes (`AuthError`, `AdminAccessError`, `DevAccessError`, `ParticipantAccessError`, `ChallengeStateError`, `WithdrawalError`, `DuoTeamIdentityError`, `WagerValidationError`, `BettingClosedError`, `InsufficientFundsError`, `WalletInvariantViolationError`, `InvalidDurationError`, `DurationParseError`, `MaximumLeavesExceededError`, `BannerNotFoundError`, etc.) as well as recognized authorization codes (`FORBIDDEN_NOT_ADMIN`, `FORBIDDEN_NOT_DEV`, `UNAUTHORIZED`, `NOT_ENROLLED`).
+   4. **Server-Side Correlation Logging (`apps/web/core/errors/to-client-error.ts`):** Standardized `toClientError` helper generating a unique UUID `correlationId` per failure, emitting structured server-side diagnostic events via `createLogger` (`correlationId`, `code`, `isDomainError`, raw exception), and returning sanitized `{ code, message, correlationId, isDomainError }` objects.
+   5. **Tasker Bot Error Sanitization (`apps/tasker/src/lib/error-sanitizer.ts`):** Implemented `sanitizeTaskerError` and updated `yapperize.ts` command to log correlation IDs server-side while presenting safe, user-friendly messages for Gemini API and Discord exceptions.
+   6. **Exhaustive Server Action & API Sanitization:** Updated all call sites in `@holdmetoit/web`:
+      - `apps/web/app/api/feedback/route.ts` (sanitized 500 responses with correlation IDs)
+      - `apps/web/features/challenges/api/challenge-admin.actions.ts` (10 admin actions sanitized)
+      - `apps/web/features/challenges/api/enroll-participant.actions.ts`
+      - `apps/web/features/challenges/api/withdraw-participant.actions.ts`
+      - `apps/web/features/accountability/api/admin-pardon.actions.ts`
+      - `apps/web/features/admin/api/user-directory.actions.ts`
+      - `apps/web/features/cron-logs/api/cron-log.actions.ts`
+      - `apps/web/features/economy/api/wallet.actions.ts`
+      - `apps/web/features/economy/api/study-reward.service.ts`
+      - `apps/web/features/feature-flags/api/feature-flags.actions.ts`
+      - `apps/web/features/participant-status/api/sick-mode.actions.ts`
+      - `apps/web/features/pokemon/api/acquisition.actions.ts`
+      - `apps/web/features/pokemon/api/pokemon.actions.ts`
+      - `apps/web/features/study-logs/api/admin-override.actions.ts`
+      - `apps/web/features/trophies/api/trophy.actions.ts`
+      - `apps/web/features/wagers/api/wager.actions.ts`
+      - `apps/web/features/wrapped/api/wrapped.actions.ts`
+      - `apps/web/features/ypt/api/ypt-claim.actions.ts`
+      - `apps/web/features/ypt/api/ypt-connection.actions.ts`
+      - `apps/web/features/ypt/api/ypt-ingest.service.ts`
+   7. **Documentation:** Created `docs/security/README.md` detailing the client error sanitization architecture, threat model, domain error whitelist, and developer usage patterns.
+- **Quality Gates:**
+   - `npm run test:tasker`: ✅ 5/5 test files green, 84/84 tests passing.
+   - `npm run typecheck:tasker`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run typecheck:web`: ✅ 0 errors (`tsc --noEmit` exited with 0).
+   - `npm run test:web`: ✅ 243/243 test files green, 2,396/2,396 tests passing.
+   - `npm run lint:web`: ✅ 0 errors.
+- **NEXT STEP (completed in Session 199):** PR #238 merged into `dev`.
+
+### Session 200 — 2026-11-03 (feat(wrapped): customizable doodle mascots (cat, dog, bunny) and profile preference selector — on `feat/wrapped-doodle-mascots-#241`)
 
 - **Context & Objectives:** Implement customizable "Wrapped Mascot" companion system for the Event Wrapped feature (`apps/web/features/wrapped/`) and wire a preference selector into the user's Preferences section (`/profile` & `/preferences`), preserving the original Googly Eyes while adding animated Doodle Cat, Doodle Dog, and Doodle Bunny options (Issue #241, Jira KAN-93):
    1. **Pure Domain Mascot Types (`wrapped-mascot.types.ts`):**
@@ -2704,14 +2755,18 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Integrated into `/profile` Settings tab (`global-profile-view.tsx`) and `/preferences` (`preferences-view.tsx`).
    6. **Visual Scale & Character Illustration Overhaul (`wrapped-mascot.tsx`, `wrapped-shy-card.tsx`):**
       - Scaled up mascots across all tiers (`sm`: `w-16 h-12 sm:w-20 sm:h-16`, `md`: `w-24 h-20 sm:w-28 sm:h-24`, `lg`: `w-32 h-24 sm:w-36 sm:h-28`, `xl`: `w-40 h-32 sm:w-44 sm:h-36`).
-      - Completely redesigned animal SVG artwork with high-contrast solid light fills (`#ffffff`, biscuit `#fef3c7`), bold charcoal linework (`#18181b`), anime double-sparkle eye reflections, and unmistakable anatomical character markers:
+      - Completely redesigned animal SVG artwork with high-contrast solid light fills (`white`, biscuit `#fef3c7`), bold charcoal linework (`var(--color-surface-page)`), anime double-sparkle eye reflections, and unmistakable anatomical character markers:
          - **Doodle Cat:** Rounded white kitten dome, triangular ears with soft pink fluff pads, 6 distinct whiskers, :3 mouth, pink button nose, blush cheeks, and chubby paws with pink toe beans.
          - **Doodle Dog:** Warm biscuit/honey pup, big floppy caramel hound ears, white snout muzzle, heart-shaped black button nose with wet shine highlight, happy head-tilt, and pink tongue blep.
          - **Doodle Bunny:** Snow-white rabbit dome, tall upright ear with pink contour, charming folded lop ear, twitching pink nose, Y-mouth, and soft fluffy paws with pink pads.
       - Updated `wrapped-shy-card.tsx` parked card translation from `-translate-x-[64px]` to `-translate-x-[116px]` (hover `-translate-x-[132px]`), removed destructive `sm:scale-75` card shrink, increased mobile card width to `w-[96px]`, and set mascot to `size="md"` so characters peek out boldly with generous room.
       - Expanded modal header container to `w-[64px] h-[48px]` and preference preview boxes to `h-28 sm:h-32`.
-   7. **Documentation & Quality Gates:**
+   7. **Design Token Compliance:**
+      - Replaced raw hex color literals in SVG markup with semantic tokens (`var(--color-surface-page)`, `var(--color-brand-3)`, `var(--color-brand-1-dark)`, `white`).
+      - Standardized typography in selector cards to `text-meta`.
+   8. **Documentation & Quality Gates:**
       - Added comprehensive feature architecture documentation in `docs/wrapped/README.md`.
       - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
+      - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
-- **NEXT STEP:** Submit Pull Request from `feat/wrapped-doodle-mascots-#241` to `dev`, advance Jira issue KAN-93 to `In Review`.
+- **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.

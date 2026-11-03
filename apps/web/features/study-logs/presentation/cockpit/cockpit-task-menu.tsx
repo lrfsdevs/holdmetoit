@@ -16,6 +16,7 @@ import {
    validateMoveTaskChallengeDay,
    type ChallengeDayOption,
 } from "@/features/study-logs/domain/challenge-day";
+import { isWeeklyTaskGraceExpired } from "@/features/tasks/domain/task-lock";
 import type { TaskStatus } from "@/features/tasks/domain/task.types";
 import type { TaskItem, CategoryGroup } from "./cockpit-tasks-section";
 
@@ -70,6 +71,12 @@ export function TaskMenuItems({
          const targetOpt = dayOptions.find((d) => d.dateKey === dateKey);
          return targetOpt?.isPast ?? dateKey < effectiveTodayDate;
       })();
+
+   const isGraceLocked = isWeeklyTaskGraceExpired({
+      taskType: taskType === "weekly" ? "WEEKLY" : "DAILY",
+      challengeId: task.challengeId,
+      createdAt: task.createdAt ?? new Date(),
+   });
 
    const moveDaysConfig =
       taskType === "daily"
@@ -260,7 +267,8 @@ export function TaskMenuItems({
 
          {taskType === "weekly" &&
             linkableChallengeId &&
-            onToggleChallengeScope && (
+            onToggleChallengeScope &&
+            !isGraceLocked && (
                <>
                   <Separator />
                   <div className="px-3 py-1 text-label font-semibold tracking-wider uppercase text-text-tertiary">
@@ -303,11 +311,15 @@ export function TaskMenuItems({
             <span>Edit Task</span>
          </Item>
 
-         {Boolean(isChallengeActive && isTaskOnPastDay) ? (
+         {Boolean((isChallengeActive && isTaskOnPastDay) || isGraceLocked) ? (
             <Item
                disabled
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-tertiary cursor-not-allowed text-left opacity-50"
-               title="Tasks on past challenge days cannot be deleted"
+               title={
+                  isGraceLocked
+                     ? "Weekly goals lock 24 hours after they are added"
+                     : "Tasks on past challenge days cannot be deleted"
+               }
             >
                <Trash2 className="h-3.5 w-3.5 text-text-tertiary" />
                <span>Delete Task (Locked)</span>
@@ -368,8 +380,21 @@ export function CategoryMenuItems({
            cat.id ? c.id === cat.id : c.name === cat.name
         );
 
+   const weeklyTargetCat = weeklyCategories.find((c) =>
+      cat.id ? c.id === cat.id : catType === "weekly" && c.name === cat.name
+   );
+   const hasGraceLockedTasks = Boolean(
+      weeklyTargetCat?.tasks.some((t) =>
+         isWeeklyTaskGraceExpired({
+            taskType: "WEEKLY",
+            challengeId: t.challengeId,
+            createdAt: t.createdAt ?? new Date(),
+         })
+      )
+   );
+
    const eligibleDays =
-      catIdx === -1
+      catIdx === -1 || (!isDaily && hasGraceLockedTasks)
          ? []
          : dayOptions.filter((opt) => {
               if (isDaily) {
@@ -458,11 +483,15 @@ export function CategoryMenuItems({
             <span>Rename Category</span>
          </Item>
 
-         {hasPastTasks ? (
+         {hasPastTasks || hasGraceLockedTasks ? (
             <Item
                disabled
                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-text-tertiary cursor-not-allowed text-left opacity-50"
-               title="Categories containing tasks on past challenge days cannot be deleted"
+               title={
+                  hasGraceLockedTasks
+                     ? "Categories containing locked weekly goals cannot be deleted"
+                     : "Categories containing tasks on past challenge days cannot be deleted"
+               }
             >
                <Trash2 className="h-3.5 w-3.5 text-text-tertiary" />
                <span>Delete Category (Locked)</span>

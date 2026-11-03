@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+   countAudienceEntries,
    formatEntryDate,
    hasEntries,
    parseChangelogMarkdown,
@@ -120,7 +121,7 @@ describe("changelog domain", () => {
          expect(groups[0].entries).toHaveLength(2);
       });
 
-      it("shows every entry to admins", () => {
+      it("shows every entry to admins by default", () => {
          const groups = selectVisibleGroups(
             parseChangelogMarkdown(SAMPLE),
             true
@@ -130,6 +131,32 @@ describe("changelog domain", () => {
             "2026-10-11",
             "2026-10-10",
          ]);
+      });
+
+      it("filters to only user-facing entries when requested by admins", () => {
+         const groups = selectVisibleGroups(
+            parseChangelogMarkdown(SAMPLE),
+            true,
+            "user"
+         );
+
+         expect(groups.map((group) => group.date)).toEqual(["2026-10-10"]);
+         expect(groups[0].entries.every((e) => e.audience === "user")).toBe(
+            true
+         );
+      });
+
+      it("filters to only internal entries when requested by admins", () => {
+         const groups = selectVisibleGroups(
+            parseChangelogMarkdown(SAMPLE),
+            true,
+            "internal"
+         );
+
+         expect(groups.map((group) => group.date)).toEqual(["2026-10-11"]);
+         expect(groups[0].entries.every((e) => e.audience === "internal")).toBe(
+            true
+         );
       });
 
       it("drops date groups that have no visible entries", () => {
@@ -142,6 +169,19 @@ describe("changelog domain", () => {
          expect(groups.some((group) => group.date === "2026-10-11")).toBe(
             false
          );
+      });
+   });
+
+   describe("countAudienceEntries", () => {
+      it("accurately counts total, user, and internal entries", () => {
+         const groups = parseChangelogMarkdown(SAMPLE);
+         const counts = countAudienceEntries(groups);
+
+         expect(counts).toEqual({
+            total: 3,
+            user: 2,
+            internal: 1,
+         });
       });
    });
 

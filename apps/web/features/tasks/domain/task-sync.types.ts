@@ -79,6 +79,7 @@ export type MutationReason =
    | "category_missing"
    | "category_name_taken"
    | "challenge_locked"
+   | "task_locked"
    | "invalid_payload";
 
 export interface MutationResult {

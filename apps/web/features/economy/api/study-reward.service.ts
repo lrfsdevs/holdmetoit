@@ -1,5 +1,6 @@
 import { prisma } from "@/core/db";
 import { createLogger, logEvents } from "@/core/observability/logger";
+import { toClientError } from "@/core/errors";
 import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
 import { recordStudyRewardTransaction } from "../data/study-reward.repository";
@@ -197,9 +198,12 @@ export async function processStudyReward(
          eligibleSeconds,
       };
    } catch (error) {
-      logger.error(logEvents.appError, {
+      const clientError = toClientError(error, {
+         scope: "economy.study_reward",
+         event: logEvents.appError,
          context: { studyLogId, userId },
-         error,
+         defaultCode: "REWARD_PROCESSING_FAILED",
+         defaultMessage: "Failed to process study reward.",
       });
       return {
          ok: false,
@@ -207,10 +211,7 @@ export async function processStudyReward(
          fractionalSecondsRemaining: 0,
          isDuplicate: false,
          eligibleSeconds: 0,
-         message:
-            error instanceof Error
-               ? error.message
-               : "Failed to process study reward.",
+         message: clientError.message,
       };
    }
 }

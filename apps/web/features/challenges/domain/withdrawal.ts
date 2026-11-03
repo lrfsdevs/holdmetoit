@@ -3,6 +3,15 @@ import type { ChallengeStatus } from "./challenge-lifecycle";
 export type WithdrawalBlockCode =
    "ALREADY_WITHDRAWN" | "RESULTS_LOCKED" | "CHALLENGE_COMPLETED";
 
+export class WithdrawalError extends Error {
+   readonly code?: string;
+   constructor(message: string, code?: string) {
+      super(message);
+      this.name = "WithdrawalError";
+      this.code = code;
+   }
+}
+
 export type WithdrawalEligibility =
    | { allowed: true }
    | { allowed: false; code: WithdrawalBlockCode; message: string };
