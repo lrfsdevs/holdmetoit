@@ -153,12 +153,12 @@ describe("CockpitTasksSection", () => {
       expect(html).toContain('aria-checked="false"');
       expect(html).not.toContain("Incomplete");
 
-      // Completed weekly task
+      // Completed weekly task remains visible
       expect(html).toContain('aria-checked="true"');
       expect(html).toContain("Completed");
    });
 
-   it("renders In Progress and Crossed Out status badges appropriately", () => {
+   it("renders In Progress, Crossed Out, and Completed daily tasks", () => {
       const customTasks: UserCategorizedTasks = {
          ...mockTasks,
          dailyCategories: [
@@ -192,6 +192,18 @@ describe("CockpitTasksSection", () => {
                      updatedAt: new Date(),
                      completedAt: null,
                   },
+                  {
+                     id: "t_done",
+                     userId: "user_1",
+                     categoryId: "cat_daily_status",
+                     title: "Finished Task",
+                     taskType: "DAILY",
+                     isComplete: true,
+                     status: "COMPLETED",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: new Date(),
+                  },
                ],
             },
          ],
@@ -206,7 +218,156 @@ describe("CockpitTasksSection", () => {
 
       expect(html).toContain("In Progress");
       expect(html).toContain("Crossed Out");
+      expect(html).toContain("Blocked Task");
+      expect(html).toContain("Finished Task");
       expect(html).not.toContain("Incomplete");
+   });
+
+   it("hides weekly tasks bound to a completed challenge while keeping daily and other weekly tasks", () => {
+      const completedChallengeTasks: UserCategorizedTasks = {
+         ...mockTasks,
+         dailyCategories: [
+            {
+               id: "cat_daily_old",
+               name: "Old Challenge Daily",
+               taskType: "DAILY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t_daily_done",
+                     userId: "user_1",
+                     categoryId: "cat_daily_old",
+                     title: "Old Challenge Daily Completed",
+                     taskType: "DAILY",
+                     isComplete: true,
+                     status: "COMPLETED",
+                     challengeId: "chal-old",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: new Date(),
+                  },
+               ],
+            },
+         ],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_old",
+               name: "Old Challenge Weekly",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t_weekly_todo",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_old",
+                     title: "Old Challenge Weekly Todo",
+                     taskType: "WEEKLY",
+                     isComplete: false,
+                     status: "TODO",
+                     challengeId: "chal-old",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: null,
+                  },
+                  {
+                     id: "t_weekly_done",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_old",
+                     title: "Old Challenge Weekly Completed",
+                     taskType: "WEEKLY",
+                     isComplete: true,
+                     status: "COMPLETED",
+                     challengeId: "chal-old",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: new Date(),
+                  },
+                  {
+                     id: "t_weekly_personal_done",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_old",
+                     title: "Personal Weekly Completed",
+                     taskType: "WEEKLY",
+                     isComplete: true,
+                     status: "COMPLETED",
+                     challengeId: null,
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: new Date(),
+                  },
+                  {
+                     id: "t_weekly_active_done",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_old",
+                     title: "Active Weekly Completed",
+                     taskType: "WEEKLY",
+                     isComplete: true,
+                     status: "COMPLETED",
+                     challengeId: "chal-active",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: new Date(),
+                  },
+               ],
+            },
+         ],
+         completedChallengeIds: ["chal-old"],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userTasks: completedChallengeTasks,
+            completedChallengeIds: ["chal-old"],
+            challengeId: "chal-old",
+            challengeStatus: "COMPLETED",
+         })
+      );
+
+      expect(html).toContain("Old Challenge Daily Completed");
+      expect(html).not.toContain("Old Challenge Weekly Todo");
+      expect(html).not.toContain("Old Challenge Weekly Completed");
+      expect(html).toContain("Personal Weekly Completed");
+      expect(html).toContain("Active Weekly Completed");
+   });
+
+   it("shows weekly challenge tasks when no completed challenge ids are provided", () => {
+      const weeklyTask: UserCategorizedTasks = {
+         ...mockTasks,
+         dailyCategories: [],
+         weeklyCategories: [
+            {
+               id: "cat_weekly_active",
+               name: "Active Challenge Weekly",
+               taskType: "WEEKLY",
+               isCollapsed: false,
+               tasks: [
+                  {
+                     id: "t_weekly_active",
+                     userId: "user_1",
+                     categoryId: "cat_weekly_active",
+                     title: "Active Challenge Weekly Goal",
+                     taskType: "WEEKLY",
+                     isComplete: false,
+                     status: "TODO",
+                     challengeId: "chal-active",
+                     createdAt: new Date(),
+                     updatedAt: new Date(),
+                     completedAt: null,
+                  },
+               ],
+            },
+         ],
+      };
+
+      const html = renderToStaticMarkup(
+         createElement(CockpitTasksSection, {
+            isLoggedIn: true,
+            userTasks: weeklyTask,
+         })
+      );
+
+      expect(html).toContain("Active Challenge Weekly Goal");
    });
 
    it("renders full 7-day pill switcher tabs with challenge days for all users (participants and admins)", () => {
@@ -585,6 +746,7 @@ describe("CockpitTasksSection", () => {
       // Existing task is rendered and has checkbox + status pill
       expect(dailySection).toContain("Day 1 Historic Study Task");
       expect(dailySection).toContain('role="checkbox"');
+      expect(dailySection).toContain('aria-checked="true"');
       expect(dailySection).toContain("Completed");
       expect(dailySection).toContain(
          'aria-label="Options for task Day 1 Historic Study Task"'

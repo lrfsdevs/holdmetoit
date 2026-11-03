@@ -153,6 +153,13 @@ export function getTaskStatus(task: TaskItem): TaskStatus {
    return task.completed ? "COMPLETED" : "TODO";
 }
 
+function isWeeklyTaskVisible(
+   task: TaskItem,
+   completedChallengeIds: Set<string>
+): boolean {
+   return !(task.challengeId && completedChallengeIds.has(task.challengeId));
+}
+
 export { formatDayDate };
 
 export const SAMPLE_STUDY_TASKS = [
@@ -177,6 +184,7 @@ export interface CockpitTasksSectionProps {
    isLoggedIn: boolean;
    userId?: string | null;
    userTasks?: UserCategorizedTasks | null;
+   completedChallengeIds?: string[];
    challengeStartDate?: string;
    challengeId?: string;
    challengeStatus?: "UPCOMING" | "ACTIVE" | "COMPLETED";
@@ -195,6 +203,7 @@ export function CockpitTasksSection({
    isLoggedIn,
    userId,
    userTasks,
+   completedChallengeIds,
    challengeStartDate,
    challengeId,
    challengeStatus,
@@ -519,6 +528,25 @@ export function CockpitTasksSection({
          }
          return [];
       }
+   );
+
+   const completedChallengeIdSet = useMemo(() => {
+      const ids = new Set(completedChallengeIds ?? []);
+      if (challengeStatus === "COMPLETED" && challengeId) {
+         ids.add(challengeId);
+      }
+      return ids;
+   }, [completedChallengeIds, challengeStatus, challengeId]);
+
+   const visibleWeeklyCategories = useMemo(
+      () =>
+         weeklyCategories.map((category) => ({
+            ...category,
+            tasks: category.tasks.filter((task) =>
+               isWeeklyTaskVisible(task, completedChallengeIdSet)
+            ),
+         })),
+      [weeklyCategories, completedChallengeIdSet]
    );
 
    const effectiveTodayDate = useMemo(() => {
@@ -2746,7 +2774,14 @@ export function CockpitTasksSection({
       );
    }, [weeklyCategories, isTaskInWeeklyWeek]);
 
-   const visibleWeeklyTasksCount = totalWeeklyTasksForWeek;
+   const visibleWeeklyTasksCount = useMemo(
+      () =>
+         visibleWeeklyCategories.reduce(
+            (acc, cat) => acc + cat.tasks.filter(isTaskInWeeklyWeek).length,
+            0
+         ),
+      [visibleWeeklyCategories, isTaskInWeeklyWeek]
+   );
 
    const handleAddTodoSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -5705,7 +5740,7 @@ export function CockpitTasksSection({
                         </div>
                      ) : (
                         <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-obsidian">
-                           {weeklyCategories.map((cat, catIdx) => {
+                           {visibleWeeklyCategories.map((cat, catIdx) => {
                               const weekTasks =
                                  cat.tasks.filter(isTaskInWeeklyWeek);
                               if (weekTasks.length === 0) {

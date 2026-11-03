@@ -217,18 +217,16 @@ export function HomeCockpitView({
             isLoggedIn={isLoggedIn}
             userId={user?.id || cockpit?.participant.userId || null}
             userTasks={effectiveUserTasks}
+            completedChallengeIds={
+               effectiveUserTasks?.completedChallengeIds ?? []
+            }
             challengeStartDate={
                cockpit?.challengeStartDate ||
                (cockpit?.challengeStatus === "ACTIVE"
                   ? cockpit.todayDate
                   : undefined)
             }
-            challengeId={
-               cockpit?.challengeStatus === "ACTIVE" ||
-               cockpit?.challengeStatus === "UPCOMING"
-                  ? cockpit.challengeId
-                  : undefined
-            }
+            challengeId={cockpit?.challengeId}
             challengeStatus={cockpit?.challengeStatus}
             todayDate={cockpit?.todayDate}
             todayDayNumber={

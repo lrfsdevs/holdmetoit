@@ -184,6 +184,25 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
+### Session 190 — 2026-11-02 (Cockpit task visibility on `afnan-jr`)
+
+- **Visibility rule:** daily shows every task, including `COMPLETED` and `CROSSED_OUT`. Weekly hides only tasks bound to a results-locked challenge (`completedChallengeIds` from `Challenge.resultsLockedAt`); all other weekly tasks stay visible/editable. Hiding is presentation-only; no queue/delete or result rewrite.
+- **Bug outcome:** the locked October weekly goals (including `36af5dc5-7f03-4e2e-91b4-56fae52ea988`) are hidden because their challenge results are locked. Daily completed/crossed-out rows remain visible; no production writes or accountability deletions.
+- **Correction to Session 189:** daily challenge auto-linking is intentional per `FEATURES.md` (every task created after enrollment is stamped to the challenge); only weekly challenge-linked tasks are accountability conditions. The weekly-only lock guard stays. Revert the daily auto-link suppression in `createTask`/sync `CREATE`, and remove the repair script's “unlink 227 daily links” classification before any `--apply`.
+- **Tests:** web `234 files / 2,291 tests`; `typecheck:web` 0; `lint:web` 0 errors.
+- **Uncommitted:** merge + review fixes + this visibility rule; no commits/pushes.
+- **NEXT:** add the `challenge_locked` notice and disable edit/toggle/scope/delete for locked weekly goals; correct the repair script; then commit/push `afnan-jr`.
+
+### Session 189 — 2026-11-02 (Web task-revert fix on `afnan-jr`)
+
+- **Root cause:** daily tasks were auto-linked to the current challenge. The results-lock guard checked only `challengeId`, so edits/toggles/deletes of those daily tasks returned `challenge_locked` after the host locked results; the client adopted the server row and silently reverted the change. DB audit: 227 live daily tasks with a `challengeId`, all in locked challenges; 20 users with post-lock task writes.
+- **Web fix:** `createTask` and the sync `CREATE` only resolve/auto-link weekly tasks; an explicit daily `challengeId` is ignored (logged); the lock guard applies only to weekly tasks; a daily legacy link can be cleared with `challengeId: null`.
+- **Task/category model:** a task’s `taskType` is its own board column; a category may contain tasks of either type (weekly parents can hold daily tasks). Task type is immutable on update/move; category type changes no longer cascade to child tasks. `getUserCategorizedTasksFromDatabase` groups by the task’s own type, so weekly tasks in daily categories and daily tasks under weekly parents remain visible.
+- **Data audit/repair:** added `apps/web/scripts/repair-task-invariants.ts` (report-only by default). Report: 227 daily challenge links, 9 live tasks in deleted categories, 101 task/category type differences (reported, not rewritten), 3 weekly goals in daily categories (valid), 1 status mismatch, 6 duplicate clusters. No writes applied.
+- **Tests:** web `234 files / 2,291 tests`; `typecheck:web` 0; `build:web` clean.
+- **Uncommitted:** merge + review fixes + this web fix; no commits/pushes.
+- **NEXT:** manual locked-challenge/two-profile checks; run the repair report on a local copy, then apply with approval/backup (`--apply --force-host --allow-locked-challenges`).
+
 ### Session 188 — 2026-11-01 (20h log limit / 12h counted cap on `afnan-jr`)
 
 - **Split limits (supersedes the raw-log portion of Session 187):** `MAX_DAILY_LOG_SECONDS` is now `20h (72,000s)`; `MAX_COUNTED_DAILY_STUDY_SECONDS` remains `12h (43,200s)`. Added `clampDailyLogSeconds()` for raw logging paths.
