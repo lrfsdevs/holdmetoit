@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-02 (Session 197 on `krish` · Session 189 on `afnan-jr`)
+> **Last Updated:** 2026-11-03 (Session 200 on `feat/wrapped-doodle-mascots-#241` · Session 199 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2731,4 +2731,42 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - `npm run typecheck:web`: ✅ 0 errors (`tsc --noEmit` exited with 0).
    - `npm run test:web`: ✅ 243/243 test files green, 2,396/2,396 tests passing.
    - `npm run lint:web`: ✅ 0 errors.
-- **NEXT STEP:** Submit PR from `krish` to `dev`, link GitHub Issue #231, transition Jira `KAN-86` to `In Review`, and request peer review.
+- **NEXT STEP (completed in Session 199):** PR #238 merged into `dev`.
+
+### Session 200 — 2026-11-03 (feat(wrapped): customizable doodle mascots (cat, dog, bunny) and profile preference selector — on `feat/wrapped-doodle-mascots-#241`)
+
+- **Context & Objectives:** Implement customizable "Wrapped Mascot" companion system for the Event Wrapped feature (`apps/web/features/wrapped/`) and wire a preference selector into the user's Preferences section (`/profile` & `/preferences`), preserving the original Googly Eyes while adding animated Doodle Cat, Doodle Dog, and Doodle Bunny options (Issue #241, Jira KAN-93):
+   1. **Pure Domain Mascot Types (`wrapped-mascot.types.ts`):**
+      - Defined `WrappedMascotVariant` (`'GOOGLY_EYES' | 'CAT' | 'DOG' | 'BUNNY'`) and `WrappedMascotMood` (`'idle' | 'shy' | 'hover' | 'hyped' | 'proud' | 'sleepy'`).
+      - Created `WRAPPED_MASCOT_OPTIONS` metadata array with descriptions and badges.
+      - Added pure domain validation guards `isWrappedMascotVariant` and `normalizeWrappedMascot` (Law L7).
+   2. **Preference Persistence & Instant Event Sync (`wrapped-storage.ts`):**
+      - Implemented `getWrappedMascotPreference` and `setWrappedMascotPreference` using `hmt:wrapped:mascot_preference` in local storage with memory fallback.
+      - Implemented reactive hook `useWrappedMascotPreference` listening to both `storage` events and custom `wrapped-mascot-change` window events for immediate cross-component reactivity without reload.
+   3. **Unified Mascot Component (`wrapped-mascot.tsx`):**
+      - Built `<WrappedMascot />` supporting all 4 variants as inline theme SVGs with shared smooth vector cursor-tracking pupil physics.
+      - Added mood-dependent expressions (ear-twitching, blush circles, floppy ear wiggles, head-tilt, and tongue blep).
+      - Added accessibility support for `prefers-reduced-motion` and safe fallback for non-browser/SSR environments.
+   4. **Integration into Wrapped Presentation:**
+      - Updated `wrapped-shy-card.tsx` and `dashboard-wrapped.tsx` with optional `variantOverride` and reactive mascot peeking.
+      - Updated `challenge-wrapped-modal.tsx` with mascot in the modal header dynamically reacting to slide-specific moods.
+   5. **Profile & Preferences Selector Card (`wrapped-mascot-preference-card.tsx`):**
+      - Built 4-option interactive grid with live cursor-tracking previews and instant selection confirmation toast.
+      - Integrated into `/profile` Settings tab (`global-profile-view.tsx`) and `/preferences` (`preferences-view.tsx`).
+   6. **Visual Scale & Character Illustration Overhaul (`wrapped-mascot.tsx`, `wrapped-shy-card.tsx`):**
+      - Scaled up mascots across all tiers (`sm`: `w-16 h-12 sm:w-20 sm:h-16`, `md`: `w-24 h-20 sm:w-28 sm:h-24`, `lg`: `w-32 h-24 sm:w-36 sm:h-28`, `xl`: `w-40 h-32 sm:w-44 sm:h-36`).
+      - Completely redesigned animal SVG artwork with high-contrast solid light fills (`white`, biscuit `#fef3c7`), bold charcoal linework (`var(--color-surface-page)`), anime double-sparkle eye reflections, and unmistakable anatomical character markers:
+         - **Doodle Cat:** Rounded white kitten dome, triangular ears with soft pink fluff pads, 6 distinct whiskers, :3 mouth, pink button nose, blush cheeks, and chubby paws with pink toe beans.
+         - **Doodle Dog:** Warm biscuit/honey pup, big floppy caramel hound ears, white snout muzzle, heart-shaped black button nose with wet shine highlight, happy head-tilt, and pink tongue blep.
+         - **Doodle Bunny:** Snow-white rabbit dome, tall upright ear with pink contour, charming folded lop ear, twitching pink nose, Y-mouth, and soft fluffy paws with pink pads.
+      - Updated `wrapped-shy-card.tsx` parked card translation from `-translate-x-[64px]` to `-translate-x-[116px]` (hover `-translate-x-[132px]`), removed destructive `sm:scale-75` card shrink, increased mobile card width to `w-[96px]`, and set mascot to `size="md"` so characters peek out boldly with generous room.
+      - Expanded modal header container to `w-[64px] h-[48px]` and preference preview boxes to `h-28 sm:h-32`.
+   7. **Design Token Compliance:**
+      - Replaced raw hex color literals in SVG markup with semantic tokens (`var(--color-surface-page)`, `var(--color-brand-3)`, `var(--color-brand-1-dark)`, `white`).
+      - Standardized typography in selector cards to `text-meta`.
+   8. **Documentation & Quality Gates:**
+      - Added comprehensive feature architecture documentation in `docs/wrapped/README.md`.
+      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
+      - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
+      - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
+- **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.
