@@ -20,7 +20,6 @@ import {
 } from "../data/ypt-claim.repository";
 import { YptClaimStatus } from "../domain/ypt-claim-state-machine";
 import { classifyYptError } from "../domain/ypt-error-classifier";
-import { checkRateLimit } from "@/core/security/rate-limiter";
 import { toClientError } from "@/core/errors";
 
 const submitYptClaimSchema = z.object({
@@ -147,25 +146,11 @@ export async function submitYptClaimAction(input: SubmitYptClaimInput) {
 
 /**
  * Returns searchable roster entries with claim status for the signed-in user.
- * Limits roster lookups per user and returns sanitized upstream errors.
+ * Returns sanitized upstream errors.
  */
 export async function getYptRosterAction(search?: string) {
    try {
       const user = await requireSessionUser();
-
-      const rateCheck = checkRateLimit(`ypt_roster:${user.id}`, {
-         maxAttempts: 30,
-         windowMs: 60 * 1000,
-      });
-
-      if (!rateCheck.allowed) {
-         return {
-            ok: false,
-            code: "RATE_LIMITED",
-            message: "Too many roster lookups. Please wait a moment.",
-            data: [],
-         };
-      }
 
       const roster = await getYptRosterWithStatus({
          currentUserId: user.id,
@@ -191,7 +176,7 @@ export async function getYptRosterAction(search?: string) {
 }
 
 /**
- * Validates and rate-limits the signed-in user’s roster selection before submitting a pending claim.
+ * Validates the signed-in user’s roster selection before submitting a pending claim.
  */
 export async function submitYptSelectionAction(input: SubmitYptSelectionInput) {
    try {
@@ -205,20 +190,6 @@ export async function submitYptSelectionAction(input: SubmitYptSelectionInput) {
             ok: false,
             code: "INVALID_INPUT",
             message: firstMessage,
-         };
-      }
-
-      const rateCheck = checkRateLimit(`ypt_claim:${user.id}`, {
-         maxAttempts: 10,
-         windowMs: 10 * 60 * 1000,
-      });
-
-      if (!rateCheck.allowed) {
-         return {
-            ok: false,
-            code: "RATE_LIMITED",
-            message:
-               "Too many verification requests. Please wait before retrying.",
          };
       }
 

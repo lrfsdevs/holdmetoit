@@ -10,7 +10,6 @@ import {
 import * as repo from "../data/ypt-claim.repository";
 import * as requireDev from "@/features/auth/api/require-dev";
 import { requireSessionUser } from "@/features/auth/api/require-session";
-import { clearRateLimitStore } from "@/core/security/rate-limiter";
 
 vi.mock("@/features/auth/api/require-session", () => ({
    requireSessionUser: vi.fn(),
@@ -43,7 +42,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 describe("YPT participant actions", () => {
    beforeEach(() => {
       vi.clearAllMocks();
-      clearRateLimitStore();
       vi.mocked(requireSessionUser).mockResolvedValue({
          id: "user-1",
          email: "user@example.com",

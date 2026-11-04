@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearRateLimitStore } from "@/core/security/rate-limiter";
 
 const {
    createSignedStorageUpload,
@@ -11,10 +10,6 @@ const {
    deleteStorageObject: vi.fn(),
    verifyFeedbackAttachment: vi.fn(),
    discardFeedbackAttachment: vi.fn(),
-}));
-
-vi.mock("next/headers", () => ({
-   headers: () => new Headers({ "x-forwarded-for": "203.0.113.7" }),
 }));
 
 vi.mock("@/core/storage/supabase-storage", () => ({
@@ -48,7 +43,6 @@ const verified = {
 
 beforeEach(() => {
    vi.clearAllMocks();
-   clearRateLimitStore();
    createSignedStorageUpload.mockResolvedValue({
       path: "feedback-attachments/abc.jpg",
       token: "token",
@@ -103,22 +97,6 @@ describe("requestFeedbackAttachmentUploadAction", () => {
          sizeBytes: 10,
       });
       expect(result).toMatchObject({ ok: false, code: "UPLOAD_FAILED" });
-   });
-
-   it("rate limits repeated requests", async () => {
-      for (let index = 0; index < 30; index += 1) {
-         const result = await requestFeedbackAttachmentUploadAction({
-            mimeType: "image/png",
-            sizeBytes: 10,
-         });
-         expect(result.ok).toBe(true);
-      }
-
-      const blocked = await requestFeedbackAttachmentUploadAction({
-         mimeType: "image/png",
-         sizeBytes: 10,
-      });
-      expect(blocked).toMatchObject({ ok: false, code: "RATE_LIMITED" });
    });
 });
 
