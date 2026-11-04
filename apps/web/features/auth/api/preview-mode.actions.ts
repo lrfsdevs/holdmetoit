@@ -18,7 +18,7 @@ export async function toggleParticipantPreviewAction(desiredState?: boolean) {
       return { ok: false, isPreviewActive: false };
    }
 
-   const cookieStore = cookies();
+   const cookieStore = await cookies();
    const currentState =
       cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value === "true";
    const nextState = desiredState !== undefined ? desiredState : !currentState;

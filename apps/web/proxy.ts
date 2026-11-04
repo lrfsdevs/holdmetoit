@@ -8,14 +8,14 @@ const SESSION_COOKIE_NAMES = [
 ];
 
 /**
- * Lightweight edge middleware for early gatekeeping on protected administrative routes.
- * Deflects completely unauthenticated requests at the network edge before Server Components
- * or database connections are initialized.
+ * Lightweight proxy for early gatekeeping on protected administrative routes.
+ * Deflects completely unauthenticated requests before Server Components or
+ * database connections are initialized.
  *
  * Fine-grained RBAC (checking ADMIN vs DEV vs PARTICIPANT roles) remains enforced by
  * Server Component layouts and Server Actions using the database-backed session.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
    const { pathname } = request.nextUrl;
 
    if (pathname.startsWith("/admin") || pathname.startsWith("/devboard")) {

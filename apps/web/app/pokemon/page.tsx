@@ -28,12 +28,13 @@ export const metadata = {
 };
 
 interface PokemonPageProps {
-   searchParams?: {
+   searchParams?: Promise<{
       as?: string;
-   };
+   }>;
 }
 
 export default async function PokemonPage({ searchParams }: PokemonPageProps) {
+   const query = (await searchParams) ?? {};
    const pokemonEnabled = await isFeatureEnabled(FEATURE_FLAG_KEYS.pokemon);
 
    if (!pokemonEnabled) {
@@ -56,7 +57,7 @@ export default async function PokemonPage({ searchParams }: PokemonPageProps) {
    const { isAdmin } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
-      searchParamAs: searchParams?.as,
+      searchParamAs: query.as,
    });
 
    const userId = session?.user?.id;

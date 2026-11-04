@@ -6,17 +6,18 @@ import { resolveDevBoardTab } from "@/features/feature-flags/domain/devboard-tab
 export const dynamic = "force-dynamic";
 
 interface DevBoardPageProps {
-   searchParams?: {
+   searchParams?: Promise<{
       tab?: string | string[];
-   };
+   }>;
 }
 
 /** Loads feature flags and restores the active DevBoard section from `?tab=`. */
 export default async function DevBoardPage({
    searchParams,
 }: DevBoardPageProps) {
+   const query = (await searchParams) ?? {};
    const flags = await listFeatureFlags();
-   const initialTab = resolveDevBoardTab(searchParams?.tab);
+   const initialTab = resolveDevBoardTab(query.tab);
 
    return (
       <DevBoardView
