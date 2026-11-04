@@ -12,9 +12,7 @@ import { cn } from "@/lib/utils";
 // Module-level cache to prevent duplicate background sync requests per session
 const syncedIdentities = new Set<string>();
 
-export interface UserAvatarProps extends React.ComponentPropsWithoutRef<
-   typeof Avatar
-> {
+export type UserAvatarProps = React.ComponentPropsWithoutRef<typeof Avatar> & {
    src?: string | null;
    alt?: string;
    name?: string | null;
@@ -24,7 +22,7 @@ export interface UserAvatarProps extends React.ComponentPropsWithoutRef<
    fallbackClassName?: string;
    size?: "xs" | "sm" | "md" | "lg" | "xl";
    autoSyncOn404?: boolean;
-}
+};
 
 const sizeClasses: Record<NonNullable<UserAvatarProps["size"]>, string> = {
    xs: "h-5 w-5 text-label",

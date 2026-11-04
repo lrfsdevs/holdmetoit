@@ -41,8 +41,12 @@
       "prepare": "husky || true"
    },
    "devDependencies": {
+      "@types/react": "^19.3.0",
+      "@types/react-dom": "^19.3.0",
       "husky": "^9.1.7",
       "lint-staged": "^17.6.0",
-      "prettier": "^3.9.9"
+      "prettier": "^3.9.9",
+      "react": "^19.3.1",
+      "react-dom": "^19.3.1"
    }
 }

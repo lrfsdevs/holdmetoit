@@ -141,13 +141,18 @@ const challenge: ChallengeScoreboardViewModel = {
    },
 };
 
-function elements(node: ReactNode): ReactElement[] {
+type TestElement = ReactElement<any>;
+
+function elements(node: ReactNode): TestElement[] {
    if (Array.isArray(node)) return node.flatMap(elements);
    if (!isValidElement<{ children?: ReactNode }>(node)) return [];
    return [node, ...elements(node.props.children)];
 }
 
-function find(tree: ReactNode, predicate: (element: ReactElement) => boolean) {
+function find(
+   tree: ReactNode,
+   predicate: (element: TestElement) => boolean
+): TestElement {
    const element = elements(tree).find(predicate);
    if (!element) throw new Error("Expected UI element was not rendered");
    return element;
@@ -189,7 +194,7 @@ function button(tree: ReactNode, text: string) {
    );
 }
 
-function liveRender(render: () => ReactElement) {
+function liveRender(render: () => TestElement) {
    mocks.live = true;
    mocks.cursor = 0;
    return render();
