@@ -116,7 +116,7 @@ describe("ProfilePage (/profile)", () => {
       } as any);
 
       const jsx = await ProfilePage({
-         searchParams: { challengeId: "chal_active" },
+         searchParams: Promise.resolve({ challengeId: "chal_active" }),
       });
 
       expect(globalProfileRepo.getGlobalUserProfile).toHaveBeenCalledWith(

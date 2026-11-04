@@ -99,7 +99,9 @@ describe("UserProfilePage (/profile/[userId])", () => {
             null
          );
 
-         const meta = await generateMetadata({ params: { userId: "missing" } });
+         const meta = await generateMetadata({
+            params: Promise.resolve({ userId: "missing" }),
+         });
          expect(meta.title).toBe("Scholar Not Found | HoldMeToIt");
       });
 
@@ -109,7 +111,7 @@ describe("UserProfilePage (/profile/[userId])", () => {
          );
 
          const meta = await generateMetadata({
-            params: { userId: "user_target" },
+            params: Promise.resolve({ userId: "user_target" }),
          });
          expect(meta.title).toContain("Bob Builder (@bobbuilder)");
          expect(meta.description).toContain("20h lifetime study hours");
@@ -123,7 +125,9 @@ describe("UserProfilePage (/profile/[userId])", () => {
             null
          );
 
-         await UserProfilePage({ params: { userId: "missing_user" } });
+         await UserProfilePage({
+            params: Promise.resolve({ userId: "missing_user" }),
+         });
          expect(notFound).toHaveBeenCalled();
       });
 
@@ -138,7 +142,7 @@ describe("UserProfilePage (/profile/[userId])", () => {
             true
          );
 
-         await UserProfilePage({ params: { userId: "me" } });
+         await UserProfilePage({ params: Promise.resolve({ userId: "me" }) });
 
          expect(globalProfileRepo.getGlobalUserProfile).toHaveBeenCalledWith(
             "user_me"
@@ -163,8 +167,8 @@ describe("UserProfilePage (/profile/[userId])", () => {
          } as any);
 
          const jsx = await UserProfilePage({
-            params: { userId: "user_target" },
-            searchParams: { challengeId: "chal_1" },
+            params: Promise.resolve({ userId: "user_target" }),
+            searchParams: Promise.resolve({ challengeId: "chal_1" }),
          });
 
          expect(privacyDomain.canViewFullProfileHistory).toHaveBeenCalledWith(
