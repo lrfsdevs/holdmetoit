@@ -25,6 +25,7 @@ interface ChallengeViewProps {
    initialTab?: ChallengeTab | string;
    isAdmin?: boolean;
    initialLeaderboardViewMode?: LeaderboardViewMode;
+   initialLeaderboardDay?: number | string;
    initialRosterSearch?: string;
    initialRosterTeamFilter?: string;
    initialRosterPage?: number;
@@ -44,6 +45,7 @@ export function ChallengeView({
    initialTab = DEFAULT_CHALLENGE_TAB,
    isAdmin = false,
    initialLeaderboardViewMode,
+   initialLeaderboardDay,
    initialRosterSearch = "",
    initialRosterTeamFilter = "ALL",
    initialRosterPage = 1,
@@ -182,6 +184,7 @@ export function ChallengeView({
                   challenge={challenge}
                   isAdmin={isAdmin}
                   initialViewMode={resolvedLeaderboardViewMode}
+                  initialDay={initialLeaderboardDay}
                   isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
                />
             </div>
