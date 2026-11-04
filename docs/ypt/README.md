@@ -91,9 +91,8 @@ group in `YPT_GROUP_IDS`.
 ## 6. Security & Authorization Rules
 
 - Service credentials are read **only** from server env and never sent to the client.
-- `getYptRosterAction` requires a session and is rate-limited (30/min/user); `submitYptSelectionAction` is rate-limited (10/10min/user).
+- `getYptRosterAction` and `submitYptSelectionAction` require a session; throttling is enforced by the external/platform rate limiter, not in-process.
 - The roster is scoped to `YPT_GROUP_IDS` and returns limited fields only.
-- Rate limiting: `core/security/rate-limiter.ts` (in-memory sliding window).
 - Approval is **DEV-only**: all admin claim actions call `requireDevUser()` and return `FORBIDDEN_NOT_DEV`. No `hasAdminPrivileges` path.
 - Every approve/reject/revoke writes an immutable `AuditLog` event via `recordAuditEvent`.
 

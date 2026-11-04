@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-03 (Session 200 on `feat/wrapped-doodle-mascots-#241` · Session 199 on `dev`)
+> **Last Updated:** 2026-11-04 (Session 201 — Next.js 16 migration on `chore/nextjs-16-upgrade`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -155,7 +155,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 > [!IMPORTANT]
 > **EXACT NEXT STEP (For Incoming Agent):**
 >
-> 0. Validate Session 162's duo identity changes: run the full `npm run test:web` / `npm run build:web`, then manually exercise `/challenge/seed-duos-october-2026` (team-view default, no VS panel, edit name + emoji as `mock_duo_1`, invalid/multi-emoji rejection, dry-run clear-to-null, combined audit row, locked-results read-only) at 360px. Apply migration `20261029000000_team_active_name_ci_unique` to each environment (back up first; verify no active case-insensitive duplicate team names). The local DB migration history currently diverges from the repo, so resolve `prisma migrate status` before running `migrate deploy`.
+> 0. **Next.js 16 migration (Session 201, `chore/nextjs-16-upgrade`):** implementation is green — `typecheck:web`, `lint:web`, 2,451 web tests, and the Turbopack `build:web` all pass. Review the branch, run the manual J1–J6 + 360px checks in the PR, then open the PR to `dev` and move the issue to `In Review`. Do **not** mark it `Done` until merged into `dev` and the release PR reaches `main`. Rate limiting is now delegated to an external/platform limiter — configure it before public deploy (see `SECURITY.md` SEC-03).
 > 1. Create the `challenge_wrapped_v1` feature flag in the target DB via `/devboard` (key `challenge_wrapped_v1`, `isEnabled = true`, `rolloutMode = TARGETED` for testers → `GLOBAL` for everyone). Wrapped is fail-closed and stays dark until this row exists.
 > 2. Restore the remaining deleted P0 UIs:
 >    - Host pardon modal (`FEAT-PUN-04`) inside the Manage tab.
@@ -183,6 +183,17 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 201 — 2026-11-04 (Next.js 14 → 16 migration + rate-limiter removal on `chore/nextjs-16-upgrade`)
+
+- **Framework/UI:** `next@16.4.5`, `react@19.3.1`, `react-dom@19.3.1`, `@types/react(-dom)@19.3.0`, `eslint@9.39.5`, `eslint-config-next@16.4.5`. Root `@types/react`/`@types/react-dom` and React 19 are hoisted so hoisted Radix declarations type-check and the web app uses a single React copy.
+- **Async request APIs:** all 8 pages and 3 `generateMetadata` functions now await `params`/`searchParams`; `preview-mode.actions.ts` awaits `cookies()`; `revalidateTag` uses `{ expire: 0 }`; `middleware.ts` → `proxy.ts` (`proxy` export, Node runtime).
+- **Rate limiting removed:** deleted `core/security/rate-limiter.ts` + `client-ip.ts` (and tests); removed the 429 block from `POST /api/feedback`, the attachment `enforceRateLimit` guards, and the YPT roster/claim checks. Rate limiting is delegated to the external/platform limiter (track `SECURITY.md` SEC-03).
+- **React 19 fixes:** `DialogContentProps`/`UserAvatarProps` became type aliases (conditional `ComponentPropsWithoutRef` extension loses members); `challenge-images.test.tsx` uses `ReactElement<any>`; new `eslint-config-next@16` React Hooks v6 rules are explicitly deferred with a follow-up.
+- **Tooling:** flat `eslint.config.mjs`; `next lint` replaced with `eslint app components core features lib types`; `next.config.mjs` keys promoted (`serverExternalPackages`, `outputFileTracingIncludes`, `eslint` removed); `next-env.d.ts`/`tsconfig.json` regenerated.
+- **Verification:** `typecheck:web` ✅; `lint:web` ✅ (0 errors, warnings only); web tests ✅ 246 files / 2,451 tests; Turbopack `build:web` ✅; `git grep` confirms no in-app rate-limiter references remain.
+- **Docs:** `SECURITY.md` SEC-02 resolved / SEC-03 mitigated; `docs/ypt/README.md` §6; `docs/nextjs-16-migration/README.md` aligned.
+- **NEXT STEP:** review/open the PR to `dev`, run manual J1–J6 + 360px checks, and configure the external rate limiter before public deploy. Keep the issue in `In Review` until merged.
 
 ### Session 190 — 2026-11-02 (Cockpit task visibility on `afnan-jr`)
 

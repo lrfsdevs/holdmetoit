@@ -3,15 +3,17 @@
 > **Scope:** `apps/web` (Next.js App Router) plus the shared workspace packages and CI tooling that gate it.
 > **Driving ticket:** `SECURITY.md` **SEC-02** — outdated Next.js with 1 critical + 4 high advisories.
 > **Baseline commit:** `fb04ccb` (branch `afnan-jr`), typecheck exit `0`.
-> **Target:** `next@16.4.4`, `react@19.3.x`, `react-dom@19.3.x`, `eslint@9.39.x`, `eslint-config-next@16.4.4`.
-> **Last Updated:** 2026-11-03
+> **Target:** `next@16.4.5`, `react@19.3.x`, `react-dom@19.3.x`, `eslint@9.39.x`, `eslint-config-next@16.4.5`.
+> **Last Updated:** 2026-11-04
 > **Authority:** `AGENTS.md` §6 (locked stack), §7 (stack laws), §9 (quality gates). This document does **not** override `FEATURES.md` or `DESIGN.md`.
+>
+> **Revision (2026-11-04):** Target is now `next@16.4.5`. The in-memory rate limiter was removed (serverless per-instance counters are ineffective), so the `headers()` migration is gone and only `cookies()` remains. See §5.1, §5.6, and §9.
 
 ---
 
 ## 1. Executive Summary
 
-This is a **two-major upgrade**: `next@14.2.35` → `next@16.4.4`. Next.js 15 removed synchronous access to request APIs (temporarily) and Next.js 16 removed the compatibility shim entirely, so the async migration is unavoidable. The project is in a good position because most `cookies()` calls are already awaited and there are no Pages Router, AMP, legacy `next/image`, parallel-route, or metadata-image routes to migrate.
+This is a **two-major upgrade**: `next@14.2.35` → `next@16.4.5`. Next.js 15 removed synchronous access to request APIs (temporarily) and Next.js 16 removed the compatibility shim entirely, so the async migration is unavoidable. The project is in a good position because most `cookies()` calls are already awaited and there are no Pages Router, AMP, legacy `next/image`, parallel-route, or metadata-image routes to migrate.
 
 **Verdict:** the upgrade is feasible in one PR, but it touches **8 application surfaces + 1 config file + tooling**. The work is mechanical except for three risk areas: Auth.js session handling through the new `proxy` convention, Turbopack as the default bundler with `discord.js`, and cache invalidation semantics (`revalidateTag` now requires a second argument).
 
@@ -21,19 +23,19 @@ This is a **two-major upgrade**: `next@14.2.35` → `next@16.4.4`. Next.js 15 re
 | :-------------------------------------- | ----: | :------- |
 | Page files with sync `params`           |     3 | **Yes**  |
 | Page files with sync `searchParams`     |     8 | **Yes**  |
-| Sync `cookies()` / `headers()` calls    |     2 | **Yes**  |
+| Sync `cookies()` calls                  |     1 | **Yes**  |
 | Single-argument `revalidateTag()`       |     1 | **Yes**  |
 | `next.config` keys removed/renamed      |     3 | **Yes**  |
 | `middleware.ts` → `proxy.ts`            |     2 | **Yes**  |
 | `next lint` script + legacy ESLint      |     2 | **Yes**  |
-| React 18 → 19 code blockers found       |     0 | No       |
+| React 19 type fixes (wrappers, tests)   |     4 | No       |
 | Test files needing prop fixture updates |     6 | **Yes**  |
 | DB schema / Prisma migrations           |     0 | N/A      |
 
 ### Security outcome
 
-- **Next.js:** 14.2.35 is the **last 14.x release**; there is no patched 14.x. `npm audit` reports `next` as **critical** with a fix only at `16.4.4`.
-- Upgrading to `16.4.4` clears the `next` and nested `postcss` advisories (including the SVG Image Optimizer RCE and the Server Actions DoS).
+- **Next.js:** 14.2.35 is the **last 14.x release**; there is no patched 14.x. `npm audit` reports `next` as **critical** with a fix only at `16.4.5`.
+- Upgrading to `16.4.5` clears the `next` and nested `postcss` advisories (including the SVG Image Optimizer RCE and the Server Actions DoS).
 - **Not cleared by this upgrade:** `prisma`, `@prisma/config`, and `deepmerge-ts`. Those need a separate **Prisma 7.10.1+** major upgrade. Do not conflate the two.
 
 ---
@@ -44,13 +46,13 @@ This is a **two-major upgrade**: `next@14.2.35` → `next@16.4.4`. Next.js 15 re
 
 | Package              | Declared range   | Installed       | Target       | Notes                                             |
 | :------------------- | :--------------- | :-------------- | :----------- | :------------------------------------------------ |
-| `next`               | `^14.2.28`       | `14.2.35`       | `16.4.4`     | 14.2.35 is the end of the 14.x line               |
+| `next`               | `^14.2.28`       | `14.2.35`       | `16.4.5`     | 14.2.35 is the end of the 14.x line               |
 | `react`              | `^18.3.1`        | `18.3.1`        | `19.3.x`     | Next 16 requires React 19.2+                      |
 | `react-dom`          | `^18.3.1`        | `18.3.1`        | `19.3.x`     | —                                                 |
 | `@types/react`       | `^18.3.23`       | `18.3.23`       | `19.3.0`     | Required for React 19 types                       |
 | `@types/react-dom`   | `^18.3.7`        | `18.3.7`        | `19.3.0`     | —                                                 |
 | `eslint`             | `^8.57.1`        | `8.57.1`        | `9.39.5`     | ESLint 8 is EOL; `eslint-config-next@16` needs 9+ |
-| `eslint-config-next` | `^14.2.28`       | `14.2.28`       | `16.4.4`     | Now flat-config-first                             |
+| `eslint-config-next` | `^14.2.28`       | `14.2.28`       | `16.4.5`     | Now flat-config-first                             |
 | `next-auth`          | `^5.0.0-beta.28` | `5.0.0-beta.32` | keep beta.32 | Peer range already allows `next@^16`              |
 | `sharp`              | `^0.35.5`        | `0.35.5`        | keep         | Meets the SVG-RCE workaround (`>=0.35.5`)         |
 | Node.js              | `>=22.12.0`      | `22.23.4`       | keep         | Next 16 min is `20.9.0`                           |
@@ -66,13 +68,13 @@ This is a **two-major upgrade**: `next@14.2.35` → `next@16.4.4`. Next.js 15 re
 
 | Package          | Severity     | Fix path                      |
 | :--------------- | :----------- | :---------------------------- |
-| `next`           | **critical** | `16.4.4`                      |
-| `postcss`        | high         | `16.4.4` (nested in `next`)   |
+| `next`           | **critical** | `16.4.5`                      |
+| `postcss`        | high         | `16.4.5` (nested in `next`)   |
 | `@prisma/config` | high         | Prisma `7.10.1+` (separate)   |
 | `deepmerge-ts`   | high         | `deepmerge-ts@8` (via Prisma) |
 | `prisma`         | high         | Prisma `7.10.1+` (separate)   |
 
-The newest Next.js advisories (`GHSA-2464-fhr4-w9xw`, `GHSA-p3m5-59mp-jv5r`) are fixed in **`15.5.28` and `16.4.1`**. However, `npm audit` only offers `next@16.4.4` as the fix for this tree, so a `15.5.28` stopgap is **not** a permanent closure. Go to `16.4.4`.
+The newest Next.js advisories (`GHSA-2464-fhr4-w9xw`, `GHSA-p3m5-59mp-jv5r`) are fixed in **`15.5.28` and `16.4.1`**. However, `npm audit` only offers `next@16.4.5` as the fix for this tree, so a `15.5.28` stopgap is **not** a permanent closure. Go to `16.4.5`.
 
 ---
 
@@ -80,11 +82,11 @@ The newest Next.js advisories (`GHSA-2464-fhr4-w9xw`, `GHSA-p3m5-59mp-jv5r`) are
 
 | Layer        | Package                            | Target          | Why                                                             |
 | :----------- | :--------------------------------- | :-------------- | :-------------------------------------------------------------- |
-| Framework    | `next`                             | `16.4.4`        | Latest stable; clears Next advisories                           |
+| Framework    | `next`                             | `16.4.5`        | Latest stable; clears Next advisories                           |
 | UI runtime   | `react`, `react-dom`               | `19.3.x`        | Required by Next 16; all React-dependent deps support 19        |
 | Types        | `@types/react`, `@types/react-dom` | `19.3.0`        | React 19 type changes (`useRef` arg, ref cleanups, `React.JSX`) |
 | Lint         | `eslint`                           | `9.39.5`        | `eslint-config-next@16` peer is `>=9`                           |
-| Lint config  | `eslint-config-next`               | `16.4.4`        | Flat config; matches framework version                          |
+| Lint config  | `eslint-config-next`               | `16.4.5`        | Flat config; matches framework version                          |
 | Lint/format  | `eslint-config-prettier`           | `10.1.8`        | Already installed; use the `/flat` entry point                  |
 | Auth         | `next-auth`                        | `5.0.0-beta.32` | Already installed; peer supports `next@^16`, `react@^19`        |
 | Auth adapter | `@auth/prisma-adapter`             | `2.x`           | No change needed                                                |
@@ -99,7 +101,7 @@ All checked React peers (Radix packages, `cmdk`, `lucide-react`, `logrocket-reac
 
 Do the framework jump in one branch, but execute it in **three commits** (tooling, framework/code, cleanup) so review is tractable. This is preferred because Next.js 15 is only a waypoint and a `15.5.28` stopgap still leaves `npm audit` unhappy.
 
-### Option B — Staged 14 → 15.5.28 → 16.4.4
+### Option B — Staged 14 → 15.5.28 → 16.4.5
 
 Useful if we want a production soak between majors. Cost: two full CI cycles, two Vercel deploys, and `15.5.28` does not close the audit entry. Only choose this if the team needs a rollback point at 15.
 
@@ -115,31 +117,17 @@ Jira/GitHub flow: `To Do` → `In Progress` (branch created) → `In Review` (PR
 
 ## 5. P0 — Blocking Changes (must land before the app runs on 16)
 
-### 5.1 Async Request APIs (`params`, `searchParams`, `cookies`, `headers`)
+### 5.1 Async Request APIs (`params`, `searchParams`, `cookies`)
 
-Next 16 removes synchronous access completely. `cookies()` and `headers()` must be awaited, and `params`/`searchParams` are Promises in pages, layouts, route handlers, `generateMetadata`, and generated metadata image routes.
+Next 16 removes synchronous access completely. `cookies()` must be awaited, and `params`/`searchParams` are Promises in pages, layouts, route handlers, `generateMetadata`, and generated metadata image routes.
 
-#### 5.1.1 Sync `cookies()` / `headers()`
+> **Rate-limiter revision (2026-11-04):** the in-memory limiter and its `headers()` call were removed instead of migrated. After that change, `preview-mode.actions.ts` is the only synchronous request API left.
 
-| File                                                             |  Line | Current                                                | Fix                                                                          |
-| :--------------------------------------------------------------- | ----: | :----------------------------------------------------- | :--------------------------------------------------------------------------- |
-| `apps/web/features/auth/api/preview-mode.actions.ts`             |    21 | `const cookieStore = cookies();`                       | `const cookieStore = await cookies();`                                       |
-| `apps/web/features/feedback/api/feedback-attachments.actions.ts` | 42–43 | `function enforceRateLimit(...) { ... headers() ... }` | Make `async`, `await headers()`, `await` all call sites (lines 66, 120, 171) |
+#### 5.1.1 Sync `cookies()`
 
-```ts
-// apps/web/features/feedback/api/feedback-attachments.actions.ts
-async function enforceRateLimit(
-   scope: string
-): Promise<RateLimitDenial | null> {
-   const ip = getClientIp(await headers());
-   const result = checkRateLimit(`feedback-${scope}:${ip}`, RATE_LIMIT);
-   if (result.allowed) return null;
-   return { ok: false, code: "RATE_LIMITED", message: RATE_LIMIT_MESSAGE };
-}
-
-// call sites
-const limited = await enforceRateLimit("upload");
-```
+| File                                                 | Line | Current                          | Fix                                    |
+| :--------------------------------------------------- | ---: | :------------------------------- | :------------------------------------- |
+| `apps/web/features/auth/api/preview-mode.actions.ts` |   21 | `const cookieStore = cookies();` | `const cookieStore = await cookies();` |
 
 > The rest of the app already awaits `cookies()` (`app/layout.tsx`, `app/page.tsx`, `app/admin/layout.tsx`, etc.). Do not “fix” already-async calls.
 
@@ -351,7 +339,7 @@ Keep the same directory scope initially so the flat-config migration does not su
 #### 5.5.2 Dependencies
 
 ```bash
-npm install -D eslint@9.39.5 eslint-config-next@16.4.4 -w @holdmetoit/web
+npm install -D eslint@9.39.5 eslint-config-next@16.4.5 -w @holdmetoit/web
 ```
 
 `eslint-config-prettier@10.1.8` stays. Use `eslint-config-prettier/flat` in the new config.
@@ -434,19 +422,26 @@ Notes:
 
 The codebase was audited for the React 19 breaking changes:
 
-| React 19 breaking change                      | Found in repo                     | Action             |
-| :-------------------------------------------- | :-------------------------------- | :----------------- |
-| `ReactDOM.render` / `hydrate` / `findDOMNode` | No                                | None               |
-| `react-dom/test-utils` / `act`                | No                                | None               |
-| `useFormState` → `useActionState`             | No                                | None               |
-| `propTypes` / `defaultProps` on components    | No (test variables only)          | None               |
-| Legacy string refs / legacy context           | No                                | None               |
-| Global `JSX` namespace usage                  | No                                | None               |
-| `useRef()` with no argument                   | No                                | None               |
-| Ref callback implicit returns                 | 6 callbacks, all block-bodied     | None               |
-| `useReducer<React.Reducer<...>>` generics     | No                                | None               |
-| `ReactElement` props defaulting to `unknown`  | 1 type helper, no `.props` access | None               |
-| `forwardRef` (deprecated, still supported)    | 82 usages                         | Optional follow-up |
+| React 19 breaking change                      | Found in repo                       | Action                      |
+| :-------------------------------------------- | :---------------------------------- | :-------------------------- |
+| `ReactDOM.render` / `hydrate` / `findDOMNode` | No                                  | None                        |
+| `react-dom/test-utils` / `act`                | No                                  | None                        |
+| `useFormState` → `useActionState`             | No                                  | None                        |
+| `propTypes` / `defaultProps` on components    | No (test variables only)            | None                        |
+| Legacy string refs / legacy context           | No                                  | None                        |
+| Global `JSX` namespace usage                  | No                                  | None                        |
+| `useRef()` with no argument                   | No                                  | None                        |
+| Ref callback implicit returns                 | 6 callbacks, all block-bodied       | None                        |
+| `useReducer<React.Reducer<...>>` generics     | No                                  | None                        |
+| `ReactElement` props defaulting to `unknown`  | `challenge-images.test.tsx` helpers | Type as `ReactElement<any>` |
+| `forwardRef` (deprecated, still supported)    | 82 usages                           | Optional follow-up          |
+
+**Additional React 19 fixes applied during implementation:**
+
+- `DialogContentProps` and `UserAvatarProps` are type aliases (`Base & { ... }`), not `interface extends React.ComponentPropsWithoutRef<...>`. React 19's conditional `ComponentPropsWithoutRef` loses members when extended through an interface or an intermediate type alias.
+- `@types/react` and `@types/react-dom` are installed at the **repo root** so hoisted Radix declarations resolve React types instead of `any`; this also dedupes React/ReactDOM to one 19.3.1 copy.
+- `challenge-images.test.tsx` traverses elements as `ReactElement<any>` because React 19 defaults `ReactElement.props` to `unknown`.
+- The new React Hooks v6 rules in `eslint-config-next@16` (`set-state-in-effect`, `purity`, `refs`, `immutability`) are explicitly deferred in `eslint.config.mjs` with a follow-up.
 
 **TypeScript caveats to expect after bumping `@types/react@19`:**
 
@@ -502,14 +497,14 @@ No code change is strictly required, but these defaults change in 16:
 Edit the **workspace** `apps/web/package.json`, then run `npm install` at the repo root (never `npm install` inside `apps/web` alone — it breaks workspace hoisting and the lockfile).
 
 ```diff
-"next": "^16.4.4",
+"next": "^16.4.5",
 "react": "^19.3.1",
 "react-dom": "^19.3.1",
 ...
 "@types/react": "^19.3.0",
 "@types/react-dom": "^19.3.0",
 "eslint": "^9.39.5",
-"eslint-config-next": "^16.4.4",
+"eslint-config-next": "^16.4.5",
 ```
 
 Then:
@@ -583,14 +578,13 @@ These were checked and are **not** present, so they should not appear in review 
 
 ## 9. Test Suite Impact
 
-| Area               | Files                                                                                                                                                | Change                                                                                                                                         |
-| :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-| Async page props   | 6 `*.test.tsx` files listed in §5.1.3                                                                                                                | Wrap `params` / `searchParams` in `Promise.resolve(...)`                                                                                       |
-| `cookies()` mocks  | `app/page.test.tsx`, `app/challenge/[id]/page.test.tsx`, `app/admin/layout.test.tsx`, `app/devboard/layout.test.tsx`, `app/challenges/page.test.tsx` | Most already return resolved values; make sure every `cookies: vi.fn()` mock resolves to a store with `get()`.                                 |
-| `headers()`        | `features/feedback/api/feedback-attachments.actions.test.ts`                                                                                         | Mock currently returns a plain `Headers`; `await` accepts non-Promises, so it still passes. Prefer `async () => new Headers(...)` for clarity. |
-| Cache invalidation | `core/cache/index.test.ts`                                                                                                                           | Assert two-argument `revalidateTag` calls.                                                                                                     |
-| Proxy              | `middleware.test.ts` → `proxy.test.ts`                                                                                                               | Import `proxy`, call it directly.                                                                                                              |
-| React 19 runtime   | Full suite                                                                                                                                           | `renderToStaticMarkup` and Testing Library 16.3 are React 19-compatible. Re-run and fix only genuine failures.                                 |
+| Area               | Files                                                                                                                                                | Change                                                                                                                   |
+| :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| Async page props   | 6 `*.test.tsx` files listed in §5.1.3                                                                                                                | Wrap `params` / `searchParams` — and the `generateMetadata` `params` calls in the same files — in `Promise.resolve(...)` |
+| `cookies()` mocks  | `app/page.test.tsx`, `app/challenge/[id]/page.test.tsx`, `app/admin/layout.test.tsx`, `app/devboard/layout.test.tsx`, `app/challenges/page.test.tsx` | Most already return resolved values; make sure every `cookies: vi.fn()` mock resolves to a store with `get()`.           |
+| Cache invalidation | `core/cache/index.test.ts`, `features/study-logs/api/log-study-time.actions.test.ts`                                                                 | Assert two-argument `revalidateTag` calls.                                                                               |
+| Proxy              | `middleware.test.ts` → `proxy.test.ts`                                                                                                               | Import `proxy`, call it directly.                                                                                        |
+| React 19 runtime   | Full suite                                                                                                                                           | `renderToStaticMarkup` and Testing Library 16.3 are React 19-compatible. Re-run and fix only genuine failures.           |
 
 Run:
 
@@ -606,7 +600,7 @@ npm run test -w @holdmetoit/web
 
 ## 10. Security Closure Notes
 
-1. **Next.js:** upgrade to `16.4.4`. This closes the critical `next` advisory and the nested `postcss` advisory. The latest Image Optimizer SVG RCE and Server Actions DoS require `>=16.4.1`, so `16.4.4` is the correct floor — do not pin lower.
+1. **Next.js:** upgrade to `16.4.5`. This closes the critical `next` advisory and the nested `postcss` advisory. The latest Image Optimizer SVG RCE and Server Actions DoS require `>=16.4.1`, so `16.4.5` is the correct floor — do not pin lower.
 2. **`sharp`:** `0.35.5` is already installed and meets the advisory workaround (`>=0.35.5`). Keep it.
 3. **`postcss`:** the direct dependency resolves to `8.5.29` (fixed). The vulnerable copy is nested under `next@14` and is removed by the framework upgrade.
 4. **Prisma family (not fixed by this PR):** `prisma@6.19.3`, `@prisma/config`, and `deepmerge-ts@7.1.5` remain flagged. Fix requires **Prisma `7.10.1+`** and `deepmerge-ts@8`. Prisma 7 is a separate major with generator/config changes. Open a dedicated ticket and do not block the Next upgrade on it.
@@ -634,7 +628,7 @@ npm run test -w @holdmetoit/web
 ### Phase 2 — Framework code (2–4 h)
 
 - [ ] Await `cookies()` in `preview-mode.actions.ts`.
-- [ ] Make `enforceRateLimit` async and await `headers()` and all three call sites.
+- [ ] Remove the in-memory rate limiter and its call sites (separate security commit).
 - [ ] Convert `params`/`searchParams` to Promises in the 8 pages and 3 `generateMetadata` functions.
 - [ ] Change `revalidateTag(tag)` → `revalidateTag(tag, { expire: 0 })`.
 - [ ] Rename `middleware.ts` → `proxy.ts`, export `proxy`, rename the test.
@@ -707,7 +701,7 @@ npm audit --omit=dev
 ## 13. Suggested Commit Sequence
 
 ```text
-chore(deps): bump next to 16.4.4, react to 19.3, eslint to 9.39
+chore(deps): bump next to 16.4.5, react to 19.3, eslint to 9.39
 chore(web): migrate eslint to flat config and remove next lint
 refactor(web): await async request APIs in pages and actions
 refactor(web): rename middleware to proxy
@@ -723,31 +717,33 @@ Conventional commits per `AGENTS.md` §4.2.
 
 ## 14. Appendix — Files to Touch (quick reference)
 
-| File                                                               | Change                                                        |
-| :----------------------------------------------------------------- | :------------------------------------------------------------ |
-| `apps/web/package.json`                                            | Bump Next/React/types/ESLint; replace `lint` script           |
-| `package-lock.json`                                                | Regenerate with root `npm install`                            |
-| `apps/web/next.config.mjs`                                         | Remove `eslint`; move tracing/externals to top level          |
-| `apps/web/eslint.config.mjs`                                       | **New** flat config with existing token guards                |
-| `apps/web/.eslintrc.json`                                          | **Delete** after flat config passes                           |
-| `apps/web/middleware.ts` → `apps/web/proxy.ts`                     | Rename file + export `proxy`                                  |
-| `apps/web/middleware.test.ts` → `apps/web/proxy.test.ts`           | Rename file + import `proxy`                                  |
-| `apps/web/core/cache/index.ts`                                     | `revalidateTag(tag, { expire: 0 })`                           |
-| `apps/web/core/cache/index.test.ts`                                | Assert the two-argument call                                  |
-| `apps/web/features/auth/api/preview-mode.actions.ts`               | `await cookies()`                                             |
-| `apps/web/features/feedback/api/feedback-attachments.actions.ts`   | Async `enforceRateLimit`, `await headers()`, await call sites |
-| `apps/web/app/page.tsx`                                            | Async `searchParams`                                          |
-| `apps/web/app/challenge/[id]/page.tsx`                             | Async `params` + `searchParams` (page + metadata)             |
-| `apps/web/app/challenge/[id]/participant/[participantId]/page.tsx` | Async `params` + `searchParams` (page + metadata)             |
-| `apps/web/app/profile/[userId]/page.tsx`                           | Async `params` + `searchParams` (page + metadata)             |
-| `apps/web/app/profile/page.tsx`                                    | Async `searchParams`                                          |
-| `apps/web/app/wallet/page.tsx`                                     | Async `searchParams`                                          |
-| `apps/web/app/pokemon/page.tsx`                                    | Async `searchParams`                                          |
-| `apps/web/app/devboard/page.tsx`                                   | Async `searchParams`                                          |
-| 6 page `*.test.tsx` files (§5.1.3)                                 | Wrap props in `Promise.resolve(...)`                          |
-| `apps/web/next-env.d.ts`                                           | Commit the regenerated file                                   |
-| `SECURITY.md`                                                      | Update SEC-02 after the upgrade                               |
-| `HANDOFF.md`                                                       | Session log + next step (prune stale entries)                 |
+| File                                                               | Change                                               |
+| :----------------------------------------------------------------- | :--------------------------------------------------- |
+| `apps/web/package.json`                                            | Bump Next/React/types/ESLint; replace `lint` script  |
+| `package-lock.json`                                                | Regenerate with root `npm install`                   |
+| `apps/web/next.config.mjs`                                         | Remove `eslint`; move tracing/externals to top level |
+| `apps/web/eslint.config.mjs`                                       | **New** flat config with existing token guards       |
+| `apps/web/.eslintrc.json`                                          | **Delete** after flat config passes                  |
+| `apps/web/middleware.ts` → `apps/web/proxy.ts`                     | Rename file + export `proxy`                         |
+| `apps/web/middleware.test.ts` → `apps/web/proxy.test.ts`           | Rename file + import `proxy`                         |
+| `apps/web/core/cache/index.ts`                                     | `revalidateTag(tag, { expire: 0 })`                  |
+| `apps/web/core/cache/index.test.ts`                                | Assert the two-argument call                         |
+| `apps/web/features/auth/api/preview-mode.actions.ts`               | `await cookies()`                                    |
+| `apps/web/core/security/rate-limiter.ts` / `client-ip.ts` + tests  | **Delete** (external limiter)                        |
+| `apps/web/app/api/feedback/route.ts`                               | Remove limiter import + 429 block                    |
+| `apps/web/features/ypt/api/ypt-claim.actions.ts`                   | Remove two rate checks                               |
+| `apps/web/app/page.tsx`                                            | Async `searchParams`                                 |
+| `apps/web/app/challenge/[id]/page.tsx`                             | Async `params` + `searchParams` (page + metadata)    |
+| `apps/web/app/challenge/[id]/participant/[participantId]/page.tsx` | Async `params` + `searchParams` (page + metadata)    |
+| `apps/web/app/profile/[userId]/page.tsx`                           | Async `params` + `searchParams` (page + metadata)    |
+| `apps/web/app/profile/page.tsx`                                    | Async `searchParams`                                 |
+| `apps/web/app/wallet/page.tsx`                                     | Async `searchParams`                                 |
+| `apps/web/app/pokemon/page.tsx`                                    | Async `searchParams`                                 |
+| `apps/web/app/devboard/page.tsx`                                   | Async `searchParams`                                 |
+| 6 page `*.test.tsx` files (§5.1.3)                                 | Wrap props in `Promise.resolve(...)`                 |
+| `apps/web/next-env.d.ts`                                           | Commit the regenerated file                          |
+| `SECURITY.md`                                                      | Update SEC-02 after the upgrade                      |
+| `HANDOFF.md`                                                       | Session log + next step (prune stale entries)        |
 
 No Prisma schema or migration changes are required for this upgrade.
 

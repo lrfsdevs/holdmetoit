@@ -1,7 +1,7 @@
 # SECURITY.md — Security Audit Report
 
 > **Project:** HoldMeToIt (web app + YPT cron/ingest bot + Tasker Discord bot + shared packages)
-> **Audit date:** 2026-11-02
+> **Audit date:** 2026-11-02 · **Remediation update:** 2026-11-04 (Next.js 16 upgrade; in-memory rate limiter removed)
 > **Audit type:** Static source review + `npm audit` (no dynamic/penetration testing, no live infrastructure review)
 > **Commit reviewed:** `2bd1012`
 
@@ -11,7 +11,7 @@
 
 | Component                                                        | Path                                                                          | Reviewed                          |
 | :--------------------------------------------------------------- | :---------------------------------------------------------------------------- | :-------------------------------- |
-| Web app (Next.js 14, Auth.js v5, Server Actions, Route Handlers) | `apps/web`                                                                    | Yes                               |
+| Web app (Next.js 16, Auth.js v5, Server Actions, Route Handlers) | `apps/web`                                                                    | Yes                               |
 | YPT cron / ingest / DB-backup bot                                | `apps/ypt-bot`                                                                | Yes                               |
 | Tasker Discord bot (slash + prefix commands, Gemini summarizer)  | `apps/tasker`                                                                 | Yes                               |
 | Shared Discord REST/bot helpers                                  | `packages/discord`                                                            | Yes                               |
@@ -38,29 +38,29 @@
 
 ## 2. Summary
 
-| ID                | Severity   | Component          | Title                                                                                                   |
-| :---------------- | :--------- | :----------------- | :------------------------------------------------------------------------------------------------------ |
-| [SEC-01](#sec-01) | **High**   | web                | YPT ingest endpoint is fail-open when `YPT_INGEST_API_KEY` is unset                                     |
-| [SEC-02](#sec-02) | **High**   | web                | Outdated Next.js 14.2.35 with 1 critical + multiple high advisories                                     |
-| [SEC-03](#sec-03) | **High**   | web / infra        | Rate limiting is in-memory and keyed on a spoofable header; guards unauthenticated fan-out endpoints    |
-| [SEC-04](#sec-04) | **Medium** | web                | Server Actions that read user data with no authentication / no ownership check                          |
-| [SEC-05](#sec-05) | **Medium** | web                | Role model: stale admin privileges, inconsistent role sources, admin-can-demote-anyone                  |
-| [SEC-06](#sec-06) | **Medium** | web / db / ypt-bot | Discord OAuth tokens stored in plaintext; backups are unencrypted full dumps                            |
-| [SEC-07](#sec-07) | **Medium** | web                | Unauthenticated feedback attachments: client-controlled `Content-Type`, public bucket                   |
-| [SEC-08](#sec-08) | **Medium** | web                | Unvalidated feedback `url` / `logrocketSessionId` injected into Discord/GitHub/Jira content             |
-| [SEC-09](#sec-09) | **Medium** | web / bots         | Raw `error.message` returned to clients and Discord users                                               |
-| [SEC-10](#sec-10) | **Medium** | web                | No security response headers (CSP, HSTS, X-Frame-Options, etc.)                                         |
-| [SEC-11](#sec-11) | **Medium** | tasker             | `/yapperize`: fail-open permission check, public output, no cooldown, prompt injection, unbounded fetch |
-| [SEC-12](#sec-12) | **Low**    | web                | `/api/users/sync-avatar` lets any user trigger sync for any other user; user enumeration                |
-| [SEC-13](#sec-13) | **Low**    | web                | Pokémon `referenceUrl` validated with `z.string().url()` (may allow `javascript:`) **(verify)**         |
-| [SEC-14](#sec-14) | **Low**    | web                | Dev-bypass for `/admin` and `/devboard` keyed on `NODE_ENV` + missing env var                           |
-| [SEC-15](#sec-15) | **Low**    | infra              | `docker-compose.yml` Postgres: default credentials, published on all interfaces                         |
-| [SEC-16](#sec-16) | **Low**    | bots / infra       | Dockerfiles: run as root, `COPY . .`, unpinned third-party apt key, health servers on `0.0.0.0`         |
-| [SEC-17](#sec-17) | **Low**    | ypt-bot            | Failed backups leave plaintext dumps in the OS temp dir indefinitely                                    |
-| [SEC-18](#sec-18) | **Low**    | web                | LogRocket session replay with default privacy settings; PII (Discord ID) sent                           |
-| [SEC-19](#sec-19) | **Low**    | CI                 | No dependency/secret/SAST scanning; actions pinned by tag; single CODEOWNER                             |
-| [SEC-20](#sec-20) | **Low**    | web                | Missing `trustHost`/origin configuration for Auth.js on non-Vercel hosts **(verify)**                   |
-| [SEC-21](#sec-21) | **Info**   | web                | Positive controls observed                                                                              |
+| ID                | Severity      | Component          | Title                                                                                                   |
+| :---------------- | :------------ | :----------------- | :------------------------------------------------------------------------------------------------------ |
+| [SEC-01](#sec-01) | **High**      | web                | YPT ingest endpoint is fail-open when `YPT_INGEST_API_KEY` is unset                                     |
+| [SEC-02](#sec-02) | **Resolved**  | web                | Outdated Next.js 14.2.35 with critical/high advisories — upgraded to 16.4.5                             |
+| [SEC-03](#sec-03) | **Mitigated** | web / infra        | In-memory rate limiter removed; rate limiting delegated to an external/platform limiter                 |
+| [SEC-04](#sec-04) | **Medium**    | web                | Server Actions that read user data with no authentication / no ownership check                          |
+| [SEC-05](#sec-05) | **Medium**    | web                | Role model: stale admin privileges, inconsistent role sources, admin-can-demote-anyone                  |
+| [SEC-06](#sec-06) | **Medium**    | web / db / ypt-bot | Discord OAuth tokens stored in plaintext; backups are unencrypted full dumps                            |
+| [SEC-07](#sec-07) | **Medium**    | web                | Unauthenticated feedback attachments: client-controlled `Content-Type`, public bucket                   |
+| [SEC-08](#sec-08) | **Medium**    | web                | Unvalidated feedback `url` / `logrocketSessionId` injected into Discord/GitHub/Jira content             |
+| [SEC-09](#sec-09) | **Medium**    | web / bots         | Raw `error.message` returned to clients and Discord users                                               |
+| [SEC-10](#sec-10) | **Medium**    | web                | No security response headers (CSP, HSTS, X-Frame-Options, etc.)                                         |
+| [SEC-11](#sec-11) | **Medium**    | tasker             | `/yapperize`: fail-open permission check, public output, no cooldown, prompt injection, unbounded fetch |
+| [SEC-12](#sec-12) | **Low**       | web                | `/api/users/sync-avatar` lets any user trigger sync for any other user; user enumeration                |
+| [SEC-13](#sec-13) | **Low**       | web                | Pokémon `referenceUrl` validated with `z.string().url()` (may allow `javascript:`) **(verify)**         |
+| [SEC-14](#sec-14) | **Low**       | web                | Dev-bypass for `/admin` and `/devboard` keyed on `NODE_ENV` + missing env var                           |
+| [SEC-15](#sec-15) | **Low**       | infra              | `docker-compose.yml` Postgres: default credentials, published on all interfaces                         |
+| [SEC-16](#sec-16) | **Low**       | bots / infra       | Dockerfiles: run as root, `COPY . .`, unpinned third-party apt key, health servers on `0.0.0.0`         |
+| [SEC-17](#sec-17) | **Low**       | ypt-bot            | Failed backups leave plaintext dumps in the OS temp dir indefinitely                                    |
+| [SEC-18](#sec-18) | **Low**       | web                | LogRocket session replay with default privacy settings; PII (Discord ID) sent                           |
+| [SEC-19](#sec-19) | **Low**       | CI                 | No dependency/secret/SAST scanning; actions pinned by tag; single CODEOWNER                             |
+| [SEC-20](#sec-20) | **Low**       | web                | Missing `trustHost`/origin configuration for Auth.js on non-Vercel hosts **(verify)**                   |
+| [SEC-21](#sec-21) | **Info**      | web                | Positive controls observed                                                                              |
 
 ---
 
@@ -84,15 +84,15 @@
 
 <a id="sec-02"></a>
 
-### SEC-02 — Outdated Next.js (14.2.35) with known critical/high advisories
+### SEC-02 — Outdated Next.js (14.2.35) with known critical/high advisories — **Resolved 2026-11-04**
 
-- **Severity:** High
-- **Location:** `apps/web/package.json` (`next ^14.2.28`, installed `14.2.35`), `package-lock.json`
-- **Description:** `npm audit --omit=dev` reports **5 vulnerabilities (1 critical, 4 high)**. All of `next` ≥ 9.3.4-canary and < 16.3.x is flagged. Advisories include: Server Actions DoS (`GHSA-m99w-x7hq-7vfj`, `GHSA-p3m5-59mp-jv5r`), RSC DoS/cache poisoning, Image Optimizer RCE (SVG/AVIF) and DoS, middleware redirect cache poisoning, request smuggling in rewrites, XSS with CSP nonces/`beforeInteractive`, and unauthenticated Server Function endpoint disclosure (`GHSA-955p-x3mx-jcvp`). Also flagged: `postcss <= 8.5.22` (nested in `next`) and `deepmerge-ts` via `prisma`/`@prisma/config`.
+- **Severity:** Resolved (was High)
+- **Location:** `apps/web/package.json` (`next ^16.4.5`, installed `16.4.5`), `package-lock.json`
+- **Description:** `next` was upgraded from `14.2.35` to `16.4.5` (React 19.3.1, `@types/react` 19.3.0, ESLint 9.39.5, `eslint-config-next` 16.4.5). The critical `next` advisory and the nested `postcss` advisory are cleared. Remaining `npm audit --omit=dev` findings are the Prisma family (`prisma`, `@prisma/config`, `deepmerge-ts`), which require a separate Prisma 7.10.1+ upgrade.
 - **Impact:** Several advisories apply directly to how this app is built (App Router + many Server Actions + `next/image` with remote patterns). Some (Image Optimizer, custom-server SSRF, Windows RCE) are mainly relevant to self-hosted deployments; Vercel mitigates some at the platform layer. The app is a public site, so DoS on Server Actions is realistic.
-- **Remediation:**
-   - Upgrade to the latest patched Next.js release (npm suggests a major upgrade to 16.x; evaluate a 15.x patched line first if 16 is too disruptive). Re-run tests and `next build`.
-   - Run `npm audit fix` for non-breaking transitive issues (`deepmerge-ts`, `prisma`).
+- **Remediation (completed):**
+   - ✅ Upgraded to `next@16.4.5`, React 19.3.1, ESLint 9.39.5, `eslint-config-next@16.4.5`; typecheck, lint, tests, and Turbopack build pass.
+   - ⏳ Prisma-family advisories remain; track the Prisma 7.10.1+ upgrade separately.
    - Track `next-auth@5.0.0-beta.x` — it is a beta; pin and monitor its advisories.
    - Add automated dependency scanning (see SEC-19).
 
@@ -100,21 +100,20 @@
 
 <a id="sec-03"></a>
 
-### SEC-03 — Rate limiting is in-memory and trusts a client-controlled header
+### SEC-03 — In-memory rate limiting removed; delegated to an external limiter
 
-- **Severity:** High
-- **Location:** `apps/web/core/security/rate-limiter.ts`, `apps/web/core/security/client-ip.ts`, used by `app/api/feedback/route.ts` and `features/feedback/api/feedback-attachments.actions.ts`
+- **Severity:** Mitigated (external limiter pending)
+- **Location:** Rate limiting was removed from `apps/web` (`core/security/rate-limiter.ts` and `core/security/client-ip.ts` deleted). Call sites cleaned: `app/api/feedback/route.ts`, `features/feedback/api/feedback-attachments.actions.ts`, `features/ypt/api/ypt-claim.actions.ts`.
 - **Description:**
-   - `getClientIp()` takes the **first** value of `X-Forwarded-For` (attacker-controlled when a proxy appends rather than overwrites), then `X-Real-IP`, then the shared bucket `"anonymous"`.
-   - The limiter is a process-local `Map`. On serverless (Vercel) or multi-instance deployments each instance has its own counters, so the effective limit is `N × limit`, and cold starts reset it.
-   - The `Map` is never pruned of idle keys; spoofing many distinct IPs grows memory unboundedly.
-   - If no proxy header exists, **all** users share the single `"anonymous"` bucket (one abuser can lock everyone out; conversely, a missing header is trivially exploitable).
-- **Impact:** `POST /api/feedback` is unauthenticated and fans out to **Postgres, Discord, GitHub Issues and Jira** per request (plus the signed-upload actions hit Supabase Storage). Bypassing the limiter allows spam of staff channels/issue trackers, exhaustion of GitHub/Jira API quotas, DB growth, and storage abuse.
+   - The limiter was a process-local `Map`. On Vercel each invocation/instance has its own counters, cold starts reset them, and the map was unbounded, so it did not provide a reliable global limit.
+   - `getClientIp()` trusted the first `X-Forwarded-For` value, which is client-controlled when a proxy appends.
+   - Both helpers and all in-app rate-limit branches were removed rather than migrated; upstream YPT 429 classification remains unchanged.
+- **Impact:** `POST /api/feedback` is unauthenticated and fans out to **Postgres, Discord, GitHub Issues and Jira** per request (plus the signed-upload actions hit Supabase Storage). Until the external limiter is live, these endpoints have no application-level throttle.
 - **Remediation:**
-   - Use a shared store (Upstash/Redis, or a Postgres-backed counter) for limits.
-   - Derive the client IP from the platform-trusted source only (e.g. `request.ip` / Vercel's `x-vercel-forwarded-for`, or the **last** trusted hop of `X-Forwarded-For`).
-   - Prune expired keys; cap the map size.
-   - For feedback, additionally rate limit per authenticated user and require login (or a CAPTCHA/Turnstile) for guests; add a global daily cap on outbound GitHub/Jira creations.
+   - Enforce limits at the platform/external layer (Vercel WAF/Firewall, Upstash Ratelimit, or a gateway) before this release is public.
+   - Derive the client IP from the platform-trusted source only.
+   - Add per-authenticated-user quotas for feedback and attachment uploads, and a global daily cap on outbound GitHub/Jira creations.
+   - Track the external-limiter work separately; do not mark this fully resolved until it is live.
 
 ---
 
@@ -386,7 +385,7 @@ These reduce risk and should be preserved:
 ## 4. Recommended Remediation Order
 
 1. **Immediately:** SEC-01 (fail-closed ingest key), confirm `YPT_INGEST_API_KEY` is set in every environment and rotate it.
-2. **This sprint:** SEC-02 (upgrade Next.js / `npm audit fix`), SEC-04 (auth on exposed read actions), SEC-03 (shared rate limiter + trusted IP source), SEC-10 (security headers).
+2. **This sprint:** ✅ SEC-02 (upgraded to Next.js 16.4.5), SEC-04 (auth on exposed read actions), SEC-03 (external/platform rate limiter + trusted IP source), SEC-10 (security headers).
 3. **Next sprint:** SEC-05 (role revalidation/session lifetime), SEC-06 (token + backup encryption, bucket assertion), SEC-07/08/09 (feedback hardening, error sanitization), SEC-11 (Tasker `/yapperize`).
 4. **Backlog:** SEC-12 – SEC-20 hardening items; add CI scanning (SEC-19) so regressions of this class are caught automatically.
 
