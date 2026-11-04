@@ -1,4 +1,5 @@
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
+import { toSafeLogRocketUrl } from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
 export const JIRA_SUMMARY_MAX = 255;
@@ -144,11 +145,12 @@ export function buildJiraDescriptionAdf(input: JiraIssueInput): AdfDoc {
       paragraph([textNode(`Reported by: ${formatReporter(input.reporter)}`)])
    );
 
-   if (input.logrocketSessionId) {
+   const logrocketUrl = toSafeLogRocketUrl(input.logrocketSessionId);
+   if (logrocketUrl) {
       content.push(
          paragraph([
             textNode("LogRocket: "),
-            linkText("View session replay", input.logrocketSessionId),
+            linkText("View session replay", logrocketUrl),
          ])
       );
    }

@@ -15,6 +15,48 @@ import {
    sendFeedbackToDiscord,
 } from "./discord-feedback.service";
 
+describe("buildDiscordFeedbackEmbed link safety", () => {
+   const bug = {
+      feedbackNumber: 7,
+      type: "bug" as const,
+      title: "Broken",
+      description: "Something is broken on this page",
+      url: "/dashboard",
+   };
+
+   it("omits the LogRocket field for non-LogRocket URLs", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         logrocketSessionId: "https://evil.example/phish",
+      });
+
+      expect(
+         embed.fields?.some((field) => field.name.includes("LogRocket"))
+      ).toBe(false);
+   });
+
+   it("keeps a crafted session URL from injecting a second link", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         logrocketSessionId:
+            "https://app.logrocket.com/a)[trusted](https://evil.example",
+      });
+      const field = embed.fields?.find((f) => f.name.includes("LogRocket"));
+
+      expect(field?.value).not.toContain("](https://evil.example");
+   });
+
+   it("falls back to the root path when the page URL is not a path", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "[Click here](https://evil.example)",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("/");
+   });
+});
+
 describe("buildDiscordFeedbackEmbed", () => {
    it("builds a bug report embed with red accent and LogRocket link", () => {
       const embed = buildDiscordFeedbackEmbed({

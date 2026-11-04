@@ -134,3 +134,67 @@ describe("createFeedbackSchema", () => {
       expect(parsed.success).toBe(false);
    });
 });
+
+describe("createFeedbackSchema link validation", () => {
+   const base = {
+      type: "bug",
+      title: "Submit failed",
+      description: "Clicking submit does not do anything at all",
+      url: "/dashboard",
+   };
+
+   it("accepts a LogRocket session URL", () => {
+      const parsed = createFeedbackSchema.safeParse({
+         ...base,
+         logrocketSessionId: "https://app.logrocket.com/org/app/s/1-abc/0",
+      });
+
+      expect(parsed.success).toBe(true);
+   });
+
+   it.each([
+      "https://evil.example/phish",
+      "http://app.logrocket.com/org/app/s/1",
+      "https://app.logrocket.com.evil.example/s/1",
+      "https://user:pass@app.logrocket.com/s/1",
+      "javascript:alert(1)",
+      "just-a-session-id",
+   ])("rejects non-LogRocket session value %j", (logrocketSessionId) => {
+      const parsed = createFeedbackSchema.safeParse({
+         ...base,
+         logrocketSessionId,
+      });
+
+      expect(parsed.success).toBe(false);
+   });
+
+   it("still allows a null or missing session value", () => {
+      expect(
+         createFeedbackSchema.safeParse({ ...base, logrocketSessionId: null })
+            .success
+      ).toBe(true);
+      expect(createFeedbackSchema.safeParse(base).success).toBe(true);
+   });
+
+   it("accepts an absolute URL on the app origin", () => {
+      expect(
+         createFeedbackSchema.safeParse({
+            ...base,
+            url: "https://holdmetoit.com/dashboard",
+         }).success
+      ).toBe(true);
+   });
+
+   it.each([
+      "https://evil.example/phish",
+      "https://holdmetoit.com.evil.example/",
+      "//evil.example/phish",
+      "javascript:alert(1)",
+      "/[Click here](https://evil.example)",
+      "dashboard",
+   ])("rejects page URL outside the app %j", (url) => {
+      expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(
+         false
+      );
+   });
+});
