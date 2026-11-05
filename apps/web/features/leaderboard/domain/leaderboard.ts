@@ -447,15 +447,18 @@ export function resolveLeaderboardSelectedDay(params: {
          }
       } catch {}
    } else if (params.requestedDay != null && params.requestedDay !== "") {
-      const parsed =
-         typeof params.requestedDay === "number"
+      let parsed: number | null = null;
+      if (typeof params.requestedDay === "number") {
+         parsed = Number.isInteger(params.requestedDay)
             ? params.requestedDay
-            : parseInt(String(params.requestedDay), 10);
-      if (
-         Number.isInteger(parsed) &&
-         parsed >= 1 &&
-         parsed <= maxSelectableDay
+            : null;
+      } else if (
+         typeof params.requestedDay === "string" &&
+         /^\s*\d+\s*$/.test(params.requestedDay)
       ) {
+         parsed = parseInt(params.requestedDay.trim(), 10);
+      }
+      if (parsed !== null && parsed >= 1 && parsed <= maxSelectableDay) {
          resolvedDayNumber = parsed;
       }
    }

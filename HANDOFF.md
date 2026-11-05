@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration/Deploy Branch:** `dev` (latest `c9203ac`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-05 (Session 201 on `krish` · `dev` @ `c9203ac`)
+> **Last Updated:** 2026-11-03 (Session 200 on `feat/wrapped-doodle-mascots-#241` · Session 199 on `dev`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2789,32 +2789,3 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
 - **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.
-
-### Session 201 — 2026-11-05 (feat(leaderboard): add filter by day option to view specific day challenge stats — on `krish` · PR to `dev`)
-
-- **Context & Objectives:** Implement historical day filter for challenge leaderboards, allowing users and hosts to view rankings and study stats for any specific challenge day (GH Issue #248, Jira KAN-94):
-   1. **Jira Issue Transition:**
-      - Transitioned Jira issue `KAN-94` from `To Do` to `In Progress` (Transition ID `21`) via Jira Cloud REST API.
-   2. **Pure Domain Architecture (`features/leaderboard/domain/leaderboard.ts`):**
-      - Implemented `getLeaderboardDayOptions` returning challenge day options (`dayNumber`, `dateKey`, `formattedDate`, `isToday`) up to `currentDayNumber` for active challenges, or all days up to `totalDays` for completed challenges.
-      - Implemented `resolveLeaderboardSelectedDay` validating day numbers and `YYYY-MM-DD` date keys against challenge boundaries with graceful fallback to Today (active) or final day (completed).
-      - Implemented `rankByDaySeconds` sorting participants descending by logged seconds on the target date key, tie-breaking by cumulative `totalLoggedSeconds` descending, then `displayName` ascending with integer clock precision (Law L7, Law L8).
-      - Implemented `formatLeaderboardDayHeading` generating clear contextual headings.
-      - Implemented `calculateTeamDayScores` aggregating daily study seconds per team.
-      - Extended `LeaderboardViewMode` union with `"day"` and updated `resolveLeaderboardViewMode`.
-   3. **Data Layer Hardening (`features/leaderboard/data/leaderboard-data.ts`):**
-      - Updated `buildScoreboardViewModel` daily logs mapping to respect participant withdrawal cutoff timestamp (`filterLogsBeforeWithdrawal`) and aggregate multiple study log durations if multiple records exist on a date key.
-   4. **Presentation & Responsive UX (`challenge-leaderboard-tab.tsx`, `challenge-view.tsx`, `app/challenge/[id]/page.tsx`):**
-      - Added accessible Radix `Select` Day Selector dropdown (`data-testid="leaderboard-day-select"`) displayed beside the view mode toggle whenever in daily view (`viewMode === "today" || viewMode === "day"`).
-      - Added contextual day heading badge (`data-testid="leaderboard-day-heading"`).
-      - Dynamic table headers and mobile cards reflect `Day X Hours` / `Day X hours` (or `Today's Hours`).
-      - Implemented cozy empty state (`data-testid="day-no-logs-empty-state"`) for zero-log days (Law L9).
-      - Synchronized URL search parameters for `?view=day&day=X` and `?date=YYYY-MM-DD`.
-      - Pre-selected active day number in `AdminHoursOverrideModal`.
-      - Wired `initialLeaderboardDay` from server component search params through `ChallengeView` to `ChallengeLeaderboardTab`.
-   5. **Documentation & Quality Gates:**
-      - Added comprehensive feature architecture documentation in `docs/leaderboard/README.md` §7.7.
-      - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
-      - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
-      - Unit test suites: ✅ 100% green exit across all leaderboard tests (5 files, 153 tests) and full test suite (248 files, 2,482 tests).
-- **NEXT STEP:** PR #254 submitted from `krish` to `dev`, Jira issue KAN-94 in `In Review`. Ready for peer review and merge into `dev`.

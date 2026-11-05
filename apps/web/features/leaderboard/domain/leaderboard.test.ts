@@ -680,6 +680,30 @@ describe("resolveLeaderboardSelectedDay", () => {
          dayNumber: 3,
          isToday: true,
       });
+
+      const resolvedPartialNumeric = resolveLeaderboardSelectedDay({
+         requestedDay: "2garbage",
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedPartialNumeric).toMatchObject({
+         dayNumber: 3,
+         isToday: true,
+      });
+
+      const resolvedFractional = resolveLeaderboardSelectedDay({
+         requestedDay: 2.5,
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedFractional).toMatchObject({
+         dayNumber: 3,
+         isToday: true,
+      });
    });
 
    it("defaults to final day for completed challenges", () => {

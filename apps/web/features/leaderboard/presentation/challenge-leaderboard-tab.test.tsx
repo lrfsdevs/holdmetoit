@@ -1467,6 +1467,19 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).toContain("00:00:00");
       });
 
+      it("resolves dateKey initialDay string (YYYY-MM-DD) for pre-hydration deep linking", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeWithDailyLogs,
+               initialViewMode: "day",
+               initialDay: "2026-10-02",
+            })
+         );
+
+         expect(html).toContain("Showing Day 2 Standings · Oct 2, 2026");
+         expect(html).toContain("Day 2 hours");
+      });
+
       it("renders cozy empty state when no study sessions are recorded across all participants on selected day", () => {
          const challengeNoLogsOnDay2: ChallengeScoreboardViewModel = {
             ...challengeWithDailyLogs,

@@ -349,15 +349,19 @@ export function ChallengeLeaderboardTab({
          ? "individual"
          : requestedViewMode;
 
-   const [selectedDay, setSelectedDay] = useState(() =>
-      resolveLeaderboardSelectedDay({
-         requestedDay: initialDay,
+   const [selectedDay, setSelectedDay] = useState(() => {
+      const isDateKey =
+         typeof initialDay === "string" &&
+         /^\d{4}-\d{2}-\d{2}$/.test(initialDay.trim());
+      return resolveLeaderboardSelectedDay({
+         requestedDateKey: isDateKey ? initialDay.trim() : undefined,
+         requestedDay: isDateKey ? undefined : initialDay,
          startAt: challenge.startAt,
          totalDays: challenge.totalDays,
          currentDayNumber: challenge.currentDayNumber,
          status: challenge.status,
-      })
-   );
+      });
+   });
 
    useEffect(() => {
       if (resolvedInitialViewMode) {
