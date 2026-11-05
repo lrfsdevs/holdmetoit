@@ -243,7 +243,7 @@ export function TrophyLeaderboardView({
                                  {entry.image ? (
                                     <Image
                                        src={entry.image}
-                                       alt={entry.displayName}
+                                       alt={entry.username || entry.displayName}
                                        fill
                                        sizes="40px"
                                        className="object-cover"
@@ -256,7 +256,7 @@ export function TrophyLeaderboardView({
                               <div className="min-w-0">
                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-bold text-white text-sm truncate">
-                                       {entry.displayName}
+                                       {entry.username || entry.displayName}
                                     </span>
                                     {isSelf && (
                                        <span className="text-label bg-brand-1/20 text-brand-1 border border-brand-1/40 px-1.5 py-0.2 rounded font-bold">
@@ -265,8 +265,6 @@ export function TrophyLeaderboardView({
                                     )}
                                  </div>
                                  <div className="text-meta text-text-tertiary flex items-center gap-2 mt-0.5">
-                                    <span>@{entry.username}</span>
-                                    <span>•</span>
                                     <span className="font-mono text-text-secondary">
                                        {entry.wins}W / {entry.losses}L (
                                        {entry.winRate}%)

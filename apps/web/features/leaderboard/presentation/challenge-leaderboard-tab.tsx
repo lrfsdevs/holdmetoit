@@ -790,7 +790,7 @@ export function ChallengeLeaderboardTab({
                         )}
                         className="text-sm font-bold text-white hover:underline truncate block"
                      >
-                        {top2.displayName}
+                        {top2.username || top2.displayName}
                      </Link>
                   ) : (
                      <p className="text-sm font-bold text-white truncate">
@@ -835,7 +835,7 @@ export function ChallengeLeaderboardTab({
                         )}
                         className="text-sm font-bold text-white hover:underline truncate block"
                      >
-                        {top1.displayName}
+                        {top1.username || top1.displayName}
                      </Link>
                   ) : (
                      <p className="text-sm font-bold text-white truncate">
@@ -865,7 +865,7 @@ export function ChallengeLeaderboardTab({
                         )}
                         className="text-sm font-bold text-white hover:text-feedback-success hover:underline truncate block"
                      >
-                        {top3.displayName}
+                        {top3.username || top3.displayName}
                      </Link>
                   ) : (
                      <p className="text-sm font-bold text-white truncate">
@@ -1274,7 +1274,7 @@ export function ChallengeLeaderboardTab({
                                                 >
                                                    <UserAvatar
                                                       src={entry.image}
-                                                      name={entry.displayName}
+                                                      name={entry.username || entry.displayName}
                                                       userId={entry.userId}
                                                       size="sm"
                                                       className="h-full w-full border-0"
@@ -1283,7 +1283,7 @@ export function ChallengeLeaderboardTab({
 
                                                 {/* Name, Handle & Status Badges (Strict 2-Line Normalized Layout) */}
                                                 <div className="min-w-0 flex-1 space-y-1">
-                                                   {/* Line 1: Display Name + Trophy + Status Pill */}
+                                                   {/* Line 1: Scholar Platform Username + Trophy + Status Pill */}
                                                    <div className="flex items-center gap-1.5 min-w-0">
                                                       <Link
                                                          href={getParticipantProfileUrl(
@@ -1292,10 +1292,12 @@ export function ChallengeLeaderboardTab({
                                                          )}
                                                          className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate block"
                                                          title={
+                                                            entry.username ||
                                                             entry.displayName
                                                          }
                                                       >
-                                                         {entry.displayName}
+                                                         {entry.username ||
+                                                            entry.displayName}
                                                       </Link>
                                                       {isGlobalLeaderboardEnabled &&
                                                          typeof entry.trophies ===
@@ -1312,16 +1314,8 @@ export function ChallengeLeaderboardTab({
                                                       />
                                                    </div>
 
-                                                   {/* Line 2: Handle + Sick Badge + Pace Badge */}
+                                                   {/* Line 2: Sick Badge + Pace Badge */}
                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                      <p
-                                                         className="text-label text-text-tertiary truncate max-w-[90px] sm:max-w-[130px]"
-                                                         title={`@${entry.username || "scholar"}`}
-                                                      >
-                                                         @
-                                                         {entry.username ||
-                                                            "scholar"}
-                                                      </p>
                                                       <SickStatusBadge
                                                          isSick={entry.isSick}
                                                          activatedAt={
@@ -1470,7 +1464,7 @@ export function ChallengeLeaderboardTab({
                                           >
                                              <UserAvatar
                                                 src={entry.image}
-                                                name={entry.displayName}
+                                                name={entry.username || entry.displayName}
                                                 userId={entry.userId}
                                                 size="sm"
                                                 className="h-full w-full border-0"
@@ -1479,7 +1473,7 @@ export function ChallengeLeaderboardTab({
 
                                           {/* Name, Handle & Status Badges (Strict 2-Line Normalized Layout) */}
                                           <div className="min-w-0 flex-1 space-y-1">
-                                             {/* Line 1: Display Name + Unassigned Pill + Trophy + Status Pill */}
+                                             {/* Line 1: Scholar Platform Username + Unassigned Pill + Trophy + Status Pill */}
                                              <div className="flex items-center gap-1.5 min-w-0">
                                                 <Link
                                                    href={getParticipantProfileUrl(
@@ -1487,9 +1481,13 @@ export function ChallengeLeaderboardTab({
                                                          entry.participantId
                                                    )}
                                                    className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate block"
-                                                   title={entry.displayName}
+                                                   title={
+                                                      entry.username ||
+                                                      entry.displayName
+                                                   }
                                                 >
-                                                   {entry.displayName}
+                                                   {entry.username ||
+                                                      entry.displayName}
                                                 </Link>
                                                 <span
                                                    data-testid={`unassigned-pill-${entry.participantId}`}
@@ -1512,15 +1510,8 @@ export function ChallengeLeaderboardTab({
                                                 />
                                              </div>
 
-                                             {/* Line 2: Handle + Sick Badge */}
+                                             {/* Line 2: Sick Badge */}
                                              <div className="flex items-center gap-1.5 min-w-0">
-                                                <p
-                                                   className="text-label text-text-tertiary truncate max-w-[90px] sm:max-w-[130px]"
-                                                   title={`@${entry.username || "scholar"}`}
-                                                >
-                                                   @
-                                                   {entry.username || "scholar"}
-                                                </p>
                                                 <SickStatusBadge
                                                    isSick={entry.isSick}
                                                    activatedAt={
@@ -1618,14 +1609,14 @@ export function ChallengeLeaderboardTab({
                                  >
                                     <UserAvatar
                                        src={entry.image}
-                                       name={entry.displayName}
+                                       name={entry.username || entry.displayName}
                                        userId={entry.userId}
                                        size="sm"
                                        className="h-full w-full border-0"
                                     />
                                  </Link>
 
-                                 {/* Participant Details: Name + Team Badge, @username */}
+                                 {/* Participant Details: Platform Username + Team Badge */}
                                  <div className="min-w-0 flex-1 space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                        <Link
@@ -1634,7 +1625,7 @@ export function ChallengeLeaderboardTab({
                                           )}
                                           className="text-xs font-bold text-white hover:text-feedback-success hover:underline truncate max-w-[110px] xs:max-w-[140px] block"
                                        >
-                                          {entry.displayName}
+                                          {entry.username || entry.displayName}
                                        </Link>
                                        {isGlobalLeaderboardEnabled &&
                                           typeof entry.trophies ===
@@ -1669,9 +1660,6 @@ export function ChallengeLeaderboardTab({
                                           <span>{entry.teamName}</span>
                                        </span>
                                     </div>
-                                    <p className="text-meta text-text-tertiary truncate">
-                                       @{entry.username || "scholar"}
-                                    </p>
                                  </div>
 
                                  {/* Total hours and +Today's hours */}
@@ -1792,7 +1780,7 @@ export function ChallengeLeaderboardTab({
                                           >
                                              <UserAvatar
                                                 src={entry.image}
-                                                name={entry.displayName}
+                                                name={entry.username || entry.displayName}
                                                 userId={entry.userId}
                                                 size="sm"
                                                 className="h-full w-full border-0"
@@ -1807,7 +1795,8 @@ export function ChallengeLeaderboardTab({
                                                    )}
                                                    className="font-semibold text-sm text-white hover:text-feedback-success hover:underline truncate block"
                                                 >
-                                                   {entry.displayName}
+                                                   {entry.username ||
+                                                      entry.displayName}
                                                 </Link>
                                                 {isGlobalLeaderboardEnabled &&
                                                    typeof entry.trophies ===
@@ -1831,11 +1820,7 @@ export function ChallengeLeaderboardTab({
                                                    variant="compact"
                                                 />
                                              </div>
-                                             {entry.username && (
-                                                <p className="text-label text-text-tertiary">
-                                                   @{entry.username}
-                                                </p>
-                                             )}
+
                                           </div>
                                        </div>
                                     </TableCell>
