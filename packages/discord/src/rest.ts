@@ -143,26 +143,50 @@ export async function requestDiscord<T>(
    }
 }
 
-export interface SendChannelMessageInput {
-   channelId: string;
+export type DiscordAllowedMentions = DiscordMessagePayload["allowed_mentions"];
+
+/**
+ * Suppresses every @everyone, @here, role, and user ping unless opted in.
+ */
+const NO_MENTIONS: DiscordAllowedMentions = { parse: [] };
+
+export interface ChannelMessageBodyInput {
    embeds?: DiscordEmbed[];
    content?: string;
    components?: DiscordMessagePayload["components"];
+   allowedMentions?: DiscordAllowedMentions;
+}
+
+/**
+ * Builds the JSON body for sending or editing a channel message. Mentions are
+ * blocked by default so user-supplied text can never notify anyone.
+ */
+export function buildChannelMessageBody(
+   input: ChannelMessageBodyInput
+): DiscordMessagePayload {
+   const body: DiscordMessagePayload = {
+      allowed_mentions: input.allowedMentions ?? NO_MENTIONS,
+   };
+   if (input.content !== undefined) body.content = input.content;
+   if (input.embeds !== undefined) body.embeds = input.embeds;
+   if (input.components !== undefined) body.components = input.components;
+   return body;
+}
+
+export interface SendChannelMessageInput extends ChannelMessageBodyInput {
+   channelId: string;
 }
 
 export async function sendChannelMessage(
    input: SendChannelMessageInput
 ): Promise<DiscordSendResult> {
-   const { channelId, embeds, content, components } = input;
+   const { channelId } = input;
 
    if (!getDiscordToken()) {
       return { success: false, error: MISSING_TOKEN_ERROR };
    }
 
-   const body: DiscordMessagePayload = {};
-   if (content !== undefined) body.content = content;
-   if (embeds !== undefined) body.embeds = embeds;
-   if (components !== undefined) body.components = components;
+   const body = buildChannelMessageBody(input);
 
    try {
       const message = await requestDiscord<{ id: string }>(
@@ -175,27 +199,21 @@ export async function sendChannelMessage(
    }
 }
 
-export interface EditChannelMessageInput {
+export interface EditChannelMessageInput extends ChannelMessageBodyInput {
    channelId: string;
    messageId: string;
-   embeds?: DiscordEmbed[];
-   content?: string;
-   components?: DiscordMessagePayload["components"];
 }
 
 export async function editChannelMessage(
    input: EditChannelMessageInput
 ): Promise<DiscordSendResult> {
-   const { channelId, messageId, embeds, content, components } = input;
+   const { channelId, messageId } = input;
 
    if (!getDiscordToken()) {
       return { success: false, error: MISSING_TOKEN_ERROR };
    }
 
-   const body: DiscordMessagePayload = {};
-   if (content !== undefined) body.content = content;
-   if (embeds !== undefined) body.embeds = embeds;
-   if (components !== undefined) body.components = components;
+   const body = buildChannelMessageBody(input);
 
    try {
       await requestDiscord(

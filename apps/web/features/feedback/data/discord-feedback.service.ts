@@ -5,6 +5,10 @@ import type {
    DiscordSendResult,
 } from "@holdmetoit/discord";
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
+import {
+   toSafeLogRocketUrl,
+   toSafePageUrl,
+} from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
 export interface DiscordFeedbackPayloadInput {
@@ -48,13 +52,16 @@ export function buildDiscordFeedbackEmbed(
       }
    }
 
+   const safePage = toSafePageUrl(input.url);
+   const page =
+      safePage.length > 250 ? `${safePage.slice(0, 247)}...` : safePage;
+   const logrocketUrl = toSafeLogRocketUrl(input.logrocketSessionId);
+
    const fields: DiscordEmbedField[] = [
       {
          name: "📍 Page",
-         value:
-            input.url.length > 250
-               ? `${input.url.slice(0, 247)}...`
-               : input.url,
+         // In a code span so nothing in the page value can be auto-linked.
+         value: `\`${page}\``,
          inline: true,
       },
       {
@@ -69,10 +76,10 @@ export function buildDiscordFeedbackEmbed(
       },
    ];
 
-   if (isBug && input.logrocketSessionId) {
+   if (isBug && logrocketUrl) {
       fields.push({
          name: "🎥 LogRocket Session",
-         value: `[View Session Replay & Logs](${input.logrocketSessionId})`,
+         value: `[View Session Replay & Logs](${logrocketUrl})`,
          inline: false,
       });
    }

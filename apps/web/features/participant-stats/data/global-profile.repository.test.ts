@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
 import {
    getGlobalUserProfile,
@@ -33,6 +33,14 @@ vi.mock("./participant-stats.repository", () => ({
 describe("global-profile.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      // Challenge status is derived from the current time, so freeze it inside
+      // the fixtures' "Winter Sprint" window (2026-10-25 to 2026-11-05).
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-30T12:00:00.000Z"));
+   });
+
+   afterEach(() => {
+      vi.useRealTimers();
    });
 
    const mockUser = {

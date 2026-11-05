@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFeedbackSchema } from "./feedback.schema";
 
 describe("createFeedbackSchema", () => {
@@ -132,5 +132,91 @@ describe("createFeedbackSchema", () => {
       });
 
       expect(parsed.success).toBe(false);
+   });
+});
+
+describe("createFeedbackSchema link validation", () => {
+   // Pin the origin so the absolute-URL cases do not depend on the developer's
+   // or CI's AUTH_URL.
+   beforeEach(() => {
+      vi.stubEnv("AUTH_URL", "https://holdmetoit.com");
+   });
+
+   afterEach(() => {
+      vi.unstubAllEnvs();
+   });
+
+   const base = {
+      type: "bug",
+      title: "Submit failed",
+      description: "Clicking submit does not do anything at all",
+      url: "/dashboard",
+   };
+
+   it("accepts a LogRocket session URL", () => {
+      const parsed = createFeedbackSchema.safeParse({
+         ...base,
+         logrocketSessionId: "https://app.logrocket.com/org/app/s/1-abc/0",
+      });
+
+      expect(parsed.success).toBe(true);
+   });
+
+   it.each([
+      "https://evil.example/phish",
+      "http://app.logrocket.com/org/app/s/1",
+      "https://app.logrocket.com.evil.example/s/1",
+      "https://user:pass@app.logrocket.com/s/1",
+      "javascript:alert(1)",
+      "just-a-session-id",
+   ])("rejects non-LogRocket session value %j", (logrocketSessionId) => {
+      const parsed = createFeedbackSchema.safeParse({
+         ...base,
+         logrocketSessionId,
+      });
+
+      expect(parsed.success).toBe(false);
+   });
+
+   it("still allows a null or missing session value", () => {
+      expect(
+         createFeedbackSchema.safeParse({ ...base, logrocketSessionId: null })
+            .success
+      ).toBe(true);
+      expect(createFeedbackSchema.safeParse(base).success).toBe(true);
+   });
+
+   it("accepts an absolute URL on the app origin", () => {
+      expect(
+         createFeedbackSchema.safeParse({
+            ...base,
+            url: "https://holdmetoit.com/dashboard",
+         }).success
+      ).toBe(true);
+   });
+
+   it.each([
+      "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      "https://holdmetoit.com/x\ty",
+      "https://holdmetoit.com/<script>",
+      "https://holdmetoit.com/~https://evil.example/phish",
+   ])("rejects an absolute URL with hidden or unsafe characters %j", (url) => {
+      expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(
+         false
+      );
+   });
+
+   it.each([
+      "https://evil.example/phish",
+      "https://holdmetoit.com.evil.example/",
+      "//evil.example/phish",
+      "javascript:alert(1)",
+      "/[Click here](https://evil.example)",
+      "/~https://evil.example/phish",
+      "dashboard",
+   ])("rejects page URL outside the app %j", (url) => {
+      expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(
+         false
+      );
    });
 });

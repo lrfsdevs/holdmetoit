@@ -1,4 +1,10 @@
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
+import {
+   fenceCodeBlock,
+   neutralizeMentions,
+   toSafeLogRocketUrl,
+   toSafePageUrl,
+} from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
 export const GITHUB_ISSUE_TITLE_MAX = 256;
@@ -46,8 +52,8 @@ function clean(value: string): string {
 function formatReporter(reporter: GitHubIssueInput["reporter"]): string {
    if (!reporter) return "Guest / Anonymous";
    if (reporter.discordId) return `<@${reporter.discordId}>`;
-   if (reporter.displayName) return reporter.displayName;
-   if (reporter.username) return reporter.username;
+   if (reporter.displayName) return neutralizeMentions(reporter.displayName);
+   if (reporter.username) return neutralizeMentions(reporter.username);
    return "Guest / Anonymous";
 }
 
@@ -74,7 +80,7 @@ export function formatGitHubIssueTitle(
 ): string {
    const prefix = `[${formatFeedbackCode(input.feedbackNumber)}] `;
    const available = GITHUB_ISSUE_TITLE_MAX - prefix.length;
-   const title = clean(input.title);
+   const title = neutralizeMentions(clean(input.title));
 
    if (title.length <= available) {
       return `${prefix}${title}`;
@@ -88,6 +94,8 @@ export function formatGitHubIssueTitle(
 export function buildGitHubIssueBody(input: GitHubIssueInput): string {
    const code = formatFeedbackCode(input.feedbackNumber);
    const attachments = input.attachments ?? [];
+   const description = clean(input.description);
+   const logrocketUrl = toSafeLogRocketUrl(input.logrocketSessionId);
 
    const lines = [
       `<!-- ${FEEDBACK_ISSUE_MARKER_PREFIX}:${code} -->`,
@@ -95,21 +103,21 @@ export function buildGitHubIssueBody(input: GitHubIssueInput): string {
       `**Type:** ${
          input.type === "bug" ? "Bug report" : "Enhancement suggestion"
       }`,
-      `**Page:** ${clean(input.url) || "/"}`,
+      // In a code span so nothing in the page value can be auto-linked.
+      `**Page:** \`${toSafePageUrl(clean(input.url))}\``,
       `**Reported by:** ${formatReporter(input.reporter)}`,
    ];
 
-   if (input.logrocketSessionId) {
-      lines.push(
-         `**LogRocket:** [View session replay](${input.logrocketSessionId})`
-      );
+   if (logrocketUrl) {
+      lines.push(`**LogRocket:** [View session replay](${logrocketUrl})`);
    }
 
+   // Fenced so @mentions, #refs, and HTML in user text stay inert.
    lines.push(
       "",
       "### Description",
       "",
-      clean(input.description) || "_No description provided._"
+      description ? fenceCodeBlock(description) : "_No description provided._"
    );
 
    if (attachments.length > 0) {
