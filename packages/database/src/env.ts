@@ -10,6 +10,11 @@ const databaseEnvSchema = z.object({
    NODE_ENV: z.string().default("development"),
    DATABASE_URL: optionalString,
    DIRECT_URL: optionalString,
+   DATABASE_SSL_CA: optionalString,
+   DATABASE_SSL_REJECT_UNAUTHORIZED: z
+      .string()
+      .optional()
+      .transform((val) => val === "true"),
 });
 
 export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;

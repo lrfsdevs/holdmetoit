@@ -191,6 +191,11 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Resolved explicit conflict in `apps/web/features/participant-stats/data/global-profile.repository.test.ts`: adopted `origin/dev`'s `{ toFake: ["Date"] }` fake timer freeze (`2026-10-30T12:00:00.000Z`) inside the Winter Sprint fixture window.
    - Fixed Next.js 16 async `searchParams` compatibility in `apps/web/app/challenge/[id]/page.tsx`: updated `initialLeaderboardDay={query.day ?? query.date}` using the awaited `query` object rather than synchronous `searchParams`, and added `day?: string; date?: string;` to the `Promise` type.
    - Retained removal of in-memory rate limiter in `apps/web/app/api/feedback/route.test.ts` while integrating `origin/dev`'s `AUTH_URL` environment stubbing and `afterEach` un-stubbing.
+- **Database TLS & Root CA Verification Hardening:**
+   - Updated `packages/database/src/index.ts` with `isLocalDatabaseHost(url)` and `resolveSslConfig(url, customSsl)` to support custom trusted root CAs via `DATABASE_SSL_CA` or `DATABASE_SSL_REJECT_UNAUTHORIZED`.
+   - Preserved unencrypted local connections on `localhost`, `127.0.0.1`, `::1` (`[::1]`), and `.local` hosts without breaking Vitest suites or local Docker containers.
+   - Preserved Supabase compatibility (which uses private intermediate CA `Supabase Intermediate 2021 CA` on pooler/direct connections) while allowing full TLS validation when the Supabase root CA is provided.
+   - Added unit test suite in `apps/web/core/db/index.test.ts` verifying host detection, SSL resolution, CA injection, and PrismaClient initialization.
 - **Quality Gates:**
    - `npm run build -w @holdmetoit/database`: ✅ 0 errors
    - `npm run build -w @holdmetoit/discord`: ✅ 0 errors
