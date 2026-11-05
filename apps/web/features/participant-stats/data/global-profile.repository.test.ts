@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
 import {
    getGlobalUserProfile,
@@ -10,6 +10,7 @@ vi.mock("@/core/db", () => ({
    prisma: {
       user: {
          findUnique: vi.fn(),
+         findFirst: vi.fn(),
       },
       task: {
          count: vi.fn(),
@@ -33,6 +34,12 @@ vi.mock("./participant-stats.repository", () => ({
 describe("global-profile.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-30T12:00:00.000Z"));
+   });
+
+   afterEach(() => {
+      vi.useRealTimers();
    });
 
    const mockUser = {
@@ -49,9 +56,32 @@ describe("global-profile.repository", () => {
    describe("getGlobalUserProfile", () => {
       it("returns null when user is not found", async () => {
          vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
 
          const result = await getGlobalUserProfile("nonexistent_user");
          expect(result).toBeNull();
+      });
+
+      it("resolves user by platform username when not found by CUID", async () => {
+         vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+         vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as any);
+         vi.mocked(prisma.task.count).mockResolvedValue(0);
+         vi.mocked(prisma.userPokemon.count).mockResolvedValue(0);
+         vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue([]);
+         vi.mocked(prisma.trophyTransaction.findMany).mockResolvedValue([]);
+
+         const result = await getGlobalUserProfile("@alicescholar");
+         expect(result).not.toBeNull();
+         expect(result?.user.id).toBe("user_1");
+         expect(prisma.user.findFirst).toHaveBeenCalledWith({
+            where: {
+               username: {
+                  equals: "alicescholar",
+                  mode: "insensitive",
+               },
+            },
+            select: expect.any(Object),
+         });
       });
 
       it("returns career stats for user with zero challenge enrollments", async () => {

@@ -184,6 +184,20 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 
 ## 7. Session Changelog (Last 3–5 Sessions)
 
+### Session 203 — 2026-11-05 (feat(auth): platform usernames backend architecture and feature flag gating)
+
+- **Scope:** Complete backend implementation of case-insensitively unique, case-preserving platform usernames, protected behind the `platform_username` feature flag. UI implementation is deferred to subsequent frontend slices per user instruction.
+- **Pure Domain Engine (Law L7):** Created `features/auth/domain/username.ts` with `validateUsername`, `formatUsername` (preserves casing), `canonicalizeUsername` (lowercased), `isReservedUsername`, `isUsernameChangeAllowed` (7-day cooldown), `generateSuffixedUsername`, `sanitizeDiscordUsername`, and `usernameZodSchema`. 25 unit tests in `username.test.ts` (100% passing).
+- **Feature Flag Protection:** Registered `platformUsername: "platform_username"` in `FEATURE_FLAG_KEYS` and added to `SYSTEM_FEATURE_FLAGS` seeded as `RolloutMode.DISABLED`.
+- **Database Schema & Migration:** Added `usernameChangedAt DateTime?` to `User` in `prisma/schema.prisma` and created migration `20261105000000_user_username_ci_unique` creating partial unique index `User_lower_username_key` on `(LOWER("username")) WHERE "username" IS NOT NULL`. Added pre-migration verification/dedupe script `apps/web/scripts/dedupe-usernames.ts`.
+- **Session Hydration & Auth.js:** Augmented `Session["user"]` and `User` in `types/next-auth.d.ts` with `username: string | null`, and hydrated `session.user.username` in `core/auth/index.ts`.
+- **Data Layer:** Added `findUserByUsername`, `isUsernameAvailable`, `provisionInitialUsername`, and `updateUsername` in `user.repository.ts`. Refactored `syncUserFromDiscordProfile` to be non-destructive (never overwrites an existing platform handle). 16 unit tests in `user.repository.test.ts` (100% passing).
+- **Audit & Observability:** Extended `AuditEventType` with `"USERNAME_UPDATED"`, added diagnostic log events `authUsernameUpdated` and `authUsernameCheckFailed`.
+- **Server Actions:** Implemented `checkUsernameAvailabilityAction` and `updateUsernameAction` in `username.actions.ts`, protected by `platform_username` feature flag, session authentication, Zod validation, 7-day cooldown check, and append-only audit logging. 10 unit tests in `username.actions.test.ts` (100% passing).
+- **Profile Integration:** Updated `getGlobalUserProfile` in `features/participant-stats/data/global-profile.repository.ts` to seamlessly resolve either by primary CUID or case-insensitive `@handle`, unblocking future `/u/[username]` views. Added `getGlobalUserProfileByUsername`.
+- **Tests:** 56 unit tests passing across all new username suites (25 domain + 16 repository + 10 actions + 5 profile lookup).
+- **NEXT:** Frontend slice — profile settings username edit card, availability debounced checker, and `/u/[username]` or `/profile/[handle]` route presentation.
+
 ### Session 190 — 2026-11-02 (Cockpit task visibility on `afnan-jr`)
 
 - **Visibility rule:** daily shows every task, including `COMPLETED` and `CROSSED_OUT`. Weekly hides only tasks bound to a results-locked challenge (`completedChallengeIds` from `Challenge.resultsLockedAt`); all other weekly tasks stay visible/editable. Hiding is presentation-only; no queue/delete or result rewrite.

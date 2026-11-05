@@ -149,6 +149,7 @@ const nextAuthResult = NextAuth({
             session.user.role = user.role;
             session.user.discordId = user.discordId;
             session.user.displayName = user.displayName;
+            session.user.username = (user as any).username ?? null;
             session.user.isSick = Boolean((user as any).isSick);
             session.user.sickModeActivatedAt = (user as any).sickModeActivatedAt
                ? new Date((user as any).sickModeActivatedAt).toISOString()

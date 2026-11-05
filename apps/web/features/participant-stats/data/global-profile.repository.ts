@@ -19,13 +19,16 @@ import type { ParticipantStatsViewModel } from "../domain/participant-stats.type
 /**
  * Fetches complete user identity, lifetime career stats (even with 0 challenge enrollments),
  * and chronologically ordered challenge participation history (newest first).
+ * Accepts either a user CUID or a platform username (@handle or handle).
  */
 export async function getGlobalUserProfile(
-   userId: string
+   identifier: string
 ): Promise<GlobalUserProfile | null> {
-   // 1. Fetch user core record
-   const user = await prisma.user.findUnique({
-      where: { id: userId },
+   const cleanIdentifier = identifier.trim().replace(/^@/, "");
+
+   // 1. Fetch user core record (try by primary CUID first, then by platform username)
+   let user = await prisma.user.findUnique({
+      where: { id: cleanIdentifier },
       select: {
          id: true,
          displayName: true,
@@ -45,8 +48,37 @@ export async function getGlobalUserProfile(
    });
 
    if (!user) {
+      user = await prisma.user.findFirst({
+         where: {
+            username: {
+               equals: cleanIdentifier,
+               mode: "insensitive",
+            },
+         },
+         select: {
+            id: true,
+            displayName: true,
+            username: true,
+            name: true,
+            image: true,
+            role: true,
+            createdAt: true,
+            trophyBalance: true,
+            yptId: true,
+            isSick: true,
+            sickModeActivatedAt: true,
+            sickModeNote: true,
+            sickModeReminderSnoozedUntil: true,
+            sickModeLastDeactivatedAt: true,
+         },
+      });
+   }
+
+   if (!user) {
       return null;
    }
+
+   const userId = user.id;
 
    // 2. Fetch parallel aggregates: completed tasks, pokedex count, participations, trophy txns
    const [
@@ -237,6 +269,15 @@ export async function getGlobalUserProfile(
       },
       challengeHistory,
    };
+}
+
+/**
+ * Fetches complete user identity and career stats by platform username.
+ */
+export async function getGlobalUserProfileByUsername(
+   username: string
+): Promise<GlobalUserProfile | null> {
+   return getGlobalUserProfile(username);
 }
 
 /**

@@ -5,6 +5,7 @@ export const FEATURE_FLAG_KEYS = {
    globalLeaderboard: "global_leaderboard_v1",
    withdrawal: "challenge_withdrawal_v1",
    logrocket: "logrocket_v1",
+   platformUsername: "platform_username",
 } as const;
 
 export type FeatureFlagKey =

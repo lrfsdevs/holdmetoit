@@ -11,6 +11,8 @@ export const logEvents = {
    authRoleSyncFailed: "auth.role_sync_failed",
    authSignout: "auth.signout",
    authPreviewToggled: "auth.preview_toggled",
+   authUsernameUpdated: "auth.username_updated",
+   authUsernameCheckFailed: "auth.username_check_failed",
 
    challengeCreated: "challenge.created",
    challengeUpdated: "challenge.updated",
