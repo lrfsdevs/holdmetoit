@@ -47,6 +47,22 @@ describe("UserNav", () => {
       expect(html).not.toContain("exit-preview-button");
    });
 
+   it("prioritizes platform username in user capsule over displayName", () => {
+      const html = renderToStaticMarkup(
+         createElement(UserNav, {
+            user: {
+               id: "u_1",
+               displayName: "Alice In Wonderland",
+               username: "alice_wonder",
+               role: "PARTICIPANT",
+            },
+         })
+      );
+      expect(html).toContain("alice_wonder");
+      expect(html).not.toContain("Alice In Wonderland");
+      expect(html).toContain('title="View profile for alice_wonder"');
+   });
+
    it("renders capsule for ADMIN role without preview button or dev badge", () => {
       const html = renderToStaticMarkup(
          createElement(UserNav, {

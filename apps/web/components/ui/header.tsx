@@ -113,7 +113,7 @@ export function UserNav({
    const effectiveIsPreviewActive = isPreviewActive ?? false;
 
    const displayName =
-      user.displayName || user.name || user.username || "Companion";
+      user.username || user.displayName || user.name || "Companion";
    const initial = displayName.charAt(0).toUpperCase();
    const isDev = isDevRole(user.role) && !effectiveIsPreviewActive;
    const activeProfileUrl = profileUrl ?? "/profile";

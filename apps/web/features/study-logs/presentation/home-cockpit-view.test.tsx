@@ -475,4 +475,21 @@ describe("HomeCockpitView", () => {
 
       expect(html).not.toContain("Old Weekly Goal");
    });
+
+   it("prioritizes platform username for Welcome header link", () => {
+      const html = renderToStaticMarkup(
+         createElement(HomeCockpitView, {
+            user: {
+               id: "user-1",
+               displayName: "Afnan Legacy",
+               username: "afnan_prime",
+            },
+         })
+      );
+
+      expect(html).toContain("Welcome");
+      expect(html).toContain("afnan_prime");
+      expect(html).not.toContain("Afnan Legacy");
+      expect(html).toContain('title="View profile for afnan_prime"');
+   });
 });
