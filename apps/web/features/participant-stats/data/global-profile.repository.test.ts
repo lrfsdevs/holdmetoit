@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/core/db";
 import {
    getGlobalUserProfile,
@@ -33,6 +33,12 @@ vi.mock("./participant-stats.repository", () => ({
 describe("global-profile.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-10-26T00:00:00.000Z"));
+   });
+
+   afterEach(() => {
+      vi.useRealTimers();
    });
 
    const mockUser = {

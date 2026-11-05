@@ -1,3 +1,4 @@
+import { getServerEnv } from "@/core/env/server";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    buildJiraIssueFields,
@@ -42,10 +43,11 @@ function parseLabels(value: string | undefined): string[] {
 
 /** Resolves the Jira Cloud API-token configuration. Never throws. */
 export function resolveJiraConfig(): JiraConfigResolution {
-   const baseUrl = process.env.JIRA_BASE_URL?.trim();
-   const email = process.env.JIRA_EMAIL?.trim();
-   const apiToken = process.env.JIRA_API_TOKEN?.trim();
-   const projectKey = process.env.JIRA_PROJECT_KEY?.trim();
+   const env = getServerEnv();
+   const baseUrl = env.JIRA_BASE_URL?.trim();
+   const email = env.JIRA_EMAIL?.trim();
+   const apiToken = env.JIRA_API_TOKEN?.trim();
+   const projectKey = env.JIRA_PROJECT_KEY?.trim();
 
    if (!baseUrl && !email && !apiToken && !projectKey) {
       return { ok: false, reason: "Jira issue sync is not configured." };
@@ -90,8 +92,7 @@ export function resolveJiraConfig(): JiraConfigResolution {
       };
    }
 
-   const assigneeAccountId =
-      process.env.JIRA_ASSIGNEE_ACCOUNT_ID?.trim() || undefined;
+   const assigneeAccountId = env.JIRA_ASSIGNEE_ACCOUNT_ID?.trim() || undefined;
 
    return {
       ok: true,
@@ -101,7 +102,7 @@ export function resolveJiraConfig(): JiraConfigResolution {
          apiToken: apiToken!,
          projectKey: projectKey!,
          assigneeAccountId,
-         labels: parseLabels(process.env.JIRA_LABELS),
+         labels: parseLabels(env.JIRA_LABELS),
       },
    };
 }

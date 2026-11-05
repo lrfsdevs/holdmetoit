@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getServerEnv } from "@/core/env/server";
+
 const SESSION_COOKIE_NAMES = [
    "authjs.session-token",
    "__Secure-authjs.session-token",
@@ -16,13 +18,13 @@ const SESSION_COOKIE_NAMES = [
  * Server Component layouts and Server Actions using the database-backed session.
  */
 export function proxy(request: NextRequest) {
+   const env = getServerEnv();
    const { pathname } = request.nextUrl;
 
    if (pathname.startsWith("/admin") || pathname.startsWith("/devboard")) {
       const isDevBypass =
-         process.env.NODE_ENV === "development" &&
-         (process.env.ALLOW_DEV_BYPASS === "true" ||
-            !process.env.AUTH_DISCORD_ID);
+         env.NODE_ENV === "development" &&
+         (env.ALLOW_DEV_BYPASS || !env.AUTH_DISCORD_ID);
 
       if (isDevBypass) {
          return NextResponse.next();

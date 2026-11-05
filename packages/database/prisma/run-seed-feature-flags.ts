@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../src/index.js";
 
 import { seedSystemFeatureFlags } from "./seed-feature-flags";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
    const flags = await seedSystemFeatureFlags(prisma);

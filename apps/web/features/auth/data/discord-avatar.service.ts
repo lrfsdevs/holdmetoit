@@ -4,6 +4,7 @@ import {
    type DiscordUser,
 } from "@holdmetoit/discord";
 import { prisma } from "@/core/db";
+import { getServerEnv } from "@/core/env/server";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    buildDiscordAvatarUrl,
@@ -31,7 +32,7 @@ export type OAuthAvatarFetchResult =
 export async function fetchDiscordUserAvatar(
    discordUserId: string
 ): Promise<DiscordAvatarFetchResult | null> {
-   const botToken = process.env.DISCORD_BOT_TOKEN;
+   const botToken = getServerEnv().DISCORD_BOT_TOKEN;
 
    if (!botToken || !discordUserId) {
       return null;
@@ -127,11 +128,10 @@ export async function fetchDiscordUserAvatarViaOAuth(
 
       // Refresh the OAuth token if the access token is missing, expired or rejected.
       if ((shouldRefresh || !fetchedUser) && account.refresh_token) {
-         const clientId =
-            process.env.AUTH_DISCORD_ID || process.env.DISCORD_CLIENT_ID;
+         const env = getServerEnv();
+         const clientId = env.AUTH_DISCORD_ID || env.DISCORD_CLIENT_ID;
          const clientSecret =
-            process.env.AUTH_DISCORD_SECRET ||
-            process.env.DISCORD_CLIENT_SECRET;
+            env.AUTH_DISCORD_SECRET || env.DISCORD_CLIENT_SECRET;
 
          if (clientId && clientSecret) {
             const params = new URLSearchParams({

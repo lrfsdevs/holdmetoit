@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerEnv } from "@/core/env/server";
 import { yptIngestSchema } from "@/features/ypt/domain/ypt.types";
 import { ingestYptActivity } from "@/features/ypt/api/ypt-ingest.service";
 
 export async function POST(req: NextRequest) {
    // 1. Bearer Token Authentication
    const authHeader = req.headers.get("authorization");
-   const expectedApiKey = process.env.YPT_INGEST_API_KEY;
+   const expectedApiKey = getServerEnv().YPT_INGEST_API_KEY;
 
    if (expectedApiKey) {
       if (!authHeader || !authHeader.startsWith("Bearer ")) {

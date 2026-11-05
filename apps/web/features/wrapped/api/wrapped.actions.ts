@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getServerEnv } from "@/core/env/server";
 import { cacheTags, invalidateTags } from "@/core/cache";
 import { toClientError } from "@/core/errors";
 import { prisma } from "@/core/db";
@@ -212,6 +213,7 @@ export async function submitChallengeFeedbackAction(
       const embed = buildChallengeFeedbackEmbed({
          challengeId,
          challengeTitle,
+         appUrl: getServerEnv().AUTH_URL,
          consistency,
          fairnessRating,
          trackingPreference,

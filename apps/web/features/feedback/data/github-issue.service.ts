@@ -1,3 +1,4 @@
+import { getServerEnv } from "@/core/env/server";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    buildGitHubIssuePayload,
@@ -43,8 +44,9 @@ function parseList(
 
 /** Resolves the fine-grained PAT configuration. Never throws. */
 export function resolveGitHubConfig(): GitHubConfigResolution {
-   const token = process.env.GITHUB_TOKEN?.trim();
-   const repo = process.env.GITHUB_REPO?.trim();
+   const env = getServerEnv();
+   const token = env.GITHUB_TOKEN?.trim();
+   const repo = env.GITHUB_REPO?.trim();
 
    if (!token && !repo) {
       return { ok: false, reason: "GitHub issue sync is not configured." };
@@ -67,15 +69,15 @@ export function resolveGitHubConfig(): GitHubConfigResolution {
       config: {
          token,
          repo,
-         apiUrl: (
-            process.env.GITHUB_API_URL?.trim() || DEFAULT_API_URL
-         ).replace(/\/+$/, ""),
-         bugLabels: parseList(process.env.GITHUB_ISSUE_LABELS_BUG, ["bug"]),
-         enhancementLabels: parseList(
-            process.env.GITHUB_ISSUE_LABELS_ENHANCEMENT,
-            ["enhancement"]
+         apiUrl: (env.GITHUB_API_URL?.trim() || DEFAULT_API_URL).replace(
+            /\/+$/,
+            ""
          ),
-         assignees: parseList(process.env.GITHUB_ISSUE_ASSIGNEES),
+         bugLabels: parseList(env.GITHUB_ISSUE_LABELS_BUG, ["bug"]),
+         enhancementLabels: parseList(env.GITHUB_ISSUE_LABELS_ENHANCEMENT, [
+            "enhancement",
+         ]),
+         assignees: parseList(env.GITHUB_ISSUE_ASSIGNEES),
       },
    };
 }

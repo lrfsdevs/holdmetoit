@@ -80,8 +80,7 @@ export function buildChallengeFeedbackEmbed(
    const starDisplay = formatStarRating(input.fairnessRating);
    const reporterText = formatReporterMention(input.reporter);
 
-   const baseUrl =
-      input.appUrl || process.env.AUTH_URL || "https://holdmetoit.com";
+   const baseUrl = input.appUrl || "https://holdmetoit.com";
    const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
    const challengeUrl = `${cleanBaseUrl}/challenge/${input.challengeId}`;
 

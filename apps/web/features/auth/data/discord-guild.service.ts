@@ -4,6 +4,7 @@
  */
 
 import { fetchGuildMember } from "@holdmetoit/discord";
+import { getServerEnv } from "@/core/env/server";
 import { parseDiscordSnowflakeList } from "@/features/auth/domain/auth-roles";
 
 export interface DiscordGuildMemberResponse {
@@ -15,12 +16,13 @@ export interface DiscordGuildMemberResponse {
 }
 
 export function getConfiguredAdminRoleIds(): string[] {
-   const raw = process.env.DISCORD_ADMIN_ROLE_IDS ?? "";
+   const raw = getServerEnv().DISCORD_ADMIN_ROLE_IDS ?? "";
    return parseDiscordSnowflakeList(raw);
 }
 
 export function getConfiguredDevDiscordIds(): string[] {
-   const raw = process.env.DEV_DISCORD_IDS ?? process.env.DISCORD_DEV_IDS ?? "";
+   const env = getServerEnv();
+   const raw = env.DEV_DISCORD_IDS ?? env.DISCORD_DEV_IDS ?? "";
    return parseDiscordSnowflakeList(raw);
 }
 
@@ -42,7 +44,7 @@ export function isDiscordDev(discordUserId: string): boolean {
 export async function fetchMemberRoles(
    discordUserId: string
 ): Promise<string[]> {
-   const guildId = process.env.DISCORD_GUILD_ID;
+   const guildId = getServerEnv().DISCORD_GUILD_ID;
 
    if (!guildId || !discordUserId) {
       return [];

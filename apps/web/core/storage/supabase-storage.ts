@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+import { getServerEnv } from "@/core/env/server";
 import {
    buildChallengeImageObjectPath,
    extractManagedObjectPath,
@@ -23,13 +24,13 @@ export interface StorageConfig {
 }
 
 export function getStorageConfig(): StorageConfig {
+   const env = getServerEnv();
    const required = {
-      SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET,
-      SUPABASE_EVENT_BANNERS_FOLDER: process.env.SUPABASE_EVENT_BANNERS_FOLDER,
-      SUPABASE_PUNISHMENT_PFPS_FOLDER:
-         process.env.SUPABASE_PUNISHMENT_PFPS_FOLDER,
+      SUPABASE_URL: env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_STORAGE_BUCKET: env.SUPABASE_STORAGE_BUCKET,
+      SUPABASE_EVENT_BANNERS_FOLDER: env.SUPABASE_EVENT_BANNERS_FOLDER,
+      SUPABASE_PUNISHMENT_PFPS_FOLDER: env.SUPABASE_PUNISHMENT_PFPS_FOLDER,
    };
 
    for (const [name, value] of Object.entries(required)) {
@@ -61,7 +62,7 @@ export function getStorageConfig(): StorageConfig {
 
    // Optional for backwards compatibility; the canonical folder is the default.
    const feedbackAttachmentsFolder = folder(
-      process.env.SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER?.trim() ||
+      env.SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER?.trim() ||
          "feedback-attachments",
       "SUPABASE_FEEDBACK_ATTACHMENTS_FOLDER"
    );

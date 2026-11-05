@@ -1,4 +1,7 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+
+import { getDatabaseEnv } from "./env.js";
 
 function withConnectionTimeouts(rawUrl?: string): string | undefined {
    if (!rawUrl) return undefined;
@@ -16,39 +19,45 @@ function withConnectionTimeouts(rawUrl?: string): string | undefined {
    }
 }
 
-if (process.env.DATABASE_URL) {
-   const hardened = withConnectionTimeouts(process.env.DATABASE_URL);
-   if (hardened) {
-      process.env.DATABASE_URL = hardened;
+const LOCAL_TEST_DATABASE_URL = "postgresql://localhost:5432/holdmetoit";
+
+function resolveConnectionString(connectionString?: string): string {
+   const env = getDatabaseEnv();
+   const resolved = connectionString ?? env.DATABASE_URL;
+   if (resolved) return resolved;
+
+   // Import-time construction happens in tests and local tooling without a DB.
+   // Production must fail fast rather than silently targeting a local database.
+   if (env.NODE_ENV === "production") {
+      throw new Error("DATABASE_URL is not set");
    }
+
+   return LOCAL_TEST_DATABASE_URL;
 }
 
-if (process.env.DIRECT_URL) {
-   const hardenedDirect = withConnectionTimeouts(process.env.DIRECT_URL);
-   if (hardenedDirect) {
-      process.env.DIRECT_URL = hardenedDirect;
-   }
+/** Creates an adapter-backed Prisma client for the app, seeds, and scripts. */
+export function createPrismaClient(connectionString?: string): PrismaClient {
+   const resolved = resolveConnectionString(connectionString);
+   const adapter = new PrismaPg({
+      connectionString: withConnectionTimeouts(resolved) ?? resolved,
+   });
+
+   return new PrismaClient({
+      adapter,
+      log:
+         getDatabaseEnv().NODE_ENV === "development"
+            ? ["error", "warn"]
+            : ["error"],
+   });
 }
 
 const globalForPrisma = globalThis as unknown as {
    prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-   globalForPrisma.prisma ??
-   new PrismaClient({
-      datasources: process.env.DATABASE_URL
-         ? {
-              db: {
-                 url: withConnectionTimeouts(process.env.DATABASE_URL),
-              },
-           }
-         : undefined,
-      log:
-         process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-   });
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+if (getDatabaseEnv().NODE_ENV !== "production") {
    globalForPrisma.prisma = prisma;
 }
 

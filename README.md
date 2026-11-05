@@ -157,8 +157,8 @@ Existing databases previously created with `db push` must be backed up and verif
 ### 4. Seed Scripts (local database only)
 
 ```bash
-# Seed/refresh the normalized Pokémon catalogue (offline bundle; idempotent)
-npm run db:seed:pokemon
+# Seed initial test participants, challenges, and feature flags
+npm run db:seed
 ```
 
 ### 5. Verification (run before every PR)
