@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `c9203ac`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-04 (Session 201 on `feat/leaderboard-day-filter-#248` · `dev` @ `a1b0f5d`)
+> **Last Updated:** 2026-11-05 (Session 201 on `krish` · `dev` @ `c9203ac`)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2790,7 +2790,7 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
 - **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.
 
-### Session 201 — 2026-11-04 (feat(leaderboard): add filter by day option to view specific day challenge stats — on `feat/leaderboard-day-filter-#248`)
+### Session 201 — 2026-11-05 (feat(leaderboard): add filter by day option to view specific day challenge stats — on `krish` · PR to `dev`)
 
 - **Context & Objectives:** Implement historical day filter for challenge leaderboards, allowing users and hosts to view rankings and study stats for any specific challenge day (GH Issue #248, Jira KAN-94):
    1. **Jira Issue Transition:**
@@ -2817,4 +2817,4 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
       - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all leaderboard tests (5 files, 153 tests) and full test suite (248 files, 2,482 tests).
-- **NEXT STEP:** Submit PR from `feat/leaderboard-day-filter-#248` to `dev`, transition Jira issue KAN-94 to `In Review`. Ready for peer review and merge into `dev`.
+- **NEXT STEP:** PR submitted from `krish` to `dev`, Jira issue KAN-94 in `In Review`. Ready for peer review and merge into `dev`.
