@@ -2817,4 +2817,4 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run typecheck:web`: ✅ 0 compiler errors (`tsc --noEmit` exits with 0).
       - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all leaderboard tests (5 files, 153 tests) and full test suite (248 files, 2,482 tests).
-- **NEXT STEP:** PR submitted from `krish` to `dev`, Jira issue KAN-94 in `In Review`. Ready for peer review and merge into `dev`.
+- **NEXT STEP:** PR #254 submitted from `krish` to `dev`, Jira issue KAN-94 in `In Review`. Ready for peer review and merge into `dev`.
