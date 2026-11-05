@@ -6,8 +6,14 @@ import {
    calculateLeadMargin,
    calculateParticipantScoredSeconds,
    calculateSharePercentages,
+   calculateTeamDayScores,
    formatLeadMarginDelta,
+   formatLeaderboardDayHeading,
+   getLeaderboardDayOptions,
+   getParticipantDayLoggedSeconds,
+   rankByDaySeconds,
    rankByTodaySeconds,
+   resolveLeaderboardSelectedDay,
    resolveLeaderboardViewMode,
    supportsTeamView,
 } from "@/features/leaderboard/domain/leaderboard";
@@ -356,6 +362,10 @@ describe("rankByTodaySeconds", () => {
 });
 
 describe("resolveLeaderboardViewMode", () => {
+   it("resolves 'day' correctly", () => {
+      expect(resolveLeaderboardViewMode("day")).toBe("day");
+   });
+
    it("resolves 'today' correctly", () => {
       expect(resolveLeaderboardViewMode("today")).toBe("today");
    });
@@ -402,5 +412,367 @@ describe("supportsTeamView", () => {
       expect(supportsTeamView("SOLOS")).toBe(false);
       expect(supportsTeamView("TEAM_VS_TEAM")).toBe(true);
       expect(supportsTeamView("DUOS")).toBe(true);
+   });
+});
+
+describe("getParticipantDayLoggedSeconds", () => {
+   it("extracts logged seconds from dailyLogs for targetDateKey", () => {
+      const entry = {
+         dailyLogs: { "2026-10-20": 7200, "2026-10-21": 3600 },
+         todayLoggedSeconds: 1800,
+      };
+      expect(getParticipantDayLoggedSeconds(entry, "2026-10-20")).toBe(7200);
+      expect(getParticipantDayLoggedSeconds(entry, "2026-10-21")).toBe(3600);
+      expect(getParticipantDayLoggedSeconds(entry, "2026-10-22")).toBe(0);
+   });
+
+   it("falls back to todayLoggedSeconds when target matches todayDateKey", () => {
+      const entry = {
+         todayLoggedSeconds: 5400,
+      };
+      expect(
+         getParticipantDayLoggedSeconds(entry, "2026-10-22", "2026-10-22")
+      ).toBe(5400);
+      expect(
+         getParticipantDayLoggedSeconds(entry, "2026-10-21", "2026-10-22")
+      ).toBe(0);
+   });
+
+   it("caps seconds at MAX_COUNTED_DAILY_STUDY_SECONDS (43,200s / 12h)", () => {
+      const entry = {
+         dailyLogs: { "2026-10-20": 100_000 },
+      };
+      expect(getParticipantDayLoggedSeconds(entry, "2026-10-20")).toBe(43_200);
+   });
+});
+
+describe("rankByDaySeconds", () => {
+   it("sorts entries with highest day study seconds first and assigns dayRank and todayRank", () => {
+      const entries = [
+         {
+            id: "p1",
+            displayName: "Alice",
+            dailyLogs: { "2026-10-21": 3600 },
+            totalLoggedSeconds: 10000,
+         },
+         {
+            id: "p2",
+            displayName: "Bob",
+            dailyLogs: { "2026-10-21": 7200 },
+            totalLoggedSeconds: 8000,
+         },
+         {
+            id: "p3",
+            displayName: "Charlie",
+            dailyLogs: { "2026-10-21": 1800 },
+            totalLoggedSeconds: 20000,
+         },
+      ];
+
+      const ranked = rankByDaySeconds(entries, "2026-10-21");
+
+      expect(ranked[0]).toMatchObject({
+         id: "p2",
+         dayRank: 1,
+         todayRank: 1,
+         dayLoggedSeconds: 7200,
+         dayLoggedClock: "02:00:00",
+      });
+      expect(ranked[1]).toMatchObject({
+         id: "p1",
+         dayRank: 2,
+         todayRank: 2,
+         dayLoggedSeconds: 3600,
+         dayLoggedClock: "01:00:00",
+      });
+      expect(ranked[2]).toMatchObject({
+         id: "p3",
+         dayRank: 3,
+         todayRank: 3,
+         dayLoggedSeconds: 1800,
+         dayLoggedClock: "00:30:00",
+      });
+   });
+
+   it("breaks ties using cumulative totalLoggedSeconds descending", () => {
+      const entries = [
+         {
+            id: "p1",
+            displayName: "Alice",
+            dailyLogs: { "2026-10-21": 3600 },
+            totalLoggedSeconds: 10000,
+         },
+         {
+            id: "p2",
+            displayName: "Bob",
+            dailyLogs: { "2026-10-21": 3600 },
+            totalLoggedSeconds: 20000,
+         },
+      ];
+
+      const ranked = rankByDaySeconds(entries, "2026-10-21");
+
+      expect(ranked[0].id).toBe("p2");
+      expect(ranked[1].id).toBe("p1");
+   });
+
+   it("breaks secondary ties using displayName alphabetical ascending", () => {
+      const entries = [
+         {
+            id: "p2",
+            displayName: "Zara",
+            dailyLogs: { "2026-10-21": 3600 },
+            totalLoggedSeconds: 10000,
+         },
+         {
+            id: "p1",
+            displayName: "Adam",
+            dailyLogs: { "2026-10-21": 3600 },
+            totalLoggedSeconds: 10000,
+         },
+      ];
+
+      const ranked = rankByDaySeconds(entries, "2026-10-21");
+
+      expect(ranked[0].id).toBe("p1");
+      expect(ranked[1].id).toBe("p2");
+   });
+
+   it("handles participants with 0 seconds on target date", () => {
+      const entries = [
+         {
+            id: "p1",
+            displayName: "Alice",
+            dailyLogs: {},
+            totalLoggedSeconds: 5000,
+         },
+      ];
+
+      const ranked = rankByDaySeconds(entries, "2026-10-21");
+
+      expect(ranked[0]).toMatchObject({
+         id: "p1",
+         dayRank: 1,
+         dayLoggedSeconds: 0,
+         dayLoggedClock: "00:00:00",
+      });
+   });
+});
+
+describe("getLeaderboardDayOptions", () => {
+   const startAt = "2026-10-20T00:00:00.000Z";
+
+   it("returns day options for an ACTIVE challenge up to currentDayNumber with today flagged", () => {
+      const options = getLeaderboardDayOptions({
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+
+      expect(options).toHaveLength(3);
+      expect(options[0]).toMatchObject({
+         dayNumber: 1,
+         dateKey: "2026-10-20",
+         label: "Day 1 · Oct 20",
+         shortLabel: "Day 1",
+         isToday: false,
+      });
+      expect(options[2]).toMatchObject({
+         dayNumber: 3,
+         dateKey: "2026-10-22",
+         label: "Today (Day 3 · Oct 22)",
+         shortLabel: "Today",
+         isToday: true,
+      });
+   });
+
+   it("returns all challenge days for a COMPLETED challenge with final day flagged", () => {
+      const options = getLeaderboardDayOptions({
+         startAt,
+         totalDays: 5,
+         currentDayNumber: 8,
+         status: "COMPLETED",
+      });
+
+      expect(options).toHaveLength(5);
+      expect(options[4]).toMatchObject({
+         dayNumber: 5,
+         dateKey: "2026-10-24",
+         label: "Day 5 · Oct 24 (Final Day)",
+         isToday: false,
+         isFinalDay: true,
+      });
+   });
+
+   it("returns Day 1 for an UPCOMING challenge", () => {
+      const options = getLeaderboardDayOptions({
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 0,
+         status: "UPCOMING",
+      });
+
+      expect(options).toHaveLength(1);
+      expect(options[0].dayNumber).toBe(1);
+   });
+});
+
+describe("resolveLeaderboardSelectedDay", () => {
+   const startAt = "2026-10-20T00:00:00.000Z";
+
+   it("resolves explicit valid day number", () => {
+      const resolved = resolveLeaderboardSelectedDay({
+         requestedDay: 2,
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 4,
+         status: "ACTIVE",
+      });
+
+      expect(resolved).toEqual({
+         dayNumber: 2,
+         dateKey: "2026-10-21",
+         isToday: false,
+         formattedDate: "Oct 21",
+      });
+   });
+
+   it("resolves valid dateKey string", () => {
+      const resolved = resolveLeaderboardSelectedDay({
+         requestedDateKey: "2026-10-22",
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 4,
+         status: "ACTIVE",
+      });
+
+      expect(resolved).toEqual({
+         dayNumber: 3,
+         dateKey: "2026-10-22",
+         isToday: false,
+         formattedDate: "Oct 22",
+      });
+   });
+
+   it("falls back to current day (Today) for active challenges when out of bounds or invalid", () => {
+      const resolvedOutOfBounds = resolveLeaderboardSelectedDay({
+         requestedDay: 99,
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedOutOfBounds).toMatchObject({
+         dayNumber: 3,
+         dateKey: "2026-10-22",
+         isToday: true,
+      });
+
+      const resolvedInvalid = resolveLeaderboardSelectedDay({
+         requestedDay: "invalid",
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedInvalid).toMatchObject({
+         dayNumber: 3,
+         isToday: true,
+      });
+
+      const resolvedPartialNumeric = resolveLeaderboardSelectedDay({
+         requestedDay: "2garbage",
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedPartialNumeric).toMatchObject({
+         dayNumber: 3,
+         isToday: true,
+      });
+
+      const resolvedFractional = resolveLeaderboardSelectedDay({
+         requestedDay: 2.5,
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 3,
+         status: "ACTIVE",
+      });
+      expect(resolvedFractional).toMatchObject({
+         dayNumber: 3,
+         isToday: true,
+      });
+   });
+
+   it("defaults to final day for completed challenges", () => {
+      const resolved = resolveLeaderboardSelectedDay({
+         startAt,
+         totalDays: 7,
+         currentDayNumber: 10,
+         status: "COMPLETED",
+      });
+
+      expect(resolved).toMatchObject({
+         dayNumber: 7,
+         dateKey: "2026-10-26",
+         isToday: false,
+      });
+   });
+});
+
+describe("formatLeaderboardDayHeading", () => {
+   it("formats heading for past days with year", () => {
+      expect(
+         formatLeaderboardDayHeading({
+            dayNumber: 3,
+            dateKey: "2026-10-22",
+            isToday: false,
+         })
+      ).toBe("Showing Day 3 Standings · Oct 22, 2026");
+   });
+
+   it("formats heading for today with year", () => {
+      expect(
+         formatLeaderboardDayHeading({
+            dayNumber: 3,
+            dateKey: "2026-10-22",
+            isToday: true,
+         })
+      ).toBe("Showing Today's Standings · Oct 22, 2026");
+   });
+});
+
+describe("calculateTeamDayScores", () => {
+   const teams = [{ id: "t1" }, { id: "t2" }];
+
+   it("aggregates participant day seconds by team and formats clocks", () => {
+      const entries = [
+         { teamId: "t1", dayLoggedSeconds: 3600 },
+         { teamId: "t1", dayLoggedSeconds: 1800 },
+         { teamId: "t2", dayLoggedSeconds: 7200 },
+      ];
+
+      const scores = calculateTeamDayScores(teams, entries);
+
+      expect(scores).toEqual([
+         { teamId: "t1", dayLoggedSeconds: 5400, dayLoggedClock: "01:30:00" },
+         { teamId: "t2", dayLoggedSeconds: 7200, dayLoggedClock: "02:00:00" },
+      ]);
+   });
+
+   it("supports extracting day seconds from dailyLogs for a given dateKey", () => {
+      const entries = [
+         { teamId: "t1", dailyLogs: { "2026-10-20": 4000 } },
+         { teamId: "t2", dailyLogs: { "2026-10-20": 8000 } },
+      ];
+
+      const scores = calculateTeamDayScores(teams, entries, "2026-10-20");
+
+      expect(scores).toEqual([
+         { teamId: "t1", dayLoggedSeconds: 4000, dayLoggedClock: "01:06:40" },
+         { teamId: "t2", dayLoggedSeconds: 8000, dayLoggedClock: "02:13:20" },
+      ]);
    });
 });

@@ -1361,4 +1361,167 @@ describe("ChallengeLeaderboardTab", () => {
          expect(adminHtml).toContain("/ 35:00:00");
       });
    });
+
+   describe("Day Selector & Historical Daily Standings (GH-#248 / KAN-94)", () => {
+      const challengeWithDailyLogs: ChallengeScoreboardViewModel = {
+         ...mockChallenge,
+         startAt: "2026-10-01T00:00:00.000Z",
+         endAt: "2026-10-08T00:00:00.000Z",
+         totalDays: 7,
+         currentDayNumber: 3,
+         standings: [
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-1",
+               displayName: "Scholar One",
+               totalLoggedSeconds: 36_000,
+               totalLoggedClock: "10:00:00",
+               todayLoggedSeconds: 3_600,
+               todayLoggedClock: "01:00:00",
+               dailyLogs: {
+                  "2026-10-01": 14_400, // Day 1: 04:00:00
+                  "2026-10-02": 0, // Day 2: 00:00:00
+                  "2026-10-03": 3_600, // Day 3 (Today): 01:00:00
+               },
+               rank: 1,
+            },
+            {
+               ...mockChallenge.standings[0]!,
+               participantId: "part-2",
+               displayName: "Scholar Two",
+               totalLoggedSeconds: 20_000,
+               totalLoggedClock: "05:33:20",
+               todayLoggedSeconds: 14_400,
+               todayLoggedClock: "04:00:00",
+               dailyLogs: {
+                  "2026-10-01": 7_200, // Day 1: 02:00:00
+                  "2026-10-02": 10_800, // Day 2: 03:00:00
+                  "2026-10-03": 14_400, // Day 3 (Today): 04:00:00
+               },
+               rank: 2,
+            },
+         ],
+      };
+
+      it("renders day selector dropdown and day heading when in daily view", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeWithDailyLogs,
+               initialViewMode: "today",
+            })
+         );
+
+         expect(html).toContain('data-testid="leaderboard-day-select"');
+         expect(html).toContain('data-testid="leaderboard-day-heading"');
+         expect(html).toContain("Showing Today&#x27;s Standings · Oct 3, 2026");
+         expect(html).toContain("Today (Day 3 · Oct 3)");
+         expect(html).toContain("Day 1 · Oct 1");
+         expect(html).toContain("Day 2 · Oct 2");
+      });
+
+      it("ranks scholars by logged seconds for the selected historical day (Day 1)", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeWithDailyLogs,
+               initialViewMode: "day",
+               initialDay: 1,
+            })
+         );
+
+         expect(html).toContain("Showing Day 1 Standings · Oct 1, 2026");
+         expect(html).toContain("Day 1 hours");
+         expect(html).toContain("Day 1 Hours");
+
+         // On Day 1 in standings table: Scholar One (4h) beats Scholar Two (2h)
+         const tableBody = html.slice(html.indexOf("<tbody"));
+         const indexScholarOne = tableBody.indexOf("Scholar One");
+         const indexScholarTwo = tableBody.indexOf("Scholar Two");
+         expect(indexScholarOne).toBeGreaterThan(-1);
+         expect(indexScholarTwo).toBeGreaterThan(-1);
+         expect(indexScholarOne).toBeLessThan(indexScholarTwo);
+
+         expect(html).toContain("04:00:00");
+         expect(html).toContain("02:00:00");
+      });
+
+      it("renders 00:00:00 for participants with zero logged time on selected day without breaking layout", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeWithDailyLogs,
+               initialViewMode: "day",
+               initialDay: 2,
+            })
+         );
+
+         expect(html).toContain("Showing Day 2 Standings · Oct 2, 2026");
+
+         // On Day 2 in standings table: Scholar Two (3h) beats Scholar One (0h)
+         const tableBody = html.slice(html.indexOf("<tbody"));
+         const indexScholarTwo = tableBody.indexOf("Scholar Two");
+         const indexScholarOne = tableBody.indexOf("Scholar One");
+         expect(indexScholarTwo).toBeGreaterThan(-1);
+         expect(indexScholarOne).toBeGreaterThan(-1);
+         expect(indexScholarTwo).toBeLessThan(indexScholarOne);
+
+         expect(html).toContain("03:00:00");
+         expect(html).toContain("00:00:00");
+      });
+
+      it("resolves dateKey initialDay string (YYYY-MM-DD) for pre-hydration deep linking", () => {
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeWithDailyLogs,
+               initialViewMode: "day",
+               initialDay: "2026-10-02",
+            })
+         );
+
+         expect(html).toContain("Showing Day 2 Standings · Oct 2, 2026");
+         expect(html).toContain("Day 2 hours");
+      });
+
+      it("renders cozy empty state when no study sessions are recorded across all participants on selected day", () => {
+         const challengeNoLogsOnDay2: ChallengeScoreboardViewModel = {
+            ...challengeWithDailyLogs,
+            standings: challengeWithDailyLogs.standings.map((s) => ({
+               ...s,
+               dailyLogs: {
+                  ...s.dailyLogs,
+                  "2026-10-02": 0,
+               },
+            })),
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: challengeNoLogsOnDay2,
+               initialViewMode: "day",
+               initialDay: 2,
+            })
+         );
+
+         expect(html).toContain('data-testid="day-no-logs-empty-state"');
+         expect(html).toContain("No study sessions logged on Day 2");
+         expect(html).toContain("No scholars recorded study hours on Oct 2.");
+      });
+
+      it("defaults to final day for completed challenges in daily view", () => {
+         const completedChallenge: ChallengeScoreboardViewModel = {
+            ...challengeWithDailyLogs,
+            status: "COMPLETED",
+            totalDays: 5,
+            currentDayNumber: 8,
+         };
+
+         const html = renderToStaticMarkup(
+            createElement(ChallengeLeaderboardTab, {
+               challenge: completedChallenge,
+               initialViewMode: "today",
+            })
+         );
+
+         expect(html).toContain("Showing Day 5 Standings · Oct 5, 2026");
+         expect(html).toContain("Day 5 · Oct 5 (Final Day)");
+      });
+   });
 });

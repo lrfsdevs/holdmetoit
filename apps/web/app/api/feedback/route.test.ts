@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
 import * as feedbackRepo from "@/features/feedback/data/feedback.repository";
@@ -53,7 +53,14 @@ vi.mock("@/features/feedback/data/discord-feedback.service", () => ({
 }));
 
 describe("POST /api/feedback", () => {
+   afterEach(() => {
+      vi.unstubAllEnvs();
+   });
+
    beforeEach(() => {
+      // The payloads use https://holdmetoit.com URLs, so pin the origin the
+      // schema compares them against.
+      vi.stubEnv("AUTH_URL", "https://holdmetoit.com");
       vi.clearAllMocks();
       verifyFeedbackAttachment.mockResolvedValue(null);
       deleteStorageObject.mockResolvedValue(undefined);

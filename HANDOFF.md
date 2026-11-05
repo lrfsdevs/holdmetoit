@@ -2,9 +2,9 @@
 
 > **Project:** HoldMeToIt (Gamified Study Accountability & Challenge Management Platform)  
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
-> **Integration/Deploy Branch:** `dev` (latest `c8f9447`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
+> **Integration/Deploy Branch:** `dev` (latest `8de6b8d`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-05 (Session 202 — Prisma 7.10.1 migration, driver adapter, env gateways & script cleanup on `chore/nextjs-16-upgrade`)
+> **Last Updated:** 2026-11-06 (Session 203 — Merge `origin/dev` @ `8de6b8d` into `chore/nextjs-16-upgrade`, resolving PR #252 and #254 integrations)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -183,6 +183,25 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
 ---
 
 ## 7. Session Changelog (Last 3–5 Sessions)
+
+### Session 203 — 2026-11-06 (Merge `origin/dev` @ `8de6b8d` into `chore/nextjs-16-upgrade`, resolving PR #252 and #254 integrations)
+
+- **Merge Integration:**
+   - Synchronized branch with `origin/dev` (`8de6b8d`), incorporating PR #252 (URL security & mention shield by Harsh) and PR #254 (Leaderboard Day Filter by Krish).
+   - Resolved explicit conflict in `apps/web/features/participant-stats/data/global-profile.repository.test.ts`: adopted `origin/dev`'s `{ toFake: ["Date"] }` fake timer freeze (`2026-10-30T12:00:00.000Z`) inside the Winter Sprint fixture window.
+   - Fixed Next.js 16 async `searchParams` compatibility in `apps/web/app/challenge/[id]/page.tsx`: updated `initialLeaderboardDay={query.day ?? query.date}` using the awaited `query` object rather than synchronous `searchParams`, and added `day?: string; date?: string;` to the `Promise` type.
+   - Retained removal of in-memory rate limiter in `apps/web/app/api/feedback/route.test.ts` while integrating `origin/dev`'s `AUTH_URL` environment stubbing and `afterEach` un-stubbing.
+- **Quality Gates:**
+   - `npm run build -w @holdmetoit/database`: ✅ 0 errors
+   - `npm run build -w @holdmetoit/discord`: ✅ 0 errors
+   - `npm run typecheck -w @holdmetoit/tasker`: ✅ 0 errors
+   - `npm run test -w @holdmetoit/tasker`: ✅ 5/5 test files, 84/84 tests passing
+   - `npm run typecheck -w @holdmetoit/web`: ✅ 0 errors (`tsc --noEmit` exits with 0)
+   - `npm run test -w @holdmetoit/web`: ✅ 248/248 test files, 2,597/2,597 tests passing (100% green)
+   - `npm run lint -w @holdmetoit/web`: ✅ 0 errors (design-token guard passed)
+   - `npm run build -w @holdmetoit/web`: ✅ Next.js 16.4.5 Turbopack production build clean across all 21 routes
+   - `bash scripts/check-schema-migration.sh origin/main`: ✅ Passed (`datamodel_changed=0, migrations_changed=0`)
+- **NEXT STEP:** Submit PR to `dev` for `chore/nextjs-16-upgrade` and transition Jira issue to `In Review`.
 
 ### Session 202 — 2026-11-05 (Prisma 7.10.1 migration, @prisma/adapter-pg driver adapter, env gateways & script cleanup on `chore/nextjs-16-upgrade`)
 

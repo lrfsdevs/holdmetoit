@@ -383,14 +383,19 @@ export function buildScoreboardViewModel(
       const team = p.teamId ? teamLookup.get(p.teamId) : null;
 
       // Raw values for the admin override modal; leaderboard ranking/display uses the capped totals above.
+      const eligibleParticipantLogs = p.isWithdrawn
+         ? filterLogsBeforeWithdrawal(p.dailyStudyLogs, p.withdrawalAt)
+         : p.dailyStudyLogs;
+
       const dailyLogs: Record<string, number> = {};
-      for (const log of p.dailyStudyLogs) {
+      for (const log of eligibleParticipantLogs) {
          if (log.logDate) {
             const dObj =
                log.logDate instanceof Date
                   ? log.logDate
                   : new Date(log.logDate);
-            dailyLogs[formatUtcDateKey(dObj)] = log.durationSeconds;
+            const key = formatUtcDateKey(dObj);
+            dailyLogs[key] = (dailyLogs[key] ?? 0) + log.durationSeconds;
          }
       }
 

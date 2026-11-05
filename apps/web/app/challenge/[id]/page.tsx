@@ -29,6 +29,8 @@ interface ChallengePageProps {
       tab?: string;
       as?: string;
       view?: string;
+      day?: string;
+      date?: string;
       search?: string;
       team?: string;
       page?: string;
@@ -149,6 +151,7 @@ export default async function ChallengePage({
          initialTab={initialTab}
          isAdmin={isAdmin}
          initialLeaderboardViewMode={initialLeaderboardViewMode}
+         initialLeaderboardDay={query.day ?? query.date}
          initialRosterSearch={initialRosterSearch}
          initialRosterTeamFilter={initialRosterTeamFilter}
          initialRosterPage={initialRosterPage}

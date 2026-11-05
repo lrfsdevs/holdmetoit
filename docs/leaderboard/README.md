@@ -228,6 +228,27 @@ The per-challenge standings are separate from the global trophy board. Two forma
    - **Mobile Cards & Team Mode Sizing:**
       - Uses `size="sm"` (`h-6 w-6` with `h-3 w-3` icons) in mobile cards (`sm:hidden`) and team view mode to preserve responsive layout without clipping or horizontal overflow on 360px+ viewports (Law L9).
 
+### 7.7 Filter by Day & Historical Daily Standings (GH #248 / KAN-94)
+
+1. **Context & Motivation:**
+   - Previously, the leaderboard view only supported viewing cumulative standings (`"individual"` / `"team"`) or the current day's study stats (`"today"`).
+   - Participants and community hosts needed the ability to inspect rankings and study durations for any historical challenge day (Day 1, Day 2, etc.) to evaluate daily consistency, track daily MVP performers, and audit logged study sessions.
+
+2. **Domain Architecture (`features/leaderboard/domain/leaderboard.ts`):**
+   - **Day Options Generation (`getLeaderboardDayOptions`):** Returns valid challenge day options (`dayNumber`, `dateKey`, `formattedDate`, `isToday`) up to `currentDayNumber` for active challenges, or all days through `totalDays` for completed challenges.
+   - **Day Selection Resolution (`resolveLeaderboardSelectedDay`):** Validates requested day number or `YYYY-MM-DD` date key against challenge day boundaries. Falls back gracefully to Today for active challenges, or the final challenge day for completed/historical challenges.
+   - **Daily Ranking Engine (`rankByDaySeconds`):** Pure function ranking participants strictly by logged study seconds on the selected date key (`Law L7`). Enforces second-level integer clock precision (`Law L8`), tie-breaking by cumulative `totalLoggedSeconds` descending, then `displayName` ascending.
+   - **Heading Formatter (`formatLeaderboardDayHeading`):** Formats clear context headers: `Showing Today's Standings · <Month Day, Year>` for today, or `Showing Day X Standings · <Month Day, Year>` for historical days.
+   - **Team Day Scores (`calculateTeamDayScores`):** Aggregates daily study seconds per team for team battle telemetry.
+   - **View Mode Extended:** Added `"day"` to `LeaderboardViewMode`, supported in `resolveLeaderboardViewMode` and synchronized across URL search params.
+
+3. **Presentation & Responsive UX (`features/leaderboard/presentation/challenge-leaderboard-tab.tsx`):**
+   - **Day Selector Dropdown:** Accessible Radix `Select` (`data-testid="leaderboard-day-select"`) displayed beside the view mode toggle whenever in daily view (`viewMode === "today" || viewMode === "day"`). Uses Obsidian Dark tokens and `min-w-dropdown-min`.
+   - **Dynamic Table Header & Mobile Cards:** Table columns and mobile cards dynamically reflect `Day X Hours` / `Day X hours` (or `Today's Hours`), showing participants' logged study duration for the selected day.
+   - **Cozy Zero-State Handling (`Law L9`):** When no study sessions are logged across any participant on the selected day, displays a cozy empty state (`data-testid="day-no-logs-empty-state"`) with clear recovery and date context.
+   - **Deep Linking & URL Sync:** Supports query parameters `?view=day&day=X` or `?date=YYYY-MM-DD`. Switching days updates the URL via `window.history.replaceState` without full page reloads.
+   - **Admin Override Pre-Selection:** When opening the admin hours override modal from daily view, the modal automatically initializes to the currently inspected day number.
+
 Rename eligibility for the caller's duo is exposed on `currentUser.teamId`,
 `currentUser.teamName`, `currentUser.teamIcon`, and `currentUser.canEditDuoTeam`; the
 team-view header shows the pencil control only for the caller's own team. See
