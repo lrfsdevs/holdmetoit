@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFeedbackSchema } from "./feedback.schema";
 
 describe("createFeedbackSchema", () => {
@@ -136,6 +136,16 @@ describe("createFeedbackSchema", () => {
 });
 
 describe("createFeedbackSchema link validation", () => {
+   // Pin the origin so the absolute-URL cases do not depend on the developer's
+   // or CI's AUTH_URL.
+   beforeEach(() => {
+      vi.stubEnv("AUTH_URL", "https://holdmetoit.com");
+   });
+
+   afterEach(() => {
+      vi.unstubAllEnvs();
+   });
+
    const base = {
       type: "bug",
       title: "Submit failed",
@@ -183,6 +193,16 @@ describe("createFeedbackSchema link validation", () => {
             url: "https://holdmetoit.com/dashboard",
          }).success
       ).toBe(true);
+   });
+
+   it.each([
+      "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      "https://holdmetoit.com/x\ty",
+      "https://holdmetoit.com/<script>",
+   ])("rejects an absolute URL with hidden or unsafe characters %j", (url) => {
+      expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(
+         false
+      );
    });
 
    it.each([

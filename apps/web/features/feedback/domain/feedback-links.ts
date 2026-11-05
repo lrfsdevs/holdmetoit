@@ -29,27 +29,31 @@ function resolveAppOrigin(): string | null {
  * Whether the value is a page on this app: either a root-relative path, or an
  * absolute URL on the app's own origin (`AUTH_URL`). Pass `appOrigin` to
  * override the configured origin.
+ *
+ * The raw text is validated, not the parsed URL, because the URL parser
+ * silently drops newlines and tabs and would hide them from the checks.
  */
 export function isInternalPageUrl(
    value: string,
    appOrigin: string | null = resolveAppOrigin()
 ): boolean {
    if (isInternalPagePath(value)) return true;
-   if (!appOrigin) return false;
+   if (!appOrigin || !value.startsWith(appOrigin)) return false;
 
-   let parsed: URL;
-   try {
-      parsed = new URL(value);
-   } catch {
-      return false;
-   }
+   const suffix = value.slice(appOrigin.length);
+   if (suffix && !/^[/?#]/.test(suffix)) return false;
 
-   if (parsed.origin !== appOrigin || parsed.username || parsed.password) {
-      return false;
-   }
-   return isInternalPagePath(
-      `${parsed.pathname}${parsed.search}${parsed.hash}`
-   );
+   // Treat the part after the origin as a path so it gets the same
+   // character rules as a relative URL.
+   return isInternalPagePath(suffix.startsWith("/") ? suffix : `/${suffix}`);
+}
+
+/**
+ * Returns the page URL when it is a page on this app, otherwise `/`, so
+ * a stored value can never place foreign URLs or extra lines in feedback.
+ */
+export function toSafePageUrl(value: string): string {
+   return isInternalPageUrl(value) ? value : "/";
 }
 
 /**

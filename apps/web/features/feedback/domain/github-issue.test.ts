@@ -231,6 +231,16 @@ describe("mention and link neutralization", () => {
       expect(body).not.toContain("**Page:** /profile/@octocat");
    });
 
+   it("replaces a page value that smuggles a second URL with the root path", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+
+      expect(body).toContain("**Page:** /");
+      expect(body).not.toContain("evil.example");
+   });
+
    it("omits the LogRocket link for non-LogRocket URLs", () => {
       const body = buildGitHubIssueBody({
          ...baseInput,

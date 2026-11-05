@@ -46,6 +46,16 @@ describe("buildDiscordFeedbackEmbed link safety", () => {
       expect(field?.value).not.toContain("](https://evil.example");
    });
 
+   it("falls back to the root path when the page value smuggles a second URL", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("/");
+   });
+
    it("falls back to the root path when the page URL is not a path", () => {
       const embed = buildDiscordFeedbackEmbed({
          ...bug,

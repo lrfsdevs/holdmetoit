@@ -3,6 +3,7 @@ import {
    fenceCodeBlock,
    neutralizeMentions,
    toSafeLogRocketUrl,
+   toSafePageUrl,
 } from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
@@ -102,7 +103,7 @@ export function buildGitHubIssueBody(input: GitHubIssueInput): string {
       `**Type:** ${
          input.type === "bug" ? "Bug report" : "Enhancement suggestion"
       }`,
-      `**Page:** ${neutralizeMentions(clean(input.url)) || "/"}`,
+      `**Page:** ${neutralizeMentions(toSafePageUrl(clean(input.url)))}`,
       `**Reported by:** ${formatReporter(input.reporter)}`,
    ];
 

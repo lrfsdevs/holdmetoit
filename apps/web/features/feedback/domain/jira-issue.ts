@@ -1,5 +1,8 @@
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
-import { toSafeLogRocketUrl } from "@/features/feedback/domain/feedback-links";
+import {
+   toSafeLogRocketUrl,
+   toSafePageUrl,
+} from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
 export const JIRA_SUMMARY_MAX = 255;
@@ -141,7 +144,7 @@ export function buildJiraDescriptionAdf(input: JiraIssueInput): AdfDoc {
             }`
          ),
       ]),
-      paragraph([textNode(`Page: ${clean(input.url) || "/"}`)]),
+      paragraph([textNode(`Page: ${toSafePageUrl(clean(input.url))}`)]),
       paragraph([textNode(`Reported by: ${formatReporter(input.reporter)}`)])
    );
 

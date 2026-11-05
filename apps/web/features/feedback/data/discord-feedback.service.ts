@@ -6,8 +6,8 @@ import type {
 } from "@holdmetoit/discord";
 import { formatFeedbackCode } from "@/features/feedback/domain/feedback-code";
 import {
-   isInternalPageUrl,
    toSafeLogRocketUrl,
+   toSafePageUrl,
 } from "@/features/feedback/domain/feedback-links";
 import type { FeedbackType } from "@/features/feedback/domain/feedback.types";
 
@@ -52,7 +52,7 @@ export function buildDiscordFeedbackEmbed(
       }
    }
 
-   const page = isInternalPageUrl(input.url) ? input.url : "/";
+   const page = toSafePageUrl(input.url);
    const logrocketUrl = toSafeLogRocketUrl(input.logrocketSessionId);
 
    const fields: DiscordEmbedField[] = [

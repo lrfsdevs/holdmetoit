@@ -363,6 +363,16 @@ describe("link and mention safety", () => {
       expect(allText(doc)).not.toContain("evil.example");
    });
 
+   it("replaces a page value that smuggles a second URL with the root path", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+
+      expect(allText(doc)).toContain("Page: /");
+      expect(allText(doc)).not.toContain("evil.example");
+   });
+
    it("emits hostile description text only as plain text nodes", () => {
       const doc = buildJiraDescriptionAdf({
          ...baseInput,

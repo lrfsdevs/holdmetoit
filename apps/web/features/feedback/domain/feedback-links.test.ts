@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
    fenceCodeBlock,
    isInternalPagePath,
    isInternalPageUrl,
    neutralizeMentions,
    toSafeLogRocketUrl,
+   toSafePageUrl,
 } from "./feedback-links";
 
 describe("isInternalPagePath", () => {
@@ -41,8 +42,34 @@ describe("isInternalPageUrl", () => {
       "/dashboard",
       "https://holdmetoit.com/",
       "https://holdmetoit.com/challenge/abc?tab=1#top",
+      "https://holdmetoit.com",
+      "https://holdmetoit.com?tab=1",
+      "https://holdmetoit.com#top",
    ])("accepts %s", (value) => {
       expect(isInternalPageUrl(value, origin)).toBe(true);
+   });
+
+   // The URL parser drops newlines and tabs, so these would pass a check on
+   // the parsed value while the raw text still carries the extra characters.
+   it.each([
+      [
+         "a newline smuggling a second URL",
+         "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      ],
+      [
+         "a carriage return",
+         "https://holdmetoit.com/x\rhttps://evil.example/phish",
+      ],
+      ["a tab in the path", "https://holdmetoit.com/x\ty"],
+      ["a newline in the origin", "https://holdmetoit.com\n/x"],
+      ["a NUL character", "https://holdmetoit.com/x\u0000y"],
+      ["a space", "https://holdmetoit.com/x y"],
+      ["angle brackets", "https://holdmetoit.com/<script>alert(1)</script>"],
+      ["a backtick", "https://holdmetoit.com/x`y"],
+      ["a double quote", 'https://holdmetoit.com/x"y'],
+      ["a backslash", "https://holdmetoit.com/x\\y"],
+   ])("rejects an absolute URL containing %s", (_label, value) => {
+      expect(isInternalPageUrl(value, origin)).toBe(false);
    });
 
    it.each([
@@ -61,6 +88,32 @@ describe("isInternalPageUrl", () => {
    it("rejects absolute URLs when the app origin is unknown", () => {
       expect(isInternalPageUrl("https://holdmetoit.com/", null)).toBe(false);
       expect(isInternalPageUrl("/dashboard", null)).toBe(true);
+   });
+});
+
+describe("toSafePageUrl", () => {
+   // Reads AUTH_URL, so pin it for tests that use an absolute URL.
+   beforeEach(() => {
+      vi.stubEnv("AUTH_URL", "https://holdmetoit.com");
+   });
+
+   afterEach(() => {
+      vi.unstubAllEnvs();
+   });
+
+   it("returns pages on this app unchanged", () => {
+      expect(toSafePageUrl("/challenge/abc")).toBe("/challenge/abc");
+      expect(toSafePageUrl("https://holdmetoit.com/dashboard")).toBe(
+         "https://holdmetoit.com/dashboard"
+      );
+   });
+
+   it("falls back to the root path for anything else", () => {
+      expect(toSafePageUrl("https://evil.example/phish")).toBe("/");
+      expect(
+         toSafePageUrl("https://holdmetoit.com/x\nhttps://evil.example")
+      ).toBe("/");
+      expect(toSafePageUrl("")).toBe("/");
    });
 });
 
