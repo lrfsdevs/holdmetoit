@@ -10,6 +10,8 @@ import { canViewFullProfileHistory } from "@/features/participant-stats/domain/p
 import { checkAreAcceptedFriends } from "@/features/participant-stats/data/profile-privacy.repository";
 import { GlobalProfileView } from "@/features/participant-stats/presentation/global-profile-view";
 import type { ParticipantStatsViewModel } from "@/features/participant-stats/domain/participant-stats.types";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +38,12 @@ export async function generateMetadata({
    }
 
    const { user, careerStats } = profile;
+   const scholarHandle = user.username || user.displayName || "scholar";
    return {
-      title: `${user.displayName} (@${user.username || "scholar"}) — Profile & Career Stats | HoldMeToIt`,
-      description: `View ${user.displayName}'s HoldMeToIt study record: ${careerStats.lifetimeStudyHuman} lifetime study hours, ${careerStats.currentStreak}-day streak, ${careerStats.trophyRank} rank with ${careerStats.trophyTotal} trophies.`,
+      title: `${scholarHandle} — Profile & Career Stats | HoldMeToIt`,
+      description: `View ${scholarHandle}'s HoldMeToIt study record: ${careerStats.lifetimeStudyHuman} lifetime study hours, ${careerStats.currentStreak}-day streak, ${careerStats.trophyRank} rank with ${careerStats.trophyTotal} trophies.`,
       openGraph: {
-         title: `${user.displayName} | HoldMeToIt Scholar Profile`,
+         title: `${scholarHandle} | HoldMeToIt Scholar Profile`,
          description: `${careerStats.lifetimeStudyHuman} study hours · ${careerStats.totalChallengesEntered} challenges · ${careerStats.trophyRank} rank`,
          images: user.image ? [{ url: user.image }] : [],
       },
@@ -103,6 +106,12 @@ export default async function UserProfilePage({
       }
    }
 
+   const [isGlobalLeaderboardEnabled, isPlatformUsernameEnabled] =
+      await Promise.all([
+         isFeatureEnabled(FEATURE_FLAG_KEYS.globalLeaderboard),
+         isFeatureEnabled(FEATURE_FLAG_KEYS.platformUsername),
+      ]);
+
    return (
       <GlobalProfileView
          profile={profile}
@@ -112,6 +121,8 @@ export default async function UserProfilePage({
          isOwnProfile={isOwnProfile}
          viewerRole={session?.user?.role}
          initialYptId={isOwnProfile ? profile.user.yptId : undefined}
+         isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
+         isPlatformUsernameEnabled={isPlatformUsernameEnabled}
       />
    );
 }

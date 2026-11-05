@@ -7,6 +7,8 @@ import {
 } from "@/features/participant-stats/data/global-profile.repository";
 import { GlobalProfileView } from "@/features/participant-stats/presentation/global-profile-view";
 import type { ParticipantStatsViewModel } from "@/features/participant-stats/domain/participant-stats.types";
+import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-keys";
+import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       }
    }
 
+   const [isGlobalLeaderboardEnabled, isPlatformUsernameEnabled] =
+      await Promise.all([
+         isFeatureEnabled(FEATURE_FLAG_KEYS.globalLeaderboard),
+         isFeatureEnabled(FEATURE_FLAG_KEYS.platformUsername),
+      ]);
+
    return (
       <GlobalProfileView
          profile={profile}
@@ -64,6 +72,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
          isOwnProfile={true}
          viewerRole={session.user.role}
          initialYptId={profile.user.yptId}
+         isGlobalLeaderboardEnabled={isGlobalLeaderboardEnabled}
+         isPlatformUsernameEnabled={isPlatformUsernameEnabled}
       />
    );
 }

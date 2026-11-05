@@ -24,6 +24,7 @@ import type {
 import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { RefreshAvatarButton } from "@/features/auth/presentation/refresh-avatar-button";
+import { EditUsernameDialog } from "@/features/auth/presentation/edit-username-dialog";
 import { ChallengeSnapshot } from "./challenge-snapshot";
 import { EmptyState } from "@/components/state/empty-state";
 import { CockpitSkeleton } from "@/components/state/cockpit-skeleton";
@@ -51,6 +52,8 @@ export interface GlobalProfileViewProps {
    isOwnProfile?: boolean;
    viewerRole?: string | null;
    initialYptId?: string | null;
+   isGlobalLeaderboardEnabled?: boolean;
+   isPlatformUsernameEnabled?: boolean;
 }
 
 export function GlobalProfileView({
@@ -60,11 +63,14 @@ export function GlobalProfileView({
    isAuthorizedHistory = true,
    isOwnProfile = false,
    initialYptId,
+   isGlobalLeaderboardEnabled = true,
+   isPlatformUsernameEnabled = true,
 }: GlobalProfileViewProps) {
    const router = useRouter();
    const searchParams = useSearchParams();
 
    const { user, careerStats, challengeHistory } = profile;
+   const [currentUsername, setCurrentUsername] = useState(user.username);
 
    // Active tab state
    const [activeTab, setActiveTab] = useState<
@@ -132,7 +138,7 @@ export function GlobalProfileView({
                   <div className="relative shrink-0">
                      <UserAvatar
                         src={user.image}
-                        name={user.displayName}
+                        name={currentUsername || user.displayName}
                         userId={user.id}
                         size="xl"
                         className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border-2 border-border-strong shadow-md text-xl"
@@ -141,8 +147,17 @@ export function GlobalProfileView({
 
                   <div className="min-w-0 space-y-1">
                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
-                           {user.displayName}
+                        <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate flex items-center gap-2">
+                           <span>{currentUsername || user.displayName}</span>
+                           {isOwnProfile && isPlatformUsernameEnabled && (
+                              <EditUsernameDialog
+                                 currentUsername={currentUsername}
+                                 usernameChangedAt={(user as any).usernameChangedAt}
+                                 onUsernameUpdated={(newUsername) =>
+                                    setCurrentUsername(newUsername)
+                                 }
+                              />
+                           )}
                         </h1>
 
                         {/* Sick Status Badge */}
@@ -153,21 +168,20 @@ export function GlobalProfileView({
                            variant="default"
                         />
 
-                        {/* Trophy Rank Badge */}
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-brand-1/40 bg-brand-1/15 text-brand-1 shadow-sm">
-                           <Trophy className="h-3.5 w-3.5 fill-current" />
-                           <span>{careerStats.trophyRank}</span>
-                           <span className="opacity-75 font-normal">
-                              ({careerStats.trophyTotal} trophies)
+                        {/* Trophy Rank Badge - Gated behind global_leaderboard feature flag */}
+                        {isGlobalLeaderboardEnabled && (
+                           <span
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-brand-1/40 bg-brand-1/15 text-brand-1 shadow-sm"
+                              data-testid="trophy-rank-badge"
+                           >
+                              <Trophy className="h-3.5 w-3.5 fill-current" />
+                              <span>{careerStats.trophyRank}</span>
+                              <span className="opacity-75 font-normal">
+                                 ({careerStats.trophyTotal} trophies)
+                              </span>
                            </span>
-                        </span>
+                        )}
                      </div>
-
-                     {user.username && (
-                        <p className="text-xs text-text-tertiary">
-                           @{user.username}
-                        </p>
-                     )}
 
                      <p className="text-xs text-text-tertiary flex items-center gap-1.5 pt-0.5">
                         <Calendar className="h-3.5 w-3.5 text-text-tertiary" />

@@ -110,16 +110,72 @@ describe("GlobalProfileView", () => {
       ],
    };
 
-   it("renders profile header with avatar, name, Discord username, trophy rank, and member since date", () => {
+   it("renders profile header with avatar, platform username, trophy rank, and member since date", () => {
       const html = renderToStaticMarkup(
-         <GlobalProfileView profile={mockProfile} isOwnProfile={false} />
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={true}
+         />
       );
 
-      expect(html).toContain("Alice Scholar");
-      expect(html).toContain("@alicescholar");
+      expect(html).toContain("alicescholar");
       expect(html).toContain("Master Scholar");
       expect(html).toContain("2450 trophies");
       expect(html).toContain("Member since Feb 2026");
+   });
+
+   it("gates trophy rank badge behind global_leaderboard feature flag", () => {
+      const htmlDisabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={false}
+         />
+      );
+
+      expect(htmlDisabled).not.toContain("trophy-rank-badge");
+      expect(htmlDisabled).not.toContain("2450 trophies");
+
+      const htmlEnabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={true}
+         />
+      );
+
+      expect(htmlEnabled).toContain("trophy-rank-badge");
+      expect(htmlEnabled).toContain("2450 trophies");
+   });
+
+   it("renders pencil icon button only for profile owner when platform_username flag is enabled", () => {
+      const htmlOwnerEnabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={true}
+            isPlatformUsernameEnabled={true}
+         />
+      );
+      expect(htmlOwnerEnabled).toContain("edit-username-trigger");
+
+      const htmlOwnerDisabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={true}
+            isPlatformUsernameEnabled={false}
+         />
+      );
+      expect(htmlOwnerDisabled).not.toContain("edit-username-trigger");
+
+      const htmlNonOwner = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isPlatformUsernameEnabled={true}
+         />
+      );
+      expect(htmlNonOwner).not.toContain("edit-username-trigger");
    });
 
    it("renders all 6 global career overview statistics cards", () => {
