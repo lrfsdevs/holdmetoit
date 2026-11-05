@@ -206,6 +206,11 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Updated `apps/web/.env.example` documenting pooled `DATABASE_URL` (PgBouncer, port 6543) vs unpooled `DIRECT_URL` (direct PostgreSQL, port 5432) plus missing variables.
 - **Test Fixes:**
    - Fixed time-dependent fixture expiration in `features/participant-stats/data/global-profile.repository.test.ts` by freezing mock system time to `2026-10-26` during the run.
+- **Review Finding Resolutions & Hardening:**
+   - Database Connection Timeout: Configured `connectionTimeoutMillis: 30_000` on `PrismaPg` adapter initialization to enforce bounded connection attempts.
+   - Seed URL Resolution: Added fallback to `DIRECT_URL` when `DATABASE_URL` is unset in `resolveConnectionString()`, and made seed URL resolution explicit in `seed.ts` and `run-seed-feature-flags.ts`.
+   - CI Schema Migration Guard: Enhanced `scripts/check-schema-migration.sh` with an `awk` AST filter ignoring comments and `generator`/`datasource` configuration blocks so non-datamodel schema changes do not trigger false migration errors.
+   - Documentation Correction: Updated `README.md` `npm run db:seed` description to accurately document that it seeds the sample challenge and system feature flags without claiming test participants.
 - **Quality Gates:**
    - `npm run build -w @holdmetoit/database`: ✅ 0 errors
    - `npm run build -w @holdmetoit/discord`: ✅ 0 errors

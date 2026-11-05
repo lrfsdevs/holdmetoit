@@ -157,7 +157,7 @@ Existing databases previously created with `db push` must be backed up and verif
 ### 4. Seed Scripts (local database only)
 
 ```bash
-# Seed initial test participants, challenges, and feature flags
+# Seed sample challenge (Honey Bees vs Lavender Butterflies) and system feature flags
 npm run db:seed
 ```
 

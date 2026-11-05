@@ -23,13 +23,13 @@ const LOCAL_TEST_DATABASE_URL = "postgresql://localhost:5432/holdmetoit";
 
 function resolveConnectionString(connectionString?: string): string {
    const env = getDatabaseEnv();
-   const resolved = connectionString ?? env.DATABASE_URL;
+   const resolved = connectionString ?? env.DATABASE_URL ?? env.DIRECT_URL;
    if (resolved) return resolved;
 
    // Import-time construction happens in tests and local tooling without a DB.
    // Production must fail fast rather than silently targeting a local database.
    if (env.NODE_ENV === "production") {
-      throw new Error("DATABASE_URL is not set");
+      throw new Error("DATABASE_URL or DIRECT_URL is not set");
    }
 
    return LOCAL_TEST_DATABASE_URL;
@@ -40,6 +40,7 @@ export function createPrismaClient(connectionString?: string): PrismaClient {
    const resolved = resolveConnectionString(connectionString);
    const adapter = new PrismaPg({
       connectionString: withConnectionTimeouts(resolved) ?? resolved,
+      connectionTimeoutMillis: 30_000,
    });
 
    return new PrismaClient({
@@ -62,4 +63,5 @@ if (getDatabaseEnv().NODE_ENV !== "production") {
 }
 
 export type { PrismaClient };
+export { getDatabaseEnv } from "./env.js";
 export { buildCategoryTombstoneName } from "./category-tombstone.js";
