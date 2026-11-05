@@ -199,6 +199,7 @@ describe("createFeedbackSchema link validation", () => {
       "https://holdmetoit.com/x\nhttps://evil.example/phish",
       "https://holdmetoit.com/x\ty",
       "https://holdmetoit.com/<script>",
+      "https://holdmetoit.com/~https://evil.example/phish",
    ])("rejects an absolute URL with hidden or unsafe characters %j", (url) => {
       expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(
          false
@@ -211,6 +212,7 @@ describe("createFeedbackSchema link validation", () => {
       "//evil.example/phish",
       "javascript:alert(1)",
       "/[Click here](https://evil.example)",
+      "/~https://evil.example/phish",
       "dashboard",
    ])("rejects page URL outside the app %j", (url) => {
       expect(createFeedbackSchema.safeParse({ ...base, url }).success).toBe(

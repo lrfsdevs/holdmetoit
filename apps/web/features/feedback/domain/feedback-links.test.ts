@@ -30,6 +30,14 @@ describe("isInternalPagePath", () => {
       "/<script>alert(1)</script>",
       "/@everyone",
       "/line\nbreak",
+      // Autolinked by GitHub and Discord when they follow ~, *, _, or (.
+      "/~https://evil.example/phish",
+      "/*https://evil.example/phish",
+      "/_https://evil.example/phish",
+      "/x/ftp://evil.example",
+      "/~www.evil.example",
+      "/(www.evil.example",
+      "/?next=https://evil.example",
    ])("rejects %j", (path) => {
       expect(isInternalPagePath(path)).toBe(false);
    });
@@ -45,6 +53,8 @@ describe("isInternalPageUrl", () => {
       "https://holdmetoit.com",
       "https://holdmetoit.com?tab=1",
       "https://holdmetoit.com#top",
+      "/challenge/www2",
+      "/awww.html",
    ])("accepts %s", (value) => {
       expect(isInternalPageUrl(value, origin)).toBe(true);
    });
@@ -68,6 +78,10 @@ describe("isInternalPageUrl", () => {
       ["a backtick", "https://holdmetoit.com/x`y"],
       ["a double quote", 'https://holdmetoit.com/x"y'],
       ["a backslash", "https://holdmetoit.com/x\\y"],
+      [
+         "an embedded link",
+         "https://holdmetoit.com/~https://evil.example/phish",
+      ],
    ])("rejects an absolute URL containing %s", (_label, value) => {
       expect(isInternalPageUrl(value, origin)).toBe(false);
    });

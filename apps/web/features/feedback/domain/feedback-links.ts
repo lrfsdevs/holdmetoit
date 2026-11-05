@@ -9,12 +9,17 @@ const INTERNAL_PAGE_PATH = new RegExp(
    "u"
 );
 
+// A scheme or "www." inside a path is auto-linked by GitHub and Discord, so
+// `/~https://evil.example` would show a clickable foreign link as an app page.
+const EMBEDDED_LINK = new RegExp("://|(?:^|[^\\p{L}\\p{N}])www\\.", "iu");
+
 /**
  * Whether the value is a root-relative page path such as `/challenge/abc`.
- * Rejects absolute URLs, protocol-relative `//host` URLs, and link syntax.
+ * Rejects absolute URLs, protocol-relative `//host` URLs, link syntax, and
+ * links embedded in the path such as `/~https://evil.example`.
  */
 export function isInternalPagePath(value: string): boolean {
-   return INTERNAL_PAGE_PATH.test(value);
+   return INTERNAL_PAGE_PATH.test(value) && !EMBEDDED_LINK.test(value);
 }
 
 function resolveAppOrigin(): string | null {

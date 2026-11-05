@@ -52,13 +52,16 @@ export function buildDiscordFeedbackEmbed(
       }
    }
 
-   const page = toSafePageUrl(input.url);
+   const safePage = toSafePageUrl(input.url);
+   const page =
+      safePage.length > 250 ? `${safePage.slice(0, 247)}...` : safePage;
    const logrocketUrl = toSafeLogRocketUrl(input.logrocketSessionId);
 
    const fields: DiscordEmbedField[] = [
       {
          name: "📍 Page",
-         value: page.length > 250 ? `${page.slice(0, 247)}...` : page,
+         // In a code span so nothing in the page value can be auto-linked.
+         value: `\`${page}\``,
          inline: true,
       },
       {

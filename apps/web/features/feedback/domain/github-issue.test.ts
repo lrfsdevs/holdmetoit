@@ -73,7 +73,7 @@ describe("buildGitHubIssueBody", () => {
 
       expect(body).toContain(`<!-- ${FEEDBACK_ISSUE_MARKER_PREFIX}:FB-42 -->`);
       expect(body).toContain("**Type:** Bug report");
-      expect(body).toContain("**Page:** /challenge/demo");
+      expect(body).toContain("**Page:** `/challenge/demo`");
       expect(body).toContain("**Reported by:** <@123456789>");
       expect(body).toContain(
          "**LogRocket:** [View session replay](https://app.logrocket.com/r/demo123)"
@@ -228,7 +228,33 @@ describe("mention and link neutralization", () => {
          url: "/profile/@octocat",
       });
 
-      expect(body).not.toContain("**Page:** /profile/@octocat");
+      expect(body).not.toContain("@octocat");
+      expect(body).toContain("**Page:** `/`");
+   });
+
+   it.each([
+      "/~https://evil.example/phish",
+      "/*https://evil.example/phish",
+      "/_https://evil.example/phish",
+      "/~www.evil.example",
+      "https://holdmetoit.com/~https://evil.example/phish",
+   ])(
+      "replaces a page value with an embedded link %j with the root path",
+      (url) => {
+         const body = buildGitHubIssueBody({ ...baseInput, url });
+
+         expect(body).toContain("**Page:** `/`");
+         expect(body).not.toContain("evil.example");
+      }
+   );
+
+   it("renders the page in a code span so GitHub cannot auto-link it", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         url: "/challenge/www2",
+      });
+
+      expect(body).toContain("**Page:** `/challenge/www2`");
    });
 
    it("replaces a page value that smuggles a second URL with the root path", () => {
@@ -237,7 +263,7 @@ describe("mention and link neutralization", () => {
          url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
       });
 
-      expect(body).toContain("**Page:** /");
+      expect(body).toContain("**Page:** `/`");
       expect(body).not.toContain("evil.example");
    });
 

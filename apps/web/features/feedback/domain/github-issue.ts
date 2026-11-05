@@ -103,7 +103,8 @@ export function buildGitHubIssueBody(input: GitHubIssueInput): string {
       `**Type:** ${
          input.type === "bug" ? "Bug report" : "Enhancement suggestion"
       }`,
-      `**Page:** ${neutralizeMentions(toSafePageUrl(clean(input.url)))}`,
+      // In a code span so nothing in the page value can be auto-linked.
+      `**Page:** \`${toSafePageUrl(clean(input.url))}\``,
       `**Reported by:** ${formatReporter(input.reporter)}`,
    ];
 
