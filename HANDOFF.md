@@ -2803,3 +2803,43 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
 - **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.
+
+### Session 201 — 2026-11-05 (feat(identity): platform usernames backend engine, UI unification, and feature flag gating — on `untitled-worktree`)
+
+- **Context & Objectives:** Implement fullstack platform usernames with case-preserving storage and case-insensitive uniqueness, 7-day cooldown engine, `platform_username` feature flag gating, edit username dialog with real-time debounced availability check, complete UI identity unification removing duplicate display names and separate `@username` sub-lines across profiles, challenge leaderboards, and trophy leaderboards, and gating profile trophy rank badges behind `global_leaderboard`:
+   1. **Backend Engine & Migration (Commit `4a698f8`):**
+      - Added declarative migration `20261105000000_user_username_ci_unique` creating partial PostgreSQL expression index: `CREATE UNIQUE INDEX User_lower_username_key ON "User" (LOWER("username")) WHERE "username" IS NOT NULL;`.
+      - Added `usernameChangedAt DateTime?` field to `User` model in `packages/database/prisma/schema.prisma`.
+      - Seeded `platform_username` feature flag in `packages/database/prisma/seed-feature-flags.ts` and registered in `apps/web/features/feature-flags/domain/feature-flag-keys.ts`.
+      - Hydrated `username: string | null` in Auth.js Session and User types (`types/next-auth.d.ts` and `core/auth/index.ts`).
+      - Created pure domain logic in `features/auth/domain/username.ts` (syntax validation regex `/^[a-zA-Z0-9_]{3,30}$/`, reserved keywords blacklist, 7-day cooldown calculator, Zod schema; 25/25 unit tests green).
+      - Added user repository methods in `features/auth/data/user.repository.ts` (`findUserByUsername`, `isUsernameAvailable`, `updateUsername`, `provisionInitialUsername`, non-destructive `syncUserFromDiscordProfile`; 16/16 unit tests green).
+      - Built server actions `checkUsernameAvailabilityAction` and `updateUsernameAction` in `features/auth/api/username.actions.ts` with flag checks, authentication assertions, cooldown enforcement, audit logging (`USERNAME_UPDATED`), and cache revalidation (10/10 unit tests green).
+      - Extended `global-profile.repository.ts` to resolve profiles by CUID or case-insensitive `@handle`.
+      - Added migration safety script `apps/web/scripts/dedupe-usernames.ts`.
+   2. **Phase 1: Edit Username Dialog (Commit `0708bc0`):**
+      - Created `apps/web/features/auth/presentation/edit-username-dialog.tsx` featuring debounced availability check, inline valid/invalid feedback, 7-day cooldown rules notice, transition pending state, and toast notifications (5/5 unit tests green).
+   3. **Phase 2: Profile Header & Trophy Gating (Commit `8843081`):**
+      - Updated `features/participant-stats/presentation/global-profile-view.tsx` to render a single unified platform username (`currentUsername || user.displayName`).
+      - Added pencil icon trigger (`EditUsernameDialog`) adjacent to username when `isOwnProfile && isPlatformUsernameEnabled`.
+      - Gated `Recruit (0 trophies)` badge behind `isGlobalLeaderboardEnabled`.
+      - Removed duplicate separate `@username` subline from profile header (7/7 unit tests green).
+      - Hydrated `isGlobalLeaderboardEnabled` and `isPlatformUsernameEnabled` in `app/profile/page.tsx` and `app/profile/[userId]/page.tsx`.
+   4. **Phase 3: Leaderboard UI Identity Unification (Commit `de9bb68`):**
+      - Updated `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`:
+         - Podiums (Rank 1, 2, 3): Render `{top.username || top.displayName}`.
+         - Main standings table: Line 1 clickable link renders `{entry.username || entry.displayName}`.
+         - Line 2: Removed redundant `@username` text, maintaining a clean 2-line layout housing `SickStatusBadge` and `PaceBadge`.
+         - Unassigned scholars table and mobile flat list / team roster cards updated to prioritize platform username with duplicate handle sublines removed.
+      - Updated `features/trophies/presentation/trophy-leaderboard-view.tsx`:
+         - Row title displays `{entry.username || entry.displayName}`.
+         - Meta subline removed duplicate `@{entry.username}`, cleanly focusing on career record: `{wins}W / {losses}L ({winRate}%)`.
+      - All 178 tests across `features/trophies/` and `features/leaderboard/` green.
+   5. **Phase 4: Cockpit & Global Header Unification (Commit `b9453f7`):**
+      - Updated `features/study-logs/presentation/home-cockpit-view.tsx` to prioritize `user?.username || cockpit?.participant.username` in `effectiveDisplayName`, rendering "Welcome {username}".
+      - Updated `components/ui/header.tsx` user capsule to prioritize `user.username || user.displayName || user.name || "Companion"`.
+      - All 26 tests across cockpit and header green.
+   6. **Phase 5: Architecture Documentation & Verification:**
+      - Created comprehensive feature and architecture documentation in `docs/identity/README.md`.
+      - Fully verified TypeScript compilation and Vitest suites.
+- **NEXT STEP:** Create Pull Request from feature branch to `dev` for peer review and staging deployment.

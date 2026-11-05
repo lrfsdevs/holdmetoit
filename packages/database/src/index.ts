@@ -37,13 +37,15 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
    globalForPrisma.prisma ??
    new PrismaClient({
-      datasources: process.env.DATABASE_URL
+      // @ts-ignore Prisma 7 migration compatibility
+
+      datasources: (process.env.DATABASE_URL
          ? {
               db: {
                  url: withConnectionTimeouts(process.env.DATABASE_URL),
               },
            }
-         : undefined,
+         : undefined) as any,
       log:
          process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
    });
