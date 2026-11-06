@@ -23,7 +23,6 @@ import type {
 } from "../domain/global-profile.types";
 import type { ParticipantStatsViewModel } from "../domain/participant-stats.types";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { RefreshAvatarButton } from "@/features/auth/presentation/refresh-avatar-button";
 import { EditUsernameDialog } from "@/features/auth/presentation/edit-username-dialog";
 import { ChallengeSnapshot } from "./challenge-snapshot";
 import { EmptyState } from "@/components/state/empty-state";
@@ -152,7 +151,9 @@ export function GlobalProfileView({
                            {isOwnProfile && isPlatformUsernameEnabled && (
                               <EditUsernameDialog
                                  currentUsername={currentUsername}
-                                 usernameChangedAt={(user as any).usernameChangedAt}
+                                 usernameChangedAt={
+                                    (user as any).usernameChangedAt
+                                 }
                                  onUsernameUpdated={(newUsername) =>
                                     setCurrentUsername(newUsername)
                                  }
@@ -189,17 +190,6 @@ export function GlobalProfileView({
                      </p>
                   </div>
                </div>
-
-               {/* Right Actions: Quick Refresh Avatar for Profile Owner */}
-               {isOwnProfile && (
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-border-default">
-                     <RefreshAvatarButton
-                        userId={user.id}
-                        size="sm"
-                        className="rounded-xl border-border-strong bg-surface-nested hover:bg-surface-elevated text-xs font-semibold text-text-secondary hover:text-white"
-                     />
-                  </div>
-               )}
             </div>
          </div>
 

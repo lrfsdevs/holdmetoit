@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { RefreshAvatarButton } from "@/features/auth/presentation/refresh-avatar-button";
 import Link from "next/link";
 import {
    ChevronRight,
@@ -185,14 +184,6 @@ export function ParticipantProfileHeader({
                         )}
                      </div>
                   </div>
-
-                  {isOwner && (
-                     <RefreshAvatarButton
-                        userId={profile.userId}
-                        size="sm"
-                        className="rounded-xl border-border-strong bg-surface-nested hover:bg-surface-elevated text-xs font-semibold text-text-secondary hover:text-white"
-                     />
-                  )}
 
                   {isAdmin && !isFallback && (
                      <Link

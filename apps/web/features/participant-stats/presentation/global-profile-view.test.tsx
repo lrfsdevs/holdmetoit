@@ -199,12 +199,12 @@ describe("GlobalProfileView", () => {
       expect(html).toContain("19 Pokémon");
    });
 
-   it("renders quick avatar refresh button and Settings tab for profile owner", () => {
+   it("renders Settings tab for profile owner and omits sync avatar button", () => {
       const html = renderToStaticMarkup(
          <GlobalProfileView profile={mockProfile} isOwnProfile={true} />
       );
 
-      expect(html).toContain("Sync Avatar");
+      expect(html).not.toContain("Sync Avatar");
       expect(html).toContain("tab-settings");
    });
 
