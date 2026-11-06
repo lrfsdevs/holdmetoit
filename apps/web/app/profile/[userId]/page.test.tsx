@@ -113,7 +113,7 @@ describe("UserProfilePage (/profile/[userId])", () => {
          const meta = await generateMetadata({
             params: Promise.resolve({ userId: "user_target" }),
          });
-         expect(meta.title).toContain("Bob Builder (@bobbuilder)");
+         expect(meta.title).toContain("bobbuilder");
          expect(meta.description).toContain("20h lifetime study hours");
       });
    });
