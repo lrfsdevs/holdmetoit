@@ -15,32 +15,30 @@ import { ParticipantStatsView } from "@/features/participant-stats/presentation/
 import { logError, logEvents } from "@/core/observability/logger";
 
 interface ParticipantStatsPageProps {
-   params: {
+   params: Promise<{
       id: string;
       participantId: string;
-   };
-   searchParams?: {
+   }>;
+   searchParams?: Promise<{
       as?: string;
       view?: string;
-   };
+   }>;
 }
 
 /** Builds participant profile metadata for search and social previews. */
 export async function generateMetadata({
    params,
 }: ParticipantStatsPageProps): Promise<Metadata> {
+   const { id, participantId } = await params;
    let stats: Awaited<ReturnType<typeof getChallengeParticipantStats>> = null;
    try {
-      stats = await getChallengeParticipantStats(
-         params.id,
-         params.participantId
-      );
+      stats = await getChallengeParticipantStats(id, participantId);
    } catch (error) {
       logError(logEvents.appError, {
          scope: "participant.stats.metadata",
          context: {
-            challengeId: params.id,
-            participantId: params.participantId,
+            challengeId: id,
+            participantId,
          },
          error,
       });
@@ -63,6 +61,8 @@ export default async function ParticipantStatsPage({
    params,
    searchParams,
 }: ParticipantStatsPageProps) {
+   const { id, participantId } = await params;
+   const query = (await searchParams) ?? {};
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
@@ -70,36 +70,32 @@ export default async function ParticipantStatsPage({
    const { isAdmin, isPreviewActive } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
-      searchParamAs: searchParams?.as,
+      searchParamAs: query.as,
    });
 
    let statsFailed = false;
    let stats: Awaited<ReturnType<typeof getChallengeParticipantStats>> = null;
    try {
-      stats = await getChallengeParticipantStats(
-         params.id,
-         params.participantId,
-         {
-            currentUserId: session?.user?.id,
-            isAdmin,
-            isPreviewActive,
-         }
-      );
+      stats = await getChallengeParticipantStats(id, participantId, {
+         currentUserId: session?.user?.id,
+         isAdmin,
+         isPreviewActive,
+      });
    } catch (error) {
       statsFailed = true;
       logError(logEvents.appError, {
          scope: "participant.stats.page",
          context: {
-            challengeId: params.id,
-            participantId: params.participantId,
+            challengeId: id,
+            participantId,
             userId: session?.user?.id,
          },
          error,
       });
    }
 
-   const returnLeaderboardUrl = `/challenge/${params.id}?tab=leaderboard${
-      searchParams?.view ? `&view=${encodeURIComponent(searchParams.view)}` : ""
+   const returnLeaderboardUrl = `/challenge/${id}?tab=leaderboard${
+      query.view ? `&view=${encodeURIComponent(query.view)}` : ""
    }`;
 
    if (statsFailed) {
@@ -122,5 +118,5 @@ export default async function ParticipantStatsPage({
       notFound();
    }
 
-   return <ParticipantStatsView stats={stats} viewParam={searchParams?.view} />;
+   return <ParticipantStatsView stats={stats} viewParam={query.view} />;
 }

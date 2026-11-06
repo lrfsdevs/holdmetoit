@@ -84,7 +84,10 @@ describe("HomePage data loading", () => {
          eligibleWrapped.promise
       );
 
-      const page = HomePage({ searchParams: { challenge: "challenge-1" } });
+      const page = HomePage({
+         searchParams: Promise.resolve({ challenge: "challenge-1" }),
+      });
+      await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
 

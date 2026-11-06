@@ -1,8 +1,15 @@
 import {
+   capDailyStudySeconds,
    DurationRangeError,
+   formatSecondsToClock,
    formatSecondsToHuman,
 } from "@/features/study-logs/domain/duration";
 import { filterLogsBeforeWithdrawal } from "@/features/challenges/domain/withdrawal";
+import {
+   formatDayDate,
+   getChallengeDayDateKey,
+   getChallengeDayFromDateKey,
+} from "@/features/study-logs/domain/challenge-day";
 
 export interface TeamRef {
    id: string;
@@ -201,6 +208,106 @@ function assertNonNegativeInteger(label: string, value: number): void {
    }
 }
 
+export interface DayRankedEntry {
+   dayRank: number;
+   todayRank: number;
+   dayLoggedSeconds: number;
+   dayLoggedClock: string;
+}
+
+/**
+ * Extracts and caps non-negative integer seconds logged by an entry on targetDateKey.
+ */
+export function getParticipantDayLoggedSeconds<
+   T extends {
+      dailyLogs?: Record<string, number>;
+      todayLoggedSeconds?: number;
+   },
+>(entry: T, targetDateKey: string, todayDateKey?: string): number {
+   let rawSeconds: number | undefined;
+
+   if (entry.dailyLogs && entry.dailyLogs[targetDateKey] !== undefined) {
+      rawSeconds = entry.dailyLogs[targetDateKey];
+   } else if (
+      todayDateKey &&
+      targetDateKey === todayDateKey &&
+      entry.todayLoggedSeconds !== undefined
+   ) {
+      rawSeconds = entry.todayLoggedSeconds;
+   } else if (!entry.dailyLogs && entry.todayLoggedSeconds !== undefined) {
+      rawSeconds =
+         todayDateKey && targetDateKey !== todayDateKey
+            ? 0
+            : entry.todayLoggedSeconds;
+   } else {
+      rawSeconds = 0;
+   }
+
+   const seconds = Math.max(0, Math.floor(rawSeconds ?? 0));
+   return capDailyStudySeconds(seconds);
+}
+
+/**
+ * Ranks leaderboard entries descending by study seconds logged on targetDateKey (Law L7, Law L8).
+ * Primary: day study seconds descending.
+ * Secondary tie-breaker: cumulative totalLoggedSeconds descending.
+ * Tertiary tie-breaker: displayName alphabetical ascending.
+ */
+export function rankByDaySeconds<
+   T extends {
+      dailyLogs?: Record<string, number>;
+      todayLoggedSeconds?: number;
+      totalLoggedSeconds?: number;
+      displayName?: string;
+   },
+>(
+   entries: readonly T[],
+   targetDateKey: string,
+   options?: { todayDateKey?: string }
+): (T & DayRankedEntry)[] {
+   const sorted = [...entries].sort((a, b) => {
+      const aDaySec = getParticipantDayLoggedSeconds(
+         a,
+         targetDateKey,
+         options?.todayDateKey
+      );
+      const bDaySec = getParticipantDayLoggedSeconds(
+         b,
+         targetDateKey,
+         options?.todayDateKey
+      );
+
+      if (bDaySec !== aDaySec) {
+         return bDaySec - aDaySec;
+      }
+
+      const aTotal = a.totalLoggedSeconds ?? 0;
+      const bTotal = b.totalLoggedSeconds ?? 0;
+      if (bTotal !== aTotal) {
+         return bTotal - aTotal;
+      }
+
+      const aName = a.displayName ?? "";
+      const bName = b.displayName ?? "";
+      return aName.localeCompare(bName);
+   });
+
+   return sorted.map((entry, index) => {
+      const dayLoggedSeconds = getParticipantDayLoggedSeconds(
+         entry,
+         targetDateKey,
+         options?.todayDateKey
+      );
+      return {
+         ...entry,
+         dayRank: index + 1,
+         todayRank: index + 1,
+         dayLoggedSeconds,
+         dayLoggedClock: formatSecondsToClock(dayLoggedSeconds),
+      };
+   });
+}
+
 /**
  * Ranks leaderboard entries descending by today's logged study seconds (Law L7).
  * Secondary tie-breaker: cumulative challenge totalLoggedSeconds.
@@ -221,7 +328,244 @@ export function rankByTodaySeconds<
    }));
 }
 
-export type LeaderboardViewMode = "individual" | "today" | "team";
+export interface LeaderboardDayOption {
+   dayNumber: number;
+   dateKey: string;
+   label: string;
+   shortLabel: string;
+   formattedDate: string;
+   isToday: boolean;
+   isFinalDay?: boolean;
+}
+
+/**
+ * Computes available challenge day options for the daily selector control (Law L7).
+ * For ACTIVE challenges: returns Day 1 through current day number (with current day marked as Today).
+ * For COMPLETED challenges: returns Day 1 through totalDays (with final day marked).
+ * For UPCOMING challenges: returns Day 1.
+ */
+export function getLeaderboardDayOptions(params: {
+   startAt: Date | string;
+   totalDays: number;
+   currentDayNumber: number;
+   status?: "UPCOMING" | "ACTIVE" | "COMPLETED";
+}): LeaderboardDayOption[] {
+   const totalDays = Math.max(1, params.totalDays);
+   let maxSelectableDay = 1;
+
+   if (params.status === "COMPLETED") {
+      maxSelectableDay = totalDays;
+   } else if (params.status === "UPCOMING") {
+      maxSelectableDay = 1;
+   } else {
+      maxSelectableDay = Math.min(
+         totalDays,
+         Math.max(1, params.currentDayNumber)
+      );
+   }
+
+   const options: LeaderboardDayOption[] = [];
+
+   for (let d = 1; d <= maxSelectableDay; d++) {
+      const dateKey = getChallengeDayDateKey(params.startAt, d);
+      const formattedDate = formatDayDate(dateKey);
+      const isToday =
+         params.status === "ACTIVE" && d === params.currentDayNumber;
+      const isFinalDay = params.status === "COMPLETED" && d === totalDays;
+
+      let label = `Day ${d} · ${formattedDate}`;
+      if (isToday) {
+         label = `Today (Day ${d} · ${formattedDate})`;
+      } else if (isFinalDay) {
+         label = `Day ${d} · ${formattedDate} (Final Day)`;
+      }
+
+      options.push({
+         dayNumber: d,
+         dateKey,
+         label,
+         shortLabel: isToday ? "Today" : `Day ${d}`,
+         formattedDate,
+         isToday,
+         isFinalDay,
+      });
+   }
+
+   return options;
+}
+
+export interface ResolvedLeaderboardDay {
+   dayNumber: number;
+   dateKey: string;
+   isToday: boolean;
+   formattedDate: string;
+}
+
+/**
+ * Resolves requested day number or dateKey to a validated challenge day (Law L7).
+ * Gracefully falls back to current day (ongoing) or final day (completed) if invalid or out of bounds.
+ */
+export function resolveLeaderboardSelectedDay(params: {
+   requestedDay?: number | string | null;
+   requestedDateKey?: string | null;
+   startAt: Date | string;
+   totalDays: number;
+   currentDayNumber: number;
+   status?: "UPCOMING" | "ACTIVE" | "COMPLETED";
+}): ResolvedLeaderboardDay {
+   const totalDays = Math.max(1, params.totalDays);
+   let maxSelectableDay = 1;
+   let defaultDay = 1;
+
+   if (params.status === "COMPLETED") {
+      maxSelectableDay = totalDays;
+      defaultDay = totalDays;
+   } else if (params.status === "UPCOMING") {
+      maxSelectableDay = 1;
+      defaultDay = 1;
+   } else {
+      maxSelectableDay = Math.min(
+         totalDays,
+         Math.max(1, params.currentDayNumber)
+      );
+      defaultDay = maxSelectableDay;
+   }
+
+   let resolvedDayNumber = defaultDay;
+
+   if (
+      params.requestedDateKey &&
+      /^\d{4}-\d{2}-\d{2}$/.test(params.requestedDateKey)
+   ) {
+      try {
+         const dayFromKey = getChallengeDayFromDateKey(
+            params.startAt,
+            params.requestedDateKey
+         );
+         if (dayFromKey >= 1 && dayFromKey <= maxSelectableDay) {
+            resolvedDayNumber = dayFromKey;
+         }
+      } catch {}
+   } else if (params.requestedDay != null && params.requestedDay !== "") {
+      let parsed: number | null = null;
+      if (typeof params.requestedDay === "number") {
+         parsed = Number.isInteger(params.requestedDay)
+            ? params.requestedDay
+            : null;
+      } else if (
+         typeof params.requestedDay === "string" &&
+         /^\s*\d+\s*$/.test(params.requestedDay)
+      ) {
+         parsed = parseInt(params.requestedDay.trim(), 10);
+      }
+      if (parsed !== null && parsed >= 1 && parsed <= maxSelectableDay) {
+         resolvedDayNumber = parsed;
+      }
+   }
+
+   const dateKey = getChallengeDayDateKey(params.startAt, resolvedDayNumber);
+   const isToday =
+      params.status === "ACTIVE" &&
+      resolvedDayNumber === params.currentDayNumber;
+   const formattedDate = formatDayDate(dateKey);
+
+   return {
+      dayNumber: resolvedDayNumber,
+      dateKey,
+      isToday,
+      formattedDate,
+   };
+}
+
+/**
+ * Formats full date with year: e.g. 'Oct 22, 2026'.
+ */
+export function formatDayDateWithYear(dateKey: string): string {
+   try {
+      const parts = dateKey.split("-").map(Number);
+      if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+         const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+         return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            timeZone: "UTC",
+         });
+      }
+   } catch {}
+   return dateKey;
+}
+
+/**
+ * Formats a prominent leaderboard day header title (e.g. 'Showing Day 3 Standings · Oct 22, 2026').
+ */
+export function formatLeaderboardDayHeading(params: {
+   dayNumber: number;
+   dateKey: string;
+   isToday?: boolean;
+}): string {
+   const formattedDate = formatDayDateWithYear(params.dateKey);
+   if (params.isToday) {
+      return `Showing Today's Standings · ${formattedDate}`;
+   }
+   return `Showing Day ${params.dayNumber} Standings · ${formattedDate}`;
+}
+
+export interface TeamDayScore {
+   teamId: string;
+   dayLoggedSeconds: number;
+   dayLoggedClock: string;
+}
+
+/**
+ * Aggregates participant day study seconds by team (Law L1, Law L7, Law L8).
+ */
+export function calculateTeamDayScores<
+   T extends {
+      teamId: string;
+      dayLoggedSeconds?: number;
+      dailyLogs?: Record<string, number>;
+   },
+>(
+   teams: readonly TeamRef[],
+   entries: readonly T[],
+   dateKey?: string
+): TeamDayScore[] {
+   const totals = new Map<string, number>();
+   const activeTeams = teams.filter((t) => !t.isDeleted);
+   for (const team of activeTeams) {
+      totals.set(team.id, 0);
+   }
+
+   for (const entry of entries) {
+      let seconds = 0;
+      if (entry.dayLoggedSeconds !== undefined) {
+         seconds = entry.dayLoggedSeconds;
+      } else if (
+         dateKey &&
+         entry.dailyLogs &&
+         entry.dailyLogs[dateKey] !== undefined
+      ) {
+         seconds = entry.dailyLogs[dateKey];
+      }
+      const current = totals.get(entry.teamId) ?? 0;
+      totals.set(
+         entry.teamId,
+         current + capDailyStudySeconds(Math.max(0, Math.floor(seconds)))
+      );
+   }
+
+   return activeTeams.map((team) => {
+      const dayLoggedSeconds = totals.get(team.id) ?? 0;
+      return {
+         teamId: team.id,
+         dayLoggedSeconds,
+         dayLoggedClock: formatSecondsToClock(dayLoggedSeconds),
+      };
+   });
+}
+
+export type LeaderboardViewMode = "individual" | "today" | "day" | "team";
 
 /**
  * Resolves and validates a leaderboard view mode parameter (Law L7).
@@ -233,6 +577,7 @@ export function resolveLeaderboardViewMode(
    format?: "TEAM_VS_TEAM" | "DUOS" | "SOLOS" | null
 ): LeaderboardViewMode {
    if (value === "today") return "today";
+   if (value === "day") return "day";
    if (value === "team") return "team";
    if (value === "individual") return "individual";
    return format === "DUOS" ? "team" : "individual";

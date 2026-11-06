@@ -33,7 +33,11 @@ describe("cache policy", () => {
    it("invalidates each requested tag", () => {
       invalidateTags(["tag:one", "tag:two"]);
 
-      expect(revalidateTag).toHaveBeenNthCalledWith(1, "tag:one");
-      expect(revalidateTag).toHaveBeenNthCalledWith(2, "tag:two");
+      expect(revalidateTag).toHaveBeenNthCalledWith(1, "tag:one", {
+         expire: 0,
+      });
+      expect(revalidateTag).toHaveBeenNthCalledWith(2, "tag:two", {
+         expire: 0,
+      });
    });
 });

@@ -16,20 +16,21 @@ import { isFeatureEnabled } from "@/features/feature-flags/api/server";
 export const dynamic = "force-dynamic";
 
 interface UserProfilePageProps {
-   params: {
+   params: Promise<{
       userId: string;
-   };
-   searchParams?: {
+   }>;
+   searchParams?: Promise<{
       challengeId?: string;
       tab?: string;
-   };
+   }>;
 }
 
 /** Generates social and search metadata for public user profiles. */
 export async function generateMetadata({
    params,
 }: UserProfilePageProps): Promise<Metadata> {
-   const profile = await getGlobalUserProfile(params.userId);
+   const { userId } = await params;
+   const profile = await getGlobalUserProfile(userId);
 
    if (!profile) {
       return {
@@ -55,12 +56,12 @@ export default async function UserProfilePage({
    params,
    searchParams,
 }: UserProfilePageProps) {
+   const { userId } = await params;
+   const query = (await searchParams) ?? {};
    const session = await auth();
 
    const targetUserId =
-      params.userId === "me" && session?.user?.id
-         ? session.user.id
-         : params.userId;
+      userId === "me" && session?.user?.id ? session.user.id : userId;
 
    const profile = await getGlobalUserProfile(targetUserId);
 
@@ -84,7 +85,7 @@ export default async function UserProfilePage({
    });
 
    let initialSnapshot: ParticipantStatsViewModel | null = null;
-   let selectedChallengeId = searchParams?.challengeId;
+   let selectedChallengeId = query.challengeId;
 
    if (isAuthorizedHistory && profile.challengeHistory.length > 0) {
       const match = profile.challengeHistory.find(

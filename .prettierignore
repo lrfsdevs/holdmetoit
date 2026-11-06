@@ -3,6 +3,7 @@ node_modules/
 dist/
 coverage/
 prisma/generated/
+packages/database/src/generated/
 .husky/
 package-lock.json
 bun.lock

@@ -27,11 +27,11 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-export interface DialogContentProps extends React.ComponentPropsWithoutRef<
+export type DialogContentProps = React.ComponentPropsWithoutRef<
    typeof DialogPrimitive.Content
-> {
+> & {
    overlayClassName?: string;
-}
+};
 
 /** Renders the shared modal panel (portalled, focus-trapped, scroll-locked). */
 const DialogContent = React.forwardRef<

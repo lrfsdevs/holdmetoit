@@ -73,7 +73,7 @@ describe("buildGitHubIssueBody", () => {
 
       expect(body).toContain(`<!-- ${FEEDBACK_ISSUE_MARKER_PREFIX}:FB-42 -->`);
       expect(body).toContain("**Type:** Bug report");
-      expect(body).toContain("**Page:** /challenge/demo");
+      expect(body).toContain("**Page:** `/challenge/demo`");
       expect(body).toContain("**Reported by:** <@123456789>");
       expect(body).toContain(
          "**LogRocket:** [View session replay](https://app.logrocket.com/r/demo123)"
@@ -172,5 +172,118 @@ describe("labels and assignees", () => {
             assignees: [],
          }).assignees
       ).toBeUndefined();
+   });
+});
+
+describe("mention and link neutralization", () => {
+   const hostile = "@everyone @octocat @org/team fixes #123 and GH-45";
+
+   it("fences the description so mentions and references stay inert", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         description: `${hostile} <img src=x onerror=alert(1)>`,
+      });
+
+      expect(body).toContain("### Description\n\n```\n");
+      expect(body).toContain(
+         `\`\`\`\n${hostile} <img src=x onerror=alert(1)>\n\`\`\``
+      );
+   });
+
+   it("keeps a description from closing its own fence", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         description: "```\n@everyone\n```\nescaped",
+      });
+
+      expect(body).toContain("````\n```\n@everyone\n```\nescaped\n````");
+   });
+
+   it("neutralizes mentions in the title", () => {
+      const title = formatGitHubIssueTitle({
+         ...baseInput,
+         title: "ping @everyone about #12",
+      });
+
+      expect(title).not.toContain("@e");
+      expect(title).not.toContain("#1");
+      expect(title.replace(/\u200b/g, "")).toBe(
+         "[FB-42] ping @everyone about #12"
+      );
+   });
+
+   it("neutralizes mentions in the reporter name", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         reporter: { displayName: "@everyone" },
+      });
+
+      expect(body).not.toContain("**Reported by:** @everyone");
+      expect(body).toContain("**Reported by:** @\u200beveryone");
+   });
+
+   it("neutralizes mentions in the page path", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         url: "/profile/@octocat",
+      });
+
+      expect(body).not.toContain("@octocat");
+      expect(body).toContain("**Page:** `/`");
+   });
+
+   it.each([
+      "/~https://evil.example/phish",
+      "/*https://evil.example/phish",
+      "/_https://evil.example/phish",
+      "/~www.evil.example",
+      "https://holdmetoit.com/~https://evil.example/phish",
+   ])(
+      "replaces a page value with an embedded link %j with the root path",
+      (url) => {
+         const body = buildGitHubIssueBody({ ...baseInput, url });
+
+         expect(body).toContain("**Page:** `/`");
+         expect(body).not.toContain("evil.example");
+      }
+   );
+
+   it("renders the page in a code span so GitHub cannot auto-link it", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         url: "/challenge/www2",
+      });
+
+      expect(body).toContain("**Page:** `/challenge/www2`");
+   });
+
+   it("replaces a page value that smuggles a second URL with the root path", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+
+      expect(body).toContain("**Page:** `/`");
+      expect(body).not.toContain("evil.example");
+   });
+
+   it("omits the LogRocket link for non-LogRocket URLs", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         logrocketSessionId: "https://evil.example/phish",
+      });
+
+      expect(body).not.toContain("evil.example");
+      expect(body).not.toContain("**LogRocket:**");
+   });
+
+   it("keeps a crafted session URL from injecting a second link", () => {
+      const body = buildGitHubIssueBody({
+         ...baseInput,
+         logrocketSessionId:
+            "https://app.logrocket.com/a)[trusted](https://evil.example",
+      });
+
+      expect(body).not.toContain("](https://evil.example");
    });
 });

@@ -22,30 +22,33 @@ import { FEATURE_FLAG_KEYS } from "@/features/feature-flags/domain/feature-flag-
 import { WRAPPED_FEATURE_FLAG_KEY } from "@/features/wrapped/api/wrapped-flag";
 
 interface ChallengePageProps {
-   params: {
+   params: Promise<{
       id: string;
-   };
-   searchParams?: {
+   }>;
+   searchParams?: Promise<{
       tab?: string;
       as?: string;
       view?: string;
+      day?: string;
+      date?: string;
       search?: string;
       team?: string;
       page?: string;
-   };
+   }>;
 }
 
 /** Builds challenge metadata for Discord link embeds. */
 export async function generateMetadata({
    params,
 }: ChallengePageProps): Promise<Metadata> {
+   const { id } = await params;
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
-      challenge = await getChallengeScoreboard(params.id);
+      challenge = await getChallengeScoreboard(id);
    } catch (error) {
       logError(logEvents.appError, {
          scope: "challenge.metadata",
-         context: { challengeId: params.id },
+         context: { challengeId: id },
          error,
       });
    }
@@ -81,6 +84,8 @@ export default async function ChallengePage({
    params,
    searchParams,
 }: ChallengePageProps) {
+   const { id } = await params;
+   const query = (await searchParams) ?? {};
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
@@ -88,7 +93,7 @@ export default async function ChallengePage({
    const { isAdmin } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
-      searchParamAs: searchParams?.as,
+      searchParamAs: query.as,
    });
 
    const isWrappedEnabled = await isFeatureEnabled(WRAPPED_FEATURE_FLAG_KEY);
@@ -102,11 +107,11 @@ export default async function ChallengePage({
 
    let challenge: Awaited<ReturnType<typeof getChallengeScoreboard>> = null;
    try {
-      challenge = await getChallengeScoreboard(params.id, session?.user?.id);
+      challenge = await getChallengeScoreboard(id, session?.user?.id);
    } catch (error) {
       logError(logEvents.appError, {
          scope: "challenge.page",
-         context: { challengeId: params.id },
+         context: { challengeId: id },
          error,
       });
       return (
@@ -125,19 +130,19 @@ export default async function ChallengePage({
       Boolean(challenge.resultsLockedAt) && isWrappedEnabled;
 
    const initialTab: ChallengeTab = resolveAllowedChallengeTab(
-      searchParams?.tab,
+      query.tab,
       isAdmin,
       { isSummaryVisible }
    );
    const initialLeaderboardViewMode = resolveLeaderboardViewMode(
-      searchParams?.view,
+      query.view,
       challenge.format
    );
 
-   const initialRosterSearch = searchParams?.search ?? "";
-   const initialRosterTeamFilter = searchParams?.team ?? "ALL";
-   const initialRosterPage = searchParams?.page
-      ? Math.max(1, parseInt(searchParams.page, 10) || 1)
+   const initialRosterSearch = query.search ?? "";
+   const initialRosterTeamFilter = query.team ?? "ALL";
+   const initialRosterPage = query.page
+      ? Math.max(1, parseInt(query.page, 10) || 1)
       : 1;
 
    return (
@@ -146,6 +151,7 @@ export default async function ChallengePage({
          initialTab={initialTab}
          isAdmin={isAdmin}
          initialLeaderboardViewMode={initialLeaderboardViewMode}
+         initialLeaderboardDay={query.day ?? query.date}
          initialRosterSearch={initialRosterSearch}
          initialRosterTeamFilter={initialRosterTeamFilter}
          initialRosterPage={initialRosterPage}

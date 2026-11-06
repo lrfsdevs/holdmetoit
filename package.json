@@ -34,15 +34,20 @@
       "db:migrate:status": "npm run db:migrate:status -w @holdmetoit/database",
       "db:seed": "npm run db:seed -w @holdmetoit/database",
       "db:seed:flags": "npm run db:seed:flags -w @holdmetoit/database",
-      "db:seed:pokemon": "npm run db:seed:pokemon -w @holdmetoit/web",
       "postinstall": "npm run db:generate",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
       "prepare": "husky || true"
    },
    "devDependencies": {
+      "@types/react": "^19.3.0",
+      "@types/react-dom": "^19.3.0",
       "husky": "^9.1.7",
       "lint-staged": "^17.6.0",
       "prettier": "^3.9.9"
+   },
+   "overrides": {
+      "react": "19.3.1",
+      "react-dom": "19.3.1"
    }
 }

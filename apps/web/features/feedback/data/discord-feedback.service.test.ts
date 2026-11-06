@@ -15,6 +15,78 @@ import {
    sendFeedbackToDiscord,
 } from "./discord-feedback.service";
 
+describe("buildDiscordFeedbackEmbed link safety", () => {
+   const bug = {
+      feedbackNumber: 7,
+      type: "bug" as const,
+      title: "Broken",
+      description: "Something is broken on this page",
+      url: "/dashboard",
+   };
+
+   it("omits the LogRocket field for non-LogRocket URLs", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         logrocketSessionId: "https://evil.example/phish",
+      });
+
+      expect(
+         embed.fields?.some((field) => field.name.includes("LogRocket"))
+      ).toBe(false);
+   });
+
+   it("keeps a crafted session URL from injecting a second link", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         logrocketSessionId:
+            "https://app.logrocket.com/a)[trusted](https://evil.example",
+      });
+      const field = embed.fields?.find((f) => f.name.includes("LogRocket"));
+
+      expect(field?.value).not.toContain("](https://evil.example");
+   });
+
+   it("falls back to the root path when the page value smuggles a second URL", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("`/`");
+   });
+
+   it("falls back to the root path when the page embeds a link", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "/~https://evil.example/phish",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("`/`");
+   });
+
+   it("renders the page in a code span so it cannot be auto-linked", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "/challenge/clxyz123",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("`/challenge/clxyz123`");
+   });
+
+   it("falls back to the root path when the page URL is not a path", () => {
+      const embed = buildDiscordFeedbackEmbed({
+         ...bug,
+         url: "[Click here](https://evil.example)",
+      });
+      const page = embed.fields?.find((f) => f.name.includes("Page"));
+
+      expect(page?.value).toBe("`/`");
+   });
+});
+
 describe("buildDiscordFeedbackEmbed", () => {
    it("builds a bug report embed with red accent and LogRocket link", () => {
       const embed = buildDiscordFeedbackEmbed({
@@ -39,7 +111,7 @@ describe("buildDiscordFeedbackEmbed", () => {
       expect(embed.footer?.text).toBe("HoldMeToIt Feedback Engine • ID: FB-42");
       expect(embed.fields).toEqual(
          expect.arrayContaining([
-            { name: "📍 Page", value: "/challenge/demo", inline: true },
+            { name: "📍 Page", value: "`/challenge/demo`", inline: true },
             { name: "👤 Reported by", value: "<@123456789>", inline: true },
             { name: "⚡ Status", value: "OPEN", inline: true },
             {

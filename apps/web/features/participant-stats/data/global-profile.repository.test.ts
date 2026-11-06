@@ -34,7 +34,9 @@ vi.mock("./participant-stats.repository", () => ({
 describe("global-profile.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
-      vi.useFakeTimers();
+      // Challenge status is derived from the current time, so freeze it inside
+      // the fixtures' "Winter Sprint" window (2026-10-25 to 2026-11-05).
+      vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2026-10-30T12:00:00.000Z"));
    });
 

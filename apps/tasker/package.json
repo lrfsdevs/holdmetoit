@@ -20,7 +20,7 @@
       "@google/genai": "^2.21.0",
       "@holdmetoit/database": "*",
       "@holdmetoit/discord": "*",
-      "@prisma/client": "^6.8.2",
+      "@prisma/client": "7.10.1",
       "chrono-node": "^2.10.1",
       "discord.js": "^14.26.3",
       "dotenv": "^17.4.2",

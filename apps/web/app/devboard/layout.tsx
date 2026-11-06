@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/core/auth";
+import { getServerEnv } from "@/core/env/server";
 import { isDevRole } from "@/features/auth/domain/auth-roles";
 import {
    getEffectiveAdminState,
@@ -22,9 +23,10 @@ export default async function DevBoardLayout({
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
+   const env = getServerEnv();
    const isDevBypass =
-      process.env.NODE_ENV === "development" &&
-      (process.env.ALLOW_DEV_BYPASS === "true" || !process.env.AUTH_DISCORD_ID);
+      env.NODE_ENV === "development" &&
+      (env.ALLOW_DEV_BYPASS || !env.AUTH_DISCORD_ID);
 
    // Strict DEV role check: Non-authenticated and non-DEV users (even ADMINs) are rejected
    if (!session?.user?.id && !isDevBypass) {

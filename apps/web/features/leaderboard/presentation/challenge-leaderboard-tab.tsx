@@ -16,6 +16,7 @@ import {
    RotateCcw,
    Target,
    HeartHandshake,
+   Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,11 +67,21 @@ import {
 } from "@/components/ui/tooltip";
 import { SickStatusBadge } from "@/features/participant-status/presentation/sick-status-badge";
 import {
+   calculateTeamDayScores,
+   formatLeaderboardDayHeading,
+   getLeaderboardDayOptions,
+   rankByDaySeconds,
    rankByTodaySeconds,
+   resolveLeaderboardSelectedDay,
    resolveLeaderboardViewMode,
    supportsTeamView,
+   type DayRankedEntry,
    type LeaderboardViewMode,
 } from "../domain/leaderboard";
+import {
+   getChallengeDayBuckets,
+   getChallengeDayDateKey,
+} from "@/features/study-logs/domain/challenge-day";
 
 export type { LeaderboardViewMode };
 
@@ -308,6 +319,7 @@ interface ChallengeLeaderboardTabProps {
    challenge: ChallengeScoreboardViewModel;
    isAdmin?: boolean;
    initialViewMode?: LeaderboardViewMode;
+   initialDay?: number | string;
    /** Server-evaluated `global_leaderboard_v1`. Gates trophy rank badges. */
    isGlobalLeaderboardEnabled?: boolean;
 }
@@ -317,6 +329,7 @@ export function ChallengeLeaderboardTab({
    challenge,
    isAdmin = false,
    initialViewMode,
+   initialDay,
    isGlobalLeaderboardEnabled = false,
 }: ChallengeLeaderboardTabProps) {
    const router = useRouter();
@@ -336,6 +349,20 @@ export function ChallengeLeaderboardTab({
          ? "individual"
          : requestedViewMode;
 
+   const [selectedDay, setSelectedDay] = useState(() => {
+      const isDateKey =
+         typeof initialDay === "string" &&
+         /^\d{4}-\d{2}-\d{2}$/.test(initialDay.trim());
+      return resolveLeaderboardSelectedDay({
+         requestedDateKey: isDateKey ? initialDay.trim() : undefined,
+         requestedDay: isDateKey ? undefined : initialDay,
+         startAt: challenge.startAt,
+         totalDays: challenge.totalDays,
+         currentDayNumber: challenge.currentDayNumber,
+         status: challenge.status,
+      });
+   });
+
    useEffect(() => {
       if (resolvedInitialViewMode) {
          setViewMode(resolvedInitialViewMode);
@@ -347,8 +374,12 @@ export function ChallengeLeaderboardTab({
          if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
             const viewParam = params.get("view");
+            const dayParam = params.get("day");
+            const dateParam = params.get("date");
+
             if (
                viewParam === "today" ||
+               viewParam === "day" ||
                viewParam === "team" ||
                viewParam === "individual"
             ) {
@@ -356,25 +387,103 @@ export function ChallengeLeaderboardTab({
             } else {
                setViewMode(defaultViewMode);
             }
+
+            if (
+               viewParam === "day" ||
+               viewParam === "today" ||
+               dayParam ||
+               dateParam
+            ) {
+               const resolved = resolveLeaderboardSelectedDay({
+                  requestedDay: dayParam,
+                  requestedDateKey: dateParam,
+                  startAt: challenge.startAt,
+                  totalDays: challenge.totalDays,
+                  currentDayNumber: challenge.currentDayNumber,
+                  status: challenge.status,
+               });
+               setSelectedDay(resolved);
+            }
          }
       };
 
       syncViewFromUrl();
       window.addEventListener("popstate", syncViewFromUrl);
       return () => window.removeEventListener("popstate", syncViewFromUrl);
-   }, [defaultViewMode]);
+   }, [
+      defaultViewMode,
+      challenge.startAt,
+      challenge.totalDays,
+      challenge.currentDayNumber,
+      challenge.status,
+   ]);
 
    const handleViewModeChange = (mode: LeaderboardViewMode) => {
       setViewMode(mode);
       setCurrentPage(1);
 
+      if (mode === "today" || mode === "day") {
+         const resolved = resolveLeaderboardSelectedDay({
+            requestedDay: null,
+            startAt: challenge.startAt,
+            totalDays: challenge.totalDays,
+            currentDayNumber: challenge.currentDayNumber,
+            status: challenge.status,
+         });
+         setSelectedDay(resolved);
+
+         if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.set("view", "today");
+            url.searchParams.delete("day");
+            url.searchParams.delete("date");
+            window.history.replaceState(
+               null,
+               "",
+               `${url.pathname}${url.search}${url.hash}`
+            );
+         }
+      } else {
+         if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (mode === defaultViewMode) {
+               url.searchParams.delete("view");
+            } else {
+               url.searchParams.set("view", mode);
+            }
+            url.searchParams.delete("day");
+            url.searchParams.delete("date");
+            window.history.replaceState(
+               null,
+               "",
+               `${url.pathname}${url.search}${url.hash}`
+            );
+         }
+      }
+   };
+
+   const handleDayChange = (newDayNumber: number) => {
+      const resolved = resolveLeaderboardSelectedDay({
+         requestedDay: newDayNumber,
+         startAt: challenge.startAt,
+         totalDays: challenge.totalDays,
+         currentDayNumber: challenge.currentDayNumber,
+         status: challenge.status,
+      });
+
+      setSelectedDay(resolved);
+      setCurrentPage(1);
+
       if (typeof window !== "undefined") {
          const url = new URL(window.location.href);
-         if (mode === defaultViewMode) {
-            url.searchParams.delete("view");
+         if (resolved.isToday) {
+            url.searchParams.set("view", "today");
+            url.searchParams.delete("day");
          } else {
-            url.searchParams.set("view", mode);
+            url.searchParams.set("view", "day");
+            url.searchParams.set("day", String(resolved.dayNumber));
          }
+         url.searchParams.delete("date");
          window.history.replaceState(
             null,
             "",
@@ -530,10 +639,46 @@ export function ChallengeLeaderboardTab({
       setCurrentPage(1);
    };
 
-   const displayStandings =
-      viewMode === "today"
-         ? rankByTodaySeconds(filteredStandings)
-         : filteredStandings;
+   const isDailyView = viewMode === "today" || viewMode === "day";
+
+   const dayOptions = getLeaderboardDayOptions({
+      startAt: challenge.startAt,
+      totalDays: challenge.totalDays,
+      currentDayNumber: challenge.currentDayNumber,
+      status: challenge.status,
+   });
+
+   const todayDateKey =
+      challenge.currentDayNumber > 0
+         ? getChallengeDayDateKey(
+              challenge.startAt,
+              Math.min(challenge.totalDays, challenge.currentDayNumber)
+           )
+         : challenge.status === "COMPLETED"
+           ? getChallengeDayDateKey(challenge.startAt, challenge.totalDays)
+           : getChallengeDayDateKey(challenge.startAt, 1);
+
+   const displayStandings: (ScoreboardStandingEntry &
+      Partial<DayRankedEntry>)[] = isDailyView
+      ? rankByDaySeconds(filteredStandings, selectedDay.dateKey, {
+           todayDateKey,
+        })
+      : filteredStandings;
+
+   const teamDayScores = calculateTeamDayScores(
+      challenge.teams,
+      displayStandings,
+      selectedDay.dateKey
+   );
+   const teamDayScoreMap = new Map(
+      teamDayScores.map((s) => [s.teamId, s.dayLoggedClock])
+   );
+
+   const dayHeading = formatLeaderboardDayHeading({
+      dayNumber: selectedDay.dayNumber,
+      dateKey: selectedDay.dateKey,
+      isToday: selectedDay.isToday,
+   });
 
    const totalPages = Math.ceil(displayStandings.length / pageSize);
    const safePage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
@@ -883,57 +1028,105 @@ export function ChallengeLeaderboardTab({
          <div className="rounded-3xl border border-border-default bg-surface-primary p-5 sm:p-7 shadow-lg space-y-5">
             <div className="flex flex-col gap-3.5 pb-3 border-b border-border-default">
                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                     <h3 className="text-xl font-bold text-white">
-                        Leaderboard Standings
-                     </h3>
-                     <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface-elevated border border-border-default text-text-tertiary">
-                        {filteredStandings.length}{" "}
-                        {filteredStandings.length === 1
-                           ? "scholar"
-                           : "scholars"}
-                     </span>
+                  <div className="flex flex-col gap-1 min-w-0">
+                     <div className="flex items-center gap-2.5 flex-wrap">
+                        <h3 className="text-xl font-bold text-white">
+                           Leaderboard Standings
+                        </h3>
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface-elevated border border-border-default text-text-tertiary">
+                           {filteredStandings.length}{" "}
+                           {filteredStandings.length === 1
+                              ? "scholar"
+                              : "scholars"}
+                        </span>
+                     </div>
+                     {isDailyView && (
+                        <p
+                           data-testid="leaderboard-day-heading"
+                           className="text-xs font-medium text-text-secondary flex items-center gap-1.5 truncate"
+                        >
+                           <Calendar className="h-3.5 w-3.5 text-accent shrink-0" />
+                           <span className="truncate">{dayHeading}</span>
+                        </p>
+                     )}
                   </div>
 
-                  {/* View Mode Toggle: Overall vs Today's LB vs View by Team */}
-                  <div className="inline-flex items-center rounded-xl bg-surface-elevated border border-border-default p-1 self-start sm:self-auto gap-1">
-                     <button
-                        type="button"
-                        onClick={() => handleViewModeChange("individual")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                           viewMode === "individual"
-                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
-                              : "text-text-tertiary hover:text-white"
-                        }`}
-                     >
-                        <Trophy className="h-3.5 w-3.5" />
-                        <span>Overall Rank</span>
-                     </button>
-                     <button
-                        type="button"
-                        onClick={() => handleViewModeChange("today")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                           viewMode === "today"
-                              ? "bg-surface-nested text-white shadow-sm border border-border-strong"
-                              : "text-text-tertiary hover:text-white"
-                        }`}
-                     >
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Today&apos;s LB</span>
-                     </button>
-                     {teamViewEnabled && (
+                  {/* View Mode Controls & Day Selector */}
+                  <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
+                     {/* View Mode Toggle: Overall vs Today's LB vs View by Team */}
+                     <div className="inline-flex items-center rounded-xl bg-surface-elevated border border-border-default p-1 self-start sm:self-auto gap-1">
                         <button
                            type="button"
-                           onClick={() => handleViewModeChange("team")}
+                           onClick={() => handleViewModeChange("individual")}
                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                              viewMode === "team"
+                              viewMode === "individual"
                                  ? "bg-surface-nested text-white shadow-sm border border-border-strong"
                                  : "text-text-tertiary hover:text-white"
                            }`}
                         >
-                           <Users className="h-3.5 w-3.5" />
-                           <span>View by Team</span>
+                           <Trophy className="h-3.5 w-3.5 shrink-0" />
+                           <span>Overall Rank</span>
                         </button>
+                        <button
+                           type="button"
+                           onClick={() => handleViewModeChange("today")}
+                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                              isDailyView
+                                 ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                                 : "text-text-tertiary hover:text-white"
+                           }`}
+                        >
+                           <Clock className="h-3.5 w-3.5 shrink-0" />
+                           <span>Today&apos;s LB</span>
+                        </button>
+                        {teamViewEnabled && (
+                           <button
+                              type="button"
+                              onClick={() => handleViewModeChange("team")}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                                 viewMode === "team"
+                                    ? "bg-surface-nested text-white shadow-sm border border-border-strong"
+                                    : "text-text-tertiary hover:text-white"
+                              }`}
+                           >
+                              <Users className="h-3.5 w-3.5 shrink-0" />
+                              <span>View by Team</span>
+                           </button>
+                        )}
+                     </div>
+
+                     {/* Day Selector dropdown (visible when in daily view) */}
+                     {isDailyView && dayOptions.length > 0 && (
+                        <div className="w-full xs:w-auto min-w-dropdown-min">
+                           <Select
+                              value={String(selectedDay.dayNumber)}
+                              onValueChange={(val) =>
+                                 handleDayChange(parseInt(val, 10))
+                              }
+                           >
+                              <SelectTrigger
+                                 data-testid="leaderboard-day-select"
+                                 aria-label="Filter by Challenge Day"
+                                 className="h-8 sm:h-9 rounded-xl border-border-strong bg-surface-elevated text-xs text-white w-full"
+                              >
+                                 <div className="flex items-center gap-1.5 truncate">
+                                    <Calendar className="h-3.5 w-3.5 text-accent shrink-0" />
+                                    <SelectValue placeholder="Select Day" />
+                                 </div>
+                              </SelectTrigger>
+                              <SelectContent>
+                                 {dayOptions.map((opt) => (
+                                    <SelectItem
+                                       key={opt.dayNumber}
+                                       value={String(opt.dayNumber)}
+                                       className="text-xs"
+                                    >
+                                       {opt.label}
+                                    </SelectItem>
+                                 ))}
+                              </SelectContent>
+                           </Select>
+                        </div>
                      )}
                   </div>
                </div>
@@ -1118,6 +1311,21 @@ export function ChallengeLeaderboardTab({
                         Reset all filters
                      </Button>
                   )}
+               </div>
+            ) : isDailyView &&
+              displayStandings.every((e) => (e.dayLoggedSeconds ?? 0) === 0) ? (
+               <div
+                  data-testid="day-no-logs-empty-state"
+                  className="rounded-2xl border border-border-default bg-surface-elevated p-8 text-center space-y-3"
+               >
+                  <Clock className="h-8 w-8 text-text-tertiary mx-auto" />
+                  <p className="text-sm font-semibold text-white">
+                     No study sessions logged on Day {selectedDay.dayNumber}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                     No scholars recorded study hours on{" "}
+                     {selectedDay.formattedDate}.
+                  </p>
                </div>
             ) : viewMode === "team" ? (
                /* View by Team Section (Side-by-Side on Desktop/Tablet Landscape) */
@@ -1571,8 +1779,10 @@ export function ChallengeLeaderboardTab({
                            <span>Participant</span>
                         </div>
                         <span className="text-right">
-                           {viewMode === "today"
-                              ? "Today's Hours"
+                           {isDailyView
+                              ? selectedDay.isToday
+                                 ? "Today's Hours"
+                                 : `Day ${selectedDay.dayNumber} Hours`
                               : "Total Hours"}
                         </span>
                      </div>
@@ -1581,8 +1791,8 @@ export function ChallengeLeaderboardTab({
                      <div className="space-y-2.5">
                         {paginatedStandings.map((entry) => {
                            const currentRank =
-                              "todayRank" in entry && viewMode === "today"
-                                 ? (entry as { todayRank: number }).todayRank
+                              isDailyView && "dayRank" in entry
+                                 ? (entry as { dayRank: number }).dayRank
                                  : entry.rank;
                            const entryPalette = getTeamColorPalette(
                               entry.teamColor,
@@ -1664,10 +1874,11 @@ export function ChallengeLeaderboardTab({
 
                                  {/* Total hours and +Today's hours */}
                                  <div className="shrink-0 text-right font-sans font-sans-tabular space-y-0.5 flex items-center gap-2">
-                                    {viewMode === "today" ? (
+                                    {isDailyView ? (
                                        <div>
                                           <p className="text-xs font-bold text-white">
-                                             {entry.todayLoggedClock}
+                                             {entry.dayLoggedClock ??
+                                                entry.todayLoggedClock}
                                           </p>
                                        </div>
                                     ) : (
@@ -1692,9 +1903,7 @@ export function ChallengeLeaderboardTab({
                                              handleOpenTargetOverride
                                           }
                                           onOpenPardon={handleOpenPardon}
-                                          showTargetOverride={
-                                             viewMode !== "today"
-                                          }
+                                          showTargetOverride={!isDailyView}
                                           size="sm"
                                        />
                                     )}
@@ -1717,12 +1926,16 @@ export function ChallengeLeaderboardTab({
                               <TableHead className="px-4 py-3">Team</TableHead>
                               <TableHead
                                  className={`px-4 py-3 ${
-                                    viewMode === "today" ? "text-right" : ""
+                                    isDailyView ? "text-right" : ""
                                  }`}
                               >
-                                 Today&apos;s hours
+                                 {isDailyView
+                                    ? selectedDay.isToday
+                                       ? "Today's hours"
+                                       : `Day ${selectedDay.dayNumber} hours`
+                                    : "Today's hours"}
                               </TableHead>
-                              {viewMode !== "today" && (
+                              {!isDailyView && (
                                  <>
                                     <TableHead className="px-4 py-3 min-w-[120px]">
                                        Progress
@@ -1745,8 +1958,8 @@ export function ChallengeLeaderboardTab({
                         <TableBody className="divide-y divide-border-subtle">
                            {paginatedStandings.map((entry) => {
                               const currentRank =
-                                 "todayRank" in entry && viewMode === "today"
-                                    ? (entry as { todayRank: number }).todayRank
+                                 isDailyView && "dayRank" in entry
+                                    ? (entry as { dayRank: number }).dayRank
                                     : entry.rank;
                               const entryPalette = getTeamColorPalette(
                                  entry.teamColor,
@@ -1844,19 +2057,20 @@ export function ChallengeLeaderboardTab({
                                        </span>
                                     </TableCell>
 
-                                    {/* Today's Hours */}
+                                    {/* Today's / Day Hours */}
                                     <TableCell
                                        className={`px-4 py-3 font-sans font-sans-tabular ${
-                                          viewMode === "today"
+                                          isDailyView
                                              ? "text-right text-sm font-bold text-white"
                                              : "text-xs text-text-secondary"
                                        }`}
                                     >
-                                       {viewMode === "today" ? (
+                                       {isDailyView ? (
                                           <div className="inline-flex items-center gap-1.5 justify-end whitespace-nowrap">
                                              <Clock className="h-3.5 w-3.5 text-text-tertiary" />
                                              <span>
-                                                {entry.todayLoggedClock}
+                                                {entry.dayLoggedClock ??
+                                                   entry.todayLoggedClock}
                                              </span>
                                           </div>
                                        ) : (
@@ -1870,7 +2084,7 @@ export function ChallengeLeaderboardTab({
                                     </TableCell>
 
                                     {/* Progress & Pace Status (Overall Rank mode) */}
-                                    {viewMode !== "today" && (
+                                    {!isDailyView && (
                                        <>
                                           {/* Progress */}
                                           <TableCell className="px-4 py-3 min-w-[120px]">
@@ -1915,7 +2129,7 @@ export function ChallengeLeaderboardTab({
                                     )}
 
                                     {/* Total Hours */}
-                                    {viewMode !== "today" && (
+                                    {!isDailyView && (
                                        <TableCell className="px-4 py-3 text-right font-sans font-sans-tabular text-sm font-bold text-white whitespace-nowrap">
                                           <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                              <Clock className="h-3.5 w-3.5 text-feedback-success shrink-0" />
@@ -1944,7 +2158,7 @@ export function ChallengeLeaderboardTab({
                                                 }
                                                 onOpenPardon={handleOpenPardon}
                                                 showTargetOverride={
-                                                   viewMode !== "today"
+                                                   !isDailyView
                                                 }
                                              />
                                           </div>
@@ -1980,7 +2194,11 @@ export function ChallengeLeaderboardTab({
                   challengeStartDate={challenge.startAt}
                   totalChallengeDays={challenge.totalDays || 7}
                   participant={overrideParticipant}
-                  initialDayNumber={challenge.currentDayNumber || 1}
+                  initialDayNumber={
+                     isDailyView
+                        ? selectedDay.dayNumber
+                        : challenge.currentDayNumber || 1
+                  }
                   onOpenTargetOverride={() => {
                      if (overrideParticipant) {
                         const found = challenge.standings.find(

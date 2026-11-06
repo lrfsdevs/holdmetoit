@@ -124,7 +124,7 @@ GROUP BY 1, 2
 HAVING COUNT(*) > 1;
 ```
 
-If it returns rows, run `apps/web/scripts/dedupe-punishment-records.ts` (dry-run by default) against a local copy first.
+If it returns rows, resolve duplicate rows prior to applying constraints (historical deduplication was handled via `dedupe-punishment-records.ts`, available in git history).
 
 ### `DailyStudyLog`
 
@@ -195,19 +195,12 @@ a new task with a locked `challengeId` is created unlinked.
 # 1. pre-check duplicates (read-only)
 psql "$DATABASE_URL" -c 'SELECT "challengeId","participantId",COUNT(*) FROM "PunishmentRecord" GROUP BY 1,2 HAVING COUNT(*) > 1;'
 
-# 2. dedupe on a local copy (dry run first)
-npx tsx --env-file=.env apps/web/scripts/dedupe-punishment-records.ts
-npx tsx --env-file=.env apps/web/scripts/dedupe-punishment-records.ts --apply
+# 2. dedupe on a local copy if any duplicates exist (historical scripts preserved in git history)
+# psql "$DATABASE_URL" -c 'DELETE FROM "PunishmentRecord" a USING "PunishmentRecord" b ...'
 
 # 3. apply the migration
-npm run db:migrate:deploy   # or your normal migration command
-
-# 4. prove the invariants on local/staging
-npx tsx --env-file=.env apps/web/scripts/verify-lock-concurrency.ts --challenge=<id> --dry-run
-npx tsx --env-file=.env apps/web/scripts/verify-lock-concurrency.ts --challenge=<id> --apply
+npm run db:migrate   # or your normal migration command
 ```
-
-The verifier locks a real challenge. Use a disposable local/staging challenge; it refuses a non-local `DATABASE_URL` unless `--force-host` is passed.
 
 ---
 

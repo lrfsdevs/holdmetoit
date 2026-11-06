@@ -1,4 +1,5 @@
 import { YptJs, type GroupMember, type UnifiedMember } from "ypt-js";
+import { getServerEnv } from "@/core/env/server";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    getYptAllJoinedMembers,
@@ -30,8 +31,9 @@ let inflightRoster: Promise<YptRosterMember[]> | null = null;
  * Reads trimmed service-account credentials and throws when either value is missing.
  */
 function getServiceCredentials(): { email: string; password: string } {
-   const email = process.env.YPT_EMAIL?.trim();
-   const password = process.env.YPT_PASSWORD?.trim();
+   const env = getServerEnv();
+   const email = env.YPT_EMAIL?.trim();
+   const password = env.YPT_PASSWORD?.trim();
 
    if (!email || !password) {
       throw new Error(
@@ -46,7 +48,7 @@ function getServiceCredentials(): { email: string; password: string } {
  * Parses the comma-separated group scope, returning an empty list when no groups are configured.
  */
 export function getConfiguredYptGroupIds(): string[] {
-   return (process.env.YPT_GROUP_IDS || "")
+   return (getServerEnv().YPT_GROUP_IDS || "")
       .split(",")
       .map((id) => id.trim())
       .filter(Boolean);

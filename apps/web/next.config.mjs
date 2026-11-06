@@ -37,22 +37,19 @@ function supabaseImagePatterns() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
    reactStrictMode: true,
-   eslint: {
-      dirs: ["app", "components", "core", "features", "lib", "types"],
+   // discord.js ships undici/ws-backed runtime code; keep it out of the
+   // server bundle and resolve it from node_modules instead.
+   serverExternalPackages: ["@holdmetoit/discord", "discord.js"],
+   // Ship the changelog source with the serverless function so the dynamic
+   // /changelog route can read it at runtime.
+   outputFileTracingIncludes: {
+      "/changelog": ["../../CHANGELOG.md"],
    },
    experimental: {
       serverActions: {
          // 3 MB punishment image + multipart overhead (Vercel caps requests at 4.5 MB).
          bodySizeLimit: "4mb",
       },
-      // Ship the changelog source with the serverless function so the dynamic
-      // /changelog route can read it at runtime.
-      outputFileTracingIncludes: {
-         "/changelog": ["../../CHANGELOG.md"],
-      },
-      // discord.js ships undici/ws-backed runtime code; keep it out of the
-      // server bundle and resolve it from node_modules instead.
-      serverComponentsExternalPackages: ["@holdmetoit/discord", "discord.js"],
    },
    /**
     * Returns permanent mappings from legacy URLs to the current application routes.

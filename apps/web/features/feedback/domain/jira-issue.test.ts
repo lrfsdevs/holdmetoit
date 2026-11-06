@@ -351,3 +351,48 @@ describe("buildJiraIssueFields", () => {
       ).toBeUndefined();
    });
 });
+
+describe("link and mention safety", () => {
+   it("omits the LogRocket link for non-LogRocket URLs", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         logrocketSessionId: "https://evil.example/phish",
+      });
+
+      expect(linkNodes(doc)).toHaveLength(0);
+      expect(allText(doc)).not.toContain("evil.example");
+   });
+
+   it("replaces a page value that smuggles a second URL with the root path", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         url: "https://holdmetoit.com/x\nhttps://evil.example/phish",
+      });
+
+      expect(allText(doc)).toContain("Page: /");
+      expect(allText(doc)).not.toContain("evil.example");
+   });
+
+   it("replaces a page value with an embedded link with the root path", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         url: "/~https://evil.example/phish",
+      });
+
+      expect(allText(doc)).toContain("Page: /");
+      expect(allText(doc)).not.toContain("evil.example");
+   });
+
+   it("emits hostile description text only as plain text nodes", () => {
+      const doc = buildJiraDescriptionAdf({
+         ...baseInput,
+         description: "@everyone @team see #12 and GH-5",
+      });
+      const serialized = JSON.stringify(doc);
+
+      expect(allText(doc)).toContain("@everyone @team see #12 and GH-5");
+      expect(serialized).not.toContain('"type":"mention"');
+      expect(serialized).not.toContain('"type":"inlineCard"');
+      expect(linkNodes(doc)).toHaveLength(0);
+   });
+});

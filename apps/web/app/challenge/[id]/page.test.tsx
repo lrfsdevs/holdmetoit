@@ -124,7 +124,7 @@ describe("ChallengePage (Server Component)", () => {
 
    it("passes default 'overview' initialTab when searchParams.tab is omitted", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
+         params: Promise.resolve({ id: "chal-1" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -133,8 +133,8 @@ describe("ChallengePage (Server Component)", () => {
 
    it("passes valid public initialTab (e.g. 'leaderboard') for non-admin", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "leaderboard" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "leaderboard" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -143,8 +143,8 @@ describe("ChallengePage (Server Component)", () => {
 
    it("resolves legacy 'about' tab to 'overview'", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "about" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "about" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -153,8 +153,8 @@ describe("ChallengePage (Server Component)", () => {
 
    it("clamps admin tab 'manage' to 'overview' when user is not an admin", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "manage" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "manage" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -168,8 +168,8 @@ describe("ChallengePage (Server Component)", () => {
       } as any);
 
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "manage" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "manage" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -179,8 +179,8 @@ describe("ChallengePage (Server Component)", () => {
 
    it("clamps invalid searchParams.tab to 'overview'", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "nonexistent-tab" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "nonexistent-tab" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -188,7 +188,9 @@ describe("ChallengePage (Server Component)", () => {
    });
 
    it("defaults non-duo challenges to the individual leaderboard view", async () => {
-      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const pageJsx = await ChallengePage({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-initial-view-mode="individual"');
@@ -200,7 +202,9 @@ describe("ChallengePage (Server Component)", () => {
          format: "DUOS",
       } as any);
 
-      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const pageJsx = await ChallengePage({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-initial-view-mode="team"');
@@ -213,8 +217,8 @@ describe("ChallengePage (Server Component)", () => {
       } as any);
 
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { view: "individual" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ view: "individual" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -222,7 +226,9 @@ describe("ChallengePage (Server Component)", () => {
    });
 
    it("passes the global leaderboard flag through to ChallengeView", async () => {
-      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const pageJsx = await ChallengePage({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-is-global-leaderboard-enabled="true"');
@@ -231,7 +237,9 @@ describe("ChallengePage (Server Component)", () => {
    it("passes a disabled global leaderboard flag through to ChallengeView", async () => {
       vi.mocked(isFeatureEnabled).mockResolvedValue(false);
 
-      const pageJsx = await ChallengePage({ params: { id: "chal-1" } });
+      const pageJsx = await ChallengePage({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
       const html = renderToStaticMarkup(pageJsx);
 
       expect(html).toContain('data-is-global-leaderboard-enabled="false"');
@@ -239,13 +247,13 @@ describe("ChallengePage (Server Component)", () => {
 
    it("passes search, team, and page from searchParams to ChallengeView", async () => {
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: {
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({
             tab: "manage",
             search: "morgan",
             team: "team-2",
             page: "3",
-         },
+         }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -259,7 +267,7 @@ describe("ChallengePage (Server Component)", () => {
 
       await expect(
          ChallengePage({
-            params: { id: "chal-missing" },
+            params: Promise.resolve({ id: "chal-missing" }),
          })
       ).rejects.toThrow("NEXT_NOT_FOUND");
 
@@ -272,7 +280,7 @@ describe("ChallengePage (Server Component)", () => {
       );
 
       const pageJsx = await ChallengePage({
-         params: { id: "chal-error" },
+         params: Promise.resolve({ id: "chal-error" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -287,8 +295,8 @@ describe("ChallengePage (Server Component)", () => {
       vi.mocked(isFeatureEnabled).mockResolvedValue(true);
 
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "summary" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "summary" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -304,8 +312,8 @@ describe("ChallengePage (Server Component)", () => {
       vi.mocked(isFeatureEnabled).mockResolvedValue(false);
 
       const pageJsx = await ChallengePage({
-         params: { id: "chal-1" },
-         searchParams: { tab: "summary" },
+         params: Promise.resolve({ id: "chal-1" }),
+         searchParams: Promise.resolve({ tab: "summary" }),
       });
       const html = renderToStaticMarkup(pageJsx);
 
@@ -323,7 +331,9 @@ describe("generateMetadata", () => {
    });
 
    it("builds title, description and Open Graph text from the challenge", async () => {
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.title).toBe("October Sprint | HoldMeToIt");
       expect(meta.description).toContain("Solo Challenge");
@@ -336,7 +346,7 @@ describe("generateMetadata", () => {
    });
 
    it("fetches the scoreboard without a user id so logged-out crawlers work", async () => {
-      await generateMetadata({ params: { id: "chal-1" } });
+      await generateMetadata({ params: Promise.resolve({ id: "chal-1" }) });
 
       expect(getChallengeScoreboard).toHaveBeenCalledWith("chal-1");
    });
@@ -348,7 +358,9 @@ describe("generateMetadata", () => {
          heroImageUrl: "https://cdn.example.com/hero.png",
       } as any);
 
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.openGraph).toMatchObject({
          images: [{ url: "https://cdn.example.com/banner.png" }],
@@ -366,7 +378,9 @@ describe("generateMetadata", () => {
          heroImageUrl: "https://cdn.example.com/hero.png",
       } as any);
 
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.openGraph).toMatchObject({
          images: [{ url: "https://cdn.example.com/hero.png" }],
@@ -374,7 +388,9 @@ describe("generateMetadata", () => {
    });
 
    it("omits images and uses a small Twitter card when no image exists", async () => {
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.openGraph).not.toHaveProperty("images");
       expect(meta.twitter).not.toHaveProperty("images");
@@ -384,7 +400,9 @@ describe("generateMetadata", () => {
    it("returns fallback metadata when the challenge is not found", async () => {
       vi.mocked(getChallengeScoreboard).mockResolvedValue(null);
 
-      const meta = await generateMetadata({ params: { id: "chal-missing" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-missing" }),
+      });
 
       expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
       expect(meta.openGraph).toBeUndefined();
@@ -396,7 +414,9 @@ describe("generateMetadata", () => {
          isDeleted: true,
       } as any);
 
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
    });
@@ -404,7 +424,9 @@ describe("generateMetadata", () => {
    it("returns fallback metadata instead of throwing when the fetch fails", async () => {
       vi.mocked(getChallengeScoreboard).mockRejectedValue(new Error("boom"));
 
-      const meta = await generateMetadata({ params: { id: "chal-1" } });
+      const meta = await generateMetadata({
+         params: Promise.resolve({ id: "chal-1" }),
+      });
 
       expect(meta.title).toBe("Challenge Not Found | HoldMeToIt");
    });

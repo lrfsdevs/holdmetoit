@@ -1,4 +1,5 @@
-import { PrismaClient, type TaskStatus, type TaskType } from "@prisma/client";
+import { type TaskStatus, type TaskType } from "@prisma/client";
+import { createPrismaClient } from "@holdmetoit/database";
 import {
    DEFAULT_CATEGORY_NAME,
    getOrCreateDefaultCategory,
@@ -54,9 +55,7 @@ async function main() {
       );
    }
 
-   const source = new PrismaClient({
-      datasources: { db: { url: sourceUrl } },
-   });
+   const source = createPrismaClient(sourceUrl);
 
    try {
       const [sourceCategories, sourceTasks] = await Promise.all([

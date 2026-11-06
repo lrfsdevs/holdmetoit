@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { middleware, config } from "./middleware";
+import { proxy, config } from "./proxy";
 
-describe("Edge Middleware", () => {
+describe("Proxy", () => {
    const originalEnv = process.env;
 
    beforeEach(() => {
@@ -35,7 +35,7 @@ describe("Edge Middleware", () => {
       process.env.AUTH_DISCORD_ID = "discord_123";
 
       const request = createRequest("/admin");
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe("https://holdmetoit.com/");
@@ -47,7 +47,7 @@ describe("Edge Middleware", () => {
       process.env.AUTH_DISCORD_ID = "discord_123";
 
       const request = createRequest("/devboard");
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe("https://holdmetoit.com/");
@@ -61,7 +61,7 @@ describe("Edge Middleware", () => {
       const request = createRequest("/admin/challenges/new", {
          "authjs.session-token": "valid_token_xyz",
       });
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
@@ -75,7 +75,7 @@ describe("Edge Middleware", () => {
       const request = createRequest("/devboard", {
          "__Secure-authjs.session-token": "secure_token_123",
       });
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
@@ -87,7 +87,7 @@ describe("Edge Middleware", () => {
       delete process.env.AUTH_DISCORD_ID;
 
       const request = createRequest("/admin/challenges/new");
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
@@ -95,7 +95,7 @@ describe("Edge Middleware", () => {
 
    it("redirects unauthenticated requests to /profile to /", () => {
       const request = createRequest("/profile");
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe("https://holdmetoit.com/");
@@ -105,7 +105,7 @@ describe("Edge Middleware", () => {
       const request = createRequest("/profile", {
          "authjs.session-token": "valid_user_session",
       });
-      const response = middleware(request);
+      const response = proxy(request);
 
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
