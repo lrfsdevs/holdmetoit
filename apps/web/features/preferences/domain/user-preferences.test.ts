@@ -17,20 +17,6 @@ describe("user-preferences domain", () => {
          expect(DEFAULT_USER_PREFERENCES.sound.volume).toBe(1.0);
          expect(DEFAULT_USER_PREFERENCES.sound.soundPack).toBe("yippee");
       });
-
-      it("defaults active theme to obsidian", () => {
-         expect(DEFAULT_USER_PREFERENCES.theme.activeTheme).toBe("obsidian");
-      });
-
-      it("defaults all notifications to disabled", () => {
-         expect(DEFAULT_USER_PREFERENCES.notifications.dailyReminder).toBe(
-            false
-         );
-         expect(DEFAULT_USER_PREFERENCES.notifications.challengeAlerts).toBe(
-            false
-         );
-         expect(DEFAULT_USER_PREFERENCES.notifications.soundAlerts).toBe(false);
-      });
    });
 
    describe("isTodoCompletionSfxEnabled", () => {
@@ -86,40 +72,29 @@ describe("user-preferences domain", () => {
          expect(sanitizeUserPreferences([])).toEqual(DEFAULT_USER_PREFERENCES);
       });
 
-      it("preserves valid customized preferences", () => {
+      it("preserves valid customized sound preferences", () => {
          const custom = {
             sound: {
                todoCompletionSfx: true,
                volume: 0.8,
                soundPack: "yippee",
             },
-            theme: {
-               activeTheme: "emerald",
-            },
-            notifications: {
-               dailyReminder: true,
-               challengeAlerts: true,
-               soundAlerts: false,
-            },
          };
 
          const sanitized = sanitizeUserPreferences(custom);
          expect(sanitized.sound.todoCompletionSfx).toBe(true);
          expect(sanitized.sound.volume).toBe(0.8);
-         expect(sanitized.theme.activeTheme).toBe("emerald");
-         expect(sanitized.notifications.dailyReminder).toBe(true);
-         expect(sanitized.notifications.challengeAlerts).toBe(true);
-         expect(sanitized.notifications.soundAlerts).toBe(false);
+         expect(sanitized.sound.soundPack).toBe("yippee");
       });
 
-      it("falls back to obsidian for unknown theme ids", () => {
+      it("falls back to default soundPack for unknown sound pack ids", () => {
          const custom = {
-            theme: {
-               activeTheme: "cyberpunk_neon",
+            sound: {
+               soundPack: "unknown_pack",
             },
          };
          const sanitized = sanitizeUserPreferences(custom);
-         expect(sanitized.theme.activeTheme).toBe("obsidian");
+         expect(sanitized.sound.soundPack).toBe("yippee");
       });
    });
 });

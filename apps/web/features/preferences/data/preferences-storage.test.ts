@@ -27,7 +27,6 @@ describe("preferences-storage", () => {
       const prefs = loadStoredPreferences();
       expect(prefs.sound.todoCompletionSfx).toBe(false);
       expect(prefs.sound.volume).toBe(1.0);
-      expect(prefs.theme.activeTheme).toBe("obsidian");
    });
 
    it("persists and reloads updated preferences", () => {

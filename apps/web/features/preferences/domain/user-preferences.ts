@@ -23,30 +23,9 @@ export interface SoundPreferences {
    soundPack: SoundPackId;
 }
 
-export type ThemeId = "obsidian" | "midnight" | "emerald" | "sunset";
-
-export interface ThemePreferences {
-   /**
-    * Active visual theme palette identifier.
-    * Obsidian Dark is the ratified default system theme.
-    */
-   activeTheme: ThemeId;
-}
-
-export interface NotificationPreferences {
-   /**
-    * Browser / web push notification preferences (Coming Soon).
-    */
-   dailyReminder: boolean;
-   challengeAlerts: boolean;
-   soundAlerts: boolean;
-}
-
 export interface UserPreferences {
    version: number;
    sound: SoundPreferences;
-   theme: ThemePreferences;
-   notifications: NotificationPreferences;
 }
 
 export const PREFERENCES_SCHEMA_VERSION = 1;
@@ -62,14 +41,6 @@ export const DEFAULT_USER_PREFERENCES: Readonly<UserPreferences> =
          todoCompletionSfx: false,
          volume: 1.0,
          soundPack: "yippee" as const,
-      }),
-      theme: Object.freeze({
-         activeTheme: "obsidian" as const,
-      }),
-      notifications: Object.freeze({
-         dailyReminder: false,
-         challengeAlerts: false,
-         soundAlerts: false,
       }),
    });
 
@@ -103,8 +74,6 @@ export function sanitizeUserPreferences(input: unknown): UserPreferences {
       return {
          ...DEFAULT_USER_PREFERENCES,
          sound: { ...DEFAULT_USER_PREFERENCES.sound },
-         theme: { ...DEFAULT_USER_PREFERENCES.theme },
-         notifications: { ...DEFAULT_USER_PREFERENCES.notifications },
       };
    }
 
@@ -112,14 +81,6 @@ export function sanitizeUserPreferences(input: unknown): UserPreferences {
    const soundRecord =
       record.sound && typeof record.sound === "object"
          ? (record.sound as Record<string, unknown>)
-         : {};
-   const themeRecord =
-      record.theme && typeof record.theme === "object"
-         ? (record.theme as Record<string, unknown>)
-         : {};
-   const notifRecord =
-      record.notifications && typeof record.notifications === "object"
-         ? (record.notifications as Record<string, unknown>)
          : {};
 
    const todoCompletionSfx =
@@ -137,42 +98,12 @@ export function sanitizeUserPreferences(input: unknown): UserPreferences {
          ? "yippee"
          : DEFAULT_USER_PREFERENCES.sound.soundPack;
 
-   const activeTheme: ThemeId =
-      themeRecord.activeTheme === "midnight" ||
-      themeRecord.activeTheme === "emerald" ||
-      themeRecord.activeTheme === "sunset"
-         ? themeRecord.activeTheme
-         : "obsidian";
-
-   const dailyReminder =
-      typeof notifRecord.dailyReminder === "boolean"
-         ? notifRecord.dailyReminder
-         : DEFAULT_USER_PREFERENCES.notifications.dailyReminder;
-
-   const challengeAlerts =
-      typeof notifRecord.challengeAlerts === "boolean"
-         ? notifRecord.challengeAlerts
-         : DEFAULT_USER_PREFERENCES.notifications.challengeAlerts;
-
-   const soundAlerts =
-      typeof notifRecord.soundAlerts === "boolean"
-         ? notifRecord.soundAlerts
-         : DEFAULT_USER_PREFERENCES.notifications.soundAlerts;
-
    return {
       version: PREFERENCES_SCHEMA_VERSION,
       sound: {
          todoCompletionSfx,
          volume,
          soundPack,
-      },
-      theme: {
-         activeTheme,
-      },
-      notifications: {
-         dailyReminder,
-         challengeAlerts,
-         soundAlerts,
       },
    };
 }
