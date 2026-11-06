@@ -1,3 +1,4 @@
+import { publicEnv } from "@/core/env/client";
 import {
    buildLogEntry,
    formatLogEntry,
@@ -38,10 +39,7 @@ function resolveThreshold(): LogLevel {
       return parseLogLevel(process.env.LOG_LEVEL, SERVER_DEFAULT_LEVEL);
    }
 
-   return parseLogLevel(
-      process.env.NEXT_PUBLIC_LOG_LEVEL,
-      CLIENT_DEFAULT_LEVEL
-   );
+   return parseLogLevel(publicEnv.NEXT_PUBLIC_LOG_LEVEL, CLIENT_DEFAULT_LEVEL);
 }
 
 function toLogRocketProps(

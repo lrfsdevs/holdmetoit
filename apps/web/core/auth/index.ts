@@ -4,6 +4,7 @@ import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { prisma } from "@/core/db";
+import { getServerEnv } from "@/core/env/server";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    buildDiscordAvatarUrl,
@@ -16,13 +17,14 @@ import {
 } from "@/features/auth/data/user.repository";
 
 const logger = createLogger("auth");
+const serverEnv = getServerEnv();
 
 const nextAuthResult = NextAuth({
    adapter: PrismaAdapter(prisma),
    providers: [
       Discord({
-         clientId: process.env.AUTH_DISCORD_ID,
-         clientSecret: process.env.AUTH_DISCORD_SECRET,
+         clientId: serverEnv.AUTH_DISCORD_ID,
+         clientSecret: serverEnv.AUTH_DISCORD_SECRET,
          issuer: "https://discord.com",
          authorization: {
             params: {

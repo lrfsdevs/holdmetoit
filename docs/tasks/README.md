@@ -172,11 +172,7 @@ The upgrade only adds the new index/store; existing rows are preserved.
   categories stay in their own column.
 - The results-lock guard applies only to weekly tasks. Legacy daily tasks with a challenge
   link remain editable; the repair script unlinks them.
-- `apps/web/scripts/repair-task-invariants.ts` is report-only by default. It unlinks daily
-  challenge links, moves live tasks out of deleted categories, and fixes status mismatches
-  with `--apply --force-host`; task/category type differences and duplicate clusters are
-  reported, not rewritten. Unlinking a locked challenge’s daily links additionally requires
-  `--allow-locked-challenges`.
+- Historical task data repairs were performed via `repair-task-invariants.ts` (archived in git history). Routine operations preserve invariant guarantees via standard Prisma repositories and transactions.
 
 ### 2.8 Cockpit visibility
 
@@ -205,8 +201,7 @@ rewrites a challenge result; weekly write protection remains the server-side
   increments.
 - IndexedDB is version 2 with `queued_mutations.userId` and the `dead_letter_mutations` store
   (§2.6). No Prisma migration is needed for queue hygiene.
-- The operator pre-check is in the migration file. Use `apps/web/scripts/dedupe-categories.ts`
-  (dry-run by default) before applying it if duplicates exist.
+- The operator pre-check is in the migration file. Resolve any duplicates before applying it if duplicates exist (see the deterministic cleanup procedure in §4 Operator runbook).
 
 ---
 
@@ -245,21 +240,69 @@ conflict with `currentCategory.id !== requestedId` means a concurrent create won
 
 ### Operator runbook
 
+Before applying migration `20261031020000_category_lower_name_active_unique`:
+
 ```bash
-# 1. pre-check (read-only)
+# 1. Pre-check for active duplicate category names (read-only)
+psql "$DATABASE_URL" -c 'SELECT "userId", LOWER("name"), "taskType", COUNT(*) FROM "Category" WHERE "isDeleted" = false GROUP BY 1,2,3 HAVING COUNT(*) > 1;'
+```
+
+> [!WARNING]
+> **STOP:** If the pre-check returns any rows, **do not run `npm run db:migrate`**.
+> Applying the migration while active duplicates exist will fail on the unique partial index `Category_userId_lower_name_taskType_active_key`.
+> Resolve duplicates first using the deterministic cleanup below.
+
+```sql
+-- 2. Deterministic Cleanup (run inside psql if duplicates were found)
+BEGIN;
+
+-- For each duplicate group, reassign tasks to the oldest created category:
+UPDATE "Task" t
+SET "categoryId" = keeper.id,
+    "revision" = t."revision" + 1
+FROM (
+  SELECT DISTINCT ON ("userId", LOWER("name"), "taskType")
+    id, "userId", LOWER("name") AS lower_name, "taskType"
+  FROM "Category"
+  WHERE "isDeleted" = false
+  ORDER BY "userId", LOWER("name"), "taskType", "createdAt" ASC, id ASC
+) keeper
+JOIN "Category" duplicate
+  ON duplicate."userId" = keeper."userId"
+ AND LOWER(duplicate."name") = keeper.lower_name
+ AND duplicate."taskType" = keeper."taskType"
+ AND duplicate.id <> keeper.id
+ AND duplicate."isDeleted" = false
+WHERE t."categoryId" = duplicate.id;
+
+-- Soft-delete duplicate categories with unique tombstone names:
+UPDATE "Category" duplicate
+SET "isDeleted" = true,
+    "deletionTime" = NOW(),
+    "name" = duplicate."name" || ' [deleted ' || duplicate.id || ']',
+    "revision" = duplicate."revision" + 1
+FROM (
+  SELECT DISTINCT ON ("userId", LOWER("name"), "taskType")
+    id, "userId", LOWER("name") AS lower_name, "taskType"
+  FROM "Category"
+  WHERE "isDeleted" = false
+  ORDER BY "userId", LOWER("name"), "taskType", "createdAt" ASC, id ASC
+) keeper
+WHERE duplicate."userId" = keeper."userId"
+  AND LOWER(duplicate."name") = keeper.lower_name
+  AND duplicate."taskType" = keeper."taskType"
+  AND duplicate.id <> keeper.id
+  AND duplicate."isDeleted" = false;
+
+COMMIT;
+```
+
+```bash
+# 3. Verify clean state (must return 0 rows before continuing)
 psql "$DATABASE_URL" -c 'SELECT "userId", LOWER("name"), "taskType", COUNT(*) FROM "Category" WHERE "isDeleted" = false GROUP BY 1,2,3 HAVING COUNT(*) > 1;'
 
-# 2. dry run, then apply on a local copy
-npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts
-npx tsx --env-file=.env apps/web/scripts/dedupe-categories.ts --apply
-
-# 3. task invariant audit (read-only)
-npx tsx --env-file=packages/database/.env apps/web/scripts/repair-task-invariants.ts
-
-# 4. after review + backup, apply the safe repairs
-npx tsx --env-file=packages/database/.env apps/web/scripts/repair-task-invariants.ts --apply --force-host --allow-locked-challenges
-
-# 5. apply the migration and regenerate the client
+# 4. Apply migrations
+npm run db:migrate
 ```
 
 ---

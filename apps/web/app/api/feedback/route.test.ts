@@ -3,7 +3,6 @@ import { NextRequest } from "next/server";
 import { POST } from "./route";
 import * as feedbackRepo from "@/features/feedback/data/feedback.repository";
 import * as discordService from "@/features/feedback/data/discord-feedback.service";
-import { clearRateLimitStore } from "@/core/security/rate-limiter";
 
 const {
    verifyFeedbackAttachment,
@@ -63,7 +62,6 @@ describe("POST /api/feedback", () => {
       // schema compares them against.
       vi.stubEnv("AUTH_URL", "https://holdmetoit.com");
       vi.clearAllMocks();
-      clearRateLimitStore();
       verifyFeedbackAttachment.mockResolvedValue(null);
       deleteStorageObject.mockResolvedValue(undefined);
       getFeedbackAttachmentsUrlConfig.mockReturnValue({
@@ -87,12 +85,11 @@ describe("POST /api/feedback", () => {
       );
    });
 
-   function createRequest(body: any, ip = "127.0.0.1"): NextRequest {
+   function createRequest(body: any): NextRequest {
       return new NextRequest("http://localhost:3000/api/feedback", {
          method: "POST",
          headers: {
             "Content-Type": "application/json",
-            "x-forwarded-for": ip,
          },
          body: JSON.stringify(body),
       });
@@ -145,52 +142,6 @@ describe("POST /api/feedback", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       expect(json.data.code).toBe("FB-42");
-   });
-
-   it("enforces rate limit and returns 429 when submissions exceed threshold", async () => {
-      vi.mocked(feedbackRepo.createFeedbackRecord).mockResolvedValue({
-         id: "fb_123",
-         feedbackNumber: 42,
-         type: "BUG" as any,
-         title: "Rate limit test",
-         description: "Testing rate limit threshold behavior.",
-         url: "https://holdmetoit.com/",
-         logrocketSessionId: null,
-         userId: "usr_1",
-         status: "OPEN" as any,
-         discordStatus: "PENDING" as any,
-         createdAt: new Date(),
-         updatedAt: new Date(),
-         discordMessageId: null,
-         discordChannelId: null,
-         user: null,
-      } as any);
-      vi.mocked(discordService.sendFeedbackToDiscord).mockResolvedValue({
-         success: true,
-      });
-
-      const ip = "192.168.1.100";
-      const validPayload = {
-         type: "bug",
-         title: "Rate limit test",
-         description: "Testing rate limit threshold behavior.",
-         url: "https://holdmetoit.com/",
-      };
-
-      // 5 allowed attempts
-      for (let i = 0; i < 5; i++) {
-         const res = await POST(createRequest(validPayload, ip));
-         expect(res.status).toBe(201);
-      }
-
-      // 6th attempt should be blocked with 429
-      const blockedRes = await POST(createRequest(validPayload, ip));
-      expect(blockedRes.status).toBe(429);
-      expect(blockedRes.headers.get("Retry-After")).toBeDefined();
-
-      const blockedJson = await blockedRes.json();
-      expect(blockedJson.success).toBe(false);
-      expect(blockedJson.error).toContain("Too many feedback submissions");
    });
 
    const baseFeedback = {

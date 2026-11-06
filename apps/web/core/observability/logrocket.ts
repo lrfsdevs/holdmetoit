@@ -3,16 +3,16 @@
 import LogRocket from "logrocket";
 import setupLogRocketReact from "logrocket-react";
 
+import { publicEnv } from "@/core/env/client";
 import { isLogRocketEnabled } from "./logrocket-config";
 
 const FALLBACK_LOGROCKET_APP_ID = "q9morb/holdmeintoit";
 const FALLBACK_RELEASE = "0.1.0";
 
 export const LOGROCKET_APP_ID =
-   process.env.NEXT_PUBLIC_LOGROCKET_APP_ID || FALLBACK_LOGROCKET_APP_ID;
+   publicEnv.NEXT_PUBLIC_LOGROCKET_APP_ID || FALLBACK_LOGROCKET_APP_ID;
 
-const LOGROCKET_RELEASE =
-   process.env.NEXT_PUBLIC_APP_RELEASE || FALLBACK_RELEASE;
+const LOGROCKET_RELEASE = publicEnv.NEXT_PUBLIC_APP_RELEASE || FALLBACK_RELEASE;
 
 let initialized = false;
 

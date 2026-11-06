@@ -1,8 +1,17 @@
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient, getDatabaseEnv } from "../src/index.js";
 
 import { seedSystemFeatureFlags } from "./seed-feature-flags";
 
-const prisma = new PrismaClient();
+const env = getDatabaseEnv();
+const seedUrl = env.DIRECT_URL ?? env.DATABASE_URL;
+
+if (!seedUrl) {
+   throw new Error(
+      "Cannot seed database: neither DIRECT_URL nor DATABASE_URL is set."
+   );
+}
+
+const prisma = createPrismaClient(seedUrl);
 
 /** Deterministic seed identifier for idempotent upserts. */
 export const SEED_CHALLENGE_ID = "seed-honey-bees-vs-lavender-butterflies";

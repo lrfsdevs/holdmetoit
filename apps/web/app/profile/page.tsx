@@ -11,14 +11,15 @@ import type { ParticipantStatsViewModel } from "@/features/participant-stats/dom
 export const dynamic = "force-dynamic";
 
 interface ProfilePageProps {
-   searchParams?: {
+   searchParams?: Promise<{
       challengeId?: string;
       tab?: string;
-   };
+   }>;
 }
 
 /** Renders the current authenticated session user's global profile view. */
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
+   const query = (await searchParams) ?? {};
    const session = await auth();
 
    if (!session?.user?.id) {
@@ -33,7 +34,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
    }
 
    let initialSnapshot: ParticipantStatsViewModel | null = null;
-   let selectedChallengeId = searchParams?.challengeId;
+   let selectedChallengeId = query.challengeId;
 
    if (profile.challengeHistory.length > 0) {
       const match = profile.challengeHistory.find(

@@ -79,9 +79,13 @@ describe("logStudyTimeAction", () => {
       );
       expect(revalidatePath).toHaveBeenCalledWith("/");
       expect(revalidatePath).toHaveBeenCalledWith("/challenge/chal_1");
-      expect(revalidateTag).toHaveBeenCalledWith("challenge:chal_1:scoreboard");
       expect(revalidateTag).toHaveBeenCalledWith(
-         "user:usr_1:challenge:chal_1:cockpit"
+         "challenge:chal_1:scoreboard",
+         { expire: 0 }
+      );
+      expect(revalidateTag).toHaveBeenCalledWith(
+         "user:usr_1:challenge:chal_1:cockpit",
+         { expire: 0 }
       );
    });
 

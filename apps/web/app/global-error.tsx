@@ -70,6 +70,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                      >
                         Try again
                      </button>
+                     {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                      <a
                         href="/"
                         className="inline-flex min-h-control-sm w-full sm:w-auto items-center justify-center rounded-xl border border-border-default bg-surface-elevated px-5 py-2.5 text-sm font-semibold text-text-primary hover:bg-surface-nested hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-border-strong"

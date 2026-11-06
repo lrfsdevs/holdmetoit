@@ -25,12 +25,13 @@ export const metadata = {
 };
 
 interface WalletPageProps {
-   searchParams?: {
+   searchParams?: Promise<{
       as?: string;
-   };
+   }>;
 }
 
 export default async function WalletPage({ searchParams }: WalletPageProps) {
+   const query = (await searchParams) ?? {};
    const walletEnabled = await isFeatureEnabled(
       FEATURE_FLAG_KEYS.globalLeaderboard
    );
@@ -55,7 +56,7 @@ export default async function WalletPage({ searchParams }: WalletPageProps) {
    const { isAdmin } = getEffectiveAdminState({
       userRole: session?.user?.role,
       previewCookie,
-      searchParamAs: searchParams?.as,
+      searchParamAs: query.as,
    });
 
    if (!session?.user?.id) {

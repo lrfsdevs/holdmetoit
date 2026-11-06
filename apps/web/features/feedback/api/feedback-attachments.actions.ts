@@ -1,13 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import {
    createSignedStorageUpload,
    deleteStorageObject,
    getFeedbackAttachmentsUrlConfig,
 } from "@/core/storage/supabase-storage";
-import { checkRateLimit } from "@/core/security/rate-limiter";
-import { getClientIp } from "@/core/security/client-ip";
 import { createLogger, logEvents } from "@/core/observability/logger";
 import {
    parseFeedbackAttachmentPath,
@@ -21,30 +18,13 @@ import {
 
 const logger = createLogger("feedback.attachments");
 
-const RATE_LIMIT = { maxAttempts: 30, windowMs: 10 * 60 * 1000 };
-const RATE_LIMIT_MESSAGE =
-   "Too many attachment upload attempts. Please wait a few minutes before trying again.";
-
 export type FeedbackAttachmentActionResult<T = undefined> =
    | { ok: true; data: T }
    | {
         ok: false;
-        code: "INVALID_INPUT" | "RATE_LIMITED" | "UPLOAD_FAILED";
+        code: "INVALID_INPUT" | "UPLOAD_FAILED";
         message: string;
      };
-
-interface RateLimitDenial {
-   ok: false;
-   code: "RATE_LIMITED";
-   message: string;
-}
-
-function enforceRateLimit(scope: string): RateLimitDenial | null {
-   const ip = getClientIp(headers());
-   const result = checkRateLimit(`feedback-${scope}:${ip}`, RATE_LIMIT);
-   if (result.allowed) return null;
-   return { ok: false, code: "RATE_LIMITED", message: RATE_LIMIT_MESSAGE };
-}
 
 export interface RequestFeedbackAttachmentUploadInput {
    mimeType: string;
@@ -63,9 +43,6 @@ export async function requestFeedbackAttachmentUploadAction(
    input: RequestFeedbackAttachmentUploadInput
 ): Promise<FeedbackAttachmentActionResult<FeedbackAttachmentUploadTarget>> {
    try {
-      const limited = enforceRateLimit("upload");
-      if (limited) return limited;
-
       if (
          !input ||
          typeof input.mimeType !== "string" ||
@@ -117,9 +94,6 @@ export async function confirmFeedbackAttachmentAction(input: {
    path: string;
 }): Promise<FeedbackAttachmentActionResult<VerifiedFeedbackAttachment>> {
    try {
-      const limited = enforceRateLimit("confirm");
-      if (limited) return limited;
-
       if (!input || typeof input.path !== "string") {
          return {
             ok: false,
@@ -168,9 +142,6 @@ export async function discardFeedbackAttachmentAction(input: {
    path: string;
 }): Promise<FeedbackAttachmentActionResult> {
    try {
-      const limited = enforceRateLimit("discard");
-      if (limited) return limited;
-
       if (!input || typeof input.path !== "string") {
          return { ok: true, data: undefined };
       }

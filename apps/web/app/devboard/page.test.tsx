@@ -31,7 +31,9 @@ describe("DevBoardPage tab plumbing", () => {
 
    it("passes through a valid tab", async () => {
       const html = renderToStaticMarkup(
-         await DevBoardPage({ searchParams: { tab: "cron-logs" } })
+         await DevBoardPage({
+            searchParams: Promise.resolve({ tab: "cron-logs" }),
+         })
       );
 
       expect(html).toContain('data-initial-tab="cron-logs"');
@@ -39,7 +41,9 @@ describe("DevBoardPage tab plumbing", () => {
 
    it("clamps unknown values", async () => {
       const html = renderToStaticMarkup(
-         await DevBoardPage({ searchParams: { tab: "nonsense" } })
+         await DevBoardPage({
+            searchParams: Promise.resolve({ tab: "nonsense" }),
+         })
       );
 
       expect(html).toContain('data-initial-tab="flags"');
@@ -47,7 +51,9 @@ describe("DevBoardPage tab plumbing", () => {
 
    it("uses the first value for repeated query params", async () => {
       const html = renderToStaticMarkup(
-         await DevBoardPage({ searchParams: { tab: ["ypt", "flags"] } })
+         await DevBoardPage({
+            searchParams: Promise.resolve({ tab: ["ypt", "flags"] }),
+         })
       );
 
       expect(html).toContain('data-initial-tab="ypt"');

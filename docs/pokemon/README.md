@@ -171,7 +171,7 @@ $$\text{Completion Percentage} = \min\left(100, \text{round}\left(\frac{\text{Un
 
 The Pokémon catalogue is **data-driven from the database** — `PokemonSpecies` (plus the normalized `PokemonForm` and `PokemonAbility` tables) is the single source of truth at runtime. There is no runtime file dependency: the application only ever reads the DB through `features/pokemon/data/*`.
 
-The catalogue was populated once (1,025 canonical species + 326 alternate forms) from a curated Generations 1–9 dataset. The one-off bundle importer and its CLI have been removed; the former JSON `metadata` column was promoted into first-class columns and child tables by the `20261022000000_normalize_pokemon_catalogue` migration (see §5.1). The DB is the source of truth at runtime, and an offline seeder (`npm run db:seed:pokemon`, §5.6) can (re)populate an empty environment from a raw metadata bundle.
+The catalogue was populated once (1,025 canonical species + 326 alternate forms) from a curated Generations 1–9 dataset. The one-off bundle importer and seed scripts have been removed; the former JSON `metadata` column was promoted into first-class columns and child tables by the `20261022000000_normalize_pokemon_catalogue` migration (see §5.1). The DB is the permanent source of truth at runtime; fresh environments restore the catalogue from a database snapshot or dump.
 
 ### 5.1 Normalized Data Model
 
@@ -183,7 +183,7 @@ All previously denormalized `PokemonSpecies.metadata` JSON has been promoted to 
 
 The `20261022000000_normalize_pokemon_catalogue` migration performs a **one-time, non-reversible backfill**: it adds the columns/tables, transforms the existing `metadata` JSON already in the DB into the new shape, then drops the `metadata` column. Take a DB snapshot before deploying.
 
-To rebuild the catalogue from scratch (e.g. after a DB reset), run the offline seeder against a raw PokéAPI/Veekun dump: `npm run db:seed:pokemon -- --file=<bundle.json>` (see §5.6).
+To rebuild the catalogue from scratch (e.g. after a DB reset), restore from the catalogue database dump or snapshot (see §5.6).
 
 ### 5.3 Provenance & Legal Licensing Constraints
 
@@ -222,7 +222,7 @@ A critical architectural distinction is maintained between **Pokémon species** 
 
 - **Ingestion (one-time):** The catalogue was imported once into the DB. The former importer engine (`features/pokemon/data/pokemon-bundle-importer.ts`), its CLI (`scripts/import-pokemon-bundle.ts`), and the `db:import:pokemon` script have been removed.
 - **Schema change:** `npx prisma migrate deploy` applies `20261022000000_normalize_pokemon_catalogue`, which backfills the normalized tables/columns from the existing `metadata` JSON and then drops the column.
-- **Re-seed path:** `prisma/seed.ts` no longer seeds Pokémon, but the offline seeder `npm run db:seed:pokemon` (`scripts/seed-pokemon-catalogue.ts`) populates the normalized catalogue from a raw metadata bundle. Flags: `--file=<path>` (default `./pokemon_metadata.json`), `--limit=<N>`, `--dry-run`. Idempotent upserts on `slug`; each species' `forms` and `abilities` are replaced on re-run.
+- **Re-seed path:** `prisma/seed.ts` no longer seeds Pokémon. The catalogue is DB-resident (1,025 species + 326 forms). New environments restore the catalogue from a hosted DB snapshot or dump (historical seeder scripts are preserved in git history).
 - **Runtime reads:** All catalogue access flows through `features/pokemon/data/pokemon-catalogue.repository.ts`; the detail queries eagerly load `forms` and `abilities`.
 
 ### 5.7 Comprehensive Data Coverage Report

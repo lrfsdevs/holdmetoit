@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Shield, Sparkles, Trophy, UserCheck } from "lucide-react";
 
 import { auth } from "@/core/auth";
+import { getServerEnv } from "@/core/env/server";
 import { hasAdminPrivileges } from "@/features/auth/domain/auth-roles";
 import {
    getEffectiveAdminState,
@@ -19,9 +20,10 @@ export default async function AdminLayout({
    const session = await auth();
    const cookieStore = await cookies();
    const previewCookie = cookieStore.get(PARTICIPANT_PREVIEW_COOKIE)?.value;
+   const env = getServerEnv();
    const isDevBypass =
-      process.env.NODE_ENV === "development" &&
-      (process.env.ALLOW_DEV_BYPASS === "true" || !process.env.AUTH_DISCORD_ID);
+      env.NODE_ENV === "development" &&
+      (env.ALLOW_DEV_BYPASS || !env.AUTH_DISCORD_ID);
 
    if (!session?.user?.id && !isDevBypass) {
       redirect("/");

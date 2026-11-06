@@ -46,4 +46,6 @@ skills-lock.json
 pokemon_metadata.csv
 pokemon_metadata.json
 pokemon_metadata.sqlite
+# generated prisma client
+packages/database/src/generated/
 .commandcode/

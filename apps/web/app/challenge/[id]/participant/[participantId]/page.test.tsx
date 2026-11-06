@@ -122,7 +122,7 @@ describe("ParticipantStatsPage", () => {
       );
 
       const pageElement = await ParticipantStatsPage({
-         params: { id: "chal_1", participantId: "part_1" },
+         params: Promise.resolve({ id: "chal_1", participantId: "part_1" }),
       });
 
       const html = renderToStaticMarkup(pageElement);
@@ -145,7 +145,7 @@ describe("ParticipantStatsPage", () => {
       );
 
       await ParticipantStatsPage({
-         params: { id: "chal_1", participantId: "part_1" },
+         params: Promise.resolve({ id: "chal_1", participantId: "part_1" }),
       });
 
       expect(getChallengeParticipantStats).toHaveBeenCalledWith(
@@ -160,7 +160,10 @@ describe("ParticipantStatsPage", () => {
 
       await expect(
          ParticipantStatsPage({
-            params: { id: "chal_1", participantId: "part_nonexistent" },
+            params: Promise.resolve({
+               id: "chal_1",
+               participantId: "part_nonexistent",
+            }),
          })
       ).rejects.toThrow("NEXT_NOT_FOUND");
 
@@ -173,7 +176,7 @@ describe("ParticipantStatsPage", () => {
       );
 
       const meta = await generateMetadata({
-         params: { id: "chal_1", participantId: "part_1" },
+         params: Promise.resolve({ id: "chal_1", participantId: "part_1" }),
       });
 
       expect(meta.title).toBe("Bob Scholar — Winter Battle | HoldMeToIt");
@@ -183,7 +186,10 @@ describe("ParticipantStatsPage", () => {
       vi.mocked(getChallengeParticipantStats).mockResolvedValue(null);
 
       const meta = await generateMetadata({
-         params: { id: "chal_1", participantId: "part_missing" },
+         params: Promise.resolve({
+            id: "chal_1",
+            participantId: "part_missing",
+         }),
       });
 
       expect(meta.title).toBe("Participant Not Found | HoldMeToIt");
@@ -195,7 +201,7 @@ describe("ParticipantStatsPage", () => {
       );
 
       const pageElement = await ParticipantStatsPage({
-         params: { id: "chal_1", participantId: "part_1" },
+         params: Promise.resolve({ id: "chal_1", participantId: "part_1" }),
       });
 
       const html = renderToStaticMarkup(pageElement);
@@ -209,7 +215,7 @@ describe("ParticipantStatsPage", () => {
       );
 
       const meta = await generateMetadata({
-         params: { id: "chal_1", participantId: "part_1" },
+         params: Promise.resolve({ id: "chal_1", participantId: "part_1" }),
       });
 
       expect(meta.title).toBe("Participant Not Found | HoldMeToIt");

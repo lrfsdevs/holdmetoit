@@ -34,6 +34,6 @@ export function cacheRead<TArgs extends readonly unknown[], TResult>(
 /** Invalidates each supplied cache tag after a mutation. */
 export function invalidateTags(tags: readonly string[]): void {
    for (const tag of tags) {
-      revalidateTag(tag);
+      revalidateTag(tag, { expire: 0 });
    }
 }

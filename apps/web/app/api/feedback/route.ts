@@ -29,8 +29,6 @@ import {
    getFeedbackAttachmentsUrlConfig,
 } from "@/core/storage/supabase-storage";
 import { createLogger, logEvents } from "@/core/observability/logger";
-import { checkRateLimit } from "@/core/security/rate-limiter";
-import { getClientIp } from "@/core/security/client-ip";
 import { toClientError } from "@/core/errors";
 
 const logger = createLogger("feedback");
@@ -44,29 +42,6 @@ export const maxDuration = 30;
 /** Persists feedback and attempts fail-soft Discord delivery. */
 export async function POST(req: NextRequest) {
    try {
-      const clientIp = getClientIp(req.headers);
-
-      const rateLimit = checkRateLimit(`feedback:${clientIp}`, {
-         maxAttempts: 5,
-         windowMs: 5 * 60 * 1000,
-      });
-
-      if (!rateLimit.allowed) {
-         const retryAfter = Math.ceil(rateLimit.resetMs / 1000);
-         return NextResponse.json(
-            {
-               success: false,
-               error: "Too many feedback submissions. Please wait a few minutes before trying again.",
-            },
-            {
-               status: 429,
-               headers: {
-                  "Retry-After": String(retryAfter),
-               },
-            }
-         );
-      }
-
       const json = await req.json();
       const parsed = createFeedbackSchema.safeParse(json);
 
