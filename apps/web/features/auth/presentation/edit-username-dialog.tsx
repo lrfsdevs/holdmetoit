@@ -56,6 +56,7 @@ export function EditUsernameDialog({
 
    // Real-time debounced availability check
    useEffect(() => {
+      let cancelled = false;
       const trimmed = candidate.trim();
       if (!trimmed || trimmed === currentUsername) {
          setCheckResult(null);
@@ -67,6 +68,7 @@ export function EditUsernameDialog({
       const timer = setTimeout(async () => {
          try {
             const res = await checkUsernameAvailabilityAction(trimmed);
+            if (cancelled) return;
             if (res.ok) {
                setCheckResult({
                   available: res.data.available,
@@ -79,16 +81,22 @@ export function EditUsernameDialog({
                });
             }
          } catch {
+            if (cancelled) return;
             setCheckResult({
                available: false,
                reason: "Failed to check availability.",
             });
          } finally {
-            setIsChecking(false);
+            if (!cancelled) {
+               setIsChecking(false);
+            }
          }
       }, 350);
 
-      return () => clearTimeout(timer);
+      return () => {
+         cancelled = true;
+         clearTimeout(timer);
+      };
    }, [candidate, currentUsername]);
 
    const handleSave = () => {
@@ -220,8 +228,8 @@ export function EditUsernameDialog({
                   )}
 
                   <p className="text-text-tertiary text-caption pt-1">
-                     3–20 characters, alphanumeric and single underscores. Changes
-                     are allowed once every 7 days.
+                     3–20 characters, alphanumeric and single underscores.
+                     Changes are allowed once every 7 days.
                   </p>
                </div>
             </div>

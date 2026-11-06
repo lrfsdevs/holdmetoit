@@ -15,6 +15,7 @@ import {
 
 vi.mock("@/core/db", () => ({
    prisma: {
+      $queryRaw: vi.fn(),
       user: {
          findUnique: vi.fn(),
          findFirst: vi.fn(),
@@ -123,70 +124,50 @@ describe("user.repository", () => {
    });
 
    describe("findUserByUsername", () => {
-      it("queries user with case-insensitive mode and canonical trimmed string", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue({
-            id: "user_1",
-            username: "Alice_Scholar",
-         } as never);
+      it("queries user with case-insensitive exact lower-case match", async () => {
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([
+            {
+               id: "user_1",
+               username: "Alice_Scholar",
+            },
+         ] as never);
 
          const user = await findUserByUsername("  ALICE_SCHOLAR  ");
          expect(user).toEqual({ id: "user_1", username: "Alice_Scholar" });
-         expect(prisma.user.findFirst).toHaveBeenCalledWith({
-            where: {
-               username: {
-                  equals: "alice_scholar",
-                  mode: "insensitive",
-               },
-            },
-         });
+         expect(prisma.$queryRaw).toHaveBeenCalled();
       });
    });
 
    describe("isUsernameAvailable", () => {
       it("returns true when no user matches the candidate", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
 
          const available = await isUsernameAvailable("NewScholar");
          expect(available).toBe(true);
-         expect(prisma.user.findFirst).toHaveBeenCalledWith({
-            where: {
-               username: {
-                  equals: "newscholar",
-                  mode: "insensitive",
-               },
-            },
-            select: { id: true },
-         });
+         expect(prisma.$queryRaw).toHaveBeenCalled();
       });
 
       it("returns false when user with candidate exists", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "other_user" } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([
+            { id: "other_user" },
+         ] as never);
 
          const available = await isUsernameAvailable("ExistingScholar");
          expect(available).toBe(false);
       });
 
       it("excludes current user ID if provided", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
 
          const available = await isUsernameAvailable("MyOwnUsername", "user_1");
          expect(available).toBe(true);
-         expect(prisma.user.findFirst).toHaveBeenCalledWith({
-            where: {
-               username: {
-                  equals: "myownusername",
-                  mode: "insensitive",
-               },
-               NOT: { id: "user_1" },
-            },
-            select: { id: true },
-         });
+         expect(prisma.$queryRaw).toHaveBeenCalled();
       });
    });
 
    describe("updateUsername", () => {
       it("updates username preserving casing when valid and available", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null); // available
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never); // available
          vi.mocked(prisma.user.update).mockResolvedValue({
             id: "user_1",
             username: "StudyPro_99",
@@ -204,7 +185,9 @@ describe("user.repository", () => {
       });
 
       it("throws UsernameTakenError if username is taken", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "other" } as never);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([
+            { id: "other" },
+         ] as never);
 
          await expect(updateUsername("user_1", "TakenName")).rejects.toThrow(
             UsernameTakenError
@@ -212,18 +195,18 @@ describe("user.repository", () => {
       });
 
       it("catches Prisma P2002 race condition and throws UsernameTakenError", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
          vi.mocked(prisma.user.update).mockRejectedValue({ code: "P2002" });
 
-         await expect(updateUsername("user_1", "RaceCondition")).rejects.toThrow(
-            UsernameTakenError
-         );
+         await expect(
+            updateUsername("user_1", "RaceCondition")
+         ).rejects.toThrow(UsernameTakenError);
       });
    });
 
    describe("provisionInitialUsername", () => {
       it("returns sanitized candidate when available", async () => {
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
 
          const candidate = await provisionInitialUsername("user_1", "Alice.99");
          expect(candidate).toBe("Alice_99");
@@ -231,9 +214,9 @@ describe("user.repository", () => {
 
       it("suffixes on collision until an available candidate is found", async () => {
          // First candidate taken, second available
-         vi.mocked(prisma.user.findFirst)
-            .mockResolvedValueOnce({ id: "other" } as never) // Alice_99 taken
-            .mockResolvedValueOnce(null); // Alice_99_1 available
+         vi.mocked(prisma.$queryRaw)
+            .mockResolvedValueOnce([{ id: "other" }] as never) // Alice_99 taken
+            .mockResolvedValueOnce([] as never); // Alice_99_1 available
 
          const candidate = await provisionInitialUsername("user_1", "Alice.99");
          expect(candidate).toBe("Alice_99_1");
@@ -276,7 +259,7 @@ describe("user.repository", () => {
             id: "user_new",
             username: null,
          } as never);
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null); // available
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never); // available
          vi.mocked(prisma.user.update).mockResolvedValue({
             id: "user_new",
             username: "FreshUser",

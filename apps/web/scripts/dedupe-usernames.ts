@@ -12,13 +12,11 @@
  * Dry run is the default. `--apply` is required to write changes.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@holdmetoit/database";
 import {
    generateSuffixedUsername,
    validateUsername,
 } from "../features/auth/domain/username";
-
-const prisma = new PrismaClient();
 
 const LOCAL_HOSTS = new Set([
    "localhost",
@@ -66,7 +64,9 @@ async function main() {
       process.exit(1);
    }
 
-   console.log("Checking User table for case-insensitive duplicate usernames...");
+   console.log(
+      "Checking User table for case-insensitive duplicate usernames..."
+   );
    const duplicateGroups = await findDuplicateGroups();
 
    if (duplicateGroups.length === 0) {
@@ -78,16 +78,14 @@ async function main() {
       for (const group of duplicateGroups) {
          console.log(`  - "${group.normalized}" (${group.count} occurrences)`);
 
-         const users = await prisma.user.findMany({
-            where: {
-               username: {
-                  equals: group.normalized,
-                  mode: "insensitive",
-               },
-            },
-            orderBy: { createdAt: "asc" },
-            select: { id: true, username: true, createdAt: true },
-         });
+         const users = await prisma.$queryRaw<
+            Array<{ id: string; username: string | null; createdAt: Date }>
+         >`
+            SELECT "id", "username", "createdAt"
+            FROM "User"
+            WHERE LOWER("username") = ${group.normalized.toLowerCase()}
+            ORDER BY "createdAt" ASC
+         `;
 
          // Oldest user keeps original; subsequent users get suffixed
          const [keeper, ...duplicates] = users;
@@ -101,16 +99,15 @@ async function main() {
                dup.username || group.normalized,
                attempt
             );
-            while (
-               await prisma.user.findFirst({
-                  where: {
-                     username: {
-                        equals: nextCandidate.toLowerCase(),
-                        mode: "insensitive",
-                     },
-                  },
-               })
-            ) {
+            while (true) {
+               const collision = await prisma.$queryRaw<Array<{ id: string }>>`
+                  SELECT "id" FROM "User"
+                  WHERE LOWER("username") = ${nextCandidate.toLowerCase()}
+                  LIMIT 1
+               `;
+               if (collision.length === 0) {
+                  break;
+               }
                attempt++;
                nextCandidate = generateSuffixedUsername(
                   dup.username || group.normalized,

@@ -8,6 +8,7 @@ import * as participantStatsRepo from "./participant-stats.repository";
 
 vi.mock("@/core/db", () => ({
    prisma: {
+      $queryRaw: vi.fn(),
       user: {
          findUnique: vi.fn(),
          findFirst: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock("./participant-stats.repository", () => ({
 describe("global-profile.repository", () => {
    beforeEach(() => {
       vi.clearAllMocks();
+      vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
       // Challenge status is derived from the current time, so freeze it inside
       // the fixtures' "Winter Sprint" window (2026-10-25 to 2026-11-05).
       vi.useFakeTimers({ toFake: ["Date"] });
@@ -58,15 +60,19 @@ describe("global-profile.repository", () => {
    describe("getGlobalUserProfile", () => {
       it("returns null when user is not found", async () => {
          vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([] as never);
 
          const result = await getGlobalUserProfile("nonexistent_user");
          expect(result).toBeNull();
       });
 
       it("resolves user by platform username when not found by CUID", async () => {
-         vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-         vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as any);
+         vi.mocked(prisma.user.findUnique)
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(mockUser as any);
+         vi.mocked(prisma.$queryRaw).mockResolvedValue([
+            { id: "user_1" },
+         ] as never);
          vi.mocked(prisma.task.count).mockResolvedValue(0);
          vi.mocked(prisma.userPokemon.count).mockResolvedValue(0);
          vi.mocked(prisma.challengeParticipant.findMany).mockResolvedValue([]);
@@ -75,13 +81,9 @@ describe("global-profile.repository", () => {
          const result = await getGlobalUserProfile("@alicescholar");
          expect(result).not.toBeNull();
          expect(result?.user.id).toBe("user_1");
-         expect(prisma.user.findFirst).toHaveBeenCalledWith({
-            where: {
-               username: {
-                  equals: "alicescholar",
-                  mode: "insensitive",
-               },
-            },
+         expect(prisma.$queryRaw).toHaveBeenCalled();
+         expect(prisma.user.findUnique).toHaveBeenLastCalledWith({
+            where: { id: "user_1" },
             select: expect.any(Object),
          });
       });

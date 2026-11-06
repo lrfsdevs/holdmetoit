@@ -26,52 +26,43 @@ export async function getGlobalUserProfile(
 ): Promise<GlobalUserProfile | null> {
    const cleanIdentifier = identifier.trim().replace(/^@/, "");
 
+   const userSelectFields = {
+      id: true,
+      displayName: true,
+      username: true,
+      usernameChangedAt: true,
+      name: true,
+      image: true,
+      role: true,
+      createdAt: true,
+      trophyBalance: true,
+      yptId: true,
+      isSick: true,
+      sickModeActivatedAt: true,
+      sickModeNote: true,
+      sickModeReminderSnoozedUntil: true,
+      sickModeLastDeactivatedAt: true,
+   };
+
    // 1. Fetch user core record (try by primary CUID first, then by platform username)
    let user = await prisma.user.findUnique({
       where: { id: cleanIdentifier },
-      select: {
-         id: true,
-         displayName: true,
-         username: true,
-         name: true,
-         image: true,
-         role: true,
-         createdAt: true,
-         trophyBalance: true,
-         yptId: true,
-         isSick: true,
-         sickModeActivatedAt: true,
-         sickModeNote: true,
-         sickModeReminderSnoozedUntil: true,
-         sickModeLastDeactivatedAt: true,
-      },
+      select: userSelectFields,
    });
 
    if (!user) {
-      user = await prisma.user.findFirst({
-         where: {
-            username: {
-               equals: cleanIdentifier,
-               mode: "insensitive",
-            },
-         },
-         select: {
-            id: true,
-            displayName: true,
-            username: true,
-            name: true,
-            image: true,
-            role: true,
-            createdAt: true,
-            trophyBalance: true,
-            yptId: true,
-            isSick: true,
-            sickModeActivatedAt: true,
-            sickModeNote: true,
-            sickModeReminderSnoozedUntil: true,
-            sickModeLastDeactivatedAt: true,
-         },
-      });
+      const canonical = cleanIdentifier.toLowerCase();
+      const matched = await prisma.$queryRaw<{ id: string }[]>`
+         SELECT "id" FROM "User"
+         WHERE LOWER("username") = ${canonical}
+         LIMIT 1
+      `;
+      if (matched.length > 0) {
+         user = await prisma.user.findUnique({
+            where: { id: matched[0].id },
+            select: userSelectFields,
+         });
+      }
    }
 
    if (!user) {
@@ -234,6 +225,9 @@ export async function getGlobalUserProfile(
          displayName:
             user.displayName || user.name || user.username || "Scholar",
          username: user.username,
+         usernameChangedAt: user.usernameChangedAt
+            ? user.usernameChangedAt.toISOString()
+            : null,
          image: user.image,
          role: user.role,
          joinedAt: user.createdAt.toISOString(),

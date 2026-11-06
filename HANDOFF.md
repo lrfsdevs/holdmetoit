@@ -2987,3 +2987,18 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
       - `npm run build:web`: ✅ Production build cleanly compiled all 21 routes.
 - **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.
+
+### Session 204 — 2026-11-06 (fix(identity): enforce exact case-normalized username queries and fix race conditions — on `feat/platform-username`)
+
+- **Context & Objectives:** Address 6 CodeRabbit code review findings on the `feat/platform-username` branch: eliminate SQL `ILIKE` underscore/percent wildcard ambiguities in username lookups, prevent async race conditions in debounced username availability checks, ensure typesafe `usernameChangedAt` serialization on global profiles, and standardize database client access in deduplication scripts.
+- **Changes Completed:**
+   1. **Exact Username Queries in `user.repository.ts`:** Replaced pattern-based Prisma `mode: "insensitive"` in `findUserByUsername` and `isUsernameAvailable` with parameterized `$queryRaw` comparing `LOWER("username") = ${canonical}`, ensuring underscore (`_`) and percent (`%`) characters are treated literally rather than as SQL pattern wildcards, and leveraging the `User_lower_username_key` expression index. Updated repository tests to mock `$queryRaw` (16/16 tests green).
+   2. **Race Condition Prevention in `edit-username-dialog.tsx`:** Added an effect-scoped `cancelled` token in `EditUsernameDialog`'s debounced availability checking effect to discard responses from obsolete requests when candidate input changes quickly (5/5 tests green).
+   3. **Fallback Username Lookup in `global-profile.repository.ts`:** Updated global profile resolution to query user ID via parameterized `SELECT "id" FROM "User" WHERE LOWER("username") = ${canonical} LIMIT 1` rather than pattern-based insensitive findFirst. Updated repository tests to mock `$queryRaw` (5/5 tests green).
+   4. **Typesafe `usernameChangedAt` Propagation:** Added `usernameChangedAt?: string | null` to `GlobalUserProfileIdentity`, selected `usernameChangedAt: true` in `global-profile.repository.ts` with ISO serialization, and passed `user.usernameChangedAt` directly to `EditUsernameDialog` without `(user as any)` casting.
+   5. **Shared Prisma Client in Deduplication Script:** Replaced direct `new PrismaClient()` construction in `apps/web/scripts/dedupe-usernames.ts` with the shared client from `@holdmetoit/database`.
+   6. **Exact Case-Normalized Comparison in Deduplication Script:** Replaced `mode: "insensitive"` in duplicate group queries and collision probes with parameterized `$queryRaw` comparing `LOWER("username") = ${...}`.
+   7. **Quality Gates & Verification:**
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run test:web`: ✅ 252 test files (2,660 tests) passing 100% green.
+- **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.

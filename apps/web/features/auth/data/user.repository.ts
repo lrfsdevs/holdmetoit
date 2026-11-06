@@ -43,42 +43,46 @@ export async function findUserByDiscordId(
 }
 
 /**
- * Finds a user by their platform username using case-insensitive lookup.
+ * Finds a user by their platform username using exact case-normalized comparison.
+ * Compares LOWER("username") = ${canonical} so underscores and percent signs
+ * are treated literally rather than as pattern-matching wildcards.
  */
 export async function findUserByUsername(
    username: string
 ): Promise<User | null> {
    const canonical = username.trim().toLowerCase();
-   return prisma.user.findFirst({
-      where: {
-         username: {
-            equals: canonical,
-            mode: "insensitive",
-         },
-      },
-   });
+   const rows = await prisma.$queryRaw<User[]>`
+      SELECT * FROM "User"
+      WHERE LOWER("username") = ${canonical}
+      LIMIT 1
+   `;
+   return rows[0] ?? null;
 }
 
 /**
  * Checks whether a candidate username is available, optionally excluding a specific user ID.
+ * Compares LOWER("username") = ${canonical} literally to avoid wildcard false positives.
  */
 export async function isUsernameAvailable(
    candidate: string,
    excludeUserId?: string
 ): Promise<boolean> {
    const canonical = candidate.trim().toLowerCase();
-   const existing = await prisma.user.findFirst({
-      where: {
-         username: {
-            equals: canonical,
-            mode: "insensitive",
-         },
-         ...(excludeUserId ? { NOT: { id: excludeUserId } } : {}),
-      },
-      select: { id: true },
-   });
-
-   return !existing;
+   if (excludeUserId) {
+      const rows = await prisma.$queryRaw<{ id: string }[]>`
+         SELECT "id" FROM "User"
+         WHERE LOWER("username") = ${canonical}
+           AND "id" != ${excludeUserId}
+         LIMIT 1
+      `;
+      return rows.length === 0;
+   }
+   const rows = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "User"
+      WHERE LOWER("username") = ${canonical}
+      LIMIT 1
+   `;
+   return rows.length === 0;
 }
 
 /**
@@ -157,7 +161,10 @@ export async function syncUserFromDiscordProfile(
    // Only provision initial platform username if the user currently lacks one
    let assignedUsername = existingUser?.username ?? null;
    if (!assignedUsername && fields.username) {
-      assignedUsername = await provisionInitialUsername(userId, fields.username);
+      assignedUsername = await provisionInitialUsername(
+         userId,
+         fields.username
+      );
    }
 
    return prisma.user.update({

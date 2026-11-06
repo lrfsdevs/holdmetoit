@@ -152,9 +152,7 @@ export function GlobalProfileView({
                            {isOwnProfile && isPlatformUsernameEnabled && (
                               <EditUsernameDialog
                                  currentUsername={currentUsername}
-                                 usernameChangedAt={
-                                    (user as any).usernameChangedAt
-                                 }
+                                 usernameChangedAt={user.usernameChangedAt}
                                  onUsernameUpdated={(newUsername) =>
                                     setCurrentUsername(newUsername)
                                  }
