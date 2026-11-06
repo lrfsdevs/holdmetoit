@@ -196,6 +196,10 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    - Preserved unencrypted local connections on `localhost`, `127.0.0.1`, `::1` (`[::1]`), and `.local` hosts without breaking Vitest suites or local Docker containers.
    - Preserved Supabase compatibility (which uses private intermediate CA `Supabase Intermediate 2021 CA` on pooler/direct connections) while allowing full TLS validation when the Supabase root CA is provided.
    - Added unit test suite in `apps/web/core/db/index.test.ts` verifying host detection, SSL resolution, CA injection, and PrismaClient initialization.
+- **Review Finding Resolutions & Audit Reconciliation:**
+   - `prisma.config.ts`: Updated URL resolution to ensure empty/blank `DIRECT_URL` cleanly falls back to `DATABASE_URL`.
+   - `docs/tasks/README.md`: Added explicit operator STOP instruction before running `db:migrate` when duplicate categories exist, along with self-contained, deterministic transactional SQL cleanup statements.
+   - `ISSUES.md`: Verified `npm audit --omit=dev` reports 0 vulnerabilities; retired `DEP-01` (Prisma 7.10.1 & deepmerge-ts 8.0.2 upgrade) and updated open finding counters.
 - **Quality Gates:**
    - `npm run build -w @holdmetoit/database`: ✅ 0 errors
    - `npm run build -w @holdmetoit/discord`: ✅ 0 errors

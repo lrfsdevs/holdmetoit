@@ -12,18 +12,18 @@
 
 | Severity                |  Count |
 | :---------------------- | -----: |
-| 🔴 Critical / High      |      6 |
+| 🔴 Critical / High      |      5 |
 | 🟠 Medium               |     14 |
 | 🟡 Low / hardening      |     18 |
 | 💡 Feature suggestions  |      3 |
-| **Total open findings** | **41** |
+| **Total open findings** | **40** |
 
 Plus 4 deployment-time operational checks that are not code defects.
 
 ### Source reconciliation
 
 - `SEC-10` absorbs the duplicate `ISS-20` (missing security headers).
-- `DEP-01` covers the remaining Prisma-family advisories from `SEC-02`/`ISS-05`; the Next.js/postcss advisories were cleared by the 16.4.5 upgrade.
+- `DEP-01` (Prisma-family advisories) was resolved: Prisma was upgraded to 7.10.1 and `deepmerge-ts` to 8.0.2; `npm audit --omit=dev` reports 0 vulnerabilities.
 - `ISS-04` keeps only the schema drift that remains after the `isLeave` fix.
 - `ISS-44` was re-counted against the current tree: **2** phantom `/dashboard` revalidations remain (the old doc listed 17).
 - `ISS-33` was re-measured: `cockpit-tasks-section.tsx` is now **7,380 lines** (the old doc listed 5,302).
@@ -56,16 +56,6 @@ Plus 4 deployment-time operational checks that are not code defects.
 - **Impact:** Until an external limiter is configured, the unauthenticated feedback route and signed uploads have no application-level throttle. Feedback fans out to Postgres, Discord, GitHub, and Jira.
 - **Fix:** Enforce limits at the platform layer (Vercel WAF/Firewall, Upstash Ratelimit, or a gateway); derive the IP from the platform-trusted source; add per-authenticated-user quotas and a daily cap on outbound GitHub/Jira creations.
 - **Source:** `SECURITY.md` SEC-03.
-
-### DEP-01 — Prisma-family advisories remain
-
-- **Severity:** High
-- **Area:** Dependencies
-- **Location:** `prisma@6.19.3`, `@prisma/config`, `deepmerge-ts@7.1.5`
-- **Problem:** `npm audit --omit=dev` still reports 3 high advisories from the Prisma family. The Next.js and nested `postcss` advisories were cleared by the 16.4.5 upgrade.
-- **Impact:** Stack exhaustion / vulnerable transitive config package; requires a Prisma major upgrade.
-- **Fix:** Upgrade to Prisma `7.10.1+` and `deepmerge-ts@8` as a dedicated change; do not bundle it with the Next.js migration.
-- **Source:** `SECURITY.md` SEC-02, `ISSUES.md` #5 (remaining items).
 
 ### ISS-04 — Schema drift: `feedbacks` and `sort_order` still lack migrations
 
@@ -486,20 +476,19 @@ These are not code defects. They are environment or kickoff checks from `solo-bl
 ## Recommended Fix Order
 
 1. **SEC-01** — fail-closed YPT ingest key.
-2. **DEP-01** — Prisma 7.10.1+ / `deepmerge-ts@8` upgrade.
-3. **ISS-04** — generate the remaining catch-up migrations and verify a clean deploy.
-4. **SEC-03** — put the external/platform rate limiter in place.
-5. **SEC-04** — auth/ownership checks on exposed read actions.
-6. **SEC-10** — security response headers.
-7. **ISS-36** — code-split the challenge tabs.
-8. **ISS-33** — decompose/relocate `CockpitTasksSection`.
-9. **SEC-05 / SEC-06 / SEC-07 / SEC-08 / SEC-09** — authz, token/backup protection, feedback hardening, error sanitization.
-10.   **SEC-11** — Tasker `/yapperize` hardening.
-11.   **ISS-12** — add the missing indexes.
-12.   **ISS-38 / ISS-39 / ISS-40 / ISS-41 / ISS-42** — architecture cleanup.
-13.   **ISS-22 / ISS-23 / ISS-24 / ISS-25 / ISS-26 / ISS-27 / ISS-44 / ISS-45 / ISS-46** — hardening and DRY.
-14.   **SEC-12 – SEC-20** — remaining hardening.
-15.   **FEAT-01 – FEAT-03** — product suggestions.
+2. **ISS-04** — generate the remaining catch-up migrations and verify a clean deploy.
+3. **SEC-03** — put the external/platform rate limiter in place.
+4. **SEC-04** — auth/ownership checks on exposed read actions.
+5. **SEC-10** — security response headers.
+6. **ISS-36** — code-split the challenge tabs.
+7. **ISS-33** — decompose/relocate `CockpitTasksSection`.
+8. **SEC-05 / SEC-06 / SEC-07 / SEC-08 / SEC-09** — authz, token/backup protection, feedback hardening, error sanitization.
+9. **SEC-11** — Tasker `/yapperize` hardening.
+10.   **ISS-12** — add the missing indexes.
+11.   **ISS-38 / ISS-39 / ISS-40 / ISS-41 / ISS-42** — architecture cleanup.
+12.   **ISS-22 / ISS-23 / ISS-24 / ISS-25 / ISS-26 / ISS-27 / ISS-44 / ISS-45 / ISS-46** — hardening and DRY.
+13.   **SEC-12 – SEC-20** — remaining hardening.
+14.   **FEAT-01 – FEAT-03** — product suggestions.
 
 ---
 
