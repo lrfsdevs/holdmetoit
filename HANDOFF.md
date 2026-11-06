@@ -2998,7 +2998,8 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
    4. **Typesafe `usernameChangedAt` Propagation:** Added `usernameChangedAt?: string | null` to `GlobalUserProfileIdentity`, selected `usernameChangedAt: true` in `global-profile.repository.ts` with ISO serialization, and passed `user.usernameChangedAt` directly to `EditUsernameDialog` without `(user as any)` casting.
    5. **Shared Prisma Client in Deduplication Script:** Replaced direct `new PrismaClient()` construction in `apps/web/scripts/dedupe-usernames.ts` with the shared client from `@holdmetoit/database`.
    6. **Exact Case-Normalized Comparison in Deduplication Script:** Replaced `mode: "insensitive"` in duplicate group queries and collision probes with parameterized `$queryRaw` comparing `LOWER("username") = ${...}`.
-   7. **Quality Gates & Verification:**
+   7. **Migration Pre-Check & Deduplication Documentation:** Updated `20261105000000_user_username_ci_unique/migration.sql` with a PL/pgSQL pre-check asserting that zero case-insensitive duplicate usernames exist in `User` before creating `User_lower_username_key`, failing fast with a descriptive error directing to `scripts/dedupe-usernames.ts`. Documented the pre-migration deduplication procedure in `packages/database/prisma/migrations/README.md`.
+   8. **Quality Gates & Verification:**
       - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
       - `npm run test:web`: ✅ 252 test files (2,660 tests) passing 100% green.
 - **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.
