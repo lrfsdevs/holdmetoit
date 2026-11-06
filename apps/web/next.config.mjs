@@ -111,6 +111,11 @@ const nextConfig = {
             destination: "/changelog",
             permanent: true,
          },
+         {
+            source: "/preferences",
+            destination: "/profile?tab=settings",
+            permanent: true,
+         },
       ];
    },
    images: {

@@ -210,18 +210,13 @@ describe("AppHeader", () => {
       expect(html).not.toContain('data-testid="pokemon-nav-link"');
    });
 
-   it("renders prominent Preferences button for all users", async () => {
+   it("omits separate Preferences button from navbar", async () => {
       const { AppHeader } = await import("./header");
       const html = renderToStaticMarkup(
          createElement(AppHeader, { user: null })
       );
 
-      expect(html).toContain('data-testid="quick-preferences-button"');
-      expect(html).toContain(
-         'data-testid="quick-preferences-button" title="Preferences"'
-      );
-      expect(html).toContain('href="/preferences"');
-      expect(html).toContain("Preferences");
-      expect(html).not.toContain('data-testid="preferences-nav-link"');
+      expect(html).not.toContain('data-testid="quick-preferences-button"');
+      expect(html).not.toContain('href="/preferences"');
    });
 });
