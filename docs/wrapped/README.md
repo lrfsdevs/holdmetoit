@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-The **Customizable Wrapped Mascot System** provides whimsical, responsive companions across the Event Wrapped experience (`/` Shy Card and `/` Story Modal), allowing students to customize their mascot companion in their Profile Preferences (`/profile` & `/preferences`).
+The **Customizable Wrapped Mascot System** provides whimsical, responsive companions across the Event Wrapped experience (`/` Shy Card and `/` Story Modal), allowing students to customize their mascot companion in their Profile Settings (`/profile?tab=settings`).
 
 The system preserves the classic **OG Googly Eyes** (`GOOGLY_EYES`) while adding three hand-drawn doodle mascots:
 

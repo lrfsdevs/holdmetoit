@@ -2959,3 +2959,31 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
       - `npm run test:web`: ✅ 100% green exit across all participant-stats (10 files, 93 tests) and auth test suites (14 files, 136 tests).
 - **NEXT STEP:** Submit PR to `dev` for peer review.
+
+### Session 203 — 2026-11-06 (refactor(settings): merge preferences into profile settings tab, remove navbar button, and deduplicate wrapped companion — on `untitled-worktree`)
+
+- **Context & Objectives:** Unify all participant configuration into a single, cohesive Settings tab under `/profile?tab=settings`, deduplicate the Wrapped Mascot Companion selector, remove the standalone `/preferences` navbar pill and route, and eliminate dead mock sections (Themes & Aesthetics, Notifications & Reminders).
+- **Changes Completed:**
+   1. **Phase 1: Pure Domain & Storage Pruning (Commit `f0a2b07`):**
+      - Pruned `ThemePreferences`, `NotificationPreferences`, `ThemeId`, and fields `theme` and `notifications` from `user-preferences.ts` and `DEFAULT_USER_PREFERENCES`.
+      - Streamlined `sanitizeUserPreferences()` to focus strictly on sound feedback (`todoCompletionSfx`, `volume`, `soundPack`).
+      - Updated domain unit tests in `user-preferences.test.ts` and `preferences-storage.test.ts` (17/17 tests passing green).
+   2. **Phase 2: Extract `AudioSettingsCard` & Retire `PreferencesView` (Commit `1456d39`):**
+      - Created modular `<AudioSettingsCard />` (`apps/web/features/preferences/presentation/audio-settings-card.tsx`) featuring sound switch toggle, audio preview button, and Obsidian status badges.
+      - Added unit tests in `audio-settings-card.test.tsx` verifying opt-in muted defaults, toggle state persistence, and preview audio triggering (4/4 tests passing green).
+      - Safely deleted legacy `preferences-view.tsx` and its test file.
+   3. **Phase 3: Profile Settings Tab Integration & Deduplication (Commit `dd97b93`):**
+      - Integrated `<AudioSettingsCard />` into `global-profile-view.tsx` inside the owner's Settings tab between `<YptSettingsCard />` and `<WrappedMascotPreferenceCard />`.
+      - Wrapped Mascot Companion is now exclusively rendered inside the profile Settings tab, eliminating duplication.
+      - Added tests in `global-profile-view.test.tsx` asserting all three settings cards render when `activeTab === "settings"` for the owner (8/8 tests passing green).
+   4. **Phase 4: Navbar & Route Cleanup (Commit `fcb29b2`):**
+      - Removed the Preferences button and unused `Settings` icon from `AppHeader` in `apps/web/components/ui/header.tsx`.
+      - Updated `header.test.tsx` to assert that the Preferences button is omitted from the top navigation bar (14/14 tests passing green).
+      - Deleted `apps/web/app/preferences/` route directory.
+      - Added permanent redirect from `/preferences` $\to$ `/profile?tab=settings` in `apps/web/next.config.mjs`.
+   5. **Phase 5: Documentation & Quality Gates Verification:**
+      - Updated `docs/preferences/README.md` and `docs/wrapped/README.md` with unified Settings architecture.
+      - `npm run test:web`: ✅ 252 test files (2,660 tests) passing 100% green.
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run build:web`: ✅ Production build cleanly compiled all 21 routes.
+- **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.
