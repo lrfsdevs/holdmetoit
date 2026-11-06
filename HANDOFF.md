@@ -2946,3 +2946,16 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - Created comprehensive feature and architecture documentation in `docs/identity/README.md`.
       - Fully verified TypeScript compilation and Vitest suites.
 - **NEXT STEP:** Create Pull Request from feature branch to `dev` for peer review and staging deployment.
+
+### Session 202 — 2026-11-06 (refactor(profile): remove redundant sync avatar button from profile views — on `untitled-worktree`)
+
+- **Context & Objectives:** Remove the redundant manual "Sync Avatar" button from participant profile views as Discord avatars and metadata already synchronize automatically upon each login session via Auth.js (`core/auth/index.ts`).
+- **Changes Completed:**
+   1. **`global-profile-view.tsx`:** Removed `<RefreshAvatarButton />` and its right-actions container from the profile header card (lines 193–203). Cleaned up unused import.
+   2. **`participant-profile-header.tsx`:** Removed `<RefreshAvatarButton />` from challenge participant profile headers (lines 189–195). Cleaned up unused import.
+   3. **`user-inspector-sheet.tsx`:** Preserved `<RefreshAvatarButton />` for admin user inspector controls where manual host troubleshooting may be warranted.
+   4. **Test Suite Aligned:** Updated `features/participant-stats/presentation/global-profile-view.test.tsx` to assert that the Settings tab renders while omitting the Sync Avatar button (`expect(html).not.toContain("Sync Avatar")`).
+   5. **Verification & Quality Gates:**
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run test:web`: ✅ 100% green exit across all participant-stats (10 files, 93 tests) and auth test suites (14 files, 136 tests).
+- **NEXT STEP:** Submit PR to `dev` for peer review.
