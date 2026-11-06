@@ -33,13 +33,15 @@ vi.mock("next/image", () => ({
    }) => createElement("img", { src, alt, className }),
 }));
 
+let mockSearchParams = new URLSearchParams();
+
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
       refresh: vi.fn(),
       push: vi.fn(),
       replace: vi.fn(),
    }),
-   useSearchParams: () => new URLSearchParams(),
+   useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock("../api/global-profile.actions", () => ({
@@ -52,6 +54,15 @@ vi.mock("@/features/ypt/presentation/ypt-settings-card", () => ({
          "div",
          { "data-testid": "ypt-settings-card" },
          "YPT Settings Card"
+      ),
+}));
+
+vi.mock("@/features/preferences/presentation/audio-settings-card", () => ({
+   AudioSettingsCard: () =>
+      createElement(
+         "div",
+         { "data-testid": "audio-settings-card" },
+         "Audio Settings Card"
       ),
 }));
 
@@ -206,6 +217,19 @@ describe("GlobalProfileView", () => {
 
       expect(html).not.toContain("Sync Avatar");
       expect(html).toContain("tab-settings");
+   });
+
+   it("renders YPT, Audio, and Wrapped Mascot settings cards when Settings tab is active for owner", () => {
+      mockSearchParams = new URLSearchParams("tab=settings");
+      const html = renderToStaticMarkup(
+         <GlobalProfileView profile={mockProfile} isOwnProfile={true} />
+      );
+
+      expect(html).toContain('data-testid="settings-content"');
+      expect(html).toContain('data-testid="ypt-settings-card"');
+      expect(html).toContain('data-testid="audio-settings-card"');
+      expect(html).toContain('data-testid="wrapped-mascot-preference-card"');
+      mockSearchParams = new URLSearchParams();
    });
 
    it("omits Settings tab for non-owner viewers", () => {

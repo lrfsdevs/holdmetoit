@@ -28,6 +28,7 @@ import { ChallengeSnapshot } from "./challenge-snapshot";
 import { EmptyState } from "@/components/state/empty-state";
 import { CockpitSkeleton } from "@/components/state/cockpit-skeleton";
 import { YptSettingsCard } from "@/features/ypt/presentation/ypt-settings-card";
+import { AudioSettingsCard } from "@/features/preferences/presentation/audio-settings-card";
 import { WrappedMascotPreferenceCard } from "@/features/wrapped/presentation/wrapped-mascot-preference-card";
 import {
    SickModeSettingsCard,
@@ -501,6 +502,9 @@ export function GlobalProfileView({
                <YptSettingsCard
                   initialYptId={initialYptId ?? user.yptId ?? null}
                />
+
+               {/* Audio Feedback Settings Card */}
+               <AudioSettingsCard />
 
                {/* Wrapped Mascot Preference Card */}
                <WrappedMascotPreferenceCard />
