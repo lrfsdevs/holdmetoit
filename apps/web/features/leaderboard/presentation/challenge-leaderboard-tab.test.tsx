@@ -261,7 +261,7 @@ describe("ChallengeLeaderboardTab", () => {
       expect(html).toContain("07:00:00");
       expect(html).toContain("/35:00:00");
       expect(html).toContain("Serpents");
-      expect(html).toContain("@afnan");
+      expect(html).toContain("afnan");
       expect(html).not.toContain("Edit hr");
    });
 
@@ -336,9 +336,9 @@ describe("ChallengeLeaderboardTab", () => {
       expect(html).toContain("Serpents");
       expect(html).toContain("Raven");
 
-      // Serpents has participant Afnan (#1 in team, #1 overall)
+      // Serpents has participant afnan (#1 in team, #1 overall)
       expect(html).toContain("#1");
-      expect(html).toContain("Afnan");
+      expect(html).toContain("afnan");
       expect(html).toContain("Leading House");
 
       // Raven has empty message since no scholars enrolled yet in mockChallenge
@@ -422,6 +422,7 @@ describe("ChallengeLeaderboardTab", () => {
                ...mockChallenge.standings[0]!,
                participantId: "part-1",
                displayName: "Overall Leader",
+               username: "overall_leader",
                totalLoggedSeconds: 50_000,
                totalLoggedClock: "13:53:20",
                todayLoggedSeconds: 3_600,
@@ -432,6 +433,7 @@ describe("ChallengeLeaderboardTab", () => {
                ...mockChallenge.standings[0]!,
                participantId: "part-2",
                displayName: "Today Champion",
+               username: "today_champion",
                totalLoggedSeconds: 20_000,
                totalLoggedClock: "05:33:20",
                todayLoggedSeconds: 14_400,
@@ -460,9 +462,9 @@ describe("ChallengeLeaderboardTab", () => {
       expect(html).not.toContain(">Total hours<");
       expect(html).not.toContain("/ 35:00:00");
 
-      // In Today's LB view, "Today Champion" with 4h today is ranked above "Overall Leader" with 1h today
-      const indexTodayChampion = html.indexOf("Today Champion");
-      const indexOverallLeader = html.indexOf("Overall Leader");
+      // In Today's LB view, "today_champion" with 4h today is ranked above "overall_leader" with 1h today
+      const indexTodayChampion = html.indexOf("today_champion");
+      const indexOverallLeader = html.indexOf("overall_leader");
       expect(indexTodayChampion).toBeGreaterThan(-1);
       expect(indexOverallLeader).toBeGreaterThan(-1);
       expect(indexTodayChampion).toBeLessThan(indexOverallLeader);
@@ -479,7 +481,7 @@ describe("ChallengeLeaderboardTab", () => {
       expect(html).not.toContain("View by Team");
       expect(html).toContain("Overall Rank");
       expect(html).not.toContain("lg:grid-cols-2");
-      expect(html).toContain("Afnan");
+      expect(html).toContain("afnan");
    });
 
    it("preserves view mode in participant profile links when initialViewMode is 'today' and omits query when 'individual'", () => {
@@ -901,9 +903,9 @@ describe("ChallengeLeaderboardTab", () => {
          expect(html).toContain("1 unassigned");
          expect(html).toContain("Awaiting house assignment");
 
-         // Scholar details are rendered
-         expect(html).toContain("Klara Scholar");
-         expect(html).toContain("@klara");
+         // Scholar details are rendered with platform username
+         expect(html).toContain("klara");
+         expect(html).not.toContain("@klara");
          expect(html).toContain(
             'data-testid="unassigned-pill-part-unassigned-1"'
          );
@@ -996,6 +998,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-serene",
                   displayName: "Scholar Serene",
+                  username: null,
                   completionPercentage: 100,
                   paceStatus: "serene",
                   paceLabel: "Serene",
@@ -1004,6 +1007,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-ontrack",
                   displayName: "Scholar OnTrack",
+                  username: null,
                   completionPercentage: 50,
                   paceStatus: "on-track",
                   paceLabel: "On Track",
@@ -1012,6 +1016,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-catchup",
                   displayName: "Scholar CatchUp",
+                  username: null,
                   completionPercentage: 25,
                   paceStatus: "catch-up",
                   paceLabel: "Catch-Up",
@@ -1020,6 +1025,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-punished",
                   displayName: "Scholar Punished",
+                  username: null,
                   completionPercentage: 10,
                   paceStatus: "punished",
                   paceLabel: "Punished",
@@ -1028,6 +1034,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-excused",
                   displayName: "Scholar Excused",
+                  username: null,
                   completionPercentage: 80,
                   paceStatus: "excused",
                   paceLabel: "Excused",
@@ -1114,6 +1121,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-completed",
                   displayName: "Champion Scholar",
+                  username: null,
                   completionPercentage: 100,
                   deficitSeconds: 0,
                   paceStatus: "serene",
@@ -1123,6 +1131,7 @@ describe("ChallengeLeaderboardTab", () => {
                   ...mockChallenge.standings[0]!,
                   participantId: "part-uncompleted",
                   displayName: "Deficit Scholar",
+                  username: null,
                   completionPercentage: 14,
                   deficitSeconds: 108_000,
                   paceStatus: "punished",
@@ -1374,6 +1383,7 @@ describe("ChallengeLeaderboardTab", () => {
                ...mockChallenge.standings[0]!,
                participantId: "part-1",
                displayName: "Scholar One",
+               username: null,
                totalLoggedSeconds: 36_000,
                totalLoggedClock: "10:00:00",
                todayLoggedSeconds: 3_600,
@@ -1389,6 +1399,7 @@ describe("ChallengeLeaderboardTab", () => {
                ...mockChallenge.standings[0]!,
                participantId: "part-2",
                displayName: "Scholar Two",
+               username: null,
                totalLoggedSeconds: 20_000,
                totalLoggedClock: "05:33:20",
                todayLoggedSeconds: 14_400,

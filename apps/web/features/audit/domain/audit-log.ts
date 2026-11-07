@@ -32,7 +32,8 @@ export type AuditEventType =
    | "TROPHY_REVERSAL"
    | "RANK_CHANGED"
    | "ADMIN_TROPHY_ADJUSTMENT"
-   | "USER_ROLE_UPDATED";
+   | "USER_ROLE_UPDATED"
+   | "USERNAME_UPDATED";
 
 export type AuditTargetType =
    | "DAILY_STUDY_LOG"

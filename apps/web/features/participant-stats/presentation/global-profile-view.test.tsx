@@ -33,13 +33,15 @@ vi.mock("next/image", () => ({
    }) => createElement("img", { src, alt, className }),
 }));
 
+let mockSearchParams = new URLSearchParams();
+
 vi.mock("next/navigation", () => ({
    useRouter: () => ({
       refresh: vi.fn(),
       push: vi.fn(),
       replace: vi.fn(),
    }),
-   useSearchParams: () => new URLSearchParams(),
+   useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock("../api/global-profile.actions", () => ({
@@ -52,6 +54,15 @@ vi.mock("@/features/ypt/presentation/ypt-settings-card", () => ({
          "div",
          { "data-testid": "ypt-settings-card" },
          "YPT Settings Card"
+      ),
+}));
+
+vi.mock("@/features/preferences/presentation/audio-settings-card", () => ({
+   AudioSettingsCard: () =>
+      createElement(
+         "div",
+         { "data-testid": "audio-settings-card" },
+         "Audio Settings Card"
       ),
 }));
 
@@ -110,16 +121,72 @@ describe("GlobalProfileView", () => {
       ],
    };
 
-   it("renders profile header with avatar, name, Discord username, trophy rank, and member since date", () => {
+   it("renders profile header with avatar, platform username, trophy rank, and member since date", () => {
       const html = renderToStaticMarkup(
-         <GlobalProfileView profile={mockProfile} isOwnProfile={false} />
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={true}
+         />
       );
 
-      expect(html).toContain("Alice Scholar");
-      expect(html).toContain("@alicescholar");
+      expect(html).toContain("alicescholar");
       expect(html).toContain("Master Scholar");
       expect(html).toContain("2450 trophies");
       expect(html).toContain("Member since Feb 2026");
+   });
+
+   it("gates trophy rank badge behind global_leaderboard feature flag", () => {
+      const htmlDisabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={false}
+         />
+      );
+
+      expect(htmlDisabled).not.toContain("trophy-rank-badge");
+      expect(htmlDisabled).not.toContain("2450 trophies");
+
+      const htmlEnabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isGlobalLeaderboardEnabled={true}
+         />
+      );
+
+      expect(htmlEnabled).toContain("trophy-rank-badge");
+      expect(htmlEnabled).toContain("2450 trophies");
+   });
+
+   it("renders pencil icon button only for profile owner when platform_username flag is enabled", () => {
+      const htmlOwnerEnabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={true}
+            isPlatformUsernameEnabled={true}
+         />
+      );
+      expect(htmlOwnerEnabled).toContain("edit-username-trigger");
+
+      const htmlOwnerDisabled = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={true}
+            isPlatformUsernameEnabled={false}
+         />
+      );
+      expect(htmlOwnerDisabled).not.toContain("edit-username-trigger");
+
+      const htmlNonOwner = renderToStaticMarkup(
+         <GlobalProfileView
+            profile={mockProfile}
+            isOwnProfile={false}
+            isPlatformUsernameEnabled={true}
+         />
+      );
+      expect(htmlNonOwner).not.toContain("edit-username-trigger");
    });
 
    it("renders all 6 global career overview statistics cards", () => {
@@ -143,13 +210,26 @@ describe("GlobalProfileView", () => {
       expect(html).toContain("19 Pokémon");
    });
 
-   it("renders quick avatar refresh button and Settings tab for profile owner", () => {
+   it("renders Settings tab for profile owner and omits sync avatar button", () => {
       const html = renderToStaticMarkup(
          <GlobalProfileView profile={mockProfile} isOwnProfile={true} />
       );
 
-      expect(html).toContain("Sync Avatar");
+      expect(html).not.toContain("Sync Avatar");
       expect(html).toContain("tab-settings");
+   });
+
+   it("renders YPT, Audio, and Wrapped Mascot settings cards when Settings tab is active for owner", () => {
+      mockSearchParams = new URLSearchParams("tab=settings");
+      const html = renderToStaticMarkup(
+         <GlobalProfileView profile={mockProfile} isOwnProfile={true} />
+      );
+
+      expect(html).toContain('data-testid="settings-content"');
+      expect(html).toContain('data-testid="ypt-settings-card"');
+      expect(html).toContain('data-testid="audio-settings-card"');
+      expect(html).toContain('data-testid="wrapped-mascot-preference-card"');
+      mockSearchParams = new URLSearchParams();
    });
 
    it("omits Settings tab for non-owner viewers", () => {

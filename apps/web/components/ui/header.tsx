@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { LogOut, Shield, Settings } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -113,7 +113,7 @@ export function UserNav({
    const effectiveIsPreviewActive = isPreviewActive ?? false;
 
    const displayName =
-      user.displayName || user.name || user.username || "Companion";
+      user.username || user.displayName || user.name || "Companion";
    const initial = displayName.charAt(0).toUpperCase();
    const isDev = isDevRole(user.role) && !effectiveIsPreviewActive;
    const activeProfileUrl = profileUrl ?? "/profile";
@@ -268,18 +268,6 @@ export function AppHeader({
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-               <Link
-                  href="/preferences"
-                  data-testid="quick-preferences-button"
-                  title="Preferences"
-                  className="flex h-8 items-center gap-1.5 rounded-full border border-border-strong bg-surface-elevated hover:bg-surface-nested hover:border-brand-1/50 px-2.5 sm:px-3 text-xs font-medium text-text-primary hover:text-white shadow-sm transition-all shrink-0 group cursor-pointer"
-               >
-                  <Settings className="h-3.5 w-3.5 text-brand-1 group-hover:rotate-45 transition-transform duration-300 shrink-0" />
-                  <span className="font-medium tracking-tight">
-                     Preferences
-                  </span>
-               </Link>
-
                <UserNav
                   user={effectiveUser}
                   redirectTo="/"

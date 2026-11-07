@@ -34,6 +34,7 @@ export interface GlobalUserProfileIdentity {
    id: string;
    displayName: string;
    username: string | null;
+   usernameChangedAt?: string | null;
    image: string | null;
    role: string;
    joinedAt: string;

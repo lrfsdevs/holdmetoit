@@ -8,6 +8,7 @@ declare module "next-auth" {
          role: UserRole;
          discordId: string | null;
          displayName: string | null;
+         username: string | null;
          isSick?: boolean;
          sickModeActivatedAt?: string | null;
          sickModeNote?: string | null;
@@ -20,6 +21,7 @@ declare module "next-auth" {
       role: UserRole;
       discordId: string | null;
       displayName: string | null;
+      username?: string | null;
       isSick?: boolean;
       sickModeActivatedAt?: Date | string | null;
       sickModeNote?: string | null;

@@ -88,8 +88,9 @@ export function HomeCockpitView({
 
    const activeChallengeId = cockpit?.challengeId ?? challengeId;
    const effectiveDisplayName =
-      cockpit?.participant.displayName ||
+      user?.username ||
       cockpit?.participant.username ||
+      cockpit?.participant.displayName ||
       user?.displayName ||
       user?.name ||
       displayName;

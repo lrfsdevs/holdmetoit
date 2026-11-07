@@ -19,34 +19,57 @@ import type { ParticipantStatsViewModel } from "../domain/participant-stats.type
 /**
  * Fetches complete user identity, lifetime career stats (even with 0 challenge enrollments),
  * and chronologically ordered challenge participation history (newest first).
+ * Accepts either a user CUID or a platform username (@handle or handle).
  */
 export async function getGlobalUserProfile(
-   userId: string
+   identifier: string
 ): Promise<GlobalUserProfile | null> {
-   // 1. Fetch user core record
-   const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-         id: true,
-         displayName: true,
-         username: true,
-         name: true,
-         image: true,
-         role: true,
-         createdAt: true,
-         trophyBalance: true,
-         yptId: true,
-         isSick: true,
-         sickModeActivatedAt: true,
-         sickModeNote: true,
-         sickModeReminderSnoozedUntil: true,
-         sickModeLastDeactivatedAt: true,
-      },
+   const cleanIdentifier = identifier.trim().replace(/^@/, "");
+
+   const userSelectFields = {
+      id: true,
+      displayName: true,
+      username: true,
+      usernameChangedAt: true,
+      name: true,
+      image: true,
+      role: true,
+      createdAt: true,
+      trophyBalance: true,
+      yptId: true,
+      isSick: true,
+      sickModeActivatedAt: true,
+      sickModeNote: true,
+      sickModeReminderSnoozedUntil: true,
+      sickModeLastDeactivatedAt: true,
+   };
+
+   // 1. Fetch user core record (try by primary CUID first, then by platform username)
+   let user = await prisma.user.findUnique({
+      where: { id: cleanIdentifier },
+      select: userSelectFields,
    });
+
+   if (!user) {
+      const canonical = cleanIdentifier.toLowerCase();
+      const matched = await prisma.$queryRaw<{ id: string }[]>`
+         SELECT "id" FROM "User"
+         WHERE LOWER("username") = ${canonical}
+         LIMIT 1
+      `;
+      if (matched.length > 0) {
+         user = await prisma.user.findUnique({
+            where: { id: matched[0].id },
+            select: userSelectFields,
+         });
+      }
+   }
 
    if (!user) {
       return null;
    }
+
+   const userId = user.id;
 
    // 2. Fetch parallel aggregates: completed tasks, pokedex count, participations, trophy txns
    const [
@@ -202,6 +225,9 @@ export async function getGlobalUserProfile(
          displayName:
             user.displayName || user.name || user.username || "Scholar",
          username: user.username,
+         usernameChangedAt: user.usernameChangedAt
+            ? user.usernameChangedAt.toISOString()
+            : null,
          image: user.image,
          role: user.role,
          joinedAt: user.createdAt.toISOString(),
@@ -237,6 +263,15 @@ export async function getGlobalUserProfile(
       },
       challengeHistory,
    };
+}
+
+/**
+ * Fetches complete user identity and career stats by platform username.
+ */
+export async function getGlobalUserProfileByUsername(
+   username: string
+): Promise<GlobalUserProfile | null> {
+   return getGlobalUserProfile(username);
 }
 
 /**

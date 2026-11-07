@@ -31,12 +31,18 @@ export const SYSTEM_FEATURE_FLAGS = [
       description:
          "Gates participant self-withdrawal, the overview withdraw button, and exclusion from standings.",
    },
-  {
+   {
       key: "logrocket_v1",
       name: "LogRocket Session Replay",
       description:
          "Master switch for LogRocket initialization, session replay, event tracking, and feedback session URLs.",
-   }
+   },
+   {
+      key: "platform_username",
+      name: "Platform Usernames",
+      description:
+         "Gates custom platform username claims, availability checks, and handle-based identity.",
+   },
 ] as const;
 
 export async function seedSystemFeatureFlags(prisma: PrismaClient) {

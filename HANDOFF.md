@@ -4,7 +4,7 @@
 > **Repository:** `github.com/Afnanpathan2004/holdmetoit`  
 > **Integration/Deploy Branch:** `dev` (latest `8de6b8d`; Vercel deploys `dev`; `main` trails) · Personal branches: `krish`, `afnan`, `afnan-jr`, `dev`  
 > **Document Status:** Active Operational Relay (Living Document)  
-> **Last Updated:** 2026-11-06 (Session 203 — Merge `origin/dev` @ `8de6b8d` into `chore/nextjs-16-upgrade`, resolving PR #252 and #254 integrations)
+> **Last Updated:** 2026-11-06 (Session 204 — fix(identity): enforce exact case-normalized username queries, race condition fix, and migration pre-check)
 > **Governance:** Subject to strict **Handoff Pruning & Obsolescence Rule (§9.3 in `AGENTS.md`)**
 
 ---
@@ -2866,3 +2866,100 @@ Legend: ✅ Done end-to-end · ⚠️ Partial / backend-only / deviates from spe
       - `npm run lint:web`: ✅ 0 errors (design-token guard passed).
       - Unit test suites: ✅ 100% green exit across all wrapped tests (17 files, 126 tests) and profile tests.
 - **NEXT STEP:** PR #242 submitted to `dev`, Jira issue KAN-93 transitioned to `In Review`. Ready for peer review and merge into `dev`.
+
+### Session 201 — 2026-11-05 (feat(identity): platform usernames backend engine, UI unification, and feature flag gating — on `untitled-worktree`)
+
+- **Context & Objectives:** Implement fullstack platform usernames with case-preserving storage and case-insensitive uniqueness, 7-day cooldown engine, `platform_username` feature flag gating, edit username dialog with real-time debounced availability check, complete UI identity unification removing duplicate display names and separate `@username` sub-lines across profiles, challenge leaderboards, and trophy leaderboards, and gating profile trophy rank badges behind `global_leaderboard`:
+   1. **Backend Engine & Migration (Commit `4a698f8`):**
+      - Added declarative migration `20261105000000_user_username_ci_unique` creating partial PostgreSQL expression index: `CREATE UNIQUE INDEX User_lower_username_key ON "User" (LOWER("username")) WHERE "username" IS NOT NULL;`.
+      - Added `usernameChangedAt DateTime?` field to `User` model in `packages/database/prisma/schema.prisma`.
+      - Seeded `platform_username` feature flag in `packages/database/prisma/seed-feature-flags.ts` and registered in `apps/web/features/feature-flags/domain/feature-flag-keys.ts`.
+      - Hydrated `username: string | null` in Auth.js Session and User types (`types/next-auth.d.ts` and `core/auth/index.ts`).
+      - Created pure domain logic in `features/auth/domain/username.ts` (syntax validation regex `USERNAME_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|_(?![_]))*[a-zA-Z0-9]$/`, length 3–20 characters via `USERNAME_MAX_LENGTH = 20`, single underscores only with no leading, trailing, or consecutive underscores, reserved keywords blacklist, 7-day cooldown calculator, Zod schema; 25/25 unit tests green).
+      - Added user repository methods in `features/auth/data/user.repository.ts` (`findUserByUsername`, `isUsernameAvailable`, `updateUsername`, `provisionInitialUsername`, non-destructive `syncUserFromDiscordProfile`; 16/16 unit tests green).
+      - Built server actions `checkUsernameAvailabilityAction` and `updateUsernameAction` in `features/auth/api/username.actions.ts` with flag checks, authentication assertions, cooldown enforcement, audit logging (`USERNAME_UPDATED`), and cache revalidation (10/10 unit tests green).
+      - Extended `global-profile.repository.ts` to resolve profiles by CUID or case-insensitive `@handle`.
+      - Added migration safety script `apps/web/scripts/dedupe-usernames.ts`.
+   2. **Phase 1: Edit Username Dialog (Commit `0708bc0`):**
+      - Created `apps/web/features/auth/presentation/edit-username-dialog.tsx` featuring debounced availability check, inline valid/invalid feedback, 7-day cooldown rules notice, transition pending state, and toast notifications (5/5 unit tests green).
+   3. **Phase 2: Profile Header & Trophy Gating (Commit `8843081`):**
+      - Updated `features/participant-stats/presentation/global-profile-view.tsx` to render a single unified platform username (`currentUsername || user.displayName`).
+      - Added pencil icon trigger (`EditUsernameDialog`) adjacent to username when `isOwnProfile && isPlatformUsernameEnabled`.
+      - Gated `Recruit (0 trophies)` badge behind `isGlobalLeaderboardEnabled`.
+      - Removed duplicate separate `@username` subline from profile header (7/7 unit tests green).
+      - Hydrated `isGlobalLeaderboardEnabled` and `isPlatformUsernameEnabled` in `app/profile/page.tsx` and `app/profile/[userId]/page.tsx`.
+   4. **Phase 3: Leaderboard UI Identity Unification (Commit `de9bb68`):**
+      - Updated `features/leaderboard/presentation/challenge-leaderboard-tab.tsx`:
+         - Podiums (Rank 1, 2, 3): Render `{top.username || top.displayName}`.
+         - Main standings table: Line 1 clickable link renders `{entry.username || entry.displayName}`.
+         - Line 2: Removed redundant `@username` text, maintaining a clean 2-line layout housing `SickStatusBadge` and `PaceBadge`.
+         - Unassigned scholars table and mobile flat list / team roster cards updated to prioritize platform username with duplicate handle sublines removed.
+      - Updated `features/trophies/presentation/trophy-leaderboard-view.tsx`:
+         - Row title displays `{entry.username || entry.displayName}`.
+         - Meta subline removed duplicate `@{entry.username}`, cleanly focusing on career record: `{wins}W / {losses}L ({winRate}%)`.
+      - All 178 tests across `features/trophies/` and `features/leaderboard/` green.
+   5. **Phase 4: Cockpit & Global Header Unification (Commit `b9453f7`):**
+      - Updated `features/study-logs/presentation/home-cockpit-view.tsx` to prioritize `user?.username || cockpit?.participant.username` in `effectiveDisplayName`, rendering "Welcome {username}".
+      - Updated `components/ui/header.tsx` user capsule to prioritize `user.username || user.displayName || user.name || "Companion"`.
+      - All 26 tests across cockpit and header green.
+   6. **Phase 5: Architecture Documentation & Verification:**
+      - Created comprehensive feature and architecture documentation in `docs/identity/README.md`.
+      - Fully verified TypeScript compilation and Vitest suites.
+- **NEXT STEP:** Create Pull Request from feature branch to `dev` for peer review and staging deployment.
+
+### Session 202 — 2026-11-06 (refactor(profile): remove redundant sync avatar button from profile views — on `untitled-worktree`)
+
+- **Context & Objectives:** Remove the redundant manual "Sync Avatar" button from participant profile views as Discord avatars and metadata already synchronize automatically upon each login session via Auth.js (`core/auth/index.ts`).
+- **Changes Completed:**
+   1. **`global-profile-view.tsx`:** Removed `<RefreshAvatarButton />` and its right-actions container from the profile header card (lines 193–203). Cleaned up unused import.
+   2. **`participant-profile-header.tsx`:** Removed `<RefreshAvatarButton />` from challenge participant profile headers (lines 189–195). Cleaned up unused import.
+   3. **`user-inspector-sheet.tsx`:** Preserved `<RefreshAvatarButton />` for admin user inspector controls where manual host troubleshooting may be warranted.
+   4. **Test Suite Aligned:** Updated `features/participant-stats/presentation/global-profile-view.test.tsx` to assert that the Settings tab renders while omitting the Sync Avatar button (`expect(html).not.toContain("Sync Avatar")`).
+   5. **Verification & Quality Gates:**
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run test:web`: ✅ 100% green exit across all participant-stats (10 files, 93 tests) and auth test suites (14 files, 136 tests).
+- **NEXT STEP:** Submit PR to `dev` for peer review.
+
+### Session 203 — 2026-11-06 (refactor(settings): merge preferences into profile settings tab, remove navbar button, and deduplicate wrapped companion — on `untitled-worktree`)
+
+- **Context & Objectives:** Unify all participant configuration into a single, cohesive Settings tab under `/profile?tab=settings`, deduplicate the Wrapped Mascot Companion selector, remove the standalone `/preferences` navbar pill and route, and eliminate dead mock sections (Themes & Aesthetics, Notifications & Reminders).
+- **Changes Completed:**
+   1. **Phase 1: Pure Domain & Storage Pruning (Commit `f0a2b07`):**
+      - Pruned `ThemePreferences`, `NotificationPreferences`, `ThemeId`, and fields `theme` and `notifications` from `user-preferences.ts` and `DEFAULT_USER_PREFERENCES`.
+      - Streamlined `sanitizeUserPreferences()` to focus strictly on sound feedback (`todoCompletionSfx`, `volume`, `soundPack`).
+      - Updated domain unit tests in `user-preferences.test.ts` and `preferences-storage.test.ts` (17/17 tests passing green).
+   2. **Phase 2: Extract `AudioSettingsCard` & Retire `PreferencesView` (Commit `1456d39`):**
+      - Created modular `<AudioSettingsCard />` (`apps/web/features/preferences/presentation/audio-settings-card.tsx`) featuring sound switch toggle, audio preview button, and Obsidian status badges.
+      - Added unit tests in `audio-settings-card.test.tsx` verifying opt-in muted defaults, toggle state persistence, and preview audio triggering (4/4 tests passing green).
+      - Safely deleted legacy `preferences-view.tsx` and its test file.
+   3. **Phase 3: Profile Settings Tab Integration & Deduplication (Commit `dd97b93`):**
+      - Integrated `<AudioSettingsCard />` into `global-profile-view.tsx` inside the owner's Settings tab between `<YptSettingsCard />` and `<WrappedMascotPreferenceCard />`.
+      - Wrapped Mascot Companion is now exclusively rendered inside the profile Settings tab, eliminating duplication.
+      - Added tests in `global-profile-view.test.tsx` asserting all three settings cards render when `activeTab === "settings"` for the owner (8/8 tests passing green).
+   4. **Phase 4: Navbar & Route Cleanup (Commit `fcb29b2`):**
+      - Removed the Preferences button and unused `Settings` icon from `AppHeader` in `apps/web/components/ui/header.tsx`.
+      - Updated `header.test.tsx` to assert that the Preferences button is omitted from the top navigation bar (14/14 tests passing green).
+      - Deleted `apps/web/app/preferences/` route directory.
+      - Added permanent redirect from `/preferences` $\to$ `/profile?tab=settings` in `apps/web/next.config.mjs`.
+   5. **Phase 5: Documentation & Quality Gates Verification:**
+      - Updated `docs/preferences/README.md` and `docs/wrapped/README.md` with unified Settings architecture.
+      - `npm run test:web`: ✅ 252 test files (2,660 tests) passing 100% green.
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run build:web`: ✅ Production build cleanly compiled all 21 routes.
+- **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.
+
+### Session 204 — 2026-11-06 (fix(identity): enforce exact case-normalized username queries and fix race conditions — on `feat/platform-username`)
+
+- **Context & Objectives:** Address 6 CodeRabbit code review findings on the `feat/platform-username` branch: eliminate SQL `ILIKE` underscore/percent wildcard ambiguities in username lookups, prevent async race conditions in debounced username availability checks, ensure typesafe `usernameChangedAt` serialization on global profiles, and standardize database client access in deduplication scripts.
+- **Changes Completed:**
+   1. **Exact Username Queries in `user.repository.ts`:** Replaced pattern-based Prisma `mode: "insensitive"` in `findUserByUsername` and `isUsernameAvailable` with parameterized `$queryRaw` comparing `LOWER("username") = ${canonical}`, ensuring underscore (`_`) and percent (`%`) characters are treated literally rather than as SQL pattern wildcards, and leveraging the `User_lower_username_key` expression index. Updated repository tests to mock `$queryRaw` (16/16 tests green).
+   2. **Race Condition Prevention in `edit-username-dialog.tsx`:** Added an effect-scoped `cancelled` token in `EditUsernameDialog`'s debounced availability checking effect to discard responses from obsolete requests when candidate input changes quickly (5/5 tests green).
+   3. **Fallback Username Lookup in `global-profile.repository.ts`:** Updated global profile resolution to query user ID via parameterized `SELECT "id" FROM "User" WHERE LOWER("username") = ${canonical} LIMIT 1` rather than pattern-based insensitive findFirst. Updated repository tests to mock `$queryRaw` (5/5 tests green).
+   4. **Typesafe `usernameChangedAt` Propagation:** Added `usernameChangedAt?: string | null` to `GlobalUserProfileIdentity`, selected `usernameChangedAt: true` in `global-profile.repository.ts` with ISO serialization, and passed `user.usernameChangedAt` directly to `EditUsernameDialog` without `(user as any)` casting.
+   5. **Shared Prisma Client in Deduplication Script:** Replaced direct `new PrismaClient()` construction in `apps/web/scripts/dedupe-usernames.ts` with the shared client from `@holdmetoit/database`.
+   6. **Exact Case-Normalized Comparison in Deduplication Script:** Replaced `mode: "insensitive"` in duplicate group queries and collision probes with parameterized `$queryRaw` comparing `LOWER("username") = ${...}`.
+   7. **Migration Pre-Check & Deduplication Documentation:** Updated `20261105000000_user_username_ci_unique/migration.sql` with a PL/pgSQL pre-check asserting that zero case-insensitive duplicate usernames exist in `User` before creating `User_lower_username_key`, failing fast with a descriptive error directing to `scripts/dedupe-usernames.ts`. Documented the pre-migration deduplication procedure in `packages/database/prisma/migrations/README.md`.
+   8. **Quality Gates & Verification:**
+      - `npm run typecheck:web`: ✅ 0 TypeScript compiler errors.
+      - `npm run test:web`: ✅ 252 test files (2,660 tests) passing 100% green.
+- **NEXT STEP:** Submit PR to `dev` for peer review and staging deployment.

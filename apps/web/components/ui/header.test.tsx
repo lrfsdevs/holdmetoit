@@ -47,6 +47,22 @@ describe("UserNav", () => {
       expect(html).not.toContain("exit-preview-button");
    });
 
+   it("prioritizes platform username in user capsule over displayName", () => {
+      const html = renderToStaticMarkup(
+         createElement(UserNav, {
+            user: {
+               id: "u_1",
+               displayName: "Alice In Wonderland",
+               username: "alice_wonder",
+               role: "PARTICIPANT",
+            },
+         })
+      );
+      expect(html).toContain("alice_wonder");
+      expect(html).not.toContain("Alice In Wonderland");
+      expect(html).toContain('title="View profile for alice_wonder"');
+   });
+
    it("renders capsule for ADMIN role without preview button or dev badge", () => {
       const html = renderToStaticMarkup(
          createElement(UserNav, {
@@ -194,18 +210,13 @@ describe("AppHeader", () => {
       expect(html).not.toContain('data-testid="pokemon-nav-link"');
    });
 
-   it("renders prominent Preferences button for all users", async () => {
+   it("omits separate Preferences button from navbar", async () => {
       const { AppHeader } = await import("./header");
       const html = renderToStaticMarkup(
          createElement(AppHeader, { user: null })
       );
 
-      expect(html).toContain('data-testid="quick-preferences-button"');
-      expect(html).toContain(
-         'data-testid="quick-preferences-button" title="Preferences"'
-      );
-      expect(html).toContain('href="/preferences"');
-      expect(html).toContain("Preferences");
-      expect(html).not.toContain('data-testid="preferences-nav-link"');
+      expect(html).not.toContain('data-testid="quick-preferences-button"');
+      expect(html).not.toContain('href="/preferences"');
    });
 });

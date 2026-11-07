@@ -39,6 +39,7 @@ The repository tracks the following declarative migrations under `prisma/migrati
 | `20261031000000_category_active_name_ci_unique`                       |  2026-10-30  | Replaces the exact-case `categories_userId_name_task_type_key` unique index with a partial unique index on `("userId", LOWER("name"), "taskType") WHERE "isDeleted" = false`, enforcing case-insensitive uniqueness only for active categories so tombstoned names can be reused.                                                                                                                                      |
 | `20261031010000_task_category_revision`                               |  2026-10-31  | Adds `revision` (`INTEGER NOT NULL DEFAULT 0`) to `Task` and `Category` for the task-sync optimistic concurrency protocol. Existing rows start at 0; every non-create writer increments it and stale clients write with a `baseRevision` predicate.                                                                                                                                                                    |
 | `20261101000000_add_user_sick_mode`                                   |  2026-11-01  | Adds the Sick Mode fields to `User` (`isSick`, `sickModeActivatedAt`, `sickModeNote`, `sickModeReminderSnoozedUntil`, `sickModeLastDeactivatedAt`) for the participant status feature (GH-#205 / KAN-66).                                                                                                                                                                                                              |
+| `20261105000000_user_username_ci_unique`                              |  2026-11-05  | Adds `usernameChangedAt` to `User` for 7-day cooldown tracking and creates a partial case-insensitive unique index `User_lower_username_key` on `(LOWER(username)) WHERE username IS NOT NULL` for platform usernames. Includes automated pre-check asserting zero duplicate usernames before index creation.                                                                                                          |
 
 ---
 
@@ -78,3 +79,20 @@ If a remote database was provisioned via `db push` and lacks migration history r
    # (continue for already-applied migrations)
    ```
 3. Run `npx prisma migrate deploy` to execute any outstanding incremental migrations.
+
+### 3.3 Pre-Migration Requirement for `20261105000000_user_username_ci_unique`
+
+Before applying migration `20261105000000_user_username_ci_unique` to an existing database with populated users, verify and resolve any case-insensitive duplicate usernames. The migration contains a PL/pgSQL pre-check that halts deployment if any duplicate non-null usernames exist.
+
+Execute the deduplication utility prior to migration:
+
+```bash
+# Dry run verification (from apps/web)
+npx tsx --env-file=.env scripts/dedupe-usernames.ts
+
+# Apply changes (auto-suffixes younger duplicates: alice -> alice_1)
+npx tsx --env-file=.env scripts/dedupe-usernames.ts --apply
+
+# If targeting a remote or hosted database (e.g. staging / production)
+npx tsx --env-file=.env scripts/dedupe-usernames.ts --apply --force-host
+```

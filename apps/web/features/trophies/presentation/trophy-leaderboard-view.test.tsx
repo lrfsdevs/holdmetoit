@@ -60,10 +60,10 @@ describe("TrophyLeaderboardView", () => {
          <TrophyLeaderboardView initialEntries={buildEntries(12)} />
       );
 
-      expect(html).toContain("Player 01");
-      expect(html).toContain("Player 10");
-      expect(html).not.toContain("Player 11");
-      expect(html).not.toContain("Player 12");
+      expect(html).toContain("player1");
+      expect(html).toContain("player10");
+      expect(html).not.toContain("player11");
+      expect(html).not.toContain("player12");
 
       expect(html).toContain("Showing");
       expect(html).toContain("1\u201310");
@@ -78,7 +78,7 @@ describe("TrophyLeaderboardView", () => {
       );
 
       expect(html).not.toContain("Showing");
-      expect(html).toContain("Player 05");
+      expect(html).toContain("player5");
    });
 
    it("renders the search input and the alphabetical sort control", () => {
@@ -106,8 +106,8 @@ describe("TrophyLeaderboardView", () => {
          <TrophyLeaderboardView initialEntries={ascending} />
       );
 
-      expect(html.indexOf("Player 01")).toBeLessThan(html.indexOf("Player 10"));
-      expect(html).not.toContain("Player 12");
+      expect(html.indexOf("player1")).toBeLessThan(html.indexOf("player10"));
+      expect(html).not.toContain("player12");
       expect(html).toContain("1\u201310");
    });
 

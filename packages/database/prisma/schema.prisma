@@ -24,9 +24,12 @@ model User {
   discordId   String?  @unique
   /// YPT numeric user ID
   yptId       String?  @unique
-  username    String?
-  displayName String?
-  role        UserRole @default(PARTICIPANT)
+  /// Platform username with preserved casing (case-insensitive uniqueness enforced via User_lower_username_key in DB).
+  username          String?
+  displayName       String?
+  /// Timestamp of when the user last changed their platform username (for 7-day cooldown enforcement).
+  usernameChangedAt DateTime?
+  role              UserRole  @default(PARTICIPANT)
 
   // Sick Mode / Under the Weather status (FEAT-PART-SICK / #205)
   isSick                       Boolean   @default(false)
